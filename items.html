@@ -1,84 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Items Master</title>
-<link rel="stylesheet" href="public/style.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-.form-box{background:#fff;padding:25px;border-radius:16px;margin-bottom:20px}
-.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
-input,select{padding:12px;border:1px solid #ddd;border-radius:10px}
-.btn-save{background:#f6a11a;color:white;border:0;padding:12px 25px;border-radius:10px;margin-top:15px}
-.items-table{background:white;border-radius:16px;overflow:hidden}
-table{width:100%;border-collapse:collapse}
-th{background:#f6a11a;color:white;padding:14px}
-td{padding:12px;border-bottom:1px solid #eee}
-</style>
-</head>
-
-<body>
-<aside class="sidebar">
-  <div class="brand">
-    <div class="logo">◆</div>
-    <h2>Inventory Store</h2>
-    <p>Management System</p>
-  </div>
-  <nav>
-    <a href="index.html">Dashboard</a>
-    <a class="active">Items</a>
-    <a>Purchase Entry</a>
-    <a>Issue Entry</a>
-    <a>Stock Ledger</a>
-    <a>Reports</a>
-    <a>Suppliers</a>
-    <a>Users</a>
-    <a>Settings</a>
-  </nav>
-</aside>
-
-<main class="main">
-  <h1>Items Master</h1>
-
-  <div class="form-box">
-    <h3>Add New Item</h3>
-    <div class="form-grid">
-      <input id="item_code" readonly>
-      <input id="item_name" placeholder="Item Name">
-      <input id="size" placeholder="Size">
-      <select id="unit">
-        <option value="">Unit</option>
-        <option>Kg</option>
-        <option>Nos</option>
-        <option>Pcs</option>
-        <option>Bags</option>
-        <option>Ltr</option>
-      </select>
-      <input id="opening_stock" type="number" placeholder="Opening Stock">
-      <input id="minimum_stock" type="number" placeholder="Minimum Stock">
-      <input id="location" placeholder="Location">
-    </div>
-    <button id="saveBtn" class="btn-save" onclick="saveItem()">Save Item</button>
-  </div>
-
-  <div class="items-table">
-    <table>
-      <thead>
-        <tr>
-          <th>Item Code</th>
-          <th>Item Name</th>
-          <th>Size</th>
-          <th>Unit</th>
-          <th>Opening Stock</th>
-          <th>Minimum Stock</th>
-          <th>Location</th>
-        </tr>
-      </thead>
-      <tbody id="itemsBody"></tbody>
-    </table>
-  </div>
-</main>
-
 <script>
 const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
@@ -108,12 +27,12 @@ async function loadItems() {
         <td>${item.opening_stock}</td>
         <td>${item.minimum_stock}</td>
         <td>${item.location || ""}</td>
-      </tr>
-    `;
+      </tr>`;
   });
 
   const nextNumber = data.length + 1;
-  document.getElementById("item_code").value = "ITM-" + String(nextNumber).padStart(4, "0");
+  document.getElementById("item_code").value =
+    "ITM-" + String(nextNumber).padStart(4, "0");
 }
 
 async function saveItem() {
@@ -123,15 +42,15 @@ async function saveItem() {
 
   const itemName = document.getElementById("item_name").value.trim();
   const itemSize = document.getElementById("size").value.trim();
+  const unit = document.getElementById("unit").value;
 
-  if (!itemName || !document.getElementById("unit").value) {
+  if (!itemName || !unit) {
     alert("Please enter Item Name and Unit");
     saveBtn.disabled = false;
     saveBtn.textContent = "Save Item";
     return;
   }
 
-  // Check same item name + same size
   const { data: existingItem, error: checkError } = await db
     .from("items")
     .select("*")
@@ -157,7 +76,7 @@ async function saveItem() {
     item_code: document.getElementById("item_code").value,
     item_name: itemName,
     size: itemSize,
-    unit: document.getElementById("unit").value,
+    unit: unit,
     opening_stock: Number(document.getElementById("opening_stock").value || 0),
     minimum_stock: Number(document.getElementById("minimum_stock").value || 0),
     location: document.getElementById("location").value
@@ -187,9 +106,5 @@ async function saveItem() {
   loadItems();
 }
 
- 
-
 loadItems();
 </script>
-</body>
-</html>
