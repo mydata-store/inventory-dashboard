@@ -2,161 +2,153 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Items Master</title>
-
 <link rel="stylesheet" href="public/style.css">
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-.form-box{
-    background:#fff;
-    padding:25px;
-    border-radius:16px;
-    box-shadow:0 5px 20px rgba(0,0,0,.08);
-    margin-bottom:20px;
-}
-
-.form-grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:15px;
-}
-
-.form-grid input,
-.form-grid select{
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:10px;
-}
-
-.btn-save{
-    background:#f6a11a;
-    color:#fff;
-    border:none;
-    padding:12px 25px;
-    border-radius:10px;
-    cursor:pointer;
-    margin-top:15px;
-}
-
-.items-table{
-    width:100%;
-    background:#fff;
-    border-radius:16px;
-    overflow:hidden;
-    box-shadow:0 5px 20px rgba(0,0,0,.08);
-}
-
-.items-table table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-.items-table th{
-    background:#f6a11a;
-    color:#fff;
-    padding:14px;
-}
-
-.items-table td{
-    padding:12px;
-    border-bottom:1px solid #eee;
-}
+.form-box{background:#fff;padding:25px;border-radius:16px;margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+input,select{padding:12px;border:1px solid #ddd;border-radius:10px}
+.btn-save{background:#f6a11a;color:white;border:0;padding:12px 25px;border-radius:10px;margin-top:15px}
+.items-table{background:white;border-radius:16px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{background:#f6a11a;color:white;padding:14px}
+td{padding:12px;border-bottom:1px solid #eee}
 </style>
-
 </head>
+
 <body>
-
 <aside class="sidebar">
-
-<div class="brand">
-<div class="logo">◆</div>
-<h2>Inventory Store</h2>
-<p>Management System</p>
-</div>
-
-<nav>
-<a href="index.html">Dashboard</a>
-<a class="active">Items</a>
-<a>Purchase Entry</a>
-<a>Issue Entry</a>
-<a>Stock Ledger</a>
-<a>Reports</a>
-<a>Suppliers</a>
-<a>Users</a>
-<a>Settings</a>
-</nav>
-
+  <div class="brand">
+    <div class="logo">◆</div>
+    <h2>Inventory Store</h2>
+    <p>Management System</p>
+  </div>
+  <nav>
+    <a href="index.html">Dashboard</a>
+    <a class="active">Items</a>
+    <a>Purchase Entry</a>
+    <a>Issue Entry</a>
+    <a>Stock Ledger</a>
+    <a>Reports</a>
+    <a>Suppliers</a>
+    <a>Users</a>
+    <a>Settings</a>
+  </nav>
 </aside>
 
 <main class="main">
+  <h1>Items Master</h1>
 
-<h1>Items Master</h1>
+  <div class="form-box">
+    <h3>Add New Item</h3>
+    <div class="form-grid">
+      <input id="item_code" readonly>
+      <input id="item_name" placeholder="Item Name">
+      <input id="size" placeholder="Size">
+      <select id="unit">
+        <option value="">Unit</option>
+        <option>Kg</option>
+        <option>Nos</option>
+        <option>Pcs</option>
+        <option>Bags</option>
+        <option>Ltr</option>
+      </select>
+      <input id="opening_stock" type="number" placeholder="Opening Stock">
+      <input id="minimum_stock" type="number" placeholder="Minimum Stock">
+      <input id="location" placeholder="Location">
+    </div>
+    <button class="btn-save" onclick="saveItem()">Save Item</button>
+  </div>
 
-<div class="form-box">
-
-<h3>Add New Item</h3>
-
-<div class="form-grid">
-
-<input type="text" placeholder="Item Name">
-
-<input type="text" placeholder="Size">
-
-<select>
-<option>Unit</option>
-<option>Kg</option>
-<option>Nos</option>
-<option>Pcs</option>
-<option>Bags</option>
-<option>Ltr</option>
-</select>
-
-<input type="number" placeholder="Opening Stock">
-
-<input type="number" placeholder="Minimum Stock">
-
-<input type="text" placeholder="Location">
-
-</div>
-
-<button class="btn-save">Save Item</button>
-
-</div>
-
-<div class="items-table">
-
-<table>
-
-<tr>
-<th>Item Name</th>
-<th>Size</th>
-<th>Unit</th>
-<th>Opening Stock</th>
-<th>Minimum Stock</th>
-</tr>
-
-<tr>
-<td>MS Nut Bolt</td>
-<td>1/2 x 3 Inch</td>
-<td>Kg</td>
-<td>500</td>
-<td>50</td>
-</tr>
-
-<tr>
-<td>MS Welding Rod</td>
-<td>Standard</td>
-<td>Kg</td>
-<td>300</td>
-<td>30</td>
-</tr>
-
-</table>
-
-</div>
-
+  <div class="items-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Item Code</th>
+          <th>Item Name</th>
+          <th>Size</th>
+          <th>Unit</th>
+          <th>Opening Stock</th>
+          <th>Minimum Stock</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+  </div>
 </main>
 
+<script>
+const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function loadItems() {
+  const { data, error } = await db.from("items").select("*").order("id", { ascending: true });
+
+  if (error) {
+    alert("Load error: " + error.message);
+    return;
+  }
+
+  const body = document.getElementById("itemsBody");
+  body.innerHTML = "";
+
+  data.forEach(item => {
+    body.innerHTML += `
+      <tr>
+        <td>${item.item_code}</td>
+        <td>${item.item_name}</td>
+        <td>${item.size}</td>
+        <td>${item.unit}</td>
+        <td>${item.opening_stock}</td>
+        <td>${item.minimum_stock}</td>
+        <td>${item.location || ""}</td>
+      </tr>
+    `;
+  });
+
+  const nextNumber = data.length + 1;
+  document.getElementById("item_code").value = "ITM-" + String(nextNumber).padStart(4, "0");
+}
+
+async function saveItem() {
+  const item = {
+    item_code: document.getElementById("item_code").value,
+    item_name: document.getElementById("item_name").value,
+    size: document.getElementById("size").value,
+    unit: document.getElementById("unit").value,
+    opening_stock: Number(document.getElementById("opening_stock").value),
+    minimum_stock: Number(document.getElementById("minimum_stock").value),
+    location: document.getElementById("location").value
+  };
+
+  if (!item.item_name || !item.unit) {
+    alert("Please enter Item Name and Unit");
+    return;
+  }
+
+  const { error } = await db.from("items").insert([item]);
+
+  if (error) {
+    alert("Save error: " + error.message);
+    return;
+  }
+
+  alert("Item saved successfully");
+
+  document.getElementById("item_name").value = "";
+  document.getElementById("size").value = "";
+  document.getElementById("unit").value = "";
+  document.getElementById("opening_stock").value = "";
+  document.getElementById("minimum_stock").value = "";
+  document.getElementById("location").value = "";
+
+  loadItems();
+}
+
+loadItems();
+</script>
 </body>
 </html>
