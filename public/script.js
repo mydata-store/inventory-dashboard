@@ -1,1 +1,1 @@
-console.log('Modern dashboard loaded');
+console.log('Inventory dashboard ready');
