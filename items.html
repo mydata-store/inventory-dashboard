@@ -114,25 +114,58 @@ async function loadItems() {
 }
 
 async function saveItem() {
-  const item = {
-    item_code: document.getElementById("item_code").value,
-    item_name: document.getElementById("item_name").value,
-    size: document.getElementById("size").value,
-    unit: document.getElementById("unit").value,
-    opening_stock: Number(document.getElementById("opening_stock").value),
-    minimum_stock: Number(document.getElementById("minimum_stock").value),
-    location: document.getElementById("location").value
-  };
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Saving...";
 
-  if (!item.item_name || !item.unit) {
+  const itemName = document.getElementById("item_name").value.trim();
+  const itemSize = document.getElementById("size").value.trim();
+
+  if (!itemName || !document.getElementById("unit").value) {
     alert("Please enter Item Name and Unit");
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Item";
     return;
   }
+
+  // Check same item name + same size
+  const { data: existingItem, error: checkError } = await db
+    .from("items")
+    .select("*")
+    .ilike("item_name", itemName)
+    .eq("size", itemSize)
+    .maybeSingle();
+
+  if (checkError) {
+    alert("Check error: " + checkError.message);
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Item";
+    return;
+  }
+
+  if (existingItem) {
+    alert("This item with same size already exists. Use code: " + existingItem.item_code);
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Item";
+    return;
+  }
+
+  const item = {
+    item_code: document.getElementById("item_code").value,
+    item_name: itemName,
+    size: itemSize,
+    unit: document.getElementById("unit").value,
+    opening_stock: Number(document.getElementById("opening_stock").value || 0),
+    minimum_stock: Number(document.getElementById("minimum_stock").value || 0),
+    location: document.getElementById("location").value
+  };
 
   const { error } = await db.from("items").insert([item]);
 
   if (error) {
     alert("Save error: " + error.message);
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Item";
     return;
   }
 
@@ -145,6 +178,39 @@ async function saveItem() {
   document.getElementById("minimum_stock").value = "";
   document.getElementById("location").value = "";
 
+  saveBtn.disabled = false;
+  saveBtn.textContent = "Save Item";
+
+  loadItems();
+}
+
+  if (!item.item_name || !item.unit) {
+    alert("Please enter Item Name and Unit");
+    return;
+  }
+
+  const { error } = await db.from("items").insert([item]);
+
+if (error) {
+    alert("Save error: " + error.message);
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Item";
+    return;
+}
+
+  alert("Item saved successfully");
+
+  document.getElementById("item_name").value = "";
+  document.getElementById("size").value = "";
+  document.getElementById("unit").value = "";
+  document.getElementById("opening_stock").value = "";
+  document.getElementById("minimum_stock").value = "";
+  document.getElementById("location").value = "";
+
+saveBtn.disabled = false;
+saveBtn.textContent = "Save Item";
+  
+  
   loadItems();
 }
 
