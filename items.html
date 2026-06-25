@@ -1,12 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Items Master</title>
-
-  <link rel="stylesheet" href="public/style.css">
+  <link rel="stylesheet" href="public/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .items-page { padding: 32px; width: 100%; }
+    .items-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; gap: 16px; }
+    .items-header h1 { font-size: 34px; margin: 0; color: #111827; }
+    .search-box { width: 320px; padding: 13px 16px; border: 1px solid #e5e7eb; border-radius: 14px; outline: none; background: #fff; }
+    .form-box { background: #fff; padding: 24px; border-radius: 18px; box-shadow: 0 10px 30px rgba(15,23,42,.08); margin-bottom: 24px; }
+    .form-box h3 { margin: 0 0 16px; font-size: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 14px; }
+    .form-grid input, .form-grid select { padding: 13px 14px; border: 1px solid #ddd; border-radius: 12px; outline: none; background: white; width: 100%; }
+    .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-save, .btn-clear { border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 700; }
+    .btn-save { background: #f6a11a; color: #fff; }
+    .btn-clear { background: #f3f4f6; color: #111827; }
+    .table-card { background: #fff; border-radius: 18px; box-shadow: 0 10px 30px rgba(15,23,42,.08); overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1050px; }
+    th { background: #f6a11a; color: white; text-align: left; padding: 15px 14px; font-size: 14px; }
+    td { padding: 14px; border-bottom: 1px solid #eef0f3; font-size: 14px; }
+    .action-btn { border: none; padding: 8px 12px; border-radius: 9px; cursor: pointer; font-weight: 700; margin-right: 6px; }
+    .edit-btn { background: #e0f2fe; color: #0369a1; }
+    .delete-btn { background: #fee2e2; color: #b91c1c; }
+    .pagination { display: flex; justify-content: space-between; padding: 14px 18px; color: #6b7280; font-size: 14px; }
+    .page-buttons button { border: none; background: #f3f4f6; padding: 8px 12px; border-radius: 9px; cursor: pointer; margin-left: 6px; }
+  </style>
 </head>
 
 <body>
@@ -20,26 +44,35 @@
     <nav>
       <a href="index.html">Dashboard</a>
       <a class="active" href="items.html">Items</a>
-      <a>Purchase Entry</a>
-      <a>Issue Entry</a>
-      <a>Stock Ledger</a>
-      <a>Reports</a>
-      <a>Suppliers</a>
-      <a>Users</a>
-      <a>Settings</a>
+      <a href="#">🛒 Purchase Entry</a>
+      <a href="#">↪ Issue Entry</a>
+      <a href="#">▤ Stock Ledger</a>
+      <a href="#">▥ Reports</a>
+      <a href="#">▱ Suppliers</a>
+      <a href="#">♟ Users</a>
+      <a href="#">⚙ Settings</a>
     </nav>
+
+    <div class="profile">
+      <img src="public/profile.png" alt="Muhammad Waqas" />
+      <h3>Muhammad Waqas</h3>
+      <p><span></span> Online</p>
+    </div>
   </aside>
 
-  <main class="main">
-    <h1>Items Master</h1>
+  <main class="main items-page">
+    <div class="items-header">
+      <h1>Items Master</h1>
+      <input id="searchInput" class="search-box" placeholder="Search item, code, size, category..." oninput="renderItems()" />
+    </div>
 
-    <div class="form-box">
-      <h3>Add New Item</h3>
+    <section class="form-box">
+      <h3 id="formTitle">Add New Item</h3>
 
       <div class="form-grid">
-        <input id="item_code" placeholder="Item Code" readonly>
-        <input id="item_name" placeholder="Item Name">
-        <input id="size" placeholder="Size">
+        <input id="item_code" placeholder="Item Code" readonly />
+        <input id="item_name" placeholder="Item Name" />
+        <input id="size" placeholder="Size" />
 
         <select id="unit">
           <option value="">Unit</option>
@@ -69,37 +102,56 @@
           <option>Others</option>
         </select>
 
-        <input id="opening_stock" type="number" placeholder="Opening Stock">
-        <input id="minimum_stock" type="number" placeholder="Minimum Stock">
-        <input id="location" placeholder="Location">
+        <input id="opening_stock" type="number" placeholder="Opening Stock" />
+        <input id="minimum_stock" type="number" placeholder="Minimum Stock" />
+        <input id="location" placeholder="Location" />
       </div>
 
-      <button id="saveBtn" class="btn-save" onclick="saveItem()">Save Item</button>
-    </div>
+      <div class="btn-row">
+        <button id="saveBtn" class="btn-save" onclick="saveItem()">Save Item</button>
+        <button class="btn-clear" onclick="clearForm()">Clear</button>
+      </div>
+    </section>
 
-    <div class="items-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Item Code</th>
-            <th>Item Name</th>
-            <th>Size</th>
-            <th>Unit</th>
-            <th>Category</th>
-            <th>Opening Stock</th>
-            <th>Minimum Stock</th>
-            <th>Location</th>
-          </tr>
-        </thead>
-        <tbody id="itemsBody"></tbody>
-      </table>
-    </div>
+    <section class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item Code</th>
+              <th>Item Name</th>
+              <th>Size</th>
+              <th>Unit</th>
+              <th>Category</th>
+              <th>Opening Stock</th>
+              <th>Minimum Stock</th>
+              <th>Location</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <div id="pageInfo">Loading items...</div>
+        <div class="page-buttons">
+          <button id="prevBtn" onclick="changePage(-1)">Previous</button>
+          <button id="nextBtn" onclick="changePage(1)">Next</button>
+        </div>
+      </div>
+    </section>
   </main>
 
 <script>
 const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let allItems = [];
+let currentPage = 1;
+let editingId = null;
+const pageSize = 10;
 
 async function loadItems() {
   const { data, error } = await db
@@ -112,33 +164,82 @@ async function loadItems() {
     return;
   }
 
-  const body = document.getElementById("itemsBody");
-  body.innerHTML = "";
+  allItems = data || [];
+  currentPage = 1;
+  renderItems();
+  setNextCode();
+}
 
-  data.forEach(item => {
-    body.innerHTML += `
-      <tr>
-        <td>${item.item_code}</td>
-        <td>${item.item_name}</td>
-        <td>${item.size}</td>
-        <td>${item.unit}</td>
-        <td>${item.category || ""}</td>
-        <td>${item.opening_stock}</td>
-        <td>${item.minimum_stock}</td>
-        <td>${item.location || ""}</td>
-      </tr>`;
+function renderItems() {
+  const search = document.getElementById("searchInput").value.toLowerCase().trim();
+  const body = document.getElementById("itemsBody");
+
+  const filtered = allItems.filter(item => {
+    const text = `${item.item_code || ""} ${item.item_name || ""} ${item.size || ""} ${item.unit || ""} ${item.category || ""} ${item.location || ""}`.toLowerCase();
+    return text.includes(search);
   });
 
-  const nextNumber = data.length + 1;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const start = (currentPage - 1) * pageSize;
+  const pageItems = filtered.slice(start, start + pageSize);
+
+  body.innerHTML = "";
+
+  if (pageItems.length === 0) {
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:#777;">No items found</td></tr>`;
+  } else {
+    pageItems.forEach(item => {
+      body.innerHTML += `
+        <tr>
+          <td>${item.item_code || ""}</td>
+          <td>${item.item_name || ""}</td>
+          <td>${item.size || ""}</td>
+          <td>${item.unit || ""}</td>
+          <td>${item.category || ""}</td>
+          <td>${item.opening_stock ?? 0}</td>
+          <td>${item.minimum_stock ?? 0}</td>
+          <td>${item.location || ""}</td>
+          <td>
+            <button class="action-btn edit-btn" onclick="editItem(${item.id})">Edit</button>
+            <button class="action-btn delete-btn" onclick="deleteItem(${item.id})">Delete</button>
+          </td>
+        </tr>`;
+    });
+  }
+
+  document.getElementById("pageInfo").textContent =
+    `Showing ${pageItems.length} of ${filtered.length} item(s) | Page ${currentPage} of ${totalPages}`;
+
+  document.getElementById("prevBtn").disabled = currentPage <= 1;
+  document.getElementById("nextBtn").disabled = currentPage >= totalPages;
+}
+
+function changePage(direction) {
+  currentPage += direction;
+  renderItems();
+}
+
+function setNextCode() {
+  if (editingId) return;
+
+  let maxNumber = 0;
+  allItems.forEach(item => {
+    const match = String(item.item_code || "").match(/ITM-(\d+)/);
+    if (match) maxNumber = Math.max(maxNumber, Number(match[1]));
+  });
+
   document.getElementById("item_code").value =
-    "ITM-" + String(nextNumber).padStart(4, "0");
+    "ITM-" + String(maxNumber + 1).padStart(4, "0");
 }
 
 async function saveItem() {
   const saveBtn = document.getElementById("saveBtn");
   saveBtn.disabled = true;
-  saveBtn.textContent = "Saving...";
+  saveBtn.textContent = editingId ? "Updating..." : "Saving...";
 
+  const itemCode = document.getElementById("item_code").value;
   const itemName = document.getElementById("item_name").value.trim();
   const itemSize = document.getElementById("size").value.trim();
   const unit = document.getElementById("unit").value;
@@ -147,52 +248,100 @@ async function saveItem() {
   if (!itemName || !unit) {
     alert("Please enter Item Name and Unit");
     saveBtn.disabled = false;
-    saveBtn.textContent = "Save Item";
+    saveBtn.textContent = editingId ? "Update Item" : "Save Item";
     return;
   }
 
-  const { data: existingItem, error: checkError } = await db
-    .from("items")
-    .select("*")
-    .ilike("item_name", itemName)
-    .eq("size", itemSize)
-    .maybeSingle();
+  const duplicate = allItems.find(item =>
+    item.id !== editingId &&
+    String(item.item_name || "").toLowerCase() === itemName.toLowerCase() &&
+    String(item.size || "").toLowerCase() === itemSize.toLowerCase()
+  );
 
-  if (checkError) {
-    alert("Check error: " + checkError.message);
+  if (duplicate) {
+    alert("This item with same size already exists. Use code: " + duplicate.item_code);
     saveBtn.disabled = false;
-    saveBtn.textContent = "Save Item";
+    saveBtn.textContent = editingId ? "Update Item" : "Save Item";
     return;
   }
 
-  if (existingItem) {
-    alert("This item with same size already exists. Use code: " + existingItem.item_code);
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Save Item";
-    return;
-  }
-
-  const item = {
-    item_code: document.getElementById("item_code").value,
+  const itemData = {
+    item_code: itemCode,
     item_name: itemName,
     size: itemSize,
     unit: unit,
     category: category,
     opening_stock: Number(document.getElementById("opening_stock").value || 0),
     minimum_stock: Number(document.getElementById("minimum_stock").value || 0),
-    location: document.getElementById("location").value
+    location: document.getElementById("location").value.trim()
   };
 
-  const { error } = await db.from("items").insert([item]);
+  let result;
 
-  if (error) {
-    alert("Save error: " + error.message);
+  if (editingId) {
+    result = await db.from("items").update(itemData).eq("id", editingId);
+  } else {
+    result = await db.from("items").insert([itemData]);
+  }
+
+  if (result.error) {
+    alert("Save error: " + result.error.message);
     saveBtn.disabled = false;
-    saveBtn.textContent = "Save Item";
+    saveBtn.textContent = editingId ? "Update Item" : "Save Item";
     return;
   }
 
-  alert("Item saved successfully");
+  alert(editingId ? "Item updated successfully" : "Item saved successfully");
+
+  clearForm();
+  await loadItems();
+}
+
+function editItem(id) {
+  const item = allItems.find(x => x.id === id);
+  if (!item) return;
+
+  editingId = id;
+
+  document.getElementById("formTitle").textContent = "Edit Item";
+  document.getElementById("saveBtn").textContent = "Update Item";
+
+  document.getElementById("item_code").value = item.item_code || "";
+  document.getElementById("item_name").value = item.item_name || "";
+  document.getElementById("size").value = item.size || "";
+  document.getElementById("unit").value = item.unit || "";
+  document.getElementById("category").value = item.category || "";
+  document.getElementById("opening_stock").value = item.opening_stock ?? 0;
+  document.getElementById("minimum_stock").value = item.minimum_stock ?? 0;
+  document.getElementById("location").value = item.location || "";
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function deleteItem(id) {
+  const item = allItems.find(x => x.id === id);
+  if (!item) return;
+
+  if (!confirm(`Delete ${item.item_code} - ${item.item_name}?`)) return;
+
+  const { error } = await db.from("items").delete().eq("id", id);
+
+  if (error) {
+    alert("Delete error: " + error.message);
+    return;
+  }
+
+  alert("Item deleted successfully");
+  clearForm();
+  await loadItems();
+}
+
+function clearForm() {
+  editingId = null;
+
+  document.getElementById("formTitle").textContent = "Add New Item";
+  document.getElementById("saveBtn").disabled = false;
+  document.getElementById("saveBtn").textContent = "Save Item";
 
   document.getElementById("item_name").value = "";
   document.getElementById("size").value = "";
@@ -202,14 +351,10 @@ async function saveItem() {
   document.getElementById("minimum_stock").value = "";
   document.getElementById("location").value = "";
 
-  saveBtn.disabled = false;
-  saveBtn.textContent = "Save Item";
-
-  loadItems();
+  setNextCode();
 }
 
 loadItems();
 </script>
-
 </body>
 </html>
