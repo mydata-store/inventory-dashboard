@@ -179,6 +179,8 @@ tr.innerHTML = `
   <td><input class="remarks"></td>
 `;
       body.appendChild(tr);
+      setupExcelKeys();
+setupSupplierAutoComplete();
     }
     function findItem(input, type) {
       const row = input.closest("tr");
@@ -266,11 +268,72 @@ saveBtn.innerText = "Save All Rows";
       alert("Local purchases saved successfully.");
       clearRows();
     }
+function setupExcelKeys() {
+  document.querySelectorAll("#purchaseBody input").forEach(input => {
+   if (input.dataset.bound) return;
+input.dataset.bound = "1";
+    input.addEventListener("keydown", function (e) {
+      const cell = this.closest("td");
+      const row = this.closest("tr");
+      const colIndex = Array.from(row.children).indexOf(cell);
+      const rowIndex = Array.from(row.parentElement.children).indexOf(row);
 
-    function clearRows() {
-      document.getElementById("purchaseBody").innerHTML = "";
-      for (let i = 0; i < 20; i++) addRow();
-    }
+      // Enter = go to next row same column
+      if (e.key === "Enter") {
+        e.preventDefault();
+
+        let nextRow = row.parentElement.children[rowIndex + 1];
+
+        if (!nextRow) {
+          addRow();
+          nextRow = row.parentElement.children[rowIndex + 1];
+        }
+
+        const nextInput = nextRow.children[colIndex]?.querySelector("input:not([type='hidden'])");
+        if (nextInput) nextInput.focus();
+      }
+
+      // Ctrl + D = copy above cell
+      if (e.ctrlKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+
+        const aboveRow = row.parentElement.children[rowIndex - 1];
+        if (!aboveRow) return;
+
+        const aboveInput = aboveRow.children[colIndex]?.querySelector("input:not([type='hidden'])");
+
+        if (aboveInput) {
+          this.value = aboveInput.value;
+
+          if (this.classList.contains("item_name")) findItem(this, "name");
+          if (this.classList.contains("quantity") || this.classList.contains("unit_price")) calcRow(this);
+        }
+      }
+    });
+  });
+}
+function clearRows() {
+  document.getElementById("purchaseBody").innerHTML = "";
+  for (let i = 0; i < 20; i++) addRow();
+  function setupSupplierAutoComplete() {
+  document.querySelectorAll(".supplier").forEach(input => {
+    input.addEventListener("blur", function () {
+      const value = this.value.trim().toLowerCase();
+      if (!value) return;
+
+      const suppliers = [...new Set(itemsList.map(x => x.supplier).filter(Boolean))];
+
+      const match = suppliers.find(s =>
+        s.toLowerCase().startsWith(value) ||
+        s.toLowerCase().includes(value)
+      );
+
+      if (match) this.value = match;
+    });
+  });
+}
+  setupExcelKeys();
+}
 
     document.addEventListener("DOMContentLoaded", async () => {
       await loadItems();
