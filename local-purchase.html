@@ -335,6 +335,20 @@ saveBtn.innerText = "Save All Rows";
       alert("Local purchases saved successfully.");
       clearRows();
     }
+let selectedCells = [];
+
+function clearSelection() {
+  selectedCells.forEach(input => input.style.background = "");
+  selectedCells = [];
+}
+
+function selectCell(input) {
+  if (!selectedCells.includes(input)) {
+    selectedCells.push(input);
+    input.style.background = "#dbeafe";
+  }
+}
+
 function setupExcelKeys() {
   document.querySelectorAll("#purchaseBody input").forEach(input => {
     if (input.dataset.bound) return;
@@ -346,8 +360,44 @@ function setupExcelKeys() {
       const colIndex = Array.from(row.children).indexOf(cell);
       const rowIndex = Array.from(row.parentElement.children).indexOf(row);
 
+      if (e.key === "Delete") {
+        e.preventDefault();
+
+        if (selectedCells.length > 0) {
+          selectedCells.forEach(input => input.value = "");
+          clearSelection();
+        } else {
+          this.value = "";
+        }
+        return;
+      }
+
+      if (e.shiftKey && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+
+        let targetRowIndex = rowIndex;
+        let targetColIndex = colIndex;
+
+        if (e.key === "ArrowUp") targetRowIndex--;
+        if (e.key === "ArrowDown") targetRowIndex++;
+        if (e.key === "ArrowLeft") targetColIndex--;
+        if (e.key === "ArrowRight") targetColIndex++;
+
+        const targetRow = row.parentElement.children[targetRowIndex];
+        if (!targetRow) return;
+
+        const targetInput = targetRow.children[targetColIndex]?.querySelector("input:not([type='hidden'])");
+        if (targetInput) {
+          selectCell(this);
+          selectCell(targetInput);
+          targetInput.focus();
+        }
+        return;
+      }
+
       if (e.key === "Enter") {
         e.preventDefault();
+        clearSelection();
 
         let nextRow = row.parentElement.children[rowIndex + 1];
         if (!nextRow) {
@@ -361,6 +411,7 @@ function setupExcelKeys() {
 
       if (e.ctrlKey && e.key.toLowerCase() === "d") {
         e.preventDefault();
+        clearSelection();
 
         const aboveRow = row.parentElement.children[rowIndex - 1];
         if (!aboveRow) return;
@@ -374,6 +425,7 @@ function setupExcelKeys() {
 
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
+        clearSelection();
 
         let targetRowIndex = rowIndex;
         let targetColIndex = colIndex;
