@@ -615,10 +615,66 @@ function setupSupplierAutoComplete() {
     undoLast();
   }
 });
-    document.addEventListener("DOMContentLoaded", async () => {
-      await loadItems();
-      clearRows();
+ function exportToExcel() {
+  let csv = [];
+
+  document.querySelectorAll("table tr").forEach(row => {
+    let cols = [...row.querySelectorAll("th, td")].map(cell => {
+      const input = cell.querySelector("input");
+      return input ? input.value : cell.innerText;
     });
+
+    csv.push(cols.join(","));
+  });
+
+  const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "Local Purchase.csv";
+  a.click();
+}
+
+function printSheet() {
+  window.print();
+}
+
+function saveDraft() {
+  const draft = [...document.querySelectorAll("#purchaseBody tr")].map(row =>
+    [...row.querySelectorAll("input:not([type='hidden'])")].map(input => input.value)
+  );
+
+  localStorage.setItem("localPurchaseDraft", JSON.stringify(draft));
+
+  alert("Draft Saved Successfully.");
+}
+
+function loadDraft() {
+  const draft = JSON.parse(localStorage.getItem("localPurchaseDraft") || "[]");
+
+  if (!draft.length) return;
+
+  clearRows();
+
+  const rows = document.querySelectorAll("#purchaseBody tr");
+
+  draft.forEach((rowData, r) => {
+    const inputs = rows[r]?.querySelectorAll("input:not([type='hidden'])");
+
+    rowData.forEach((value, c) => {
+      if (inputs[c]) inputs[c].value = value;
+    });
+  });
+}
+
+function showPurchaseHistory() {
+  window.location.href = "purchase-history.html";
+}
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadItems();
+    clearRows();
+    loadDraft();
+});
 function formatDate(input) {
     if (!input.value.trim()) return;
 
