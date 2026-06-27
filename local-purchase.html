@@ -155,6 +155,7 @@ thead th {
   <button class="save" onclick="saveAllRows()">Save All Rows</button>
   <button class="clear" onclick="clearRows()">Clear</button>
   <button onclick="exportToExcel()">Export to Excel</button>
+  <button onclick="exportPDF()">Export PDF</button>
   <button onclick="printSheet()">Print Sheet</button>
   <button onclick="saveDraft()">Save Draft</button>
   <button onclick="showPurchaseHistory()">Purchase History</button>
@@ -636,7 +637,105 @@ function setupSupplierAutoComplete() {
   a.download = "Local Purchase.csv";
   a.click();
 }
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("landscape", "mm", "a4");
 
+  const title = "Local Purchase Report";
+  const dateTime = new Date().toLocaleString();
+
+  doc.setFontSize(16);
+  doc.text("Inventory Store Management System", 14, 12);
+
+  doc.setFontSize(12);
+  doc.text(title, 14, 20);
+  doc.text("Generated: " + dateTime, 220, 20);
+
+  const headers = [[
+    "Date",
+    "Bill #",
+    "IGP #",
+    "Item Name",
+    "Size",
+    "Quantity",
+    "Unit",
+    "Unit Price",
+    "Total Price",
+    "Supplier",
+    "Purchased By",
+    "Vehicle #",
+    "Remarks"
+  ]];
+
+  const rows = [];
+
+  document.querySelectorAll("#purchaseBody tr").forEach(row => {
+    const itemName = row.querySelector(".item_name")?.value.trim();
+    if (!itemName) return;
+
+    rows.push([
+      row.querySelector(".date")?.value || "",
+      row.querySelector(".bill_no")?.value || "",
+      row.querySelector(".igp_no")?.value || "",
+      row.querySelector(".item_name")?.value || "",
+      row.querySelector(".size")?.value || "",
+      row.querySelector(".quantity")?.value || "",
+      row.querySelector(".unit")?.value || "",
+      row.querySelector(".unit_price")?.value || "",
+      row.querySelector(".total_price")?.value || "",
+      row.querySelector(".supplier")?.value || "",
+      row.querySelector(".purchased_by")?.value || "",
+      row.querySelector(".vehicle_no")?.value || "",
+      row.querySelector(".remarks")?.value || ""
+    ]);
+  });
+
+  if (!rows.length) {
+    alert("No purchase data to export.");
+    return;
+  }
+
+  const totalAmount = rows.reduce((sum, row) => {
+    return sum + (Number(row[8]) || 0);
+  }, 0);
+
+  doc.autoTable({
+    head: headers,
+    body: rows,
+    startY: 28,
+    styles: {
+      fontSize: 8,
+      cellPadding: 2
+    },
+    headStyles: {
+      fillColor: [246, 161, 26],
+      textColor: 255,
+      halign: "center"
+    },
+    columnStyles: {
+      3: { cellWidth: 45 },
+      9: { cellWidth: 40 },
+      12: { cellWidth: 35 }
+    },
+    didDrawPage: function () {
+      const pageCount = doc.internal.getNumberOfPages();
+      const pageSize = doc.internal.pageSize;
+      const pageWidth = pageSize.width;
+      const pageHeight = pageSize.height;
+
+      doc.setFontSize(9);
+      doc.text("Page " + pageCount, pageWidth - 25, pageHeight - 8);
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY || 28;
+
+  doc.setFontSize(11);
+  doc.text("Total Amount: " + totalAmount.toLocaleString(), 14, finalY + 10);
+
+  doc.save("Local Purchase Report.pdf");
+}
+    
 function printSheet() {
   window.print();
 }
