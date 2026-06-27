@@ -641,33 +641,113 @@ function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF("landscape", "mm", "a4");
 
-  const title = "Local Purchase Report";
-  const dateTime = new Date().toLocaleString();
+  const today = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
 
-  doc.setFontSize(16);
-  doc.text("Inventory Store Management System", 14, 12);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(0, 0, 0);
+  doc.text("LOCAL PURCHASE REPORT", 148, 15, { align: "center" });
 
-  doc.setFontSize(12);
-  doc.text(title, 14, 20);
-  doc.text("Generated: " + dateTime, 220, 20);
+  doc.setFontSize(10);
+  doc.text("Date: " + today, 285, 15, { align: "right" });
 
   const headers = [[
-    "Date",
-    "Bill #",
-    "IGP #",
-    "Item Name",
-    "Size",
-    "Quantity",
-    "Unit",
-    "Unit Price",
-    "Total Price",
-    "Supplier",
-    "Purchased By",
-    "Vehicle #",
+    "SR #",
+    "ITEM",
+    "SIZE",
+    "QTY",
+    "UNIT",
+    "Rate",
+    "Amount",
     "Remarks"
   ]];
 
   const rows = [];
+  let sr = 1;
+
+  document.querySelectorAll("#purchaseBody tr").forEach(row => {
+    const itemName = row.querySelector(".item_name")?.value.trim();
+    if (!itemName) return;
+
+    rows.push([
+      sr++,
+      itemName,
+      row.querySelector(".size")?.value || "",
+      row.querySelector(".quantity")?.value || "",
+      row.querySelector(".unit")?.value || "",
+      row.querySelector(".unit_price")?.value || "",
+      row.querySelector(".total_price")?.value || "",
+      row.querySelector(".remarks")?.value || ""
+    ]);
+  });
+
+  if (!rows.length) {
+    alert("No purchase data to export.");
+    return;
+  }
+
+  while (rows.length < 27) {
+    rows.push([rows.length + 1, "", "", "", "", "", "", ""]);
+  }
+
+  const totalAmount = rows.reduce((sum, row) => {
+    return sum + (Number(row[6]) || 0);
+  }, 0);
+
+  rows.push(["", "", "", "", "", "TOTAL =", totalAmount.toLocaleString(), ""]);
+
+  doc.autoTable({
+    head: headers,
+    body: rows,
+    startY: 25,
+    theme: "grid",
+    styles: {
+      fontSize: 9,
+      cellPadding: 2,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      valign: "middle"
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      halign: "center",
+      lineColor: [0, 0, 0],
+      lineWidth: 0.3
+    },
+    columnStyles: {
+      0: { cellWidth: 15, halign: "center" },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 70 },
+      3: { cellWidth: 23, halign: "center" },
+      4: { cellWidth: 23, halign: "center" },
+      5: { cellWidth: 30, halign: "right" },
+      6: { cellWidth: 30, halign: "right" },
+      7: { cellWidth: 30 }
+    },
+    didParseCell: function (data) {
+      if (data.row.index === rows.length - 1) {
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.halign = "right";
+      }
+    }
+  });
+
+  const pageHeight = doc.internal.pageSize.height;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("This is a computer generated report.", 148, pageHeight - 10, { align: "center" });
+
+  doc.save("Local Purchase Report.pdf");
+} 
+    const rows = [];
 
   document.querySelectorAll("#purchaseBody tr").forEach(row => {
     const itemName = row.querySelector(".item_name")?.value.trim();
