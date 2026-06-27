@@ -618,28 +618,12 @@ function setupSupplierAutoComplete() {
     undoLast();
   }
 });
- function exportToExcel() {
-  let csv = [];
-
-  document.querySelectorAll("table tr").forEach(row => {
-    let cols = [...row.querySelectorAll("th, td")].map(cell => {
-      const input = cell.querySelector("input");
-      return input ? input.value : cell.innerText;
-    });
-
-    csv.push(cols.join(","));
-  });
-
-  const blob = new Blob([csv.join("\n")], { type: "text/csv" });
-
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "Local Purchase.csv";
-  a.click();
-}
-function exportPDF() {
+    function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF("landscape", "mm", "a4");
+
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
 
   const today = new Date().toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -648,21 +632,22 @@ function exportPDF() {
   });
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(0, 0, 0);
-  doc.text("LOCAL PURCHASE REPORT", 148, 15, { align: "center" });
+  doc.setFontSize(24);
+  doc.setTextColor(5, 28, 50);
+  doc.text("Local Purchase Report", pageWidth / 2, 18, { align: "center" });
 
-  doc.setFontSize(10);
-  doc.text("Date: " + today, 285, 15, { align: "right" });
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Date: " + today, pageWidth - 14, 15, { align: "right" });
 
   const headers = [[
-    "SR #",
-    "ITEM",
-    "SIZE",
-    "QTY",
-    "UNIT",
-    "Rate",
-    "Amount",
+    "Sr. No.",
+    "Item Name",
+    "Size",
+    "Quantity",
+    "Unit",
+    "Unit Price",
+    "Total Price",
     "Remarks"
   ]];
 
@@ -680,7 +665,7 @@ function exportPDF() {
       row.querySelector(".quantity")?.value || "",
       row.querySelector(".unit")?.value || "",
       row.querySelector(".unit_price")?.value || "",
-      row.querySelector(".total_price")?.value || "",
+      Number(row.querySelector(".total_price")?.value || 0).toLocaleString(),
       row.querySelector(".remarks")?.value || ""
     ]);
   });
@@ -690,12 +675,15 @@ function exportPDF() {
     return;
   }
 
+  const realItemCount = rows.length;
+
   while (rows.length < 27) {
     rows.push([rows.length + 1, "", "", "", "", "", "", ""]);
   }
 
   const totalAmount = rows.reduce((sum, row) => {
-    return sum + (Number(row[6]) || 0);
+    const amount = String(row[6]).replace(/,/g, "");
+    return sum + (Number(amount) || 0);
   }, 0);
 
   rows.push(["", "", "", "", "", "TOTAL =", totalAmount.toLocaleString(), ""]);
@@ -703,51 +691,74 @@ function exportPDF() {
   doc.autoTable({
     head: headers,
     body: rows,
-    startY: 25,
+    startY: 28,
     theme: "grid",
+    margin: { left: 6, right: 6 },
     styles: {
       fontSize: 9,
       cellPadding: 2,
-      lineColor: [0, 0, 0],
-      lineWidth: 0.2,
+      lineColor: [60, 60, 60],
+      lineWidth: 0.25,
       textColor: [0, 0, 0],
-      valign: "middle"
+      valign: "middle",
+      minCellHeight: 6
     },
     headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
+      fillColor: [5, 28, 50],
+      textColor: [255, 255, 255],
       fontStyle: "bold",
       halign: "center",
-      lineColor: [0, 0, 0],
-      lineWidth: 0.3
+      fontSize: 10,
+      minCellHeight: 9
+    },
+    alternateRowStyles: {
+      fillColor: [248, 248, 248]
     },
     columnStyles: {
-      0: { cellWidth: 15, halign: "center" },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 70 },
-      3: { cellWidth: 23, halign: "center" },
-      4: { cellWidth: 23, halign: "center" },
-      5: { cellWidth: 30, halign: "right" },
-      6: { cellWidth: 30, halign: "right" },
-      7: { cellWidth: 30 }
+      0: { cellWidth: 22, halign: "center" },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 38, halign: "center" },
+      3: { cellWidth: 30, halign: "center" },
+      4: { cellWidth: 26, halign: "center" },
+      5: { cellWidth: 35, halign: "center" },
+      6: { cellWidth: 35, halign: "center" },
+      7: { cellWidth: 48 }
     },
     didParseCell: function (data) {
       if (data.row.index === rows.length - 1) {
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.halign = "right";
+        data.cell.styles.fontSize = 10;
+        data.cell.styles.fillColor = [255, 255, 255];
+        data.cell.styles.halign = "center";
       }
     }
   });
 
-  const pageHeight = doc.internal.pageSize.height;
+  const tableEndY = doc.lastAutoTable.finalY + 10;
 
-  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("This is a computer generated report.", 148, pageHeight - 10, { align: "center" });
+  doc.setFontSize(11);
+  doc.text("Total Items: " + realItemCount, 8, tableEndY);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFillColor(5, 28, 50);
+  doc.setTextColor(255, 255, 255);
+  doc.rect(pageWidth - 92, tableEndY - 5, 45, 12, "F");
+  doc.text("GRAND TOTAL", pageWidth - 69.5, tableEndY + 3, { align: "center" });
+
+  doc.setDrawColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
+  doc.rect(pageWidth - 47, tableEndY - 5, 39, 12);
+  doc.text(totalAmount.toLocaleString(), pageWidth - 27.5, tableEndY + 3, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("This is computer generated report.", pageWidth / 2, pageHeight - 10, { align: "center" });
+
+  doc.text("Page 1 of 1", pageWidth - 14, pageHeight - 10, { align: "right" });
 
   doc.save("Local Purchase Report.pdf");
 }
-
     function printSheet() {
   window.print();
 }
