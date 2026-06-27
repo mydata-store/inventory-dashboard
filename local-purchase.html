@@ -357,6 +357,51 @@ setupSupplierAutoComplete();
       row.querySelector(".total_price").value = qty * rate;
     }
 
+    function validateRows() {
+  let valid = true;
+
+  document.querySelectorAll("#purchaseBody tr").forEach(row => {
+    const item = row.querySelector(".item_name");
+    const qty = row.querySelector(".quantity");
+
+    item.classList.remove("required-error");
+    qty.classList.remove("required-error");
+
+    if (item.value.trim() && !qty.value.trim()) {
+      qty.classList.add("required-error");
+      valid = false;
+    }
+
+    if (qty.value.trim() && !item.value.trim()) {
+      item.classList.add("required-error");
+      valid = false;
+    }
+  });
+
+  return valid;
+}
+
+async function checkDuplicateBill() {
+  const bills = [...document.querySelectorAll(".bill_no")]
+    .map(x => x.value.trim())
+    .filter(Boolean);
+
+  for (const bill of bills) {
+    const { data } = await db
+      .from("purchases")
+      .select("bill_no")
+      .eq("bill_no", bill)
+      .limit(1);
+
+    if (data && data.length > 0) {
+      if (!confirm("Bill No " + bill + " already exists.\nDo you still want to save?")) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
     async function saveAllRows() {
 if (isSaving) return;
 isSaving = true;
