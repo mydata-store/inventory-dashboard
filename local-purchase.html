@@ -436,28 +436,55 @@ function setupAutoFormatText() {
 setupSupplierAutoComplete();
       setupAutoFormatText();
     }
-    function findItem(input, type) {
-      const row = input.closest("tr");
-      const value = input.value.trim().toLowerCase();
 
-      if (!value) return;
+      function findItem(input, type) {
+  const row = input.closest("tr");
+  const value = input.value.trim().toLowerCase();
 
-      let item;
+  if (!value) return;
 
-      if (type === "code") {
-        item = itemsList.find(x => (x.item_code || "").toLowerCase() === value);
-      } else {
-        item = itemsList.find(x => (x.item_name || "").toLowerCase().includes(value));
-      }
+  let matches = [];
 
-      if (!item) return;
+  if (type === "code") {
+    matches = itemsList.filter(x =>
+      (x.item_code || "").toLowerCase() === value
+    );
+  } else {
+    matches = itemsList.filter(x =>
+      (x.item_name || "").toLowerCase().includes(value)
+    );
+  }
 
-      row.querySelector(".item_code").value = item.item_code || "";
-      row.querySelector(".item_name").value = item.item_name || "";
-      row.querySelector(".size").value = item.size || "";
-      row.querySelector(".unit").value = item.unit || "";
-    }
+  if (!matches.length) return;
 
+  let item = matches[0];
+
+  if (matches.length > 1) {
+    const list = matches
+      .map((x, i) => `${i + 1}. ${x.item_name || ""} | ${x.size || ""} | ${x.unit || ""}`)
+      .join("\n");
+
+    const choice = prompt(
+      "Select item number:\n\n" + list,
+      "1"
+    );
+
+    const index = Number(choice) - 1;
+
+    if (!choice || !matches[index]) return;
+
+    item = matches[index];
+  }
+
+  row.querySelector(".item_code").value = item.item_code || "";
+  row.querySelector(".item_name").value = item.item_name || "";
+  row.querySelector(".size").value = item.size || "";
+  row.querySelector(".unit").value = item.unit || "";
+
+  if (row.querySelector(".quantity").value || row.querySelector(".unit_price").value) {
+    calcRow(row.querySelector(".quantity"));
+  }
+}
     function calcRow(input) {
       const row = input.closest("tr");
       const qty = Number(row.querySelector(".quantity").value || 0);
