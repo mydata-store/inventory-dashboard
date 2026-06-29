@@ -730,27 +730,36 @@ function setupSupplierAutoComplete() {
 
       const suppliers = [...new Set(itemsList.map(x => x.supplier).filter(Boolean))];
 
-      const match = suppliers.find(s =>
+      const matches = suppliers.filter(s =>
         s.toLowerCase().startsWith(value) ||
         s.toLowerCase().includes(value)
       );
 
-      this.value = titleCaseText(match || this.value);
+      if (!matches.length) {
+        this.value = titleCaseText(this.value);
+        return;
+      }
+
+      let supplier = matches[0];
+
+      if (matches.length > 1) {
+        const list = matches
+          .map((s, i) => `${i + 1}. ${s}`)
+          .join("\n");
+
+        const choice = prompt("Select supplier number:\n\n" + list, "1");
+        const index = Number(choice) - 1;
+
+        if (!choice || !matches[index]) return;
+
+        supplier = matches[index];
+      }
+
+      this.value = titleCaseText(supplier);
     });
   });
-}
-   document.addEventListener("keydown", function(e) {
-  if (e.ctrlKey && e.key.toLowerCase() === "s") {
-    e.preventDefault();
-    saveAllRows();
-  }
-
-  if (e.ctrlKey && e.key.toLowerCase() === "z") {
-    e.preventDefault();
-    undoLast();
-  }
-});
-    function exportPDF() {
+}   
+      function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF("landscape", "mm", "a4");
 
