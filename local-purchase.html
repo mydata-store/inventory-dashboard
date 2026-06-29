@@ -264,7 +264,28 @@ td input:focus {
     <tbody id="purchaseBody"></tbody>
   </table>
 </div>
+function setupSupplierAutoComplete() {
+  const supplierList = document.getElementById("supplierList");
+  if (!supplierList) return;
 
+  const suppliers = [...new Set(itemsList.map(x => x.supplier).filter(Boolean))];
+
+  supplierList.innerHTML = suppliers
+    .map(s => `<option value="${s}"></option>`)
+    .join("");
+
+  document.querySelectorAll(".supplier").forEach(input => {
+    if (input.dataset.supplierBound) return;
+    input.dataset.supplierBound = "1";
+
+    input.addEventListener("blur", function () {
+      if (!this.value.trim()) return;
+
+      this.value = titleCaseText(this.value.trim());
+    });
+  });
+}
+  
 </main>
   
     <script>
@@ -360,7 +381,7 @@ tr.innerHTML = `
   <td><input class="unit" readonly></td>
   <td><input type="number" class="unit_price" oninput="calcRow(this)"></td>
   <td><input type="number" class="total_price" readonly></td>
-  <td><input class="supplier"></td>
+  <td><input class="supplier" list="supplierList"></td>
   <td><input class="purchased_by"></td>
   <td><input class="vehicle_no"></td>
   <td><input class="remarks"></td>
