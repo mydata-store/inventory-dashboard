@@ -485,7 +485,47 @@ setupSupplierAutoComplete();
     calcRow(row.querySelector(".quantity"));
   }
 }
-    function calcRow(input) {
+ function findSize(input) {
+  const row = input.closest("tr");
+  const itemName = row.querySelector(".item_name").value.trim().toLowerCase();
+  const sizeValue = input.value.trim().toLowerCase();
+
+  if (!itemName) return;
+
+  const matches = itemsList.filter(x =>
+    (x.item_name || "").toLowerCase() === itemName
+  );
+
+  if (!matches.length) return;
+
+  if (!sizeValue) {
+    const list = matches
+      .map((x, i) => `${i + 1}. ${x.size || ""} | ${x.unit || ""}`)
+      .join("\n");
+
+    const choice = prompt("Select size:\n\n" + list, "1");
+    const index = Number(choice) - 1;
+
+    if (!choice || !matches[index]) return;
+
+    input.value = matches[index].size || "";
+    row.querySelector(".unit").value = matches[index].unit || "";
+    row.querySelector(".item_code").value = matches[index].item_code || "";
+    return;
+  }
+
+  const sizeMatch = matches.find(x =>
+    (x.size || "").toLowerCase() === sizeValue ||
+    (x.size || "").toLowerCase().includes(sizeValue)
+  );
+
+  if (!sizeMatch) return;
+
+  input.value = sizeMatch.size || "";
+  row.querySelector(".unit").value = sizeMatch.unit || "";
+  row.querySelector(".item_code").value = sizeMatch.item_code || "";
+}
+      function calcRow(input) {
       const row = input.closest("tr");
       const qty = Number(row.querySelector(".quantity").value || 0);
       const rate = Number(row.querySelector(".unit_price").value || 0);
