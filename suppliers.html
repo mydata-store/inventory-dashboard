@@ -1,1 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suppliers</title>
+  <link rel="stylesheet" href="public/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
 
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">◆</div>
+    <div>
+      <h2>Inventory Store</h2>
+      <p>Management System</p>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <a href="public/index.html">▦ Dashboard</a>
+    <a href="items.html">▫ Items</a>
+    <a href="purchase.html">🛒 Purchase Entry</a>
+    <a href="#">↪ Issue Entry</a>
+    <a href="#">▤ Stock Ledger</a>
+    <a href="#">▥ Reports</a>
+    <a class="active" href="suppliers.html">▱ Suppliers</a>
+    <a href="#">⚙ Settings</a>
+  </nav>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Suppliers Master</h1>
+    <input id="searchBox" placeholder="Search supplier, phone, city..." oninput="renderSuppliers()">
+  </div>
+
+  <section class="card">
+    <h2>Add New Supplier</h2>
+
+    <div class="form-grid">
+      <input id="supplier_code" placeholder="Supplier Code" readonly>
+      <input id="supplier_name" placeholder="Supplier Name">
+      <input id="proprietor_name" placeholder="Proprietor Name">
+      <input id="contact_person" placeholder="Contact Person">
+      <input id="mobile_no" placeholder="Mobile No.">
+      <input id="whatsapp_no" placeholder="WhatsApp No.">
+      <input id="landline_no" placeholder="Landline No.">
+      <input id="email" placeholder="Email">
+      <input id="ntn_gst" placeholder="NTN / GST No.">
+      <input id="city" placeholder="City">
+      <input id="address" placeholder="Address">
+      <input id="remarks" placeholder="Remarks">
+    </div>
+
+    <button class="save" onclick="saveSupplier()">Save Supplier</button>
+    <button class="clear" onclick="clearForm()">Clear</button>
+  </section>
+
+  <section class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Supplier Name</th>
+          <th>Proprietor</th>
+          <th>Mobile</th>
+          <th>City</th>
+          <th>Address</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="supplierBody"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let suppliers = [];
+let editId = null;
+
+async function loadSuppliers() {
+  const { data, error } = await db.from("suppliers").select("*").order("id", { ascending: true });
+
+  if (error) {
+    alert("Load error: " + error.message);
+    return;
+  }
+
+  suppliers = data || [];
+  generateCode();
+  renderSuppliers();
+}
+
+function generateCode() {
+  const next = suppliers.length + 1;
+  document.getElementById("supplier_code").value = "SUP-" + String(next).padStart(4, "0");
+}
+
+async function saveSupplier() {
+  const supplier_name = document.getElementById("supplier_name").value.trim();
+
+  if (!supplier_name) {
+    alert("Supplier Name is required.");
+    return;
+  }
+
+  const record = {
+    supplier_code: document.getElementById("supplier_code").value,
+    supplier_name,
+    proprietor_name: document.getElementById("proprietor_name").value,
+    contact_person: document.getElementById("contact_person").value,
+    mobile_no: document.getElementById("mobile_no").value,
+    whatsapp_no: document.getElementById("whatsapp_no").value,
+    landline_no: document.getElementById("landline_no").value,
+    email: document.getElementById("email").value,
+    ntn_gst: document.getElementById("ntn_gst").value,
+    city: document.getElementById("city").value,
+    address: document.getElementById("address").value,
+    remarks: document.getElementById("remarks").value,
+    status: "Active"
+  };
+
+  let result;
+
+  if (editId) {
+    result = await db.from("suppliers").update(record).eq("id", editId);
+  } else {
+    result = await db.from("suppliers").insert([record]);
+  }
+
+  if (result.error) {
+    alert("Save error: " + result.error.message);
+    return;
+  }
+
+  alert("Supplier saved successfully.");
+  clearForm();
+  loadSuppliers();
+}
+
+function renderSuppliers() {
+  const search = document.getElementById("searchBox").value.toLowerCase();
+  const body = document.getElementById("supplierBody");
+
+  const filtered = suppliers.filter(s =>
+    (s.supplier_name || "").toLowerCase().includes(search) ||
+    (s.mobile_no || "").toLowerCase().includes(search) ||
+    (s.city || "").toLowerCase().includes(search)
+  );
+
+  body.innerHTML = filtered.map(s => `
+    <tr>
+      <td>${s.supplier_code || ""}</td>
+      <td>${s.supplier_name || ""}</td>
+      <td>${s.proprietor_name || ""}</td>
+      <td>${s.mobile_no || ""}</td>
+      <td>${s.city || ""}</td>
+      <td>${s.address || ""}</td>
+      <td>
+        <button onclick="editSupplier(${s.id})">Edit</button>
+        <button onclick="deleteSupplier(${s.id})">Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function editSupplier(id) {
+  const s = suppliers.find(x => x.id === id);
+  if (!s) return;
+
+  editId = id;
+
+  document.getElementById("supplier_code").value = s.supplier_code || "";
+  document.getElementById("supplier_name").value = s.supplier_name || "";
+  document.getElementById("proprietor_name").value = s.proprietor_name || "";
+  document.getElementById("contact_person").value = s.contact_person || "";
+  document.getElementById("mobile_no").value = s.mobile_no || "";
+  document.getElementById("whatsapp_no").value = s.whatsapp_no || "";
+  document.getElementById("landline_no").value = s.landline_no || "";
+  document.getElementById("email").value = s.email || "";
+  document.getElementById("ntn_gst").value = s.ntn_gst || "";
+  document.getElementById("city").value = s.city || "";
+  document.getElementById("address").value = s.address || "";
+  document.getElementById("remarks").value = s.remarks || "";
+}
+
+async function deleteSupplier(id) {
+  if (!confirm("Delete this supplier?")) return;
+
+  const { error } = await db.from("suppliers").delete().eq("id", id);
+
+  if (error) {
+    alert("Delete error: " + error.message);
+    return;
+  }
+
+  loadSuppliers();
+}
+
+function clearForm() {
+  editId = null;
+
+  document.querySelectorAll(".form-grid input").forEach(input => input.value = "");
+  generateCode();
+}
+
+loadSuppliers();
+</script>
+
+</body>
+</html>
