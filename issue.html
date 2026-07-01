@@ -118,6 +118,7 @@ td input:focus,td select:focus{outline:2px solid #2563eb;background:#fff7ed}
       </thead>
       <tbody id="issueBody"></tbody>
     </table>
+    <datalist id="itemsList"></datalist>
   </div>
 </main>
 
@@ -131,10 +132,18 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let itemsList = [];
 
 async function loadItems() {
-  const { data } = await db.from("items").select("*");
+  const { data } = await db.from("items").select("*").order("item_name");
   itemsList = data || [];
-}
 
+  const list = document.getElementById("itemsList");
+  if (list) {
+    list.innerHTML = itemsList.map(item => `
+      <option value="${item.item_name}">
+        ${item.size || ""} - ${item.unit || ""}
+      </option>
+    `).join("");
+  }
+}
 function addRow() {
   const body = document.getElementById("issueBody");
   const tr = document.createElement("tr");
