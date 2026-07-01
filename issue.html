@@ -354,26 +354,26 @@ async function checkDuplicateBill() {
   const body = document.getElementById("purchaseBody");
   const tr = document.createElement("tr");
 
-  tr.innerHTML = `
-    <td><input type="text" class="date" onblur="formatDate(this)"></td>
-    <td><input class="bill_no"></td>
-    <td><input class="igp_no"></td>
-    <td>
-      <input type="hidden" class="item_code">
-      <input type="hidden" class="category">
-      <input class="item_name" onblur="findItem(this,'name')">
-    </td>
-    <td><input class="size" readonly></td>
-    <td><input type="number" class="quantity" oninput="calcRow(this)"></td>
-    <td><input class="unit" readonly></td>
-    <td><input type="number" class="unit_price" oninput="calcRow(this)"></td>
-    <td><input type="number" class="total_price" readonly></td>
-    <td><input class="supplier" list="supplierList"></td>
-    <td><input class="purchased_by"></td>
-    <td><input class="vehicle_no"></td>
-    <td><input class="remarks"></td>
-  `;
-
+tr.innerHTML = `
+  <td><input type="text" class="date" onblur="formatDate(this)"></td>
+  <td><input class="bill_no"></td>
+  <td><input class="purchased_by"></td>
+  <td>
+    <input type="hidden" class="item_code">
+    <input type="hidden" class="category">
+    <input type="hidden" class="store_type">
+    <input class="item_name" onblur="findItem(this, 'name')">
+  </td>
+  <td><input class="size" readonly></td>
+  <td><input class="quantity" type="number" oninput="calcRow(this)"></td>
+  <td><input class="unit" readonly></td>
+  <td><input class="unit_price" type="number"></td>
+  <td><input class="total_price" readonly></td>
+  <td><input class="supplier"></td>
+  <td><input class="vehicle_no"></td>
+  <td><input class="available_stock" readonly></td>
+  <td><input class="remarks"></td>
+`;
   body.appendChild(tr);
 
   setupExcelKeys();
@@ -458,7 +458,7 @@ setupExcelKeys();
 setupSupplierAutoComplete();
 setupAutoFormatText();
 
-function findItem(input, type) {
+async function findItem(input, type) {
   const row = input.closest("tr");
   const value = input.value.trim().toLowerCase();
 
@@ -501,6 +501,19 @@ function findItem(input, type) {
   row.querySelector(".item_name").value = item.item_name || "";
   row.querySelector(".size").value = item.size || "";
   row.querySelector(".unit").value = item.unit || "";
+  const { data: stock } = await db
+  .from("stock_transactions")
+  .select("quantity_in, quantity_out")
+  .eq("item_code", item.item_code);
+
+let balance = 0;
+
+(stock || []).forEach(r => {
+  balance += Number(r.quantity_in || 0);
+  balance -= Number(r.quantity_out || 0);
+});
+
+row.querySelector(".available_stock").value = balance;
 
   if (row.querySelector(".quantity").value || row.querySelector(".unit_price").value) {
     calcRow(row.querySelector(".quantity"));
