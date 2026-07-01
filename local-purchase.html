@@ -275,7 +275,7 @@ td input:focus {
 
     let itemsList = [];
     let isSaving = false;
-    
+    let suppliersList = [];
     let undoStack = [];
 
 function saveUndo() {
@@ -323,6 +323,11 @@ function validateRows() {
   return valid;
 }
 
+      async function loadSuppliers() {
+  const { data } = await db.from("suppliers").select("*").order("supplier_name");
+  suppliersList = data || [];
+}
+      
 async function checkDuplicateBill() {
   const bills = [...document.querySelectorAll(".bill_no")]
     .map(x => x.value.trim())
@@ -737,7 +742,7 @@ function setupSupplierAutoComplete() {
   const supplierList = document.getElementById("supplierList");
   if (!supplierList) return;
 
-  const suppliers = [...new Set(itemsList.map(x => x.supplier).filter(Boolean))];
+  const suppliers = suppliersList.map(s => s.supplier_name).filter(Boolean);
 
   supplierList.innerHTML = suppliers
     .map(s => `<option value="${s}"></option>`)
