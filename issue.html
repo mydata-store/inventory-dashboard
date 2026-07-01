@@ -404,37 +404,50 @@ function showItemSuggestions(input){
   currentSuggestBox = box;
 }
 
-function itemKeyMove(event, input){
-  if(!currentSuggestBox) return;
+function itemKeyMove(event, input) {
+  if (!currentSuggestBox) return;
 
   const rows = [...currentSuggestBox.querySelectorAll(".item-suggest-row")];
 
-  if(event.key === "ArrowDown"){
+  if (event.key === "ArrowDown") {
     event.preventDefault();
-    activeSuggestIndex = Math.min(activeSuggestIndex + 1, rows.length - 1);
-  } else if(event.key === "ArrowUp"){
+    activeSuggestIndex++;
+    if (activeSuggestIndex >= rows.length) activeSuggestIndex = 0;
+  }
+
+  else if (event.key === "ArrowUp") {
     event.preventDefault();
-    activeSuggestIndex = Math.max(activeSuggestIndex - 1, 0);
-  } else if(event.key === "Enter"){
+    activeSuggestIndex--;
+    if (activeSuggestIndex < 0) activeSuggestIndex = rows.length - 1;
+  }
+
+  else if (event.key === "Enter") {
     event.preventDefault();
-    if(activeSuggestIndex >= 0 && currentSuggestItems[activeSuggestIndex]){
+
+    if (activeSuggestIndex < 0) activeSuggestIndex = 0;
+
+    if (currentSuggestItems[activeSuggestIndex]) {
       selectSuggestedItem(input, currentSuggestItems[activeSuggestIndex]);
     }
     return;
-  } else if(event.key === "Escape"){
+  }
+
+  else if (event.key === "Escape") {
     closeItemSuggestions();
     return;
-  } else {
+  }
+
+  else {
     return;
   }
 
   rows.forEach(r => r.classList.remove("active"));
-  if(rows[activeSuggestIndex]){
+
+  if (rows[activeSuggestIndex]) {
     rows[activeSuggestIndex].classList.add("active");
-    rows[activeSuggestIndex].scrollIntoView({block:"nearest"});
+    rows[activeSuggestIndex].scrollIntoView({ block: "nearest" });
   }
 }
-
 async function selectSuggestedItem(input, item){
   const row = input.closest("tr");
 
