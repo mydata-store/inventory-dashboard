@@ -155,7 +155,11 @@ function addRow() {
     <td><input class="issue_no"></td>
     <td>
       <input type="hidden" class="item_code">
-      <input class="item_name" list="itemsList" onblur="findItem(this)"></td>
+      <td>
+<input class="item_name"
+       list="itemsList"
+       oninput="fillItem(this)">
+</td>
     <td><input class="size_in" readonly></td>
     <td><input type="number" class="quantity" min="0"></td>
     <td><input class="unit_in" readonly></td>
@@ -301,6 +305,30 @@ function formatDate(input) {
     }
 }
 
+function fillItem(input){
+
+    const row = input.closest("tr");
+
+    const item = itemsList.find(i =>
+        i.item_name &&
+        i.item_name.toLowerCase() === input.value.toLowerCase()
+    );
+
+if(!item) return;
+
+row.querySelector(".item_code").value = item.item_code || "";
+  
+    row.querySelector(".size_in").value = item.item_size || "";
+    row.querySelector(".unit_in").value = item.unit || "";
+
+    const available =
+        (item.opening_stock || 0) +
+        (item.purchase_qty || 0) -
+        (item.issue_qty || 0);
+
+    row.querySelector(".available_stock").value = available;
+}
+  
 document.addEventListener("DOMContentLoaded", async () => {
     await loadItems();
     clearRows();
