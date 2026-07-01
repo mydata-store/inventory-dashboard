@@ -577,7 +577,8 @@ saveBtn.disabled = true;
 saveBtn.innerText = "Saving...";
       const rows = document.querySelectorAll("#purchaseBody tr");
       const data = [];
-
+      const stockTransactions = [];
+      
       rows.forEach(row => {
         const itemName = row.querySelector(".item_name").value.trim();
         if (!itemName) return;
@@ -600,7 +601,36 @@ saveBtn.innerText = "Saving...";
           remarks: row.querySelector(".remarks").value
         });
       });
+      
+     const qty = Number(row.querySelector(".quantity").value || 0);
+const selectedItem = itemsList.find(x => x.item_code === row.querySelector(".item_code").value);
+const category = selectedItem?.category || "";
+const store_type = selectedItem?.store_type || "Inventory";
+const issue_method = selectedItem?.issue_method || "Manual";
+const freight = 0;
+      
+const transaction = {
+    transaction_date: row.querySelector(".date").value || null,
+    bill_no: row.querySelector(".bill_no").value,
+    item_code: row.querySelector(".item_code").value,
+    item_name: itemName,
+    size: row.querySelector(".size").value,
+    category: category,
+    store_type: store_type,
+    transaction_type: "Purchase",
+    quantity_in: qty,
+    quantity_out: 0,
+    unit: row.querySelector(".unit").value,
+    unit_rate: Number(row.querySelector(".unit_price").value || 0),
+    freight: freight,
+    supplier: row.querySelector(".supplier").value,
+    vehicle_no: row.querySelector(".vehicle_no").value,
+    purchased_by: row.querySelector(".purchased_by").value,
+    remarks: row.querySelector(".remarks").value
+};
 
+stockTransactions.push(transaction);
+      
      if (!data.length) {
     saveBtn.disabled = false;
     saveBtn.innerText = "Save All Rows";
@@ -609,17 +639,26 @@ saveBtn.innerText = "Saving...";
     return;
 }
 
-      const { error } = await db.from("purchases").insert(data);
+ const { error } = await db.from("purchases").insert(data);
 
-     if (error) {
-    saveBtn.disabled = false;
-    saveBtn.innerText = "Save All Rows";
-       isSaving = false;
-    alert("Save error: " + error.message);
-    return;
-       
+if (error) {
+  saveBtn.disabled = false;
+  saveBtn.innerText = "Save All Rows";
+  isSaving = false;
+  alert("Save error: " + error.message);
+  return;
 }
-saveBtn.disabled = false;
+
+const { error: stockError } = await db
+  .from("stock_transactions")
+  .insert(stockTransactions);
+
+if (stockError) {
+  alert("Stock transaction error: " + stockError.message);
+  return;
+}
+
+      saveBtn.disabled = false;
 saveBtn.innerText = "Save All Rows";
     isSaving = false;
     
