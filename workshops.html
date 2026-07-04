@@ -4,8 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Workshop / Party Master</title>
+
   <link rel="stylesheet" href="public/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .main{padding:28px;background:#f5f6fb;min-height:100vh}
+    .page-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .page-top h1{font-size:30px;margin:0;color:#07142e}
+    .page-top p{margin:5px 0 0;color:#6b7280}
+    .search-box{width:280px;padding:13px 18px;border:1px solid #d9dee8;border-radius:10px}
+
+    .card{background:white;border-radius:16px;padding:22px;margin-bottom:22px;box-shadow:0 8px 20px rgba(0,0,0,.05)}
+    .card h2{margin:0 0 16px;font-size:22px;color:#07142e}
+
+    .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .form-grid input,.form-grid select{
+      padding:13px 14px;border:1px solid #cfd6e1;border-radius:9px;font-size:14px;
+    }
+
+    .btn-row{display:flex;gap:10px;margin-top:16px}
+    button{border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer}
+    .save{background:#f5a316;color:white}
+    .clear{background:#edf0f5;color:#111827}
+    .export{background:#2563eb;color:white}
+    .edit{background:#2563eb;color:white;padding:7px 16px}
+    .delete{background:#ef4444;color:white;padding:7px 16px}
+
+    table{width:100%;border-collapse:collapse}
+    th{background:#f5a316;color:white;text-align:left;padding:13px}
+    td{padding:13px;border-bottom:1px solid #e5e7eb}
+    th:first-child{border-radius:10px 0 0 0}
+    th:last-child{border-radius:0 10px 0 0}
+
+    @media(max-width:1000px){
+      .form-grid{grid-template-columns:repeat(2,1fr)}
+      .page-top{display:block}
+      .search-box{width:100%;margin-top:12px}
+    }
+  </style>
 </head>
 
 <body>
@@ -22,7 +59,7 @@
       <a href="index.html">⌂ Dashboard</a>
       <a href="items.html">▣ Items</a>
       <a href="purchase.html">🛒 Purchase Entry</a>
-      <a href="#">↩ Issue Entry</a>
+      <a href="issue.html">↩ Issue Entry</a>
       <a href="#">▤ Stock Ledger</a>
       <a href="#">▥ Reports</a>
       <a href="suppliers.html">▰ Suppliers</a>
@@ -38,29 +75,31 @@
   </aside>
 
   <main class="main">
-    <div class="page-header">
+    <div class="page-top">
       <div>
         <h1>Workshop / Party Master</h1>
-        <p>Manage repair workshops, vendors, calibration labs and sample parties</p>
+        <p>Manage repair workshops, outside parties, calibration labs and vendors</p>
       </div>
-      <input id="searchBox" placeholder="Search workshop, mobile, city..." oninput="renderWorkshops()" />
+      <input class="search-box" id="searchBox" placeholder="Search workshop, mobile, city..." oninput="renderWorkshops()" />
     </div>
 
-    <section class="form-card">
+    <section class="card">
       <h2>Add New Workshop / Party</h2>
 
-      <div class="item-form">
+      <div class="form-grid">
         <input id="workshop_code" placeholder="Workshop Code" readonly />
         <input id="workshop_name" placeholder="Workshop / Party Name *" />
         <input id="contact_person" placeholder="Contact Person" />
         <input id="mobile_no" placeholder="Mobile No." />
 
+        <input id="city" placeholder="City" />
         <input id="address" placeholder="Address" />
-        <input id="specialization" placeholder="Specialization e.g. Lathe, Welding, Repair" />
+        <input id="specialization" placeholder="Specialization e.g. Lathe, Welding" />
         <select id="status">
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
         </select>
+
         <input id="remarks" placeholder="Remarks" />
       </div>
 
@@ -71,7 +110,7 @@
       </div>
     </section>
 
-    <section class="table-card">
+    <section class="card">
       <table>
         <thead>
           <tr>
@@ -79,6 +118,7 @@
             <th>Workshop / Party Name</th>
             <th>Contact Person</th>
             <th>Mobile</th>
+            <th>City</th>
             <th>Specialization</th>
             <th>Address</th>
             <th>Status</th>
@@ -92,7 +132,6 @@
   </main>
 
 <script>
-  // Replace these two values with same Supabase URL and anon key from your existing pages
   const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
   const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -100,13 +139,16 @@
   let workshops = [];
   let editId = null;
 
-  document.addEventListener("DOMContentLoaded", async () => {
-    await loadWorkshops();
-  });
+  document.addEventListener("DOMContentLoaded", loadWorkshops);
 
   async function loadWorkshops(){
     const { data, error } = await db.from("workshops").select("*").order("id", { ascending:true });
-    if(error){ alert("Load error: " + error.message); return; }
+
+    if(error){
+      alert("Load error: " + error.message);
+      return;
+    }
+
     workshops = data || [];
     generateCode();
     renderWorkshops();
@@ -119,27 +161,36 @@
 
   async function saveWorkshop(){
     const workshop_name = document.getElementById("workshop_name").value.trim();
-    if(!workshop_name){ alert("Workshop / Party Name is required."); return; }
+
+    if(!workshop_name){
+      alert("Workshop / Party Name is required.");
+      return;
+    }
 
     const record = {
       workshop_code: document.getElementById("workshop_code").value,
-      workshop_name,
+      workshop_name: workshop_name,
       contact_person: document.getElementById("contact_person").value,
       mobile_no: document.getElementById("mobile_no").value,
+      city: document.getElementById("city").value,
       address: document.getElementById("address").value,
       specialization: document.getElementById("specialization").value,
-      remarks: document.getElementById("remarks").value,
-      status: document.getElementById("status").value
+      status: document.getElementById("status").value,
+      remarks: document.getElementById("remarks").value
     };
 
     let result;
+
     if(editId){
       result = await db.from("workshops").update(record).eq("id", editId);
     } else {
       result = await db.from("workshops").insert([record]);
     }
 
-    if(result.error){ alert("Save error: " + result.error.message); return; }
+    if(result.error){
+      alert("Save error: " + result.error.message);
+      return;
+    }
 
     alert("Workshop saved successfully!");
     clearForm();
@@ -156,7 +207,7 @@
         (w.workshop_code || "").toLowerCase().includes(q) ||
         (w.workshop_name || "").toLowerCase().includes(q) ||
         (w.mobile_no || "").toLowerCase().includes(q) ||
-        (w.address || "").toLowerCase().includes(q) ||
+        (w.city || "").toLowerCase().includes(q) ||
         (w.specialization || "").toLowerCase().includes(q)
       )
       .forEach(w => {
@@ -166,6 +217,7 @@
             <td><b>${w.workshop_name || ""}</b></td>
             <td>${w.contact_person || ""}</td>
             <td>${w.mobile_no || ""}</td>
+            <td>${w.city || ""}</td>
             <td>${w.specialization || ""}</td>
             <td>${w.address || ""}</td>
             <td>${w.status || ""}</td>
@@ -184,38 +236,56 @@
     if(!w) return;
 
     editId = id;
+
     document.getElementById("workshop_code").value = w.workshop_code || "";
     document.getElementById("workshop_name").value = w.workshop_name || "";
     document.getElementById("contact_person").value = w.contact_person || "";
     document.getElementById("mobile_no").value = w.mobile_no || "";
+    document.getElementById("city").value = w.city || "";
     document.getElementById("address").value = w.address || "";
     document.getElementById("specialization").value = w.specialization || "";
-    document.getElementById("remarks").value = w.remarks || "";
     document.getElementById("status").value = w.status || "Active";
+    document.getElementById("remarks").value = w.remarks || "";
   }
 
   async function deleteWorkshop(id){
     if(!confirm("Delete this workshop?")) return;
+
     const { error } = await db.from("workshops").delete().eq("id", id);
-    if(error){ alert("Delete error: " + error.message); return; }
+
+    if(error){
+      alert("Delete error: " + error.message);
+      return;
+    }
+
     await loadWorkshops();
   }
 
   function clearForm(){
     editId = null;
-    ["workshop_name","contact_person","mobile_no","address","specialization","remarks"].forEach(id => {
+
+    ["workshop_name","contact_person","mobile_no","city","address","specialization","remarks"].forEach(id => {
       document.getElementById(id).value = "";
     });
+
     document.getElementById("status").value = "Active";
     generateCode();
   }
 
   function exportExcel(){
-    let csv = "Code,Workshop Name,Contact Person,Mobile,Specialization,Address,Status,Remarks\n";
+    let csv = "Code,Workshop Name,Contact Person,Mobile,City,Specialization,Address,Status,Remarks\n";
+
     workshops.forEach(w => {
       csv += [
-        w.workshop_code, w.workshop_name, w.contact_person, w.mobile_no,
-        w.specialization, w.address, w.status, w.remarks
+        w.workshop_code,
+        w.workshop_name,
+        w.contact_person,
+        w.mobile_no,
+        w.city,
+        w.specialization,
+        w.address,
+        w.status,
+        w.remarks
       ].map(v => `"${String(v || "").replaceAll('"','""')}"`).join(",") + "\n";
     });
 
