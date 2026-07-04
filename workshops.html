@@ -1,1 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suppliers</title>
+  <link rel="stylesheet" href="public/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
 
+  .page-header h1 {
+    font-size: 32px;
+    color: #111827;
+  }
+
+  #searchBox {
+    width: 280px;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    outline: none;
+  }
+
+  .form-card,
+  .table-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  }
+
+  .form-card h2 {
+    margin-bottom: 16px;
+    font-size: 22px;
+  }
+
+  .item-form {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+
+  .item-form input {
+    height: 42px;
+    padding: 0 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+  }
+tbody tr:nth-child(even){
+    background:#fafafa;
+}
+
+tbody tr:hover{
+    background:#fff8ec;
+}
+  .save,
+  .clear {
+    margin-top: 16px;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .save {
+    background: #f6a11a;
+    color: white;
+  }
+
+  .clear {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    background: #f6a11a;
+    color: white;
+    padding: 12px;
+    text-align: left;
+  }
+th:last-child,
+td:last-child{
+    text-align:center;
+}
+  td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+td:last-child{
+    white-space:nowrap;
+}
+td:last-child{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:8px;
+}
+  
+  table th:first-child {
+    border-top-left-radius: 12px;
+  }
+
+  table th:last-child {
+    border-top-right-radius: 12px;
+  }
+  
+.action-btn{
+    border:none;
+    border-radius:8px;
+    padding:5px 10px;
+    font-size:11px;
+    font-weight:600;
+    cursor:pointer;
+    color:#fff;
+    margin:2px;
+    min-width:60px;
+}  
+  
+.edit-btn{
+    background:#2563eb;
+    margin-right:6px;
+}
+
+.edit-btn:hover{
+    background:#1d4ed8;
+    transform:translateY(-2px);
+    box-shadow:0 4px 10px rgba(37,99,235,.3);
+}
+
+.delete-btn{
+    background:#ef4444;
+}
+
+.delete-btn:hover{
+    background:#dc2626;
+    transform:translateY(-2px);
+    box-shadow:0 4px 10px rgba(239,68,68,.3);
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">◆</div>
+    <div>
+      <h2>Inventory Store</h2>
+      <p>Management System</p>
+    </div>
+  </div>
+
+  <nav class="nav">
+   
+    <a href="index.html">🏠 Dashboard</a>
+    <a href="items.html">📦 Items</a>
+    <a href="local-purchase.html">🛒 Purchase Entry</a>
+    <a href="#">↩ Issue Entry</a>
+    <a href="#">📋 Stock Ledger</a>
+    <a href="#">📊 Reports</a>
+    <a class="active" href="suppliers.html">🏢 Suppliers</a>
+    <a href="#">⚙ Settings</a>
+
+  </nav>
+<div class="profile-card">
+  <img src="public/waqas.jpg.png" />
+  <h3>Muhammad Waqas</h3>
+  <p><span></span> Online</p>
+</div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Suppliers Master</h1>
+    <input id="searchBox" placeholder="Search supplier, phone, city..." oninput="renderSuppliers()">
+  </div>
+
+  <div class="form-card">
+    <h2>Add New Supplier</h2>
+
+    <div class="item-form">
+      <input id="supplier_code" placeholder="Supplier Code" readonly>
+      <input id="supplier_name" placeholder="Supplier Name">
+      <input id="proprietor_name" placeholder="Proprietor Name">
+      <input id="contact_person" placeholder="Contact Person">
+      <input id="mobile_no" placeholder="Mobile No.">
+      <input id="whatsapp_no" placeholder="WhatsApp No.">
+      <input id="landline_no" placeholder="Landline No.">
+      <input id="email" placeholder="Email">
+      <input id="ntn_gst" placeholder="NTN / GST No.">
+      <input id="city" placeholder="City">
+      <input id="address" placeholder="Address">
+      <input id="remarks" placeholder="Remarks">
+    </div>
+
+    <button class="save" onclick="saveSupplier()">Save Supplier</button>
+    <button class="clear" onclick="clearForm()">Clear</button>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Supplier Name</th>
+          <th>Proprietor</th>
+          <th>Mobile</th>
+          <th>City</th>
+          <th>Address</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="supplierBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let suppliers = [];
+let editId = null;
+
+async function loadSuppliers() {
+  const { data, error } = await db.from("suppliers").select("*").order("id", { ascending: true });
+
+  if (error) {
+    alert("Load error: " + error.message);
+    return;
+  }
+
+  suppliers = data || [];
+  generateCode();
+  renderSuppliers();
+}
+
+function generateCode() {
+  const next = suppliers.length + 1;
+  document.getElementById("supplier_code").value = "SUP-" + String(next).padStart(4, "0");
+}
+
+async function saveSupplier() {
+  const supplier_name = document.getElementById("supplier_name").value.trim();
+
+  if (!supplier_name) {
+    alert("Supplier Name is required.");
+    return;
+  }
+
+  const record = {
+    supplier_code: document.getElementById("supplier_code").value,
+    supplier_name,
+    proprietor_name: document.getElementById("proprietor_name").value,
+    contact_person: document.getElementById("contact_person").value,
+    mobile_no: document.getElementById("mobile_no").value,
+    whatsapp_no: document.getElementById("whatsapp_no").value,
+    landline_no: document.getElementById("landline_no").value,
+    email: document.getElementById("email").value,
+    ntn_gst: document.getElementById("ntn_gst").value,
+    city: document.getElementById("city").value,
+    address: document.getElementById("address").value,
+    remarks: document.getElementById("remarks").value,
+    status: "Active"
+  };
+
+  let result;
+
+  if (editId) {
+    result = await db.from("suppliers").update(record).eq("id", editId);
+  } else {
+    result = await db.from("suppliers").insert([record]);
+  }
+
+  if (result.error) {
+    alert("Save error: " + result.error.message);
+    return;
+  }
+  
+alert("Supplier saved successfully.");
+location.reload();
+  }
+
+function renderSuppliers() {
+  const search = document.getElementById("searchBox").value.toLowerCase();
+  const body = document.getElementById("supplierBody");
+
+  const filtered = suppliers.filter(s =>
+    (s.supplier_name || "").toLowerCase().includes(search) ||
+    (s.mobile_no || "").toLowerCase().includes(search) ||
+    (s.city || "").toLowerCase().includes(search)
+  );
+
+  body.innerHTML = filtered.map(s => `
+    <tr>
+      <td>${s.supplier_code || ""}</td>
+      <td>${s.supplier_name || ""}</td>
+      <td>${s.proprietor_name || ""}</td>
+      <td>${s.mobile_no || ""}</td>
+      <td>${s.city || ""}</td>
+      <td>${s.address || ""}</td>
+   <td>
+    <button class="action-btn edit-btn" onclick="editSupplier(${s.id})">Edit</button>
+    <button class="action-btn delete-btn" onclick="deleteSupplier(${s.id})">Delete</button>
+</td>
+</tr>
+  `).join("");
+}
+
+function editSupplier(id) {
+  const s = suppliers.find(x => x.id === id);
+  if (!s) return;
+
+  editId = id;
+
+  document.getElementById("supplier_code").value = s.supplier_code || "";
+  document.getElementById("supplier_name").value = s.supplier_name || "";
+  document.getElementById("proprietor_name").value = s.proprietor_name || "";
+  document.getElementById("contact_person").value = s.contact_person || "";
+  document.getElementById("mobile_no").value = s.mobile_no || "";
+  document.getElementById("whatsapp_no").value = s.whatsapp_no || "";
+  document.getElementById("landline_no").value = s.landline_no || "";
+  document.getElementById("email").value = s.email || "";
+  document.getElementById("ntn_gst").value = s.ntn_gst || "";
+  document.getElementById("city").value = s.city || "";
+  document.getElementById("address").value = s.address || "";
+  document.getElementById("remarks").value = s.remarks || "";
+}
+
+async function deleteSupplier(id) {
+  if (!confirm("Delete this supplier?")) return;
+
+  const { error } = await db.from("suppliers").delete().eq("id", id);
+
+  if (error) {
+    alert("Delete error: " + error.message);
+    return;
+  }
+
+  loadSuppliers();
+}
+
+function clearForm() {
+  editId = null;
+
+  document.querySelectorAll(".form-grid input").forEach(input => input.value = "");
+  generateCode();
+}
+
+loadSuppliers();
+</script>
+
+</body>
+</html>
