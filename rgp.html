@@ -11,29 +11,46 @@
 .page-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .page-top h1{font-size:30px;margin:0;color:#07142e}
 .page-top p{margin:5px 0 0;color:#6b7280}
-.search-box{width:310px;padding:13px 18px;border:1px solid #d9dee8;border-radius:10px}
+.search-box{width:360px;padding:13px 18px;border:1px solid #d9dee8;border-radius:10px}
+
 .card{background:white;border-radius:16px;padding:22px;margin-bottom:22px;box-shadow:0 8px 20px rgba(0,0,0,.05)}
-.card h2{margin:0 0 16px;font-size:22px;color:#07142e}
-.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-input,select,textarea{padding:13px 14px;border:1px solid #cfd6e1;border-radius:9px;font-size:14px;width:100%}
-textarea{resize:none}
-.btn-row{display:flex;gap:10px;margin-top:16px}
-button{border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer}
-.save{background:#f5a316;color:white}
-.clear{background:#edf0f5;color:#111827}
-.export{background:#2563eb;color:white}
-.delete{background:#ef4444;color:white}
-.print{background:#16a34a;color:white}
-table{width:100%;border-collapse:collapse}
-th{background:#f5a316;color:white;text-align:left;padding:12px}
+.section-title{font-size:17px;font-weight:800;margin:0 0 18px;border-bottom:1px solid #e5e7eb;padding-bottom:12px}
+.section-title span{border-bottom:4px solid #f5a316;padding-bottom:12px}
+
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.form-group label{font-weight:700;font-size:13px;margin-bottom:6px;display:block}
+.form-group input,.form-group select{width:100%;padding:12px;border:1px solid #cfd6e1;border-radius:8px;font-size:14px}
+
+.wide-2{grid-column:span 2}
+.wide-3{grid-column:span 3}
+
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th{background:#111827;color:white;text-align:left;padding:12px;font-size:13px}
 td{padding:10px;border-bottom:1px solid #e5e7eb}
-.item-table input,.item-table select{padding:9px}
-.small-btn{padding:8px 12px}
-@media(max-width:1000px){.form-grid{grid-template-columns:repeat(2,1fr)}.page-top{display:block}.search-box{width:100%;margin-top:12px}}
+td input,td select{width:100%;padding:9px;border:1px solid #cfd6e1;border-radius:7px}
+
+.btn-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+button{border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer}
+.save{background:#16a34a;color:white}
+.clear{background:#f5a316;color:white}
+.print{background:#2563eb;color:white}
+.export{background:#7c3aed;color:white}
+.delete{background:#ef4444;color:white}
+.add{background:white;color:#2563eb;border:1px dashed #2563eb}
+.dark{background:#111827;color:white}
+
+.filter-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+.badge{background:#f5a316;color:#111;padding:5px 10px;border-radius:6px;font-weight:700}
+
+@media(max-width:1100px){
+  .form-grid,.filter-grid{grid-template-columns:repeat(2,1fr)}
+  .wide-2,.wide-3{grid-column:span 2}
+}
 </style>
 </head>
 
 <body>
+
 <aside class="sidebar">
   <div class="brand">
     <div class="brand-icon">◆</div>
@@ -61,54 +78,113 @@ td{padding:10px;border-bottom:1px solid #e5e7eb}
 </aside>
 
 <main class="main">
+
   <div class="page-top">
     <div>
-      <h1>RGP Entry</h1>
-      <p>Returnable gate pass for workshop repair material</p>
+      <h1>RGP Entry 🧾</h1>
+      <p>Returnable Gate Pass for workshop repair material</p>
     </div>
-    <input class="search-box" id="searchBox" placeholder="Search RGP, department, item, workshop..." oninput="renderRGP()">
+    <input class="search-box" id="topSearch" placeholder="Search RGP No, Department, Item, Workshop..." oninput="renderRGP()">
   </div>
 
   <section class="card">
-    <h2>RGP Header</h2>
+    <h2 class="section-title"><span>RETURNABLE GATE PASS DETAILS</span></h2>
 
     <div class="form-grid">
-      <input id="rgp_no" placeholder="RGP No. *">
-      <input id="rgp_date" type="date">
-      <input id="due_date" type="date">
-      <input id="department" placeholder="Department">
+      <div class="form-group">
+        <label>RGP No. *</label>
+        <input id="rgp_no" placeholder="Enter RGP No Manual">
+      </div>
 
-      <select id="workshop"></select>
-      <input id="carrier_name" placeholder="Carrier Name">
-      <input id="authorized_by" placeholder="Authorized By">
-      <input id="received_checked_by" placeholder="Received & Checked By">
+      <div class="form-group">
+        <label>RGP Date *</label>
+        <input id="rgp_date" placeholder="25-6" onblur="formatDateField(this)">
+      </div>
 
-      <input id="purpose" placeholder="Purpose">
-      <input id="repair_bill_no" placeholder="Bill of Repaired Material">
-      <input id="repair_bill_date" type="date">
-      <input id="repair_amount" type="number" placeholder="Repair Amount">
+      <div class="form-group">
+        <label>Due Date *</label>
+        <input id="due_date" placeholder="25-6" onblur="formatDateField(this)">
+      </div>
 
-      <select id="status">
-        <option>Pending</option>
-        <option>Partial Return</option>
-        <option>Completed</option>
-        <option>Cancelled</option>
-      </select>
+      <div class="form-group">
+        <label>Department *</label>
+        <select id="department">
+          <option value="">Select Department</option>
+          <option>Mechanical</option>
+          <option>Electrical</option>
+          <option>Production</option>
+          <option>Store</option>
+          <option>Admin</option>
+          <option>Quality</option>
+        </select>
+      </div>
 
-      <input id="remarks" placeholder="Remarks">
+      <div class="form-group">
+        <label>Status *</label>
+        <select id="status">
+          <option>Pending</option>
+          <option>Partial Return</option>
+          <option>Completed</option>
+          <option>Cancelled</option>
+        </select>
+      </div>
+
+      <div class="form-group wide-2">
+        <label>Workshop / Party *</label>
+        <select id="workshop"></select>
+      </div>
+
+      <div class="form-group wide-2">
+        <label>Carrier Name *</label>
+        <input id="carrier_name" placeholder="Enter Carrier Name">
+      </div>
+
+      <div class="form-group wide-2">
+        <label>Authorized By *</label>
+        <input id="authorized_by" placeholder="Enter Authorized Person Name">
+      </div>
+
+      <div class="form-group wide-2">
+        <label>Purpose / Work Detail *</label>
+        <input id="purpose" placeholder="Enter purpose for sending material to workshop">
+      </div>
+
+      <div class="form-group wide-2">
+        <label>Received & Checked By *</label>
+        <input id="received_checked_by" placeholder="Enter Receiver Name">
+      </div>
+
+      <div class="form-group wide-2">
+        <label>Bill of Repaired Material</label>
+        <input id="repair_bill_no" placeholder="Workshop Bill / Invoice No">
+      </div>
+
+      <div class="form-group">
+        <label>Bill Date</label>
+        <input id="repair_bill_date" placeholder="25-6" onblur="formatDateField(this)">
+      </div>
+
+      <div class="form-group">
+        <label>Repair Amount (PKR)</label>
+        <input id="repair_amount" type="number" placeholder="Enter Amount">
+      </div>
+
+      <div class="form-group wide-2">
+        <label>Remarks</label>
+        <input id="remarks" placeholder="Enter remarks">
+      </div>
     </div>
-  </section>
 
-  <section class="card">
-    <h2>Material Details</h2>
+    <h2 class="section-title" style="margin-top:28px"><span>MATERIAL DETAILS</span> <small>(Add multiple items)</small></h2>
 
-    <table class="item-table">
+    <table>
       <thead>
         <tr>
-          <th>Item</th>
+          <th>Sr</th>
+          <th>Item *</th>
           <th>Size</th>
           <th>Unit</th>
-          <th>Qty</th>
+          <th>Qty Sent *</th>
           <th>Condition</th>
           <th>Remarks</th>
           <th>Action</th>
@@ -118,24 +194,49 @@ td{padding:10px;border-bottom:1px solid #e5e7eb}
     </table>
 
     <div class="btn-row">
-      <button class="export" onclick="addItemRow()">+ Add Item</button>
-      <button class="save" onclick="saveRGP()">Save RGP</button>
-      <button class="clear" onclick="clearForm()">Clear</button>
-      <button class="export" onclick="exportExcel()">Export Excel</button>
+      <button class="add" onclick="addItemRow()">+ Add Item</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="save" onclick="saveRGP()">💾 Save RGP</button>
+      <button class="clear" onclick="clearForm()">⟳ Clear</button>
+      <button class="print" onclick="printLast()">🖨 Print RGP</button>
+      <button class="export" onclick="exportExcel()">📄 Export Excel</button>
     </div>
   </section>
 
   <section class="card">
+    <h2 class="section-title"><span>SEARCH & FILTER RGP</span></h2>
+
+    <div class="filter-grid">
+      <input id="f_rgp" placeholder="RGP No" oninput="renderRGP()">
+      <select id="f_dept" onchange="renderRGP()">
+        <option value="">All Departments</option>
+        <option>Mechanical</option><option>Electrical</option><option>Production</option>
+        <option>Store</option><option>Admin</option><option>Quality</option>
+      </select>
+      <select id="f_item" onchange="renderRGP()"></select>
+      <select id="f_workshop" onchange="renderRGP()"></select>
+      <input id="f_carrier" placeholder="Carrier Name" oninput="renderRGP()">
+      <select id="f_status" onchange="renderRGP()">
+        <option value="">All Status</option>
+        <option>Pending</option><option>Partial Return</option><option>Completed</option><option>Cancelled</option>
+      </select>
+      <button class="dark" onclick="clearFilters()">Clear</button>
+    </div>
+
+    <h2 class="section-title" style="margin-top:28px"><span>RGP LIST</span></h2>
+
     <table>
       <thead>
         <tr>
           <th>RGP No</th>
-          <th>Date</th>
+          <th>RGP Date</th>
           <th>Due Date</th>
           <th>Department</th>
-          <th>Workshop</th>
+          <th>Workshop / Party</th>
           <th>Carrier</th>
-          <th>Purpose</th>
+          <th>Items</th>
           <th>Status</th>
           <th>Action</th>
         </tr>
@@ -143,6 +244,7 @@ td{padding:10px;border-bottom:1px solid #e5e7eb}
       <tbody id="rgpBody"></tbody>
     </table>
   </section>
+
 </main>
 
 <script>
@@ -153,53 +255,98 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let workshops = [];
 let items = [];
 let rgps = [];
+let lastSavedId = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  document.getElementById("rgp_date").valueAsDate = new Date();
+  document.getElementById("rgp_date").value = todayDisplay();
   await loadMasters();
   await loadRGP();
   addItemRow();
 });
 
+function todayDisplay(){
+  const d = new Date();
+  const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return String(d.getDate()).padStart(2,"0") + "-" + m[d.getMonth()] + "-" + String(d.getFullYear()).slice(2);
+}
+
+function formatDateField(el){
+  if(!el.value.trim()) return;
+  const v = el.value.trim().replaceAll("/","-");
+  const p = v.split("-");
+  if(p.length < 2) return;
+
+  let day = Number(p[0]);
+  let month = Number(p[1]);
+  let year = p[2] ? Number(p[2]) : new Date().getFullYear();
+
+  if(year < 100) year = 2000 + year;
+  if(!day || !month || month < 1 || month > 12) return;
+
+  const mons = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  el.value = String(day).padStart(2,"0") + "-" + mons[month-1] + "-" + String(year).slice(2);
+}
+
+function toISO(v){
+  if(!v) return null;
+  const mons = {Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+  const p = v.split("-");
+  if(p.length !== 3) return null;
+  return "20" + p[2] + "-" + mons[p[1]] + "-" + p[0].padStart(2,"0");
+}
+
 async function loadMasters(){
   const w = await db.from("workshops").select("*").order("workshop_name");
   workshops = w.data || [];
 
-  document.getElementById("workshop").innerHTML =
-    `<option value="">Select Workshop / Party</option>` +
-    workshops.map(x => `<option value="${x.id}" data-name="${x.workshop_name}">${x.workshop_name}</option>`).join("");
+  const workshopOptions = `<option value="">Select Workshop / Party</option>` +
+    workshops.map(x=>`<option value="${x.id}" data-name="${x.workshop_name}">${x.workshop_name}</option>`).join("");
+
+  document.getElementById("workshop").innerHTML = workshopOptions;
+  document.getElementById("f_workshop").innerHTML = `<option value="">All Workshops</option>` +
+    workshops.map(x=>`<option>${x.workshop_name}</option>`).join("");
 
   const i = await db.from("items").select("*").order("item_name");
   items = i.data || [];
-}
 
-async function loadRGP(){
-  const {data,error} = await db.from("rgp_master").select("*").order("id",{ascending:false});
-  if(error){ alert("Load error: " + error.message); return; }
-  rgps = data || [];
-  renderRGP();
+  document.getElementById("f_item").innerHTML = `<option value="">All Items</option>` +
+    items.map(x=>`<option>${x.item_name || x.name || ""}</option>`).join("");
 }
 
 function itemOptions(){
-  return `<option value="">Select Item</option>` + items.map(i =>
-    `<option value="${i.id}" data-name="${i.item_name || ""}" data-size="${i.size || ""}" data-unit="${i.unit || ""}">
-      ${i.item_name || ""}
-    </option>`
-  ).join("");
+  return `<option value="">Select Item</option>` + items.map(i=>{
+    const name = i.item_name || i.name || "";
+    return `<option value="${i.id}" data-name="${name}" data-size="${i.size || ""}" data-unit="${i.unit || ""}">${name}</option>`;
+  }).join("");
 }
 
 function addItemRow(){
+  const body = document.getElementById("itemBody");
   const tr = document.createElement("tr");
   tr.innerHTML = `
+    <td class="sr"></td>
     <td><select onchange="fillItem(this)">${itemOptions()}</select></td>
-    <td><input class="size"></td>
-    <td><input class="unit"></td>
-    <td><input class="qty" type="number"></td>
-    <td><input class="condition" placeholder="Used / Damaged / OK"></td>
-    <td><input class="item_remarks"></td>
-    <td><button class="delete small-btn" onclick="this.closest('tr').remove()">X</button></td>
+    <td><input class="size" placeholder="Auto"></td>
+    <td><input class="unit" placeholder="Auto"></td>
+    <td><input class="qty" type="number" placeholder="Qty"></td>
+    <td>
+      <select class="condition">
+        <option value="">Select Condition</option>
+        <option>Used</option>
+        <option>Damaged</option>
+        <option>OK</option>
+        <option>Repair</option>
+      </select>
+    </td>
+    <td><input class="item_remarks" placeholder="Item Remarks"></td>
+    <td><button class="delete" onclick="this.closest('tr').remove(); refreshSr();">🗑</button></td>
   `;
-  document.getElementById("itemBody").appendChild(tr);
+  body.appendChild(tr);
+  refreshSr();
+}
+
+function refreshSr(){
+  document.querySelectorAll("#itemBody tr").forEach((tr,i)=>tr.querySelector(".sr").innerText = i+1);
 }
 
 function fillItem(sel){
@@ -211,24 +358,24 @@ function fillItem(sel){
 
 async function saveRGP(){
   const rgp_no = document.getElementById("rgp_no").value.trim();
-  if(!rgp_no){ alert("RGP No. is required"); return; }
+  if(!rgp_no){ alert("RGP No is required"); return; }
 
   const wSel = document.getElementById("workshop");
   const wOpt = wSel.options[wSel.selectedIndex];
 
   const master = {
     rgp_no,
-    rgp_date: document.getElementById("rgp_date").value,
-    due_date: document.getElementById("due_date").value || null,
+    rgp_date: toISO(document.getElementById("rgp_date").value),
+    due_date: toISO(document.getElementById("due_date").value),
     department: document.getElementById("department").value,
     workshop_id: wSel.value || null,
-    workshop_name: wOpt ? wOpt.dataset.name || "" : "",
+    workshop_name: wOpt ? (wOpt.dataset.name || "") : "",
     carrier_name: document.getElementById("carrier_name").value,
     authorized_by: document.getElementById("authorized_by").value,
     purpose: document.getElementById("purpose").value,
     received_checked_by: document.getElementById("received_checked_by").value,
     repair_bill_no: document.getElementById("repair_bill_no").value,
-    repair_bill_date: document.getElementById("repair_bill_date").value || null,
+    repair_bill_date: toISO(document.getElementById("repair_bill_date").value),
     repair_amount: document.getElementById("repair_amount").value || 0,
     remarks: document.getElementById("remarks").value,
     status: document.getElementById("status").value
@@ -237,7 +384,7 @@ async function saveRGP(){
   const {data,error} = await db.from("rgp_master").insert([master]).select().single();
   if(error){ alert("Save error: " + error.message); return; }
 
-  const rows = [...document.querySelectorAll("#itemBody tr")].map(tr => {
+  const rows = [...document.querySelectorAll("#itemBody tr")].map(tr=>{
     const sel = tr.querySelector("select");
     const opt = sel.options[sel.selectedIndex];
     return {
@@ -250,68 +397,120 @@ async function saveRGP(){
       item_condition: tr.querySelector(".condition").value,
       item_remarks: tr.querySelector(".item_remarks").value
     };
-  }).filter(x => x.item_name);
+  }).filter(x=>x.item_name);
 
   if(rows.length){
     const itemSave = await db.from("rgp_items").insert(rows);
-    if(itemSave.error){ alert("Items save error: " + itemSave.error.message); return; }
+    if(itemSave.error){ alert("Item save error: " + itemSave.error.message); return; }
   }
 
+  lastSavedId = data.id;
   alert("RGP saved successfully!");
   clearForm();
   await loadRGP();
 }
 
+async function loadRGP(){
+  const {data,error} = await db.from("rgp_master").select("*").order("id",{ascending:false});
+  if(error){ alert("Load error: " + error.message); return; }
+
+  rgps = data || [];
+  renderRGP();
+}
+
 function renderRGP(){
-  const q = document.getElementById("searchBox").value.toLowerCase();
+  const q = (document.getElementById("topSearch").value || "").toLowerCase();
+  const fr = (document.getElementById("f_rgp").value || "").toLowerCase();
+  const fd = document.getElementById("f_dept").value;
+  const fi = document.getElementById("f_item").value.toLowerCase();
+  const fw = document.getElementById("f_workshop").value;
+  const fc = (document.getElementById("f_carrier").value || "").toLowerCase();
+  const fs = document.getElementById("f_status").value;
+
   const body = document.getElementById("rgpBody");
   body.innerHTML = "";
 
-  rgps.filter(r =>
-    (r.rgp_no||"").toLowerCase().includes(q) ||
-    (r.department||"").toLowerCase().includes(q) ||
-    (r.workshop_name||"").toLowerCase().includes(q) ||
-    (r.purpose||"").toLowerCase().includes(q) ||
-    (r.carrier_name||"").toLowerCase().includes(q)
-  ).forEach(r => {
+  rgps.filter(r=>{
+    const all = `${r.rgp_no} ${r.department} ${r.workshop_name} ${r.carrier_name} ${r.purpose} ${r.status}`.toLowerCase();
+    return all.includes(q)
+      && (r.rgp_no || "").toLowerCase().includes(fr)
+      && (!fd || r.department === fd)
+      && (!fw || r.workshop_name === fw)
+      && (r.carrier_name || "").toLowerCase().includes(fc)
+      && (!fs || r.status === fs);
+  }).forEach(r=>{
     body.innerHTML += `
       <tr>
-        <td>${r.rgp_no||""}</td>
-        <td>${r.rgp_date||""}</td>
-        <td>${r.due_date||""}</td>
-        <td>${r.department||""}</td>
-        <td>${r.workshop_name||""}</td>
-        <td>${r.carrier_name||""}</td>
-        <td>${r.purpose||""}</td>
-        <td>${r.status||""}</td>
-        <td><button class="print small-btn" onclick="printRGP(${r.id})">Print</button></td>
+        <td>${r.rgp_no || ""}</td>
+        <td>${formatISO(r.rgp_date)}</td>
+        <td>${formatISO(r.due_date)}</td>
+        <td>${r.department || ""}</td>
+        <td>${r.workshop_name || ""}</td>
+        <td>${r.carrier_name || ""}</td>
+        <td><span class="badge">Items</span></td>
+        <td>${r.status || ""}</td>
+        <td>
+          <button class="print" onclick="printRGP(${r.id})">Print</button>
+          <button class="delete" onclick="deleteRGP(${r.id})">Delete</button>
+        </td>
       </tr>
     `;
   });
 }
 
+function formatISO(v){
+  if(!v) return "";
+  const d = new Date(v);
+  const mons = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return String(d.getDate()).padStart(2,"0") + "-" + mons[d.getMonth()] + "-" + String(d.getFullYear()).slice(2);
+}
+
+async function deleteRGP(id){
+  if(!confirm("Delete this RGP?")) return;
+  const {error} = await db.from("rgp_master").delete().eq("id",id);
+  if(error){ alert("Delete error: " + error.message); return; }
+  await loadRGP();
+}
+
+function clearForm(){
+  document.querySelectorAll(".card input").forEach(x=>x.value="");
+  document.querySelectorAll(".card select").forEach(x=>x.selectedIndex=0);
+  document.getElementById("rgp_date").value = todayDisplay();
+  document.getElementById("itemBody").innerHTML = "";
+  addItemRow();
+}
+
+function clearFilters(){
+  ["f_rgp","f_carrier","topSearch"].forEach(id=>document.getElementById(id).value="");
+  ["f_dept","f_item","f_workshop","f_status"].forEach(id=>document.getElementById(id).selectedIndex=0);
+  renderRGP();
+}
+
+function printLast(){
+  if(!lastSavedId){ alert("Please save RGP first, then print."); return; }
+  printRGP(lastSavedId);
+}
+
 async function printRGP(id){
-  const r = rgps.find(x => x.id === id);
+  const r = rgps.find(x=>x.id===id);
   const {data:its} = await db.from("rgp_items").select("*").eq("rgp_id",id);
 
-  let rows = (its||[]).map((x,i)=>`
-    <tr>
-      <td>${i+1}</td><td>${x.item_name||""}</td><td>${x.size||""}</td>
-      <td>${x.unit||""}</td><td>${x.qty||""}</td><td>${x.item_condition||""}</td><td>${x.item_remarks||""}</td>
-    </tr>`).join("");
+  let rows = (its || []).map((x,i)=>`
+    <tr><td>${i+1}</td><td>${x.item_name||""}</td><td>${x.size||""}</td><td>${x.unit||""}</td><td>${x.qty||""}</td><td>${x.item_condition||""}</td><td>${x.item_remarks||""}</td></tr>
+  `).join("");
 
-  const win = window.open("", "_blank");
-  win.document.write(`
+  const w = window.open("","_blank");
+  w.document.write(`
     <html><head><title>RGP ${r.rgp_no}</title>
     <style>
       body{font-family:Arial;padding:30px}
-      .head{display:flex;justify-content:space-between;align-items:center}
-      img{width:75px;height:75px;border-radius:50%}
-      h1{text-align:center}
-      table{width:100%;border-collapse:collapse;margin-top:15px}
-      th,td{border:1px solid #333;padding:8px;font-size:13px}
-      .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:15px}
-      .box{border:1px solid #333;padding:8px}
+      h1{text-align:center;margin:5px 0}
+      .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:10px}
+      img{width:70px;height:70px;border-radius:50%}
+      .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+      .box{border:1px solid #000;padding:8px;font-size:13px}
+      table{width:100%;border-collapse:collapse;margin-top:18px}
+      th,td{border:1px solid #000;padding:8px;font-size:13px}
       .sign{display:flex;justify-content:space-between;margin-top:50px}
     </style></head><body>
       <div class="head">
@@ -321,8 +520,8 @@ async function printRGP(id){
       <h1>RGP FORM</h1>
       <div class="grid">
         <div class="box"><b>RGP No:</b> ${r.rgp_no||""}</div>
-        <div class="box"><b>Date:</b> ${r.rgp_date||""}</div>
-        <div class="box"><b>Due Date:</b> ${r.due_date||""}</div>
+        <div class="box"><b>RGP Date:</b> ${formatISO(r.rgp_date)}</div>
+        <div class="box"><b>Due Date:</b> ${formatISO(r.due_date)}</div>
         <div class="box"><b>Department:</b> ${r.department||""}</div>
         <div class="box"><b>Workshop:</b> ${r.workshop_name||""}</div>
         <div class="box"><b>Carrier:</b> ${r.carrier_name||""}</div>
@@ -336,40 +535,33 @@ async function printRGP(id){
         <tbody>${rows}</tbody>
       </table>
 
-      <p><b>Repair Bill:</b> ${r.repair_bill_no||""} &nbsp; <b>Amount:</b> ${r.repair_amount||""}</p>
+      <p><b>Bill of Repaired Material:</b> ${r.repair_bill_no||""}</p>
+      <p><b>Repair Amount:</b> ${r.repair_amount||""}</p>
       <p><b>Remarks:</b> ${r.remarks||""}</p>
 
       <div class="sign">
         <div>Prepared By __________</div>
         <div>Authorized By __________</div>
-        <div>Gate / Receiver __________</div>
+        <div>Received By __________</div>
       </div>
-
       <script>window.print();<\/script>
     </body></html>
   `);
 }
 
-function clearForm(){
-  document.querySelectorAll("input, textarea").forEach(x => x.value = "");
-  document.getElementById("status").value = "Pending";
-  document.getElementById("rgp_date").valueAsDate = new Date();
-  document.getElementById("itemBody").innerHTML = "";
-  addItemRow();
-}
-
 function exportExcel(){
-  let csv = "RGP No,Date,Due Date,Department,Workshop,Carrier,Purpose,Status\n";
-  rgps.forEach(r => {
-    csv += [r.rgp_no,r.rgp_date,r.due_date,r.department,r.workshop_name,r.carrier_name,r.purpose,r.status]
-      .map(v => `"${String(v||"").replaceAll('"','""')}"`).join(",") + "\n";
+  let csv = "RGP No,RGP Date,Due Date,Department,Workshop,Carrier,Purpose,Status\n";
+  rgps.forEach(r=>{
+    csv += [r.rgp_no,formatISO(r.rgp_date),formatISO(r.due_date),r.department,r.workshop_name,r.carrier_name,r.purpose,r.status]
+      .map(v=>`"${String(v||"").replaceAll('"','""')}"`).join(",") + "\n";
   });
   const blob = new Blob([csv],{type:"text/csv"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "rgp_entries.csv";
+  a.download = "rgp_list.csv";
   a.click();
 }
 </script>
+
 </body>
 </html>
