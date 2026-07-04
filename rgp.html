@@ -1,1 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RGP Entry</title>
+<link rel="stylesheet" href="public/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<style>
+.main{padding:28px;background:#f5f6fb;min-height:100vh}
+.page-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.page-top h1{font-size:30px;margin:0;color:#07142e}
+.page-top p{margin:5px 0 0;color:#6b7280}
+.search-box{width:310px;padding:13px 18px;border:1px solid #d9dee8;border-radius:10px}
+.card{background:white;border-radius:16px;padding:22px;margin-bottom:22px;box-shadow:0 8px 20px rgba(0,0,0,.05)}
+.card h2{margin:0 0 16px;font-size:22px;color:#07142e}
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+input,select,textarea{padding:13px 14px;border:1px solid #cfd6e1;border-radius:9px;font-size:14px;width:100%}
+textarea{resize:none}
+.btn-row{display:flex;gap:10px;margin-top:16px}
+button{border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer}
+.save{background:#f5a316;color:white}
+.clear{background:#edf0f5;color:#111827}
+.export{background:#2563eb;color:white}
+.delete{background:#ef4444;color:white}
+.print{background:#16a34a;color:white}
+table{width:100%;border-collapse:collapse}
+th{background:#f5a316;color:white;text-align:left;padding:12px}
+td{padding:10px;border-bottom:1px solid #e5e7eb}
+.item-table input,.item-table select{padding:9px}
+.small-btn{padding:8px 12px}
+@media(max-width:1000px){.form-grid{grid-template-columns:repeat(2,1fr)}.page-top{display:block}.search-box{width:100%;margin-top:12px}}
+</style>
+</head>
+
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">◆</div>
+    <div><h2>Inventory Store</h2><p>Management System</p></div>
+  </div>
+
+  <nav class="nav">
+    <a href="index.html">⌂ Dashboard</a>
+    <a href="items.html">▣ Items</a>
+    <a href="purchase.html">🛒 Purchase Entry</a>
+    <a href="issue.html">↩ Issue Entry</a>
+    <a class="active" href="rgp.html">🛠 RGP Entry</a>
+    <a href="#">▤ Stock Ledger</a>
+    <a href="#">▥ Reports</a>
+    <a href="suppliers.html">▰ Suppliers</a>
+    <a href="workshops.html">⚙ Workshop / Party</a>
+    <a href="#">⚙ Settings</a>
+  </nav>
+
+  <div class="profile-card">
+    <img src="public/waqas.jpg.png">
+    <h3>Muhammad Waqas</h3>
+    <p><span></span> Online</p>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-top">
+    <div>
+      <h1>RGP Entry</h1>
+      <p>Returnable gate pass for workshop repair material</p>
+    </div>
+    <input class="search-box" id="searchBox" placeholder="Search RGP, department, item, workshop..." oninput="renderRGP()">
+  </div>
+
+  <section class="card">
+    <h2>RGP Header</h2>
+
+    <div class="form-grid">
+      <input id="rgp_no" placeholder="RGP No. *">
+      <input id="rgp_date" type="date">
+      <input id="due_date" type="date">
+      <input id="department" placeholder="Department">
+
+      <select id="workshop"></select>
+      <input id="carrier_name" placeholder="Carrier Name">
+      <input id="authorized_by" placeholder="Authorized By">
+      <input id="received_checked_by" placeholder="Received & Checked By">
+
+      <input id="purpose" placeholder="Purpose">
+      <input id="repair_bill_no" placeholder="Bill of Repaired Material">
+      <input id="repair_bill_date" type="date">
+      <input id="repair_amount" type="number" placeholder="Repair Amount">
+
+      <select id="status">
+        <option>Pending</option>
+        <option>Partial Return</option>
+        <option>Completed</option>
+        <option>Cancelled</option>
+      </select>
+
+      <input id="remarks" placeholder="Remarks">
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Material Details</h2>
+
+    <table class="item-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Size</th>
+          <th>Unit</th>
+          <th>Qty</th>
+          <th>Condition</th>
+          <th>Remarks</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="itemBody"></tbody>
+    </table>
+
+    <div class="btn-row">
+      <button class="export" onclick="addItemRow()">+ Add Item</button>
+      <button class="save" onclick="saveRGP()">Save RGP</button>
+      <button class="clear" onclick="clearForm()">Clear</button>
+      <button class="export" onclick="exportExcel()">Export Excel</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>RGP No</th>
+          <th>Date</th>
+          <th>Due Date</th>
+          <th>Department</th>
+          <th>Workshop</th>
+          <th>Carrier</th>
+          <th>Purpose</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="rgpBody"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let workshops = [];
+let items = [];
+let rgps = [];
+
+document.addEventListener("DOMContentLoaded", async () => {
+  document.getElementById("rgp_date").valueAsDate = new Date();
+  await loadMasters();
+  await loadRGP();
+  addItemRow();
+});
+
+async function loadMasters(){
+  const w = await db.from("workshops").select("*").order("workshop_name");
+  workshops = w.data || [];
+
+  document.getElementById("workshop").innerHTML =
+    `<option value="">Select Workshop / Party</option>` +
+    workshops.map(x => `<option value="${x.id}" data-name="${x.workshop_name}">${x.workshop_name}</option>`).join("");
+
+  const i = await db.from("items").select("*").order("item_name");
+  items = i.data || [];
+}
+
+async function loadRGP(){
+  const {data,error} = await db.from("rgp_master").select("*").order("id",{ascending:false});
+  if(error){ alert("Load error: " + error.message); return; }
+  rgps = data || [];
+  renderRGP();
+}
+
+function itemOptions(){
+  return `<option value="">Select Item</option>` + items.map(i =>
+    `<option value="${i.id}" data-name="${i.item_name || ""}" data-size="${i.size || ""}" data-unit="${i.unit || ""}">
+      ${i.item_name || ""}
+    </option>`
+  ).join("");
+}
+
+function addItemRow(){
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><select onchange="fillItem(this)">${itemOptions()}</select></td>
+    <td><input class="size"></td>
+    <td><input class="unit"></td>
+    <td><input class="qty" type="number"></td>
+    <td><input class="condition" placeholder="Used / Damaged / OK"></td>
+    <td><input class="item_remarks"></td>
+    <td><button class="delete small-btn" onclick="this.closest('tr').remove()">X</button></td>
+  `;
+  document.getElementById("itemBody").appendChild(tr);
+}
+
+function fillItem(sel){
+  const opt = sel.options[sel.selectedIndex];
+  const tr = sel.closest("tr");
+  tr.querySelector(".size").value = opt.dataset.size || "";
+  tr.querySelector(".unit").value = opt.dataset.unit || "";
+}
+
+async function saveRGP(){
+  const rgp_no = document.getElementById("rgp_no").value.trim();
+  if(!rgp_no){ alert("RGP No. is required"); return; }
+
+  const wSel = document.getElementById("workshop");
+  const wOpt = wSel.options[wSel.selectedIndex];
+
+  const master = {
+    rgp_no,
+    rgp_date: document.getElementById("rgp_date").value,
+    due_date: document.getElementById("due_date").value || null,
+    department: document.getElementById("department").value,
+    workshop_id: wSel.value || null,
+    workshop_name: wOpt ? wOpt.dataset.name || "" : "",
+    carrier_name: document.getElementById("carrier_name").value,
+    authorized_by: document.getElementById("authorized_by").value,
+    purpose: document.getElementById("purpose").value,
+    received_checked_by: document.getElementById("received_checked_by").value,
+    repair_bill_no: document.getElementById("repair_bill_no").value,
+    repair_bill_date: document.getElementById("repair_bill_date").value || null,
+    repair_amount: document.getElementById("repair_amount").value || 0,
+    remarks: document.getElementById("remarks").value,
+    status: document.getElementById("status").value
+  };
+
+  const {data,error} = await db.from("rgp_master").insert([master]).select().single();
+  if(error){ alert("Save error: " + error.message); return; }
+
+  const rows = [...document.querySelectorAll("#itemBody tr")].map(tr => {
+    const sel = tr.querySelector("select");
+    const opt = sel.options[sel.selectedIndex];
+    return {
+      rgp_id: data.id,
+      item_id: sel.value || null,
+      item_name: opt ? opt.dataset.name || "" : "",
+      size: tr.querySelector(".size").value,
+      unit: tr.querySelector(".unit").value,
+      qty: tr.querySelector(".qty").value || 0,
+      item_condition: tr.querySelector(".condition").value,
+      item_remarks: tr.querySelector(".item_remarks").value
+    };
+  }).filter(x => x.item_name);
+
+  if(rows.length){
+    const itemSave = await db.from("rgp_items").insert(rows);
+    if(itemSave.error){ alert("Items save error: " + itemSave.error.message); return; }
+  }
+
+  alert("RGP saved successfully!");
+  clearForm();
+  await loadRGP();
+}
+
+function renderRGP(){
+  const q = document.getElementById("searchBox").value.toLowerCase();
+  const body = document.getElementById("rgpBody");
+  body.innerHTML = "";
+
+  rgps.filter(r =>
+    (r.rgp_no||"").toLowerCase().includes(q) ||
+    (r.department||"").toLowerCase().includes(q) ||
+    (r.workshop_name||"").toLowerCase().includes(q) ||
+    (r.purpose||"").toLowerCase().includes(q) ||
+    (r.carrier_name||"").toLowerCase().includes(q)
+  ).forEach(r => {
+    body.innerHTML += `
+      <tr>
+        <td>${r.rgp_no||""}</td>
+        <td>${r.rgp_date||""}</td>
+        <td>${r.due_date||""}</td>
+        <td>${r.department||""}</td>
+        <td>${r.workshop_name||""}</td>
+        <td>${r.carrier_name||""}</td>
+        <td>${r.purpose||""}</td>
+        <td>${r.status||""}</td>
+        <td><button class="print small-btn" onclick="printRGP(${r.id})">Print</button></td>
+      </tr>
+    `;
+  });
+}
+
+async function printRGP(id){
+  const r = rgps.find(x => x.id === id);
+  const {data:its} = await db.from("rgp_items").select("*").eq("rgp_id",id);
+
+  let rows = (its||[]).map((x,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${x.item_name||""}</td><td>${x.size||""}</td>
+      <td>${x.unit||""}</td><td>${x.qty||""}</td><td>${x.item_condition||""}</td><td>${x.item_remarks||""}</td>
+    </tr>`).join("");
+
+  const win = window.open("", "_blank");
+  win.document.write(`
+    <html><head><title>RGP ${r.rgp_no}</title>
+    <style>
+      body{font-family:Arial;padding:30px}
+      .head{display:flex;justify-content:space-between;align-items:center}
+      img{width:75px;height:75px;border-radius:50%}
+      h1{text-align:center}
+      table{width:100%;border-collapse:collapse;margin-top:15px}
+      th,td{border:1px solid #333;padding:8px;font-size:13px}
+      .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:15px}
+      .box{border:1px solid #333;padding:8px}
+      .sign{display:flex;justify-content:space-between;margin-top:50px}
+    </style></head><body>
+      <div class="head">
+        <div><h2>Inventory Store</h2><b>Returnable Gate Pass</b></div>
+        <img src="public/waqas.jpg.png">
+      </div>
+      <h1>RGP FORM</h1>
+      <div class="grid">
+        <div class="box"><b>RGP No:</b> ${r.rgp_no||""}</div>
+        <div class="box"><b>Date:</b> ${r.rgp_date||""}</div>
+        <div class="box"><b>Due Date:</b> ${r.due_date||""}</div>
+        <div class="box"><b>Department:</b> ${r.department||""}</div>
+        <div class="box"><b>Workshop:</b> ${r.workshop_name||""}</div>
+        <div class="box"><b>Carrier:</b> ${r.carrier_name||""}</div>
+        <div class="box"><b>Authorized By:</b> ${r.authorized_by||""}</div>
+        <div class="box"><b>Received & Checked By:</b> ${r.received_checked_by||""}</div>
+        <div class="box"><b>Purpose:</b> ${r.purpose||""}</div>
+      </div>
+
+      <table>
+        <thead><tr><th>Sr</th><th>Item</th><th>Size</th><th>Unit</th><th>Qty</th><th>Condition</th><th>Remarks</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <p><b>Repair Bill:</b> ${r.repair_bill_no||""} &nbsp; <b>Amount:</b> ${r.repair_amount||""}</p>
+      <p><b>Remarks:</b> ${r.remarks||""}</p>
+
+      <div class="sign">
+        <div>Prepared By __________</div>
+        <div>Authorized By __________</div>
+        <div>Gate / Receiver __________</div>
+      </div>
+
+      <script>window.print();<\/script>
+    </body></html>
+  `);
+}
+
+function clearForm(){
+  document.querySelectorAll("input, textarea").forEach(x => x.value = "");
+  document.getElementById("status").value = "Pending";
+  document.getElementById("rgp_date").valueAsDate = new Date();
+  document.getElementById("itemBody").innerHTML = "";
+  addItemRow();
+}
+
+function exportExcel(){
+  let csv = "RGP No,Date,Due Date,Department,Workshop,Carrier,Purpose,Status\n";
+  rgps.forEach(r => {
+    csv += [r.rgp_no,r.rgp_date,r.due_date,r.department,r.workshop_name,r.carrier_name,r.purpose,r.status]
+      .map(v => `"${String(v||"").replaceAll('"','""')}"`).join(",") + "\n";
+  });
+  const blob = new Blob([csv],{type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "rgp_entries.csv";
+  a.click();
+}
+</script>
+</body>
+</html>
