@@ -446,12 +446,57 @@ async function saveRGP(){
   clearForm();
   await loadRGP();
 }
-
 async function loadRGP(){
-  const {data,error} = await db.from("rgp_master").select("*").order("id",{ascending:false});
-  if(error){ alert("Load error: " + error.message); return; }
+  const {data, error} = await db
+    .from("rgp_items")
+    .select(`
+      *,
+      rgp_master:rgp_id (
+        id,
+        rgp_no,
+        rgp_date,
+        due_date,
+        department,
+        workshop_name,
+        carrier_name,
+        authorized_by,
+        bill_repaired_material,
+        status,
+        purpose
+      )
+    `)
+    .order("id", {ascending:false});
 
-  rgps = data || [];
+  if(error){
+    alert("Load error: " + error.message);
+    return;
+  }
+
+  rgps = (data || []).map(x => ({
+    id: x.rgp_id,
+    item_id: x.id,
+    rgp_no: x.rgp_master?.rgp_no || "",
+    rgp_date: x.rgp_master?.rgp_date || "",
+    due_date: x.rgp_master?.due_date || "",
+    department: x.rgp_master?.department || "",
+    workshop_name: x.rgp_master?.workshop_name || "",
+    carrier_name: x.rgp_master?.carrier_name || "",
+    authorized_by: x.rgp_master?.authorized_by || "",
+    bill_repaired_material: x.rgp_master?.bill_repaired_material || "",
+    status: x.rgp_master?.status || "",
+    purpose: x.rgp_master?.purpose || "",
+
+    item_code: x.item_code || "",
+    item_name: x.item_name || "",
+    qty: Number(x.qty || 0),
+    unit: x.unit || "",
+    rate: Number(x.rate || 0),
+    value: Number(x.value || 0),
+    qty_received: Number(x.qty_received || 0),
+    qty_pending: Number(x.qty_pending || 0),
+    pending_value: Number(x.pending_value || 0)
+  }));
+
   renderRGP();
 }
 
