@@ -206,67 +206,86 @@
   }
 
   async function saveReturn(){
-    if(!currentItem) return;
+  if(!currentItem) return;
 
-    const receiveNow = Number(document.getElementById("receive_now").value || 0);
-    if(receiveNow <= 0){
-      alert("Please enter received quantity.");
-      return;
-    }
-
-    const qty = Number(currentItem.qty || 0);
-    const oldReceived = Number(currentItem.qty_received || 0);
-    const rate = Number(currentItem.rate || 0);
-
-    const newReceived = oldReceived + receiveNow;
-    const newPending = qty - newReceived;
-    const newPendingValue = newPending * rate;
-
-    const {error} = await db
-      .from("rgp_items")
-      .update({
-        qty_received: newReceived,
-        qty_pending: newPending,
-        pending_value: newPendingValue
-      })
-      .eq("id", currentItem.id);
-
-    if(error){
-      alert("Return save error: " + error.message);
-      return;
-    }
-
-    await updateMasterStatus(currentItem.rgp_id);
-
-    alert("Return saved successfully.");
-    location.href = "rgp-list.html?v=3";
+  const receiveNow = Number(document.getElementById("receive_now").value || 0);
+  if(receiveNow <= 0){
+    alert("Please enter received quantity.");
+    return;
   }
 
+  const qty = Number(currentItem.qty || 0);
+  const oldReceived = Number(currentItem.qty_received || 0);
+  const rate = Number(currentItem.rate || 0);
+
+  const newReceived = oldReceived + receiveNow;
+  if(newReceived > qty){
+    alert("Received quantity cannot be greater than sent quantity.");
+    return;
+  }
+
+  const newPending = qty - newReceived;
+  const newPendingValue = newPending * rate;
+
+  const itemUpdate = await db
+    .from("rgp_items")
+    .update({
+      qty_received: newReceived,
+      qty_pending: newPending,
+      pending_value: newPendingValue
+    })
+    .eq("id", currentItem.id);
+
+  if(itemUpdate.error){
+    alert("Item update error: " + itemUpdate.error.message);
+    return;
+  }
+
+  const returnSave = await db.from("rgp_returns").insert([{
+    rgp_id: currentItem.rgp_id,
+    rgp_item_id: currentItem.id,
+    return_date: document.getElementById("return_date").value,
+    qty_received: receiveNow,
+    received_by: document.getElementById("received_by").value,
+    item_condition: document.getElementById("item_condition").value,
+    remarks: document.getElementById("remarks").value
+  }]);
+
+  if(returnSave.error){
+    alert("Return history error: " + returnSave.error.message);
+    return;
+  }
+
+  await updateMasterStatus(currentItem.rgp_id);
+
+  alert("Return saved successfully.");
+  location.href = "rgp-list.html?v=13";
+}
   async function updateMasterStatus(rgpId){
-    const {data, error} = await db
-      .from("rgp_items")
-      .select("qty, qty_received")
-      .eq("rgp_id", rgpId);
+  const {data, error} = await db
+    .from("rgp_items")
+    .select("qty, qty_received")
+    .eq("rgp_id", rgpId);
 
-    if(error) return;
+  if(error) return;
 
-    let totalQty = 0;
-    let totalReceived = 0;
+  let totalQty = 0;
+  let totalReceived = 0;
 
-    (data || []).forEach(x => {
-      totalQty += Number(x.qty || 0);
-      totalReceived += Number(x.qty_received || 0);
-    });
+  (data || []).forEach(x => {
+    totalQty += Number(x.qty || 0);
+    totalReceived += Number(x.qty_received || 0);
+  });
 
-    let status = "Pending";
-    if(totalReceived > 0 && totalReceived < totalQty) status = "Partial Return";
-    if(totalReceived >= totalQty) status = "Completed";
+  let status = "Pending";
+  if(totalReceived > 0 && totalReceived < totalQty) status = "Partial Return";
+  if(totalReceived >= totalQty) status = "Completed";
 
-    await db
-      .from("rgp_master")
-      .update({status})
-      .eq("id", rgpId);
-  }
+  await db
+    .from("rgp_master")
+    .update({status})
+    .eq("id", rgpId);
+}
 </script>
 </body>
 </html>
