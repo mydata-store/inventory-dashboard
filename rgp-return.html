@@ -1,1 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RGP Return Entry</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box;font-family:Arial}
+    body{margin:0;background:#f4f6fb;color:#111827}
+    .layout{display:flex;min-height:100vh}
+    .sidebar{width:240px;background:linear-gradient(180deg,#2b0f00,#160700);color:white;padding:22px 16px;position:fixed;height:100vh}
+    .logo{font-size:22px;font-weight:800;margin-bottom:30px}
+    .logo span{color:#f59e0b;font-size:13px}
+    .menu a{display:block;color:white;text-decoration:none;padding:13px;border-radius:10px;margin-bottom:8px;font-weight:600}
+    .menu a.active,.menu a:hover{background:#f59e0b;color:#111827}
+    .profile{position:absolute;bottom:20px;left:16px;right:16px;background:rgba(255,255,255,.08);padding:18px;border-radius:16px;text-align:center}
+    .main{margin-left:240px;padding:26px;width:calc(100% - 240px)}
+    h1{margin:0}
+    .sub{color:#6b7280;margin:6px 0 20px}
+    .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+    .tab{padding:16px;border-radius:12px;background:white;text-align:center;text-decoration:none;color:#111827;font-weight:800;border:1px solid #e5e7eb}
+    .tab.active{background:#f59e0b}
+    .card{background:white;border-radius:16px;padding:20px;box-shadow:0 8px 22px rgba(0,0,0,.07);margin-bottom:18px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    label{font-weight:800;font-size:13px}
+    input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;margin-top:6px}
+    input[readonly]{background:#f1f5f9}
+    button{border:0;border-radius:8px;padding:12px 20px;font-weight:800;cursor:pointer}
+    .save{background:#16a34a;color:white}
+    .back{background:#111827;color:white}
+    .warning{background:#fff7ed;border-left:5px solid #f59e0b;padding:14px;border-radius:10px;margin-bottom:16px}
+  </style>
+</head>
 
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="logo">📦 Inventory Store<br><span>Management System</span></div>
+    <nav class="menu">
+      <a href="index.html?v=1">⌂ Dashboard</a>
+      <a href="items.html?v=1">▣ Items Master</a>
+      <a href="purchase.html?v=1">🛒 Purchase Entry</a>
+      <a href="issue.html?v=1">↪ Issue Entry</a>
+      <a class="active" href="gate-pass.html?v=1">🚚 Gate Pass</a>
+      <a href="#">▤ Stock Ledger</a>
+      <a href="#">▥ Reports</a>
+      <a href="suppliers.html?v=1">▰ Suppliers</a>
+      <a href="workshops.html?v=1">⚙ Workshop / Party</a>
+    </nav>
+    <div class="profile">
+      <b>Muhammad Waqas</b><br>
+      <span style="color:#22c55e">● Online</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1>RGP Return Entry</h1>
+    <div class="sub">Receive repaired / returned material against RGP</div>
+
+    <div class="tabs">
+      <a class="tab" href="rgp-list.html?v=2">▦ RGP List</a>
+      <a class="tab" href="rgp-entry.html?v=1">⊕ RGP Entry Form</a>
+      <a class="tab active" href="rgp-return.html?v=1">↩ Return Entry Form</a>
+    </div>
+
+    <div class="warning">
+      Enter received quantity only. System will automatically calculate pending quantity and pending value.
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div><label>RGP #</label><input id="rgp_no" readonly></div>
+        <div><label>Item Code</label><input id="item_code" readonly></div>
+        <div><label>Item Name</label><input id="item_name" readonly></div>
+        <div><label>Size</label><input id="size" readonly></div>
+
+        <div><label>Department</label><input id="department" readonly></div>
+        <div><label>Workshop</label><input id="workshop" readonly></div>
+        <div><label>Carrier</label><input id="carrier" readonly></div>
+        <div><label>Authorized By</label><input id="authorized_by" readonly></div>
+
+        <div><label>Qty Sent</label><input id="qty" readonly></div>
+        <div><label>Unit</label><input id="unit" readonly></div>
+        <div><label>Already Received</label><input id="old_received" readonly></div>
+        <div><label>Current Pending</label><input id="old_pending" readonly></div>
+
+        <div><label>Receive Now *</label><input id="receive_now" type="number" oninput="calculateReturn()"></div>
+        <div><label>New Received</label><input id="new_received" readonly></div>
+        <div><label>New Pending</label><input id="new_pending" readonly></div>
+        <div><label>New Pending Value</label><input id="pending_value" readonly></div>
+      </div>
+
+      <br>
+      <button class="save" onclick="saveReturn()">Save Return</button>
+      <button class="back" onclick="location.href='rgp-list.html?v=3'">Back to RGP List</button>
+    </div>
+  </main>
+</div>
+
+<script>
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentItem = null;
+
+  document.addEventListener("DOMContentLoaded", loadItem);
+
+  function getParam(name){
+    return new URLSearchParams(window.location.search).get(name);
+  }
+
+  async function loadItem(){
+    const itemId = getParam("item");
+
+    if(!itemId){
+      alert("No RGP item selected. Please open return from RGP List.");
+      location.href = "rgp-list.html?v=3";
+      return;
+    }
+
+    const {data, error} = await db
+      .from("rgp_items")
+      .select(`
+        *,
+        rgp_master:rgp_id (
+          id,
+          rgp_no,
+          department,
+          workshop_name,
+          carrier_name,
+          authorized_by,
+          status
+        )
+      `)
+      .eq("id", itemId)
+      .single();
+
+    if(error){
+      alert("Load error: " + error.message);
+      return;
+    }
+
+    currentItem = data;
+    const m = data.rgp_master || {};
+
+    const qty = Number(data.qty || 0);
+    const received = Number(data.qty_received || 0);
+    const pending = Number(data.qty_pending ?? (qty - received));
+    const rate = Number(data.rate || 0);
+
+    document.getElementById("rgp_no").value = m.rgp_no || "";
+    document.getElementById("item_code").value = data.item_code || "";
+    document.getElementById("item_name").value = data.item_name || "";
+    document.getElementById("size").value = data.size || "";
+    document.getElementById("department").value = m.department || "";
+    document.getElementById("workshop").value = m.workshop_name || "";
+    document.getElementById("carrier").value = m.carrier_name || "";
+    document.getElementById("authorized_by").value = m.authorized_by || "";
+    document.getElementById("qty").value = qty;
+    document.getElementById("unit").value = data.unit || "";
+    document.getElementById("old_received").value = received;
+    document.getElementById("old_pending").value = pending;
+
+    document.getElementById("new_received").value = received;
+    document.getElementById("new_pending").value = pending;
+    document.getElementById("pending_value").value = (pending * rate).toFixed(2);
+  }
+
+  function calculateReturn(){
+    if(!currentItem) return;
+
+    const qty = Number(currentItem.qty || 0);
+    const oldReceived = Number(currentItem.qty_received || 0);
+    const receiveNow = Number(document.getElementById("receive_now").value || 0);
+    const rate = Number(currentItem.rate || 0);
+
+    if(receiveNow < 0){
+      alert("Receive quantity cannot be negative.");
+      document.getElementById("receive_now").value = "";
+      return;
+    }
+
+    const newReceived = oldReceived + receiveNow;
+
+    if(newReceived > qty){
+      alert("Received quantity cannot be greater than sent quantity.");
+      document.getElementById("receive_now").value = "";
+      document.getElementById("new_received").value = oldReceived;
+      document.getElementById("new_pending").value = qty - oldReceived;
+      document.getElementById("pending_value").value = ((qty - oldReceived) * rate).toFixed(2);
+      return;
+    }
+
+    const newPending = qty - newReceived;
+
+    document.getElementById("new_received").value = newReceived;
+    document.getElementById("new_pending").value = newPending;
+    document.getElementById("pending_value").value = (newPending * rate).toFixed(2);
+  }
+
+  async function saveReturn(){
+    if(!currentItem) return;
+
+    const receiveNow = Number(document.getElementById("receive_now").value || 0);
+    if(receiveNow <= 0){
+      alert("Please enter received quantity.");
+      return;
+    }
+
+    const qty = Number(currentItem.qty || 0);
+    const oldReceived = Number(currentItem.qty_received || 0);
+    const rate = Number(currentItem.rate || 0);
+
+    const newReceived = oldReceived + receiveNow;
+    const newPending = qty - newReceived;
+    const newPendingValue = newPending * rate;
+
+    const {error} = await db
+      .from("rgp_items")
+      .update({
+        qty_received: newReceived,
+        qty_pending: newPending,
+        pending_value: newPendingValue
+      })
+      .eq("id", currentItem.id);
+
+    if(error){
+      alert("Return save error: " + error.message);
+      return;
+    }
+
+    await updateMasterStatus(currentItem.rgp_id);
+
+    alert("Return saved successfully.");
+    location.href = "rgp-list.html?v=3";
+  }
+
+  async function updateMasterStatus(rgpId){
+    const {data, error} = await db
+      .from("rgp_items")
+      .select("qty, qty_received")
+      .eq("rgp_id", rgpId);
+
+    if(error) return;
+
+    let totalQty = 0;
+    let totalReceived = 0;
+
+    (data || []).forEach(x => {
+      totalQty += Number(x.qty || 0);
+      totalReceived += Number(x.qty_received || 0);
+    });
+
+    let status = "Pending";
+    if(totalReceived > 0 && totalReceived < totalQty) status = "Partial Return";
+    if(totalReceived >= totalQty) status = "Completed";
+
+    await db
+      .from("rgp_master")
+      .update({status})
+      .eq("id", rgpId);
+  }
+</script>
+</body>
+</html>
