@@ -175,61 +175,51 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   document.addEventListener("DOMContentLoaded", loadRGP);
 
-  async function loadRGP(){
-    const {data, error} = await db
-      .from("rgp_items")
-     .select(`
-  *,
-  rgp_master:rgp_id (
-    id,
-    rgp_no,
-    rgp_date,
-    due_date,
-    department,
-    workshop_name,
-    carrier_name,
-    authorized_by,
-    status
-  )
-`)
-      .order("id", {ascending:false});
-
-    if(error){
-      alert("Load error: " + error.message);
-      return;
-    }
-
-    rgps = (data || []).map(x => {
-      const m = x.rgp_master || {};
-      const qty = Number(x.qty || 0);
-      const received = Number(x.qty_received || 0);
-      const pending = Number(x.qty_pending ?? (qty - received));
-      const rate = Number(x.rate || 0);
-
-      return {
-        rgp_id: m.id,
-        item_id: x.id,
-        rgp_no: m.rgp_no || "",
-        item_code: x.item_code || "",
-        item_name: x.item_name || "",
-        size: x.size || "",
-        qty,
-        unit: x.unit || "",
-        qty_received: received,
-        qty_pending: pending,
-        pending_value: Number(x.pending_value || (pending * rate)),
-        department: m.department || "",
-        workshop_name: m.workshop_name || "",
-        carrier_name: m.carrier_name || "",
-        authorized_by: m.authorized_by || "",
-        bill_detail: "",
-        status: m.status || ""
-      };
-    });
-
-    renderRGP();
+ async function loadRGP(){
+  const itemsRes = await db.from("rgp_items").select("*").order("id", {ascending:false});
+  if(itemsRes.error){
+    alert("Items load error: " + itemsRes.error.message);
+    return;
   }
 
+  const masterRes = await db.from("rgp_master").select("*");
+  if(masterRes.error){
+    alert("Master load error: " + masterRes.error.message);
+    return;
+  }
+
+  const masters = masterRes.data || [];
+
+  rgps = (itemsRes.data || []).map(x => {
+    const m = masters.find(mm => mm.id == x.rgp_id) || {};
+    const qty = Number(x.qty || 0);
+    const received = Number(x.qty_received || 0);
+    const pending = Number(x.qty_pending ?? (qty - received));
+    const rate = Number(x.rate || 0);
+
+    return {
+      rgp_id: m.id,
+      item_id: x.id,
+      rgp_no: m.rgp_no || "",
+      item_code: x.item_code || "",
+      item_name: x.item_name || "",
+      size: x.size || "",
+      qty: qty,
+      unit: x.unit || "",
+      qty_received: received,
+      qty_pending: pending,
+      pending_value: Number(x.pending_value || (pending * rate)),
+      department: m.department || "",
+      workshop_name: m.workshop_name || "",
+      carrier_name: m.carrier_name || "",
+      authorized_by: m.authorized_by || "",
+      bill_detail: "",
+      status: m.status || ""
+    };
+  });
+
+  renderRGP();
+}
   function renderRGP(){
     const fr = document.getElementById("f_rgp").value.toLowerCase();
     const fc = document.getElementById("f_code").value.toLowerCase();
