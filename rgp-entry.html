@@ -1,1 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RGP Entry</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box;font-family:Arial}
+    body{margin:0;background:#f4f6fb;color:#111827}
+    .layout{display:flex;min-height:100vh}
+    .sidebar{width:240px;background:linear-gradient(180deg,#2b0f00,#160700);color:white;padding:22px 16px;position:fixed;height:100vh}
+    .logo{font-size:22px;font-weight:800;margin-bottom:30px}
+    .logo span{color:#f59e0b;font-size:13px}
+    .menu a{display:block;color:white;text-decoration:none;padding:13px;border-radius:10px;margin-bottom:8px;font-weight:600}
+    .menu a.active,.menu a:hover{background:#f59e0b;color:#111827}
+    .profile{position:absolute;bottom:20px;left:16px;right:16px;background:rgba(255,255,255,.08);padding:18px;border-radius:16px;text-align:center}
+    .profile-img{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #f59e0b;margin-bottom:10px}
+    .main{margin-left:240px;padding:26px;width:calc(100% - 240px)}
+    h1{margin:0}
+    .sub{color:#6b7280;margin:6px 0 20px}
+    .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+    .tab{padding:16px;border-radius:12px;background:white;text-align:center;text-decoration:none;color:#111827;font-weight:800;border:1px solid #e5e7eb}
+    .tab.active{background:#f59e0b}
+    .card{background:white;border-radius:16px;padding:20px;box-shadow:0 8px 22px rgba(0,0,0,.07);margin-bottom:18px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    label{font-weight:800;font-size:13px}
+    input,select,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;margin-top:6px}
+    textarea{resize:vertical}
+    table{width:100%;border-collapse:collapse;min-width:1100px}
+    th{background:#0f172a;color:white;padding:12px;text-align:left}
+    td{padding:10px;border-bottom:1px solid #e5e7eb}
+    button{border:0;border-radius:8px;padding:12px 18px;font-weight:800;cursor:pointer}
+    .add{background:#2563eb;color:white}
+    .save{background:#16a34a;color:white}
+    .clear{background:#f59e0b}
+    .delete{background:#dc2626;color:white}
+    .back{background:#111827;color:white}
+    .table-wrap{overflow:auto}
+  </style>
+</head>
 
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="logo">📦 Inventory Store<br><span>Management System</span></div>
+    <nav class="menu">
+      <a href="index.html?v=1">⌂ Dashboard</a>
+      <a href="items.html?v=1">▣ Items Master</a>
+      <a href="purchase.html?v=1">🛒 Purchase Entry</a>
+      <a href="issue.html?v=1">↪ Issue Entry</a>
+      <a class="active" href="gate-pass.html?v=1">🚚 Gate Pass</a>
+      <a href="#">▤ Stock Ledger</a>
+      <a href="#">▥ Reports</a>
+      <a href="suppliers.html?v=1">▰ Suppliers</a>
+      <a href="workshops.html?v=1">⚙ Workshop / Party</a>
+    </nav>
+    <div class="profile">
+      <img src="public/profile.png?v=2" class="profile-img">
+      <b>Muhammad Waqas</b><br>
+      <span style="color:#22c55e">● Online</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1>RGP Entry</h1>
+    <div class="sub">Create new Returnable Gate Pass</div>
+
+    <div class="tabs">
+      <a class="tab" href="rgp-list.html?v=14">▦ RGP List</a>
+      <a class="tab active" href="rgp-entry.html?v=1">⊕ RGP Entry Form</a>
+      <a class="tab" href="rgp-return.html?v=1">↩ Return Entry Form</a>
+    </div>
+
+    <div class="card">
+      <h3>Returnable Gate Pass Details</h3>
+      <div class="grid">
+        <div><label>RGP No *</label><input id="rgp_no"></div>
+        <div><label>RGP Date *</label><input id="rgp_date" placeholder="25-6"></div>
+        <div><label>Due Date</label><input id="due_date" placeholder="30-6"></div>
+        <div><label>Department *</label><input id="department" list="deptList"></div>
+
+        <div><label>Workshop *</label><input id="workshop_name" list="workshopList"></div>
+        <div><label>Carrier Name</label><input id="carrier_name"></div>
+        <div><label>Authorized By</label><input id="authorized_by"></div>
+        <div><label>Bill Detail</label><input id="bill_detail"></div>
+
+        <div style="grid-column:span 2"><label>Purpose</label><input id="purpose"></div>
+        <div style="grid-column:span 2"><label>Remarks</label><input id="remarks"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Material Details</h3>
+      <button class="add" onclick="addItemRow()">+ Add Item</button>
+      <br><br>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item *</th>
+              <th>Item Code</th>
+              <th>Size</th>
+              <th>Unit</th>
+              <th>Qty *</th>
+              <th>Rate</th>
+              <th>Pending Value</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="itemBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <button class="save" onclick="saveRGP()">Save RGP</button>
+    <button class="clear" onclick="clearForm()">Clear</button>
+    <button class="back" onclick="location.href='rgp-list.html?v=14'">Back to List</button>
+
+    <datalist id="deptList">
+      <option>Mechanical PM I</option><option>Mechanical PM II</option><option>Mechanical PM III</option>
+      <option>Electrical PM IK</option><option>Electrical PP IK</option><option>Machine Hall PM I</option>
+      <option>Finishing Hall IK</option><option>Instrument</option><option>Boiler House</option>
+      <option>Main Store</option><option>Main Workshop</option><option>Admin</option><option>Security</option>
+    </datalist>
+
+    <datalist id="workshopList"></datalist>
+    <datalist id="itemList"></datalist>
+  </main>
+</div>
+
+<script>
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let itemsMaster = [];
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadItems();
+    await loadWorkshops();
+    addItemRow();
+  });
+
+  function formatShortDate(v){
+    if(!v) return "";
+    const parts = v.split("-");
+    if(parts.length < 2) return v;
+
+    const day = parts[0].padStart(2,"0");
+    const monthNo = Number(parts[1]);
+    const year = parts[2] ? parts[2] : "26";
+    const months = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    return `${day}-${months[monthNo] || parts[1]}-${year}`;
+  }
+
+  async function loadItems(){
+    const {data,error} = await db.from("items").select("*").order("item_name",{ascending:true});
+    if(error){ alert("Items load error: " + error.message); return; }
+
+    itemsMaster = data || [];
+    const list = document.getElementById("itemList");
+    list.innerHTML = "";
+    itemsMaster.forEach(i => {
+      list.innerHTML += `<option value="${i.item_name}"></option>`;
+    });
+  }
+
+  async function loadWorkshops(){
+    const {data,error} = await db.from("workshops").select("*").order("workshop_name",{ascending:true});
+    if(error) return;
+
+    const list = document.getElementById("workshopList");
+    list.innerHTML = "";
+    (data || []).forEach(w => {
+      list.innerHTML += `<option value="${w.workshop_name}"></option>`;
+    });
+  }
+
+  function addItemRow(){
+    const body = document.getElementById("itemBody");
+
+    body.innerHTML += `
+      <tr>
+        <td><input class="item_name" list="itemList" onchange="fillItem(this)"></td>
+        <td><input class="item_code" readonly></td>
+        <td><input class="size" readonly></td>
+        <td><input class="unit" readonly></td>
+        <td><input class="qty" type="number" oninput="calcRow(this)"></td>
+        <td><input class="rate" type="number" oninput="calcRow(this)"></td>
+        <td><input class="pending_value" readonly></td>
+        <td><button class="delete" onclick="this.closest('tr').remove()">Delete</button></td>
+      </tr>
+    `;
+  }
+
+  function fillItem(el){
+    const tr = el.closest("tr");
+    const name = el.value.toLowerCase();
+
+    const item = itemsMaster.find(x => (x.item_name || "").toLowerCase() === name);
+    if(!item) return;
+
+    tr.querySelector(".item_code").value = item.item_code || item.code || "";
+    tr.querySelector(".size").value = item.size || "";
+    tr.querySelector(".unit").value = item.unit || "";
+    tr.querySelector(".rate").value = item.rate || item.unit_rate || item.last_rate || 0;
+
+    calcRow(el);
+  }
+
+  function calcRow(el){
+    const tr = el.closest("tr");
+    const qty = Number(tr.querySelector(".qty").value || 0);
+    const rate = Number(tr.querySelector(".rate").value || 0);
+    tr.querySelector(".pending_value").value = (qty * rate).toFixed(2);
+  }
+
+  async function saveRGP(){
+    const rgpNo = document.getElementById("rgp_no").value.trim();
+    const rgpDate = formatShortDate(document.getElementById("rgp_date").value.trim());
+    const dueDate = formatShortDate(document.getElementById("due_date").value.trim());
+
+    if(!rgpNo){ alert("Please enter RGP No."); return; }
+    if(!rgpDate){ alert("Please enter RGP Date."); return; }
+
+    const rows = [...document.querySelectorAll("#itemBody tr")];
+    if(rows.length === 0){ alert("Please add item."); return; }
+
+    const itemRows = [];
+
+    for(const tr of rows){
+      const itemName = tr.querySelector(".item_name").value.trim();
+      const qty = Number(tr.querySelector(".qty").value || 0);
+      const rate = Number(tr.querySelector(".rate").value || 0);
+
+      if(!itemName || qty <= 0){
+        alert("Please enter item and qty correctly.");
+        return;
+      }
+
+      itemRows.push({
+        item_code: tr.querySelector(".item_code").value,
+        item_name: itemName,
+        size: tr.querySelector(".size").value,
+        unit: tr.querySelector(".unit").value,
+        qty: qty,
+        rate: rate,
+        value: qty * rate,
+        qty_received: 0,
+        qty_pending: qty,
+        pending_value: qty * rate,
+        condition: "",
+        remarks: ""
+      });
+    }
+
+    const masterInsert = await db.from("rgp_master").insert([{
+      rgp_no: rgpNo,
+      rgp_date: rgpDate,
+      due_date: dueDate,
+      department: document.getElementById("department").value,
+      workshop_name: document.getElementById("workshop_name").value,
+      carrier_name: document.getElementById("carrier_name").value,
+      authorized_by: document.getElementById("authorized_by").value,
+      bill_detail: document.getElementById("bill_detail").value,
+      purpose: document.getElementById("purpose").value,
+      remarks: document.getElementById("remarks").value,
+      status: "Pending"
+    }]).select().single();
+
+    if(masterInsert.error){
+      alert("RGP master save error: " + masterInsert.error.message);
+      return;
+    }
+
+    const rgpId = masterInsert.data.id;
+    itemRows.forEach(x => x.rgp_id = rgpId);
+
+    const itemInsert = await db.from("rgp_items").insert(itemRows);
+
+    if(itemInsert.error){
+      alert("RGP item save error: " + itemInsert.error.message);
+      return;
+    }
+
+    alert("RGP saved successfully.");
+    location.href = "rgp-list.html?v=15";
+  }
+
+  function clearForm(){
+    document.querySelectorAll("input,textarea").forEach(x => x.value = "");
+    document.getElementById("itemBody").innerHTML = "";
+    addItemRow();
+  }
+</script>
+</body>
+</html>
