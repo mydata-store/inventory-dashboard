@@ -239,9 +239,21 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     );
 
     document.getElementById("totalRecords").innerText = filtered.length;
+    const totalPendingQty = filtered.reduce((sum, r) => sum + Number(r.qty_pending || 0), 0);
+const totalPendingValue = filtered.reduce((sum, r) => sum + Number(r.pending_value || 0), 0);
 
+document.getElementById("totalPendingQty").innerText = totalPendingQty;
+document.getElementById("totalPendingValue").innerText = "Rs. " + totalPendingValue.toFixed(2);
+    
     filtered.forEach(r => {
-      const pendingClass = r.qty_pending <= 0 ? "zero" : r.qty_pending > 10 ? "danger" : "pending";
+      let pendingClass = "pending";
+
+if(Number(r.qty_pending) == 0){
+    pendingClass = "zero";
+}
+else if(Number(r.qty_pending) > 0){
+    pendingClass = "danger";
+}
 
       body.innerHTML += `
         <tr>
