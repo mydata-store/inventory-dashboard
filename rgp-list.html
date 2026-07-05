@@ -1,1 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RGP List</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box;font-family:Arial}
+    body{margin:0;background:#f4f6fb;color:#111827}
+    .layout{display:flex;min-height:100vh}
+    .sidebar{width:240px;background:linear-gradient(180deg,#2b0f00,#160700);color:white;padding:22px 16px;position:fixed;height:100vh}
+    .logo{font-size:22px;font-weight:800;margin-bottom:30px}
+    .logo span{color:#f59e0b;font-size:13px}
+    .menu a{display:block;color:white;text-decoration:none;padding:13px;border-radius:10px;margin-bottom:8px;font-weight:600}
+    .menu a.active,.menu a:hover{background:#f59e0b;color:#111827}
+    .profile{position:absolute;bottom:20px;left:16px;right:16px;background:rgba(255,255,255,.08);padding:18px;border-radius:16px;text-align:center}
+    .main{margin-left:240px;padding:26px;width:calc(100% - 240px)}
+    h1{margin:0}
+    .sub{color:#6b7280;margin:6px 0 20px}
+    .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+    .tab{padding:16px;border-radius:12px;background:white;text-align:center;text-decoration:none;color:#111827;font-weight:800;border:1px solid #e5e7eb}
+    .tab.active{background:#f59e0b}
+    .card{background:white;border-radius:16px;padding:18px;box-shadow:0 8px 22px rgba(0,0,0,.07);margin-bottom:18px}
+    .filters{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+    input,select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px}
+    button{border:0;border-radius:8px;padding:11px 18px;font-weight:800;cursor:pointer}
+    .search{background:#111827;color:white}
+    .clear{background:#f59e0b}
+    .export{background:#16a34a;color:white}
+    .table-wrap{max-height:520px;overflow:auto;border-radius:12px}
+    table{width:100%;border-collapse:collapse;min-width:1600px}
+    th{position:sticky;top:0;background:#0f172a;color:white;padding:12px;text-align:left;font-size:13px}
+    td{padding:11px;border-bottom:1px solid #e5e7eb;font-size:13px}
+    tr:hover{background:#f8fafc}
+    .badge{padding:5px 10px;border-radius:8px;font-weight:800}
+    .pending{background:#fde68a}
+    .zero{background:#bbf7d0}
+    .danger{background:#fecaca}
+    .btn-print{background:#2563eb;color:white}
+    .btn-return{background:#16a34a;color:white}
+  </style>
+</head>
 
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="logo">📦 Inventory Store<br><span>Management System</span></div>
+    <nav class="menu">
+      <a href="index.html?v=1">⌂ Dashboard</a>
+      <a href="items.html?v=1">▣ Items Master</a>
+      <a href="purchase.html?v=1">🛒 Purchase Entry</a>
+      <a href="issue.html?v=1">↪ Issue Entry</a>
+      <a class="active" href="gate-pass.html?v=1">🚚 Gate Pass</a>
+      <a href="#">▤ Stock Ledger</a>
+      <a href="#">▥ Reports</a>
+      <a href="suppliers.html?v=1">▰ Suppliers</a>
+      <a href="workshops.html?v=1">⚙ Workshop / Party</a>
+    </nav>
+    <div class="profile">
+      <b>Muhammad Waqas</b><br>
+      <span style="color:#22c55e">● Online</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1>RGP Management</h1>
+    <div class="sub">Returnable Gate Pass item-wise list</div>
+
+    <div class="tabs">
+      <a class="tab active" href="rgp-list.html?v=1">▦ RGP List</a>
+      <a class="tab" href="rgp-entry.html?v=1">⊕ RGP Entry Form</a>
+      <a class="tab" href="rgp-return.html?v=1">↩ Return Entry Form</a>
+    </div>
+
+    <div class="card">
+      <h3>🔎 Search & Filter RGP</h3>
+      <div class="filters">
+        <input id="f_rgp" placeholder="RGP #">
+        <input id="f_code" placeholder="Item Code">
+        <input id="f_item" placeholder="Item Name">
+        <input id="f_department" placeholder="Department">
+        <input id="f_workshop" placeholder="Workshop">
+        <input id="f_carrier" placeholder="Carrier">
+        <select id="f_status">
+          <option value="">All Status</option>
+          <option>Pending</option>
+          <option>Partial Return</option>
+          <option>Completed</option>
+          <option>Cancelled</option>
+        </select>
+        <button class="search" onclick="renderRGP()">Search</button>
+        <button class="clear" onclick="clearFilters()">Clear</button>
+        <button class="export" onclick="exportExcel()">Export Excel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>Total Records: <span id="totalRecords">0</span></b>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>RGP #</th>
+              <th>Item Code</th>
+              <th>Item Name</th>
+              <th>Qty</th>
+              <th>Unit</th>
+              <th>Qty Received</th>
+              <th>Qty Pending</th>
+              <th>Pending Value</th>
+              <th>Department</th>
+              <th>Workshop</th>
+              <th>Carrier</th>
+              <th>Authorized By</th>
+              <th>Bill Detail</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="rgpBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let rgps = [];
+
+  document.addEventListener("DOMContentLoaded", loadRGP);
+
+  async function loadRGP(){
+    const {data, error} = await db
+      .from("rgp_items")
+      .select(`
+        *,
+        rgp_master:rgp_id (
+          id,
+          rgp_no,
+          rgp_date,
+          due_date,
+          department,
+          workshop_name,
+          carrier_name,
+          authorized_by,
+          bill_repaired_material,
+          status
+        )
+      `)
+      .order("id", {ascending:false});
+
+    if(error){
+      alert("Load error: " + error.message);
+      return;
+    }
+
+    rgps = (data || []).map(x => {
+      const m = x.rgp_master || {};
+      const qty = Number(x.qty || 0);
+      const received = Number(x.qty_received || 0);
+      const pending = Number(x.qty_pending ?? (qty - received));
+      const rate = Number(x.rate || 0);
+
+      return {
+        rgp_id: m.id,
+        item_id: x.id,
+        rgp_no: m.rgp_no || "",
+        item_code: x.item_code || "",
+        item_name: x.item_name || "",
+        size: x.size || "",
+        qty,
+        unit: x.unit || "",
+        qty_received: received,
+        qty_pending: pending,
+        pending_value: Number(x.pending_value || (pending * rate)),
+        department: m.department || "",
+        workshop_name: m.workshop_name || "",
+        carrier_name: m.carrier_name || "",
+        authorized_by: m.authorized_by || "",
+        bill_detail: m.bill_repaired_material || "",
+        status: m.status || ""
+      };
+    });
+
+    renderRGP();
+  }
+
+  function renderRGP(){
+    const fr = document.getElementById("f_rgp").value.toLowerCase();
+    const fc = document.getElementById("f_code").value.toLowerCase();
+    const fi = document.getElementById("f_item").value.toLowerCase();
+    const fd = document.getElementById("f_department").value.toLowerCase();
+    const fw = document.getElementById("f_workshop").value.toLowerCase();
+    const fcar = document.getElementById("f_carrier").value.toLowerCase();
+    const fs = document.getElementById("f_status").value;
+
+    const body = document.getElementById("rgpBody");
+    body.innerHTML = "";
+
+    const filtered = rgps.filter(r =>
+      r.rgp_no.toLowerCase().includes(fr) &&
+      r.item_code.toLowerCase().includes(fc) &&
+      r.item_name.toLowerCase().includes(fi) &&
+      r.department.toLowerCase().includes(fd) &&
+      r.workshop_name.toLowerCase().includes(fw) &&
+      r.carrier_name.toLowerCase().includes(fcar) &&
+      (!fs || r.status === fs)
+    );
+
+    document.getElementById("totalRecords").innerText = filtered.length;
+
+    filtered.forEach(r => {
+      const pendingClass = r.qty_pending <= 0 ? "zero" : r.qty_pending > 10 ? "danger" : "pending";
+
+      body.innerHTML += `
+        <tr>
+          <td><b>${r.rgp_no}</b></td>
+          <td>${r.item_code}</td>
+          <td>${r.item_name}${r.size ? " " + r.size : ""}</td>
+          <td>${r.qty}</td>
+          <td>${r.unit}</td>
+          <td>${r.qty_received}</td>
+          <td><span class="badge ${pendingClass}">${r.qty_pending}</span></td>
+          <td><b>${Number(r.pending_value || 0).toFixed(2)}</b></td>
+          <td>${r.department}</td>
+          <td>${r.workshop_name}</td>
+          <td>${r.carrier_name}</td>
+          <td>${r.authorized_by}</td>
+          <td>${r.bill_detail}</td>
+          <td>${r.status}</td>
+          <td>
+            <button class="btn-return" onclick="location.href='rgp-return.html?rgp=${r.rgp_id}&v=1'">Return</button>
+            <button class="btn-print" onclick="location.href='rgp.html?v=20'">Print</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function clearFilters(){
+    document.querySelectorAll("input,select").forEach(x => x.value = "");
+    renderRGP();
+  }
+
+  function exportExcel(){
+    alert("Excel export will be added next.");
+  }
+</script>
+</body>
+</html>
