@@ -1,1 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RGP Detail</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:#f4f6fb;color:#111827}
+    .layout{display:flex;min-height:100vh}
+
+    .sidebar{
+      width:210px;
+      background:linear-gradient(180deg,#351000,#1a0600);
+      color:white;
+      padding:22px 14px;
+      position:relative;
+    }
+    .brand{font-size:24px;font-weight:800;line-height:1.1;margin-bottom:8px}
+    .brand-sub{color:#ffb000;font-size:13px;font-weight:700;margin-bottom:35px}
+    .menu a{
+      display:flex;align-items:center;gap:8px;
+      color:white;text-decoration:none;
+      padding:13px 12px;border-radius:8px;
+      margin-bottom:8px;font-weight:700;font-size:14px;
+    }
+    .menu a:hover{background:rgba(255,255,255,.10)}
+    .menu a.active{background:#f59e0b;color:#111}
+
+    .user-box{
+      position:absolute;bottom:20px;left:14px;right:14px;
+      background:rgba(255,255,255,.10);
+      padding:16px 10px;border-radius:14px;text-align:center;
+    }
+    .user-box img{
+      width:72px;height:72px;border-radius:50%;object-fit:cover;
+      border:3px solid #f59e0b;display:block;margin:0 auto 10px auto;background:#fff;
+    }
+    .user-box b{display:block;color:white;font-size:14px;font-weight:800}
+    .user-box span{display:block;margin-top:3px;color:#22c55e;font-size:12px;font-weight:700}
+
+    .main{flex:1;padding:24px 34px}
+    h1{margin:0;font-size:28px}
+    .subtitle{color:#6b7280;margin:5px 0 20px}
+
+    .top-actions{display:flex;gap:10px;margin-bottom:18px}
+    button{
+      border:0;padding:11px 16px;border-radius:8px;
+      font-weight:800;cursor:pointer;
+    }
+    .btn-dark{background:#0f172a;color:white}
+    .btn-yellow{background:#f59e0b;color:#111}
+    .btn-green{background:#16a34a;color:white}
+
+    .card{
+      background:white;border-radius:14px;padding:22px;
+      box-shadow:0 8px 24px rgba(0,0,0,.06);
+      margin-bottom:20px;
+    }
+
+    .header-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
+    }
+    .info-box{
+      background:#f9fafb;border:1px solid #e5e7eb;
+      padding:12px;border-radius:10px;
+    }
+    .info-label{font-size:12px;color:#6b7280;font-weight:700}
+    .info-value{font-size:15px;font-weight:900;margin-top:5px}
+
+    .badge{
+      padding:7px 12px;border-radius:9px;font-weight:900;
+      display:inline-block;font-size:13px;
+    }
+    .pending{background:#fee2e2;color:#dc2626}
+    .partial{background:#fef3c7;color:#b45309}
+    .completed{background:#dcfce7;color:#15803d}
+    .age-green{background:#dcfce7;color:#15803d}
+    .age-orange{background:#ffedd5;color:#c2410c}
+    .age-red{background:#fee2e2;color:#dc2626}
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      gap:15px;
+    }
+    .stat{
+      background:#f9fafb;border:1px solid #e5e7eb;
+      border-radius:12px;padding:15px;text-align:center;
+    }
+    .stat-title{font-size:12px;color:#6b7280;font-weight:800}
+    .stat-value{font-size:22px;font-weight:900;margin-top:7px}
+
+    .overall-progress{
+      height:15px;background:#e5e7eb;border-radius:20px;overflow:hidden;margin-top:12px;
+    }
+    .overall-progress span{
+      display:block;height:100%;background:#16a34a;width:0%;
+    }
+
+    .item-card{
+      border:1px solid #e5e7eb;
+      border-radius:14px;
+      overflow:hidden;
+      margin-bottom:15px;
+      background:white;
+    }
+    .item-head{
+      padding:16px 18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:pointer;
+      background:#f9fafb;
+    }
+    .item-title{font-weight:900;font-size:16px}
+    .item-sub{font-size:12px;color:#6b7280;margin-top:4px}
+    .item-body{display:none;padding:18px}
+    .item-card.open .item-body{display:block}
+
+    .item-info{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:12px;
+      margin-bottom:18px;
+    }
+
+    .progress-wrap{margin:15px 0}
+    .progress-line{
+      height:13px;background:#e5e7eb;border-radius:20px;overflow:hidden;
+    }
+    .progress-line span{
+      display:block;height:100%;background:#16a34a;width:0%;
+    }
+    .progress-text{font-size:13px;font-weight:800;margin-top:6px}
+
+    table{width:100%;border-collapse:collapse}
+    th{
+      background:#0f172a;color:white;padding:12px;
+      text-align:left;font-size:13px;
+    }
+    td{padding:12px;border-bottom:1px solid #e5e7eb;font-size:13px}
+    .no-history{
+      padding:14px;background:#fef3c7;color:#92400e;
+      border-radius:10px;font-weight:800;
+    }
+
+    @media print{
+      .sidebar,.top-actions{display:none}
+      .main{padding:0}
+      body{background:white}
+      .card,.item-card{box-shadow:none;break-inside:avoid}
+      .item-body{display:block!important}
+    }
+  </style>
+</head>
+
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="brand">📦 Inventory<br>Store</div>
+    <div class="brand-sub">Management System</div>
+
+    <div class="menu">
+      <a href="index.html">⌂ Dashboard</a>
+      <a href="items.html">▣ Items Master</a>
+      <a href="purchase.html">🛒 Purchase Entry</a>
+      <a href="issue.html">↪ Issue Entry</a>
+      <a href="rgp-list.html" class="active">🚚 Gate Pass</a>
+      <a href="rgp.html">▣ Stock Ledger</a>
+      <a href="#">▣ Reports</a>
+      <a href="suppliers.html">▬ Suppliers</a>
+      <a href="workshops.html">⚙ Workshop / Party</a>
+    </div>
+
+    <div class="user-box">
+      <img src="public/profile.png?v=2" alt="Muhammad Waqas">
+      <b>Muhammad Waqas</b>
+      <span>● Online</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1 id="pageTitle">RGP Detail</h1>
+    <div class="subtitle">Complete item-wise return history</div>
+
+    <div class="top-actions">
+      <button class="btn-dark" onclick="location.href='rgp-list.html'">⬅ Back</button>
+      <button class="btn-yellow" onclick="expandAll()">▼ Expand All</button>
+      <button class="btn-green" onclick="window.print()">🖨 Print</button>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">RGP Information</h2>
+      <div class="header-grid" id="rgpInfo"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Summary</h2>
+      <div class="stats">
+        <div class="stat"><div class="stat-title">Items</div><div class="stat-value" id="s_items">0</div></div>
+        <div class="stat"><div class="stat-title">Qty Sent</div><div class="stat-value" id="s_sent">0</div></div>
+        <div class="stat"><div class="stat-title">Returned</div><div class="stat-value" id="s_returned">0</div></div>
+        <div class="stat"><div class="stat-title">Pending</div><div class="stat-value" id="s_pending">0</div></div>
+        <div class="stat"><div class="stat-title">Pending Value</div><div class="stat-value" id="s_value">Rs. 0</div></div>
+        <div class="stat"><div class="stat-title">Completion</div><div class="stat-value" id="s_percent">0%</div></div>
+      </div>
+      <div class="overall-progress"><span id="overallBar"></span></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Item Wise History</h2>
+      <div id="itemCards"></div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+  const SUPABASE_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const params = new URLSearchParams(window.location.search);
+  const rgpId = params.get("rgp") || params.get("rgp_id");
+
+  let master = {};
+  let items = [];
+  let returns = [];
+
+  function formatRGP(id){
+    return "RGP-" + String(id).padStart(5, "0");
+  }
+
+  function formatDate(d){
+    if(!d) return "";
+    const date = new Date(d);
+    if(isNaN(date)) return d;
+    return date.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"2-digit"});
+  }
+
+  function titleCase(str){
+    return String(str || "").replace(/\w\S*/g, t =>
+      t.charAt(0).toUpperCase() + t.substr(1).toLowerCase()
+    );
+  }
+
+  function getStatus(sent, returned){
+    if(returned <= 0) return "pending";
+    if(returned >= sent) return "completed";
+    return "partial";
+  }
+
+  function getAge(){
+    const d = master.rgp_date || master.date || master.created_at;
+    if(!d) return 0;
+    const start = new Date(d);
+    const now = new Date();
+    return Math.max(0, Math.floor((now - start) / (1000*60*60*24)));
+  }
+
+  function ageClass(days){
+    if(days <= 7) return "age-green";
+    if(days <= 30) return "age-orange";
+    return "age-red";
+  }
+
+  async function loadDetail(){
+    if(!rgpId){
+      alert("No RGP selected.");
+      location.href = "rgp-list.html";
+      return;
+    }
+
+    const mRes = await db.from("rgp_master").select("*").eq("id", rgpId).single();
+    if(mRes.error){
+      alert("RGP Master error: " + mRes.error.message);
+      return;
+    }
+    master = mRes.data || {};
+
+    const iRes = await db.from("rgp_items").select("*").eq("rgp_id", rgpId).order("id");
+    if(iRes.error){
+      alert("RGP Items error: " + iRes.error.message);
+      return;
+    }
+    items = iRes.data || [];
+
+    const rRes = await db.from("rgp_returns").select("*").eq("rgp_id", rgpId).order("return_date");
+    if(rRes.error){
+      alert("RGP Returns error: " + rRes.error.message);
+      return;
+    }
+    returns = rRes.data || [];
+
+    renderPage();
+  }
+
+  function renderPage(){
+    document.getElementById("pageTitle").innerText = "RGP Detail - " + formatRGP(master.id);
+
+    const totalSent = items.reduce((s,x)=>s + Number(x.qty || 0),0);
+    const totalReturned = items.reduce((s,x)=>s + Number(x.qty_received || 0),0);
+    const totalPending = items.reduce((s,x)=>s + Number(x.qty_pending || (Number(x.qty||0)-Number(x.qty_received||0))),0);
+    const pendingValue = items.reduce((s,x)=>{
+      const qty = Number(x.qty || 0);
+      const rec = Number(x.qty_received || 0);
+      const pen = Number(x.qty_pending || (qty-rec));
+      const rate = Number(x.rate || 0);
+      return s + (pen * rate);
+    },0);
+
+    const percent = totalSent > 0 ? Math.round((totalReturned / totalSent) * 100) : 0;
+    const age = getAge();
+
+    let status = getStatus(totalSent,totalReturned);
+    let statusClass = status === "completed" ? "completed" : status === "partial" ? "partial" : "pending";
+
+    document.getElementById("rgpInfo").innerHTML = `
+      ${infoBox("RGP No", formatRGP(master.id))}
+      ${infoBox("RGP Date", formatDate(master.rgp_date))}
+      ${infoBox("Department", master.department)}
+      ${infoBox("Workshop", master.workshop_name)}
+      ${infoBox("Purpose", master.purpose)}
+      ${infoBox("Outgoing Carrier", master.carrier_name)}
+      ${infoBox("Authorized By", master.authorized_by)}
+      ${infoBox("Bill Detail", master.bill_detail || master.bill_of_repaired_material || "")}
+      ${infoBox("Status", `<span class="badge ${statusClass}">${titleCase(status)}</span>`)}
+      ${infoBox("RGP Age", `<span class="badge ${ageClass(age)}">${age} Days</span>`)}
+      ${infoBox("Remarks", master.remarks || "")}
+    `;
+
+    document.getElementById("s_items").innerText = items.length;
+    document.getElementById("s_sent").innerText = totalSent;
+    document.getElementById("s_returned").innerText = totalReturned;
+    document.getElementById("s_pending").innerText = totalPending;
+    document.getElementById("s_value").innerText = "Rs. " + pendingValue.toLocaleString();
+    document.getElementById("s_percent").innerText = percent + "%";
+    document.getElementById("overallBar").style.width = percent + "%";
+
+    renderItems();
+  }
+
+  function infoBox(label,value){
+    return `
+      <div class="info-box">
+        <div class="info-label">${label}</div>
+        <div class="info-value">${value || "-"}</div>
+      </div>
+    `;
+  }
+
+  function renderItems(){
+    const box = document.getElementById("itemCards");
+    box.innerHTML = "";
+
+    items.forEach((item,index)=>{
+      const sent = Number(item.qty || 0);
+      const returned = Number(item.qty_received || 0);
+      const pending = Number(item.qty_pending || (sent-returned));
+      const rate = Number(item.rate || 0);
+      const value = pending * rate;
+      const percent = sent > 0 ? Math.round((returned / sent) * 100) : 0;
+
+      const itemReturns = returns.filter(r =>
+        String(r.rgp_item_id || r.item_id || r.rgp_items_id) === String(item.id)
+      );
+
+      let itemStatus = getStatus(sent,returned);
+      let itemStatusClass = itemStatus === "completed" ? "completed" : itemStatus === "partial" ? "partial" : "pending";
+
+      box.innerHTML += `
+        <div class="item-card ${index === 0 ? "open" : ""}">
+          <div class="item-head" onclick="toggleItem(this)">
+            <div>
+              <div class="item-title">${item.item_name || "-"} ${item.size ? " - " + item.size : ""}</div>
+              <div class="item-sub">Code: ${item.item_code || "-"} | Unit: ${item.unit || "-"}</div>
+            </div>
+            <div>
+              <span class="badge ${itemStatusClass}">${titleCase(itemStatus)}</span>
+            </div>
+          </div>
+
+          <div class="item-body">
+            <div class="item-info">
+              ${infoBox("Qty Sent", sent + " " + (item.unit || ""))}
+              ${infoBox("Returned", returned + " " + (item.unit || ""))}
+              ${infoBox("Pending", pending + " " + (item.unit || ""))}
+              ${infoBox("Rate", "Rs. " + rate)}
+              ${infoBox("Pending Value", "Rs. " + value.toLocaleString())}
+            </div>
+
+            <div class="progress-wrap">
+              <div class="progress-line"><span style="width:${percent}%"></span></div>
+              <div class="progress-text">${percent}% Returned (${returned} / ${sent} ${item.unit || ""})</div>
+            </div>
+
+            <h3>Return History</h3>
+            ${renderReturnHistory(itemReturns,item.unit)}
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  function renderReturnHistory(list,unit){
+    if(!list.length){
+      return `<div class="no-history">No return received yet. This item is still pending at workshop.</div>`;
+    }
+
+    let rows = "";
+    list.forEach(r=>{
+      rows += `
+        <tr>
+          <td>${formatDate(r.return_date)}</td>
+          <td>${Number(r.qty_returned || r.return_qty || 0)} ${unit || ""}</td>
+          <td>${r.incoming_carrier || "-"}</td>
+          <td>${r.received_checked_by || r.received_by || "-"}</td>
+          <td>${r.remarks || "-"}</td>
+        </tr>
+      `;
+    });
+
+    return `
+      <table>
+        <thead>
+          <tr>
+            <th>Return Date</th>
+            <th>Qty Returned</th>
+            <th>Incoming Carrier</th>
+            <th>Received & Checked By</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function toggleItem(head){
+    head.parentElement.classList.toggle("open");
+  }
+
+  function expandAll(){
+    document.querySelectorAll(".item-card").forEach(c=>c.classList.add("open"));
+  }
+
+  loadDetail();
+</script>
+
+</body>
+</html>
