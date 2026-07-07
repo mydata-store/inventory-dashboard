@@ -11,15 +11,12 @@
     .layout{display:flex;min-height:100vh}
 
     .sidebar{
-  width:210px;
-  height:100vh;
-  background:linear-gradient(180deg,#351000,#1a0600);
-  color:white;
-  padding:22px 14px;
-  position:fixed;
-  left:0;
-  top:0;
-}
+      width:210px;
+      background:linear-gradient(180deg,#351000,#1a0600);
+      color:white;
+      padding:22px 14px;
+      position:relative;
+    }
     .brand{font-size:24px;font-weight:800;line-height:1.1;margin-bottom:8px}
     .brand-sub{color:#ffb000;font-size:13px;font-weight:700;margin-bottom:35px}
     .menu a{
@@ -43,11 +40,7 @@
     .user-box b{display:block;color:white;font-size:14px;font-weight:800}
     .user-box span{display:block;margin-top:3px;color:#22c55e;font-size:12px;font-weight:700}
 
-    .main{
-  flex:1;
-  padding:24px 34px;
-  margin-left:210px;
-}
+    .main{flex:1;padding:24px 34px}
     h1{margin:0;font-size:28px}
     .subtitle{color:#6b7280;margin:5px 0 20px}
 
@@ -76,7 +69,7 @@
       padding:12px;border-radius:10px;
     }
     .info-label{font-size:12px;color:#6b7280;font-weight:700}
-    .info-value{font-size:15px;font-weight:500;margin-top:5px;color:#374151;}
+    .info-value{font-size:15px;font-weight:900;margin-top:5px}
 
     .badge{
       padding:7px 12px;border-radius:9px;font-weight:900;
@@ -90,31 +83,10 @@
     .age-red{background:#fee2e2;color:#dc2626}
 
     .stats{
-  display:grid;
-  grid-template-columns:repeat(6,1fr);
-  gap:8px;
-}
-
-.stat{
-  background:#f9fafb;
-  border:1px solid #e5e7eb;
-  border-radius:9px;
-  padding:8px 10px;
-  text-align:center;
-  min-height:58px;
-}
-
-.stat-title{
-  font-size:10px;
-  color:#6b7280;
-  font-weight:700;
-}
-
-.stat-value{
-  font-size:16px;
-  font-weight:800;
-  margin-top:3px;
-}
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      gap:15px;
+    }
     .stat{
       background:#f9fafb;border:1px solid #e5e7eb;
       border-radius:12px;padding:15px;text-align:center;
@@ -249,9 +221,9 @@
 </div>
 
 <script>
-  const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma"; 
-  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+  const SUPABASE_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const params = new URLSearchParams(window.location.search);
   const rgpId = params.get("rgp") || params.get("rgp_id");
@@ -332,16 +304,7 @@
     document.getElementById("pageTitle").innerText = "RGP Detail - " + formatRGP(master.id);
 
     const totalSent = items.reduce((s,x)=>s + Number(x.qty || 0),0);
-    const totalReturned = items.reduce((s,x)=>{
-  const sent = Number(x.qty || 0);
-  const received = Number(x.qty_received || 0);
-  return s + Math.min(received, sent);
-},0);
-    
-  const sent = Number(x.qty || 0);
-  const received = Number(x.qty_received || 0);
-  return s + Math.min(received, sent);
-},0);
+    const totalReturned = items.reduce((s,x)=>s + Number(x.qty_received || 0),0);
     const totalPending = items.reduce((s,x)=>s + Number(x.qty_pending || (Number(x.qty||0)-Number(x.qty_received||0))),0);
     const pendingValue = items.reduce((s,x)=>{
       const qty = Number(x.qty || 0);
@@ -397,9 +360,7 @@
 
     items.forEach((item,index)=>{
       const sent = Number(item.qty || 0);
-      const rawReturned = Number(item.qty_received || 0);
-      const rawReturned = Number(item.qty_received || 0);
-      const returned = Math.min(rawReturned, sent);
+      const returned = Number(item.qty_received || 0);
       const pending = Number(item.qty_pending || (sent-returned));
       const rate = Number(item.rate || 0);
       const value = pending * rate;
@@ -423,7 +384,6 @@
               <span class="badge ${itemStatusClass}">${titleCase(itemStatus)}</span>
             </div>
           </div>
-
 
           <div class="item-body">
             <div class="item-info">
@@ -457,9 +417,9 @@
       rows += `
         <tr>
           <td>${formatDate(r.return_date)}</td>
-          <td>${Number(r.qty_received || 0)} ${unit || ""}</td>
+          <td>${Number(r.qty_returned || r.return_qty || 0)} ${unit || ""}</td>
           <td>${r.incoming_carrier || "-"}</td>
-          <td>${r.received_by || "-"}</td>
+          <td>${r.received_checked_by || r.received_by || "-"}</td>
           <td>${r.remarks || "-"}</td>
         </tr>
       `;
