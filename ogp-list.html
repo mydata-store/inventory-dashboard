@@ -1,1 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OGP Entry</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f4f6fb;color:#0f172a}
+.layout{display:flex;min-height:100vh}
+
+.sidebar{
+  width:210px;height:100vh;position:fixed;left:0;top:0;
+  background:linear-gradient(180deg,#351000,#1a0600);
+  color:white;padding:22px 14px;
+}
+.brand{font-size:24px;font-weight:900;line-height:1.1;margin-bottom:6px}
+.brand-sub{color:#f59e0b;font-size:13px;font-weight:800;margin-bottom:35px}
+.menu a{display:block;color:white;text-decoration:none;padding:12px;border-radius:10px;margin-bottom:7px;font-weight:700}
+.menu a.active,.menu a:hover{background:#f59e0b;color:#111827}
+.profile{
+  position:absolute;bottom:20px;left:14px;right:14px;
+  background:rgba(255,255,255,.10);padding:16px 10px;border-radius:14px;text-align:center;
+}
+.profile img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #f59e0b;margin-bottom:10px}
+.profile b{display:block;color:white;font-size:14px}
+.profile span{color:#22c55e;font-size:12px;font-weight:700}
+
+.main{margin-left:210px;width:calc(100% - 210px);padding:28px 34px}
+h1{margin:0;font-size:28px}
+.sub{color:#64748b;margin:6px 0 20px}
+
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.tab{padding:15px;border-radius:10px;background:white;border:1px solid #dbe1ea;text-align:center;font-weight:800;text-decoration:none;color:#111827}
+.tab.active{background:#f59e0b}
+
+.card{background:white;border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 8px 22px rgba(0,0,0,.06)}
+.card h3{margin:0 0 16px}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+label{font-size:13px;font-weight:800}
+input,select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;margin-top:6px}
+
+table{width:100%;border-collapse:collapse}
+th{background:#0f172a;color:white;padding:11px;text-align:left;font-size:13px}
+td{padding:8px;border-bottom:1px solid #e5e7eb}
+td input{margin:0}
+
+.btn{border:0;border-radius:8px;padding:12px 18px;font-weight:800;cursor:pointer}
+.green{background:#16a34a;color:white}
+.yellow{background:#f59e0b}
+.dark{background:#111827;color:white}
+.blue{background:#2563eb;color:white}
+.actions{display:flex;gap:8px;margin-top:14px}
+</style>
+</head>
+
+<body>
+<div class="layout">
+
+<aside class="sidebar">
+  <div class="brand">📦 Inventory<br>Store</div>
+  <div class="brand-sub">Management System</div>
+
+  <div class="menu">
+    <a href="index.html">⌂ Dashboard</a>
+    <a href="items.html">▣ Items Master</a>
+    <a href="purchase.html">🛒 Purchase Entry</a>
+    <a href="issue.html">↪ Issue Entry</a>
+    <a class="active" href="gate-pass.html">🚚 Gate Pass</a>
+    <a href="#">▣ Stock Ledger</a>
+    <a href="#">▥ Reports</a>
+    <a href="suppliers.html">▰ Suppliers</a>
+    <a href="workshops.html">⚙ Workshop / Party</a>
+  </div>
+
+  <div class="profile">
+    <img src="public/profile.png?v=2">
+    <b>Muhammad Waqas</b>
+    <span>● Online</span>
+  </div>
+</aside>
+
+<main class="main">
+  <h1>OGP Entry</h1>
+  <div class="sub">Create new Outward Gate Pass</div>
+
+  <div class="tabs">
+    <a class="tab" href="ogp-list.html">▦ OGP List</a>
+    <a class="tab active" href="ogp-entry.html">⊕ OGP Entry Form</a>
+    <a class="tab" href="ogp-detail.html">↪ OGP Detail</a>
+  </div>
+
+  <div class="card">
+    <h3>Outward Gate Pass Details</h3>
+
+    <div class="grid">
+      <div><label>OGP No *</label><input id="ogp_no" placeholder="Enter OGP No"></div>
+      <div><label>OGP Date *</label><input id="ogp_date" placeholder="07-7"></div>
+      <div><label>Department *</label><input id="department" placeholder="Enter Department"></div>
+      <div><label>Receiver / Party *</label><input id="receiver_party" placeholder="Enter Receiver / Party"></div>
+
+      <div><label>Carrier Name</label><input id="carrier_name" placeholder="Enter Carrier Name"></div>
+      <div><label>Authorized By</label><input id="authorized_by" placeholder="Enter Authorized By"></div>
+      <div><label>Bill / Challan Detail</label><input id="bill_detail" placeholder="Enter Bill / Challan Detail"></div>
+      <div><label>Purpose</label><input id="purpose" placeholder="Enter Purpose"></div>
+
+      <div style="grid-column:1/5"><label>Remarks</label><input id="remarks" placeholder="Enter Remarks"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Material Details</h3>
+    <button class="btn blue" onclick="addItemRow()">+ Add Item</button>
+
+    <br><br>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Item *</th>
+          <th>Item Code</th>
+          <th>Size</th>
+          <th>Unit</th>
+          <th>Qty *</th>
+          <th>Rate</th>
+          <th>Total Value</th>
+        </tr>
+      </thead>
+      <tbody id="itemBody"></tbody>
+    </table>
+
+    <datalist id="itemList"></datalist>
+
+    <div class="actions">
+      <button class="btn green" onclick="saveOGP()">Save OGP</button>
+      <button class="btn yellow" onclick="clearForm()">Clear</button>
+      <button class="btn dark" onclick="location.href='ogp-list.html'">Back to List</button>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let itemsMaster = [];
+
+function titleCase(str){
+  return (str || "").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function formatShortDate(v){
+  if(!v) return "";
+  const p = v.split("-");
+  if(p.length < 2) return v;
+  const d = p[0].padStart(2,"0");
+  const m = Number(p[1]);
+  const y = p[2] ? p[2] : "26";
+  const months = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${d}-${months[m] || p[1]}-${y}`;
+}
+
+async function loadItems(){
+  const {data,error} = await db.from("items").select("*").order("item_name",{ascending:true});
+  if(error){ alert("Items load error: " + error.message); return; }
+
+  itemsMaster = data || [];
+  const list = document.getElementById("itemList");
+  list.innerHTML = "";
+
+  itemsMaster.forEach(i=>{
+    list.innerHTML += `<option value="${i.item_name}${i.size ? " - " + i.size : ""}"></option>`;
+  });
+}
+
+function addItemRow(){
+  const body = document.getElementById("itemBody");
+
+  body.insertAdjacentHTML("beforeend", `
+    <tr>
+      <td><input class="item_name" list="itemList" oninput="fillItem(this)" onblur="fillItem(this)" onkeydown="cellKeys(event,this)"></td>
+      <td><input class="item_code" readonly onkeydown="cellKeys(event,this)"></td>
+      <td><input class="size" readonly onkeydown="cellKeys(event,this)"></td>
+      <td><input class="unit" readonly onkeydown="cellKeys(event,this)"></td>
+      <td><input class="qty" type="number" oninput="calcRow(this)" onkeydown="cellKeys(event,this)"></td>
+      <td><input class="rate" type="number" oninput="calcRow(this)" onkeydown="cellKeys(event,this)"></td>
+      <td><input class="total_value" readonly onkeydown="cellKeys(event,this)"></td>
+    </tr>
+  `);
+}
+
+function fillItem(el){
+  const tr = el.closest("tr");
+  const name = el.value.trim().toLowerCase();
+
+  const item = itemsMaster.find(x =>
+    `${x.item_name}${x.size ? " - " + x.size : ""}`.trim().toLowerCase() === name
+  );
+
+  if(!item) return;
+
+  el.value = item.item_name || "";
+  tr.querySelector(".item_code").value = item.item_code || item.code || "";
+  tr.querySelector(".size").value = item.size || "";
+  tr.querySelector(".unit").value = item.unit || "";
+  tr.querySelector(".rate").value = item.rate || item.unit_rate || item.last_rate || 0;
+
+  calcRow(el);
+}
+
+function calcRow(el){
+  const tr = el.closest("tr");
+  const qty = Number(tr.querySelector(".qty").value || 0);
+  const rate = Number(tr.querySelector(".rate").value || 0);
+  tr.querySelector(".total_value").value = (qty * rate).toFixed(2);
+}
+
+function cellKeys(e, el){
+  const inputs = [...document.querySelectorAll("tbody input")];
+  const index = inputs.indexOf(el);
+
+  if(e.key === "ArrowRight"){ e.preventDefault(); inputs[index+1]?.focus(); }
+  if(e.key === "ArrowLeft"){ e.preventDefault(); inputs[index-1]?.focus(); }
+  if(e.key === "ArrowDown"){ e.preventDefault(); inputs[index+7]?.focus(); }
+  if(e.key === "ArrowUp"){ e.preventDefault(); inputs[index-7]?.focus(); }
+
+  if(e.key === "Enter"){
+    e.preventDefault();
+    if(index === inputs.length - 1){
+      addItemRow();
+      setTimeout(()=>document.querySelector("#itemBody tr:last-child input")?.focus(),50);
+    }else{
+      inputs[index+1]?.focus();
+    }
+  }
+
+  if(e.ctrlKey && e.key.toLowerCase() === "d"){
+    e.preventDefault();
+    const above = inputs[index-7];
+    if(above) el.value = above.value;
+  }
+
+  if(e.key === "Delete"){
+    e.preventDefault();
+    if(!el.readOnly){
+      el.value = "";
+      calcRow(el);
+    }
+  }
+}
+
+async function saveOGP(){
+  const rows = [...document.querySelectorAll("#itemBody tr")];
+
+  const itemRows = rows.map(tr => ({
+    item_code: tr.querySelector(".item_code").value,
+    item_name: tr.querySelector(".item_name").value,
+    size: tr.querySelector(".size").value,
+    unit: tr.querySelector(".unit").value,
+    qty: Number(tr.querySelector(".qty").value || 0),
+    rate: Number(tr.querySelector(".rate").value || 0),
+    total_value: Number(tr.querySelector(".total_value").value || 0)
+  })).filter(x => x.item_name && x.qty > 0);
+
+  if(!document.getElementById("ogp_no").value){ alert("Enter OGP No"); return; }
+  if(!document.getElementById("ogp_date").value){ alert("Enter OGP Date"); return; }
+  if(itemRows.length === 0){ alert("Please add at least one item"); return; }
+
+  const masterInsert = await db.from("ogp_master").insert([{
+    ogp_no: document.getElementById("ogp_no").value,
+    ogp_date: formatShortDate(document.getElementById("ogp_date").value),
+    department: titleCase(document.getElementById("department").value),
+    receiver_party: titleCase(document.getElementById("receiver_party").value),
+    carrier_name: titleCase(document.getElementById("carrier_name").value),
+    authorized_by: titleCase(document.getElementById("authorized_by").value),
+    purpose: titleCase(document.getElementById("purpose").value),
+    bill_detail: document.getElementById("bill_detail").value,
+    remarks: document.getElementById("remarks").value,
+    status: "Issued"
+  }]).select().single();
+
+  if(masterInsert.error){
+    alert("OGP master save error: " + masterInsert.error.message);
+    return;
+  }
+
+  const ogpId = masterInsert.data.id;
+  itemRows.forEach(x => x.ogp_id = ogpId);
+
+  const itemInsert = await db.from("ogp_items").insert(itemRows);
+
+  if(itemInsert.error){
+    alert("OGP item save error: " + itemInsert.error.message);
+    return;
+  }
+
+  alert("OGP saved successfully.");
+  location.href = "ogp-list.html?v=1";
+}
+
+function clearForm(){
+  document.querySelectorAll("input").forEach(x => x.value = "");
+  document.getElementById("itemBody").innerHTML = "";
+  addItemRow();
+}
+
+document.addEventListener("input", e=>{
+  if(e.target.tagName === "INPUT" && !e.target.classList.contains("item_name")){
+    e.target.value = titleCase(e.target.value);
+  }
+});
+
+loadItems();
+addItemRow();
+</script>
+
+</body>
+</html>
