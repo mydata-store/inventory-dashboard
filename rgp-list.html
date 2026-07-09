@@ -2,620 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RGP List</title>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:Arial, sans-serif;
-      background:#f4f6fb;
-      color:#111827;
-    }
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6fb;color:#0f172a}
     .layout{display:flex;min-height:100vh}
-   .sidebar{
-  width:210px;
-  background:linear-gradient(180deg,#351000,#1a0600);
-  color:white;
-  padding:22px 14px;
-  position:relative;
-}
-.brand{
-  font-size:24px;
-  font-weight:800;
-  line-height:1.1;
-  margin-bottom:8px;
-}
-
-.brand-sub{
-  color:#ffb000;
-  font-size:13px;
-  font-weight:700;
-  margin-bottom:35px;
-}
-
-.menu a{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  color:white;
-  text-decoration:none;
-  padding:13px 12px;
-  border-radius:8px;
-  margin-bottom:8px;
-  font-weight:700;
-  font-size:14px;
-}
-
-.menu a:hover{
-  background:rgba(255,255,255,.10);
-}
-
-.menu a.active{
-  background:#f59e0b;
-  color:#111;
-}
-.user-box{
-  position:absolute;
-  bottom:20px;
-  left:14px;
-  right:14px;
-  background:rgba(255,255,255,.10);
-  padding:16px 10px;
-  border-radius:14px;
-  text-align:center;
-}
-
-.user-box img{
-  width:72px;
-  height:72px;
-  border-radius:50%;
-  object-fit:cover;
-  object-position:center;
-  border:3px solid #f59e0b;
-  display:block;
-  margin:0 auto 10px auto;
-  background:#fff;
-}
-
-.user-box b{
-  display:block;
-  color:white;
-  font-size:14px;
-  font-weight:800;
-  margin-top:4px;
-}
-
-.user-box span{
-  display:block;
-  margin-top:3px;
-  color:#22c55e;
-  font-size:12px;
-  font-weight:700;
-}
-
-    .main{flex:1;padding:24px 34px}
-    h1{margin:0;font-size:28px}
-    .subtitle{color:#6b7280;margin-top:5px;margin-bottom:20px}
-
-    .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px}
-    .tab{
-      padding:15px;
-      border:1px solid #ddd;
-      background:white;
-      border-radius:9px;
-      text-align:center;
-      font-weight:800;
-      cursor:pointer;
-    }
-    .tab.active{background:#f59e0b;border-color:#f59e0b}
-
-    .card{
-      background:white;
-      border-radius:12px;
-      padding:22px;
-      box-shadow:0 8px 24px rgba(0,0,0,.06);
-      margin-bottom:20px;
-    }
-
-    .filter-title{font-size:18px;font-weight:800;margin-bottom:18px}
-    .filters{
-      display:grid;
-      grid-template-columns:repeat(7,1fr);
-      gap:14px;
-      align-items:end;
-    }
-    label{font-size:13px;font-weight:700;margin-bottom:7px;display:block}
-    input,select{
-      width:100%;
-      padding:11px;
-      border:1px solid #d1d5db;
-      border-radius:7px;
-      outline:none;
-    }
-    input:focus,select:focus{
-      border-color:#2563eb;
-      box-shadow:0 0 0 2px rgba(37,99,235,.15);
-    }
-    .filter-buttons{
-      margin-top:18px;
-      display:grid;
-      grid-template-columns:180px 180px 180px;
-      gap:14px;
-    }
-    button{
-      border:0;
-      padding:11px 14px;
-      border-radius:7px;
-      font-weight:800;
-      cursor:pointer;
-    }
-    .btn-search{background:#0f172a;color:white}
-    .btn-clear{background:#f59e0b;color:#111}
-    .btn-export{background:#16a34a;color:white}
-
-    .stats{
-      display:grid;
-      grid-template-columns:repeat(5,1fr);
-      gap:18px;
-      margin-bottom:20px;
-    }
-    .stat{
-      background:white;
-      border-radius:12px;
-      padding:22px;
-      display:flex;
-      gap:15px;
-      align-items:center;
-      box-shadow:0 8px 24px rgba(0,0,0,.06);
-    }
-    .stat-icon{
-      width:48px;height:48px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:24px;
-      font-weight:900;
-    }
-    .blue{background:#dbeafe;color:#2563eb}
-    .green{background:#dcfce7;color:#16a34a}
-    .orange{background:#ffedd5;color:#f97316}
-    .red{background:#fee2e2;color:#dc2626}
-    .purple{background:#f3e8ff;color:#9333ea}
-    .stat-title{font-size:14px;color:#374151}
-    .stat-value{font-size:25px;font-weight:900;margin-top:5px}
-    .rs{color:#9333ea}
-
-    table{
-      width:100%;
-      border-collapse:collapse;
-      overflow:hidden;
-      border-radius:10px;
-    }
-    th{
-      background:#0f172a;
-      color:white;
-      padding:13px;
-      font-size:13px;
-      text-align:left;
-    }
-    td{
-      padding:13px;
-      border-bottom:1px solid #e5e7eb;
-      font-size:13px;
-    }
-    .rgp-link{color:#2563eb;font-weight:900}
-    .badge{
-      padding:6px 11px;
-      border-radius:8px;
-      font-weight:800;
-      display:inline-block;
-    }
-    .pending{background:#fee2e2;color:#dc2626}
-    .partial{background:#fef3c7;color:#b45309}
-    .completed{background:#dcfce7;color:#15803d}
-    .qty-badge{background:#dbeafe;color:#2563eb}
-    .danger-badge{background:#fee2e2;color:#dc2626}
-    .zero-badge{background:#dcfce7;color:#15803d}
-
-    .actions{display:flex;gap:8px}
-    .btn-detail{background:white;color:#2563eb;border:1px solid #2563eb}
-    .btn-return{background:#16a34a;color:white}
-    .btn-print{background:white;color:#2563eb;border:1px solid #2563eb}
-
-    @media(max-width:1100px){
-      .filters,.stats{grid-template-columns:1fr 1fr}
-      .tabs{grid-template-columns:1fr}
-      .sidebar{display:none}
-    }
+    .sidebar{width:210px;height:100vh;background:linear-gradient(180deg,#351000,#1a0600);color:white;padding:22px 14px;position:fixed;left:0;top:0;z-index:100}
+    .brand{font-size:24px;font-weight:900;line-height:1.1;margin-bottom:6px}.brand-sub{color:#ffb000;font-size:13px;font-weight:800;margin-bottom:34px}
+    .menu a{display:flex;align-items:center;gap:8px;color:white;text-decoration:none;padding:12px 12px;border-radius:8px;margin-bottom:7px;font-weight:700;font-size:14px}.menu a:hover{background:rgba(255,255,255,.10)}.menu a.active{background:#f59e0b;color:#111827}
+    .user-box{position:absolute;bottom:20px;left:14px;right:14px;background:rgba(255,255,255,.10);padding:16px 10px;border-radius:14px;text-align:center}.user-box img{width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:center;border:3px solid #f59e0b;display:block;margin:0 auto 10px auto}.user-box b{display:block;color:white;font-size:14px;font-weight:800}.user-box span{display:block;margin-top:3px;color:#22c55e;font-size:12px;font-weight:700}
+    .main{margin-left:210px;flex:1;padding:28px 34px}.top-title{display:grid;grid-template-columns:1fr 520px;gap:20px;align-items:start;border-bottom:1px solid #dbe1ea;padding-bottom:24px}.top-title h1{margin:0;font-size:31px;font-weight:900}.subtitle{margin-top:8px;color:#4b5563;font-size:16px}.search-area{display:flex;flex-direction:column;align-items:flex-end;gap:12px}.smart-search{width:100%;height:54px;border:1px solid #cfd8e3;border-radius:10px;background:white;padding:0 16px;font-size:15px;box-shadow:0 5px 18px rgba(15,23,42,.04)}.small-actions{display:flex;gap:12px}.btn{height:38px;border:0;border-radius:8px;padding:0 22px;font-weight:900;cursor:pointer;font-size:14px}.btn-dark{background:#0f172a;color:white}.btn-yellow{background:#f59e0b;color:#111827}.btn-green{background:#16a34a;color:white}.btn-blue{background:white;color:#2563eb;border:1px solid #2563eb}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:24px 0 26px}.tab{height:56px;border:1px solid #d1d5db;border-radius:8px;background:white;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center;text-decoration:none;color:#111827}.tab.active{background:#f59e0b;border-color:#f59e0b}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-bottom:26px}.stat{background:white;border-radius:13px;padding:20px 18px;display:flex;gap:16px;align-items:center;box-shadow:0 8px 22px rgba(15,23,42,.06)}.icon{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px}.i1{background:#dbeafe}.i2{background:#dcfce7}.i3{background:#ffedd5}.i4{background:#fee2e2}.i5{background:#f3e8ff;color:#9333ea;font-weight:900}.stat-label{font-size:14px;color:#374151;margin-bottom:8px}.stat-value{font-size:28px;font-weight:900}.card{background:white;border-radius:13px;padding:18px;box-shadow:0 8px 22px rgba(15,23,42,.06)}.card h2{margin:0 0 18px;font-size:24px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:1320px}th{background:#0f172a;color:white;text-align:left;padding:14px 12px;font-size:13px;white-space:nowrap}th:first-child{border-radius:8px 0 0 0}th:last-child{border-radius:0 8px 0 0}td{border-bottom:1px solid #e5e7eb;padding:15px 12px;font-size:13px;vertical-align:middle}a.rgp-link{color:#2563eb;font-weight:900}.badge{display:inline-block;border-radius:7px;padding:7px 11px;font-weight:900;font-size:12px}.pending{background:#fee2e2;color:#dc2626}.partial{background:#fef3c7;color:#b45309}.completed{background:#dcfce7;color:#15803d}.pill-red{background:#fee2e2;color:#ef4444;border-radius:7px;padding:7px 12px;font-weight:900}.actions{display:flex;gap:8px;white-space:nowrap}.action{height:33px;border-radius:6px;padding:0 12px;font-weight:900;cursor:pointer;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.detail{background:white;color:#2563eb;border:1px solid #2563eb}.return{background:#16a34a;color:white;border:1px solid #16a34a}.print{background:white;color:#2563eb;border:1px solid #2563eb}.no-data{text-align:center;color:#6b7280;font-weight:800;padding:28px}
+    @media(max-width:1200px){.top-title{grid-template-columns:1fr}.search-area{align-items:stretch}.stats{grid-template-columns:repeat(2,1fr)}}
+    @media print{.sidebar,.tabs,.top-title .search-area,.actions{display:none}.main{margin:0;padding:0}.card,.stat{box-shadow:none}.top-title{border:0;display:block}.stats{grid-template-columns:repeat(5,1fr)}}
   </style>
 </head>
-
 <body>
 <div class="layout">
-
   <aside class="sidebar">
     <div class="brand">📦 Inventory<br>Store</div>
     <div class="brand-sub">Management System</div>
-
-    <div class="menu">
-  <a href="index.html">⌂ Dashboard</a>
-  <a href="items.html">▣ Items Master</a>
-  <a href="purchase.html">🛒 Purchase Entry</a>
-  <a href="issue.html">↪ Issue Entry</a>
-  <a href="rgp-list.html" class="active">🚚 Gate Pass</a>
-  <a href="rgp.html">▣ Stock Ledger</a>
-  <a href="#">▣ Reports</a>
-  <a href="suppliers.html">▬ Suppliers</a>
-  <a href="workshops.html">⚙ Workshop / Party</a>
-</div>
-    <div class="user-box">
-  <img src="public/profile.png?v=2" alt="Muhammad Waqas">
-  <b>Muhammad Waqas</b>
-  <span>● Online</span>
-</div>
+    <nav class="menu">
+      <a href="index.html">⌂ Dashboard</a>
+      <a href="items.html">▣ Items Master</a>
+      <a href="purchase.html">🛒 Purchase Entry</a>
+      <a href="issue.html">↪ Issue Entry</a>
+      <a class="active" href="gate-pass.html">🚚 Gate Pass</a>
+      <a href="rgp.html">▣ Stock Ledger</a>
+      <a href="#">▣ Reports</a>
+      <a href="suppliers.html">▬ Suppliers</a>
+      <a href="workshops.html">⚙ Workshop / Party</a>
+    </nav>
+    <div class="user-box"><img src="public/profile.png?v=2" alt="Muhammad Waqas"><b>Muhammad Waqas</b><span>● Online</span></div>
   </aside>
-
   <main class="main">
-    <h1>RGP Management</h1>
-    <div class="subtitle">Returnable Gate Pass Item-wise List</div>
-
-    <div class="tabs">
-      <div class="tab active">☷ RGP List</div>
-      <div class="tab" onclick="location.href='rgp-entry.html'">⊕ RGP Entry Form</div>
-      <div class="tab" onclick="location.href='rgp-return.html'">↩ Return Entry Form</div>
-    </div>
-
-    <div class="card">
-      <div class="filter-title">🔎 Search & Filter RGP</div>
-
-      <div class="filters">
-  <div>
-    <label>RGP No</label>
-    <input id="f_rgp" class="filter-field" list="rgpList" placeholder="Enter RGP No">
-    <datalist id="rgpList"></datalist>
-  </div>
-
-  <div>
-    <label>Item</label>
-    <input id="f_item_code" class="filter-field" list="itemList" placeholder="Type Item Code / Name">
-    <datalist id="itemList"></datalist>
-  </div>
-
-  <div>
-    <label>Item Name</label>
-    <input id="f_item" class="filter-field" list="itemNameList" placeholder="Type Item Name">
-    <datalist id="itemNameList"></datalist>
-  </div>
-
-  <div>
-    <label>Department</label>
-    <input id="f_department" class="filter-field" list="departmentList" placeholder="Type Department">
-    <datalist id="departmentList"></datalist>
-  </div>
-
-  <div>
-    <label>Workshop</label>
-    <input id="f_workshop" class="filter-field" list="workshopList" placeholder="Type Workshop">
-    <datalist id="workshopList"></datalist>
-  </div>
-
-  <div>
-    <label>Carrier</label>
-    <input id="f_carrier" class="filter-field" list="carrierList" placeholder="Type Carrier">
-    <datalist id="carrierList"></datalist>
-  </div>
-
-  <div>
-    <label>Status</label>
-    <select id="f_status" class="filter-field">
-      <option value="">All Status</option>
-      <option value="pending">Pending</option>
-      <option value="partial return">Partial Return</option>
-      <option value="completed">Completed</option>
-    </select>
-  </div>
-</div>
-      <div class="filter-buttons">
-        <button class="btn-search filter-field" onclick="renderRGP()">🔍 Search</button>
-        <button class="btn-clear filter-field" onclick="clearFilters()">⟳ Clear</button>
-        <button class="btn-export filter-field" onclick="exportExcel()">▣ Export Excel</button>
-      </div>
-    </div>
-
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-icon blue">📄</div>
-        <div>
-          <div class="stat-title">Total RGPs</div>
-          <div class="stat-value" id="totalRecords">0</div>
+    <section class="top-title">
+      <div><h1>RGP Management</h1><div class="subtitle">Returnable Gate Pass Item-wise List</div></div>
+      <div class="search-area">
+        <input id="globalSearch" class="smart-search" placeholder="🔍  Search RGP, item, department, workshop, carrier, status..." oninput="renderRGP()">
+        <div class="small-actions">
+          <button class="btn btn-dark" onclick="renderRGP()">🔍 Search</button>
+          <button class="btn btn-yellow" onclick="clearSearch()">⟳ Clear</button>
+          <button class="btn btn-green" onclick="window.print()">▣ Print</button>
         </div>
       </div>
-
-      <div class="stat">
-        <div class="stat-icon green">📤</div>
-        <div>
-          <div class="stat-title">Total Items Sent</div>
-          <div class="stat-value" id="totalQty">0</div>
-        </div>
+    </section>
+    <section class="tabs">
+      <a class="tab active" href="rgp-list.html">☷ RGP List</a>
+      <a class="tab" href="rgp-entry.html">⊕ RGP Entry Form</a>
+      <a class="tab" href="rgp-return.html">↩ Return Entry Form</a>
+    </section>
+    <section class="stats">
+      <div class="stat"><div class="icon i1">▤</div><div><div class="stat-label">Total RGPs</div><div class="stat-value" id="totalRecords">0</div></div></div>
+      <div class="stat"><div class="icon i2">⚖</div><div><div class="stat-label">Total Items Sent</div><div class="stat-value" id="totalSent">0</div></div></div>
+      <div class="stat"><div class="icon i3">↩</div><div><div class="stat-label">Total Returned Items</div><div class="stat-value" id="totalReturned">0</div></div></div>
+      <div class="stat"><div class="icon i4">⏱</div><div><div class="stat-label">Pending Items</div><div class="stat-value" id="totalPendingQty">0</div></div></div>
+      <div class="stat"><div class="icon i5">PKR</div><div><div class="stat-label">Pending Value</div><div class="stat-value" id="totalPendingValue">Rs. 0.00</div></div></div>
+    </section>
+    <section class="card">
+      <h2>RGP List</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>RGP No</th><th>Item Code</th><th>Item Name</th><th>Qty</th><th>Unit</th><th>Qty Received</th><th>Qty Pending</th><th>Pending Value</th><th>Department</th><th>Workshop</th><th>Carrier</th><th>Authorized By</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="rgpBody"></tbody>
+        </table>
       </div>
-
-      <div class="stat">
-        <div class="stat-icon orange">↩</div>
-        <div>
-          <div class="stat-title">Total Returned Items</div>
-          <div class="stat-value" id="totalReceived">0</div>
-        </div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-icon red">⏱</div>
-        <div>
-          <div class="stat-title">Pending Items</div>
-          <div class="stat-value" id="totalPendingQty">0</div>
-        </div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-icon purple">PKR</div>
-        <div>
-          <div class="stat-title">Pending Value</div>
-          <div class="stat-value rs" id="totalPendingValue">Rs. 0.00</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2 style="margin-top:0">RGP List</h2>
-
-      <table>
-        <thead>
-          <tr>
-            <th>RGP No</th>
-            <th>Item Code</th>
-            <th>Item Name</th>
-            <th>Qty</th>
-            <th>Unit</th>
-            <th>Qty Received</th>
-            <th>Qty Pending</th>
-            <th>Pending Value</th>
-            <th>Department</th>
-            <th>Workshop</th>
-            <th>Carrier</th>
-            <th>Authorized By</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="rgpBody"></tbody>
-      </table>
-    </div>
-
+    </section>
   </main>
 </div>
-
 <script>
-  const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma"; 
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
   let rgps = [];
-function formatRGP(no){
-  const n = String(no || "").replace(/\D/g, "");
-  return "RGP-" + String(n).padStart(5, "0");
-}
-  
+  function formatRGP(no){ const n = String(no || "").replace(/\D/g, ""); return "RGP-" + String(n).padStart(5,"0"); }
+  function displayItemName(r){ const name = r.item_name || ""; const size = r.size || ""; if(!size) return name || "-"; return name.toLowerCase().includes(size.toLowerCase()) ? name : `${name} - ${size}`; }
+  function statusClass(s){ const t = String(s||"").toLowerCase(); if(t.includes("complete")) return "completed"; if(t.includes("partial")) return "partial"; return "pending"; }
+  function calcStatus(qty, received){ if(received >= qty && qty > 0) return "Completed"; if(received > 0) return "Partial Return"; return "Pending"; }
   async function loadRGP(){
-    const itemsRes = await db
-  .from("rgp_items")
-  .select("*")
-  .order("rgp_id", { ascending: false });
-    if(itemsRes.error){
-      alert("Items load error: " + itemsRes.error.message);
-      return;
-    }
-
-    const masterRes = await db.from("rgp_master").select("*");
-    if(masterRes.error){
-      alert("Master load error: " + masterRes.error.message);
-      return;
-    }
-
-    const items = itemsRes.data || [];
+    const itemsRes = await db.from("rgp_items").select("*").order("rgp_id", { ascending:false }).order("id", { ascending:true });
+    if(itemsRes.error){ alert("Items load error: " + itemsRes.error.message); return; }
+    const masterRes = await db.from("rgp_master").select("*").order("id", { ascending:false });
+    if(masterRes.error){ alert("Master load error: " + masterRes.error.message); return; }
     const masters = masterRes.data || [];
-
-    rgps = items.map(x => {
-      const m = masters.find(mm => mm.id == x.rgp_id) || {};
+    rgps = (itemsRes.data || []).map(x => {
+      const m = masters.find(mm => Number(mm.id) === Number(x.rgp_id)) || {};
       const qty = Number(x.qty || 0);
-      const received = Number(x.qty_received || 0);
-      const pending = Number(x.qty_pending || (qty - received));
+      const received = Math.min(Number(x.qty_received || 0), qty);
+      const pending = Number(x.qty_pending ?? (qty - received));
       const rate = Number(x.rate || 0);
-
-      let status = m.status || "";
-      if(pending <= 0) status = "completed";
-      else if(received > 0) status = "partial return";
-      else status = "pending";
-
       return {
-        rgp_id: m.id,
-        item_id: x.id,
-        rgp_no: m.rgp_no || "",
-        rgp_date: m.rgp_date || "",
-        item_code: x.item_code || "",
-        item_name: x.item_name || "",
-        size: x.size || "",
-        qty: qty,
-        unit: x.unit || "",
-        qty_received: received,
-        qty_pending: pending,
-        pending_value: Number(x.pending_value || (pending * rate)),
-        department: m.department || "",
-        workshop_name: m.workshop_name || "",
-        carrier_name: m.carrier_name || "",
-        authorized_by: m.authorized_by || "",
-        status: status
+        rgp_id:x.rgp_id, item_id:x.id, rgp_no:m.rgp_no || x.rgp_id,
+        item_code:x.item_code || "", item_name:x.item_name || "", size:x.size || "", unit:x.unit || "",
+        qty, qty_received:received, qty_pending:pending, pending_value:Number(x.pending_value ?? (pending * rate)),
+        department:m.department || "", workshop_name:m.workshop_name || "", carrier_name:m.carrier_name || "",
+        authorized_by:m.authorized_by || "", status:calcStatus(qty, received)
       };
     });
-
-    fillItemDropdown();
     renderRGP();
   }
-
-  function fillItemDropdown(){
-  fillDatalist("rgpList", rgps.map(r => r.rgp_no));
-  fillDatalist("itemList", rgps.map(r => `${r.item_code} - ${r.item_name}`));
-  fillDatalist("itemNameList", rgps.map(r => r.item_name));
-  fillDatalist("departmentList", rgps.map(r => r.department));
-  fillDatalist("workshopList", rgps.map(r => r.workshop_name));
-  fillDatalist("carrierList", rgps.map(r => r.carrier_name));
-}
-
-function fillDatalist(id, values){
-  const list = document.getElementById(id);
-  const unique = [...new Set(values.filter(v => v && String(v).trim() !== ""))];
-
-  list.innerHTML = "";
-  unique.forEach(v => {
-    list.innerHTML += `<option value="${v}"></option>`;
-  });
-}
-  function formatRGP(id){
-  return "RGP-" + String(id).padStart(5, "0");
-}
   function renderRGP(){
-    const fr = document.getElementById("f_rgp").value.toLowerCase();
-    const fc = document.getElementById("f_item_code").value.toLowerCase();
-    const fi = document.getElementById("f_item").value.toLowerCase();
-    const fd = document.getElementById("f_department").value.toLowerCase();
-    const fw = document.getElementById("f_workshop").value.toLowerCase();
-    const fcar = document.getElementById("f_carrier").value.toLowerCase();
-    const fs = document.getElementById("f_status").value.toLowerCase();
-
-    const body = document.getElementById("rgpBody");
-    body.innerHTML = "";
-
-    const filtered = rgps.filter(r =>
-      formatRGP(r.rgp_no).toLowerCase().includes(fr) &&
-      (`${r.item_code} - ${r.item_name}`).toLowerCase().includes(fc) &&
-      r.item_name.toLowerCase().includes(fi) &&
-      r.department.toLowerCase().includes(fd) &&
-      r.workshop_name.toLowerCase().includes(fw) &&
-      r.carrier_name.toLowerCase().includes(fcar) &&
-      (!fs || r.status.toLowerCase() === fs)
-    );
-
-    const uniqueRgps = [...new Set(filtered.map(r => r.rgp_id))];
-document.getElementById("totalRecords").innerText = uniqueRgps.length;
-    document.getElementById("totalQty").innerText = filtered.reduce((s,r)=>s + Number(r.qty || 0),0);
-    document.getElementById("totalReceived").innerText = filtered.reduce((s,r)=>s + Number(r.qty_received || 0),0);
-    document.getElementById("totalPendingQty").innerText = filtered.reduce((s,r)=>s + Number(r.qty_pending || 0),0);
-
+    const search = (document.getElementById("globalSearch").value || "").toLowerCase().trim();
+    const filtered = rgps.filter(r => {
+      const text = `${formatRGP(r.rgp_no)} ${r.item_code} ${r.item_name} ${r.size} ${r.department} ${r.workshop_name} ${r.carrier_name} ${r.authorized_by} ${r.status}`.toLowerCase();
+      return text.includes(search);
+    });
+    const uniqueRgps = [...new Set(filtered.map(r => formatRGP(r.rgp_no)))];
+    const totalSent = filtered.reduce((s,r)=>s + Number(r.qty || 0),0);
+    const totalReturned = filtered.reduce((s,r)=>s + Number(r.qty_received || 0),0);
+    const totalPending = filtered.reduce((s,r)=>s + Number(r.qty_pending || 0),0);
     const totalValue = filtered.reduce((s,r)=>s + Number(r.pending_value || 0),0);
-    document.getElementById("totalPendingValue").innerText =
-      "Rs. " + totalValue.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-
+    document.getElementById("totalRecords").innerText = uniqueRgps.length;
+    document.getElementById("totalSent").innerText = totalSent;
+    document.getElementById("totalReturned").innerText = totalReturned;
+    document.getElementById("totalPendingQty").innerText = totalPending;
+    document.getElementById("totalPendingValue").innerText = "Rs. " + totalValue.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+    const body = document.getElementById("rgpBody"); body.innerHTML = "";
+    if(!filtered.length){ body.innerHTML = `<tr><td colspan="14" class="no-data">No RGP found</td></tr>`; return; }
     filtered.forEach(r => {
-      let statusClass = "pending";
-      if(r.status === "partial return") statusClass = "partial";
-      if(r.status === "completed") statusClass = "completed";
-
-      let pendingClass = r.qty_pending <= 0 ? "zero-badge" : "danger-badge";
-
-      body.innerHTML += `
-        <tr ondblclick="openDetail('${r.rgp_id}')">
-          <td>
-  <a class="rgp-link" href="rgp-detail.html?rgp=${r.rgp_id}">
-    ${formatRGP(r.rgp_no)}
-  </a>
-</td>
-          <td>${r.item_code}</td>
-          <td>${r.item_name}${r.size ? " - " + r.size : ""}</td>
-          <td>${r.qty}</td>
-          <td>${r.unit}</td>
-          <td>${r.qty_received}</td>
-          <td><span class="badge ${pendingClass}" title="${r.qty_received} Returned / ${r.qty_pending} Pending">${r.qty_pending}</span></td>
-          <td><b>${Number(r.pending_value || 0).toFixed(2)}</b></td>
-          <td>${r.department}</td>
-          <td>${r.workshop_name}</td>
-          <td>${r.carrier_name}</td>
-          <td>${r.authorized_by}</td>
-          <td><span class="badge ${statusClass}">${titleCase(r.status)}</span></td>
-          <td>
-            <div class="actions">
-              <button class="btn-detail" onclick="openDetail('${r.rgp_id}')">👁 Detail</button>
-              ${r.qty_pending > 0 ? `<button class="btn-return" onclick="openReturn('${r.item_id}')">↩ Return</button>` : ""}
-              <button class="btn-print" onclick="printRGP('${r.rgp_id}')">🖨 Print</button>
-            </div>
-          </td>
-        </tr>
-      `;
+      const cls = statusClass(r.status);
+      const returnBtn = cls === "completed" ? "" : `<a class="action return" href="rgp-return.html?item=${r.item_id}">↩ Return</a>`;
+      body.insertAdjacentHTML("beforeend", `
+        <tr>
+          <td><a class="rgp-link" href="rgp-detail.html?rgp=${r.rgp_id}">${formatRGP(r.rgp_no)}</a></td>
+          <td>${r.item_code || "-"}</td><td>${displayItemName(r)}</td><td>${r.qty}</td><td>${r.unit || "-"}</td><td>${r.qty_received}</td>
+          <td><span class="pill-red">${r.qty_pending}</span></td><td><b>${Number(r.pending_value||0).toFixed(2)}</b></td>
+          <td>${r.department || "-"}</td><td>${r.workshop_name || "-"}</td><td>${r.carrier_name || "-"}</td><td>${r.authorized_by || "-"}</td>
+          <td><span class="badge ${cls}">${r.status}</span></td>
+          <td><div class="actions"><a class="action detail" href="rgp-detail.html?rgp=${r.rgp_id}">⊙ Detail</a>${returnBtn}<a class="action print" href="rgp.html?rgp=${r.rgp_id}">▣ Print</a></div></td>
+        </tr>`);
     });
   }
-
-function openDetail(rgpId){
-  location.href = "rgp-detail.html?rgp=" + rgpId;
-}
-
-  function openReturn(itemId){
-    location.href = "rgp-return.html?item=" + itemId;
-  }
-
-  function printRGP(rgpId){
-    location.href = "rgp.html?v=" + rgpId;
-  }
-
-  function clearFilters(){
-    document.querySelectorAll(".filter-field").forEach(x => {
-      if(x.tagName === "SELECT") x.selectedIndex = 0;
-      else if(x.tagName === "INPUT") x.value = "";
-    });
-    renderRGP();
-  }
-
-  function titleCase(str){
-    return String(str || "").replace(/\w\S*/g, txt =>
-      txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
-    );
-  }
-
-  function exportExcel(){
-    alert("Excel export will be added next.");
-  }
-
-  document.addEventListener("keydown", function(e){
-    const fields = Array.from(document.querySelectorAll(".filter-field"));
-    const active = document.activeElement;
-    const index = fields.indexOf(active);
-
-    if(index === -1) return;
-
-    if(e.key === "ArrowRight" || e.key === "ArrowDown"){
-      e.preventDefault();
-      fields[Math.min(index + 1, fields.length - 1)].focus();
-    }
-
-    if(e.key === "ArrowLeft" || e.key === "ArrowUp"){
-      e.preventDefault();
-      fields[Math.max(index - 1, 0)].focus();
-    }
-
-    if(e.key === "Enter"){
-      e.preventDefault();
-      renderRGP();
-    }
-
-    if(e.key === "Escape"){
-      e.preventDefault();
-      clearFilters();
-    }
-  });
-
+  function clearSearch(){ document.getElementById("globalSearch").value = ""; renderRGP(); }
   loadRGP();
 </script>
-
 </body>
 </html>
