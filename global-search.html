@@ -83,7 +83,7 @@ h1{margin:0;font-size:28px}
 }
 .search-line{
   display:grid;
-  grid-template-columns:1fr 180px 110px;
+  grid-template-columns:minmax(0,1fr) 180px 110px;
   gap:10px
 }
 .search-line input,.search-line select{
@@ -224,6 +224,124 @@ mark{
   padding:0 2px
 }
 
+
+.search-box-wrap{
+  position:relative;
+}
+
+.search-icon{
+  position:absolute;
+  left:16px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#64748b;
+  font-size:18px;
+  pointer-events:none;
+}
+
+.search-box-wrap input{
+  width:100%;
+  padding-left:46px;
+}
+
+.global-suggestions{
+  display:none;
+  position:absolute;
+  left:0;
+  right:0;
+  top:56px;
+  z-index:300;
+  max-height:420px;
+  overflow:auto;
+  background:#fff;
+  border:1px solid #cbd5e1;
+  border-radius:12px;
+  box-shadow:0 18px 42px rgba(15,23,42,.18);
+}
+
+.global-suggestions.open{
+  display:block;
+}
+
+.suggestion-group{
+  padding:8px 10px 4px;
+  color:#64748b;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+  background:#f8fafc;
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+
+.suggestion-item{
+  display:grid;
+  grid-template-columns:38px 1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 12px;
+  border-bottom:1px solid #eef2f7;
+  cursor:pointer;
+}
+
+.suggestion-item:last-child{
+  border-bottom:0;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active{
+  background:#eff6ff;
+}
+
+.suggestion-icon{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#f1f5f9;
+  font-size:18px;
+}
+
+.suggestion-main strong{
+  display:block;
+  font-size:13px;
+}
+
+.suggestion-main span{
+  display:block;
+  margin-top:3px;
+  color:#64748b;
+  font-size:11px;
+}
+
+.suggestion-type{
+  padding:5px 8px;
+  border-radius:999px;
+  background:#e2e8f0;
+  color:#334155;
+  font-size:10px;
+  font-weight:900;
+}
+
+.recent-title{
+  padding:10px 12px 6px;
+  color:#64748b;
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.no-suggestion{
+  padding:18px;
+  text-align:center;
+  color:#64748b;
+  font-size:12px;
+}
+
 @media(max-width:1150px){
   .stats{grid-template-columns:repeat(2,1fr)}
   .result-meta{grid-template-columns:repeat(2,1fr)}
@@ -277,11 +395,15 @@ mark{
 
   <section class="search-card">
     <div class="search-line">
-      <input
-        id="searchInput"
-        autocomplete="off"
-        placeholder="Search item, bill, supplier, department, RGP, OGP, CGP..."
-      >
+      <div class="search-box-wrap">
+        <span class="search-icon">🔎</span>
+        <input
+          id="searchInput"
+          autocomplete="off"
+          placeholder="Search item, bill, supplier, department, RGP, OGP, CGP..."
+        >
+        <div id="globalSuggestions" class="global-suggestions"></div>
+      </div>
       <select id="typeFilter">
         <option value="all">All Records</option>
         <option value="item">Items</option>
@@ -324,6 +446,10 @@ mark{
 const SUPABASE_URL="https://lzsxtvkluqvcaetnnydu.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let suggestionItems=[];
+let suggestionIndex=-1;
+let recentSearches=[];
 
 let cache={
   items:[],
@@ -619,9 +745,222 @@ function buildResults(query){
   return found;
 }
 
+
+function iconForType(type){
+  return {
+    item:"📦",
+    transaction:"🧾",
+    rgp:"🔧",
+    ogp:"🚚",
+    cgp:"♻",
+    master:"🏢"
+  }[type] || "🔎";
+}
+
+function labelForType(type){
+  return {
+    item:"Item",
+    transaction:"Transaction",
+    rgp:"RGP",
+    ogp:"OGP",
+    cgp:"CGP",
+    master:"Master"
+  }[type] || type;
+}
+
+function saveRecentSearch(text){
+  const value=String(text||"").trim();
+
+  if(!value){
+    return;
+  }
+
+  recentSearches=[
+    value,
+    ...recentSearches.filter(item=>normal(item)!==normal(value))
+  ].slice(0,8);
+
+  localStorage.setItem(
+    "inventory_recent_searches",
+    JSON.stringify(recentSearches)
+  );
+}
+
+function loadRecentSearches(){
+  try{
+    recentSearches=JSON.parse(
+      localStorage.getItem("inventory_recent_searches") || "[]"
+    );
+  }
+  catch{
+    recentSearches=[];
+  }
+}
+
+function buildSuggestionItems(query){
+  const found=buildResults(query);
+
+  const seen=new Set();
+
+  return found
+    .filter(item=>{
+      const key=`${item.type}|${normal(item.title)}|${normal(item.subtitle)}`;
+
+      if(seen.has(key)){
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    })
+    .slice(0,40);
+}
+
+function renderSuggestions(){
+  const box=document.getElementById("globalSuggestions");
+  const query=searchInput.value.trim();
+
+  suggestionIndex=Math.min(
+    suggestionIndex,
+    suggestionItems.length-1
+  );
+
+  if(!query){
+    if(!recentSearches.length){
+      box.innerHTML=`
+        <div class="no-suggestion">
+          Start typing to search all modules.
+        </div>
+      `;
+    }
+    else{
+      box.innerHTML=`
+        <div class="recent-title">Recent Searches</div>
+        ${recentSearches.map((value,index)=>`
+          <div
+            class="suggestion-item ${index===suggestionIndex?"active":""}"
+            onmousedown="chooseRecentSearch(${index})"
+          >
+            <div class="suggestion-icon">🕘</div>
+            <div class="suggestion-main">
+              <strong>${esc(value)}</strong>
+              <span>Recent search</span>
+            </div>
+            <span class="suggestion-type">Recent</span>
+          </div>
+        `).join("")}
+      `;
+    }
+
+    box.classList.add("open");
+    return;
+  }
+
+  if(query.length<2){
+    box.innerHTML=`
+      <div class="no-suggestion">
+        Type at least two characters.
+      </div>
+    `;
+    box.classList.add("open");
+    return;
+  }
+
+  if(!suggestionItems.length){
+    box.innerHTML=`
+      <div class="no-suggestion">
+        No matching suggestion found.
+      </div>
+    `;
+    box.classList.add("open");
+    return;
+  }
+
+  const grouped={};
+
+  suggestionItems.forEach((item,index)=>{
+    if(!grouped[item.type]){
+      grouped[item.type]=[];
+    }
+
+    grouped[item.type].push({item,index});
+  });
+
+  box.innerHTML=Object.entries(grouped).map(([type,items])=>`
+    <div class="suggestion-group">${esc(labelForType(type))}</div>
+
+    ${items.map(({item,index})=>`
+      <div
+        class="suggestion-item ${index===suggestionIndex?"active":""}"
+        onmousedown="chooseSuggestion(${index})"
+      >
+        <div class="suggestion-icon">${iconForType(item.type)}</div>
+
+        <div class="suggestion-main">
+          <strong>${highlight(item.title,query)}</strong>
+          <span>${highlight(item.subtitle||"",query)}</span>
+        </div>
+
+        <span class="suggestion-type">${esc(labelForType(item.type))}</span>
+      </div>
+    `).join("")}
+  `).join("");
+
+  box.classList.add("open");
+
+  const active=box.querySelector(".suggestion-item.active");
+
+  if(active){
+    active.scrollIntoView({block:"nearest"});
+  }
+}
+
+function chooseSuggestion(index){
+  const item=suggestionItems[index];
+
+  if(!item){
+    return;
+  }
+
+  searchInput.value=item.title;
+  saveRecentSearch(item.title);
+  globalSuggestions.classList.remove("open");
+  location.href=item.url;
+}
+
+function chooseRecentSearch(index){
+  const value=recentSearches[index];
+
+  if(!value){
+    return;
+  }
+
+  searchInput.value=value;
+  suggestionIndex=-1;
+  suggestionItems=buildSuggestionItems(value);
+  runSearch();
+  globalSuggestions.classList.remove("open");
+}
+
+function refreshSuggestions(){
+  const query=searchInput.value.trim();
+
+  suggestionIndex=-1;
+  suggestionItems=
+    query.length>=2
+      ? buildSuggestionItems(query)
+      : [];
+
+  renderSuggestions();
+}
+
 function runSearch(){
   const query=searchInput.value.trim();
   const filter=typeFilter.value;
+
+  if(query.length>=2){
+    saveRecentSearch(query);
+  }
 
   if(query.length<2){
     results.innerHTML='<div class="empty">Please type at least two characters.</div>';
@@ -700,21 +1039,93 @@ function clearSearch(){
   searchInput.focus();
 }
 
+searchInput.addEventListener("focus",()=>{
+  refreshSuggestions();
+});
+
 searchInput.addEventListener("keydown",event=>{
-  if(event.key==="Enter"){
-    runSearch();
+  const boxOpen=globalSuggestions.classList.contains("open");
+
+  if(event.key==="ArrowDown"){
+    event.preventDefault();
+
+    const maxIndex=
+      searchInput.value.trim()
+        ? suggestionItems.length-1
+        : recentSearches.length-1;
+
+    suggestionIndex=Math.min(
+      suggestionIndex+1,
+      maxIndex
+    );
+
+    renderSuggestions();
+  }
+  else if(event.key==="ArrowUp"){
+    event.preventDefault();
+
+    suggestionIndex=Math.max(
+      suggestionIndex-1,
+      0
+    );
+
+    renderSuggestions();
+  }
+  else if(event.key==="Enter"){
+    if(boxOpen && suggestionIndex>=0){
+      event.preventDefault();
+
+      if(searchInput.value.trim()){
+        chooseSuggestion(suggestionIndex);
+      }
+      else{
+        chooseRecentSearch(suggestionIndex);
+      }
+    }
+    else{
+      runSearch();
+      globalSuggestions.classList.remove("open");
+    }
+  }
+  else if(event.key==="Tab"){
+    if(boxOpen && suggestionIndex>=0){
+      if(searchInput.value.trim()){
+        chooseSuggestion(suggestionIndex);
+      }
+      else{
+        chooseRecentSearch(suggestionIndex);
+      }
+    }
+  }
+  else if(event.key==="Escape"){
+    globalSuggestions.classList.remove("open");
   }
 });
 
 searchInput.addEventListener("input",()=>{
+  refreshSuggestions();
+
   const value=searchInput.value.trim();
 
   if(value.length>=2){
     clearTimeout(window.searchTimer);
-    window.searchTimer=setTimeout(runSearch,250);
+    window.searchTimer=setTimeout(runSearch,300);
   }
 });
 
+searchInput.addEventListener("blur",()=>{
+  setTimeout(()=>{
+    globalSuggestions.classList.remove("open");
+  },180);
+});
+
+document.addEventListener("click",event=>{
+  if(!event.target.closest(".search-box-wrap")){
+    globalSuggestions.classList.remove("open");
+  }
+});
+
+loadRecentSearches();
 loadAll();
 </script>
 </body>
