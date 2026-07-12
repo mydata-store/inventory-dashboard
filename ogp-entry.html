@@ -393,14 +393,14 @@ button{
       <a href="purchase.html">🛒 Purchase Entry</a>
       <a href="issue.html">↪ Issue Entry</a>
       <a class="active" href="gate-pass.html">🚚 Gate Pass</a>
-      <a href="#">▣ Stock Ledger</a>
+      <a href="stock-ledger.html">▣ Stock Ledger</a>
       <a href="#">▥ Reports</a>
       <a href="suppliers.html">▰ Suppliers</a>
       <a href="workshops.html">⚙ Workshop / Party</a>
     </nav>
 
     <div class="profile">
-      <img src="public/profile.png?v=2" alt="Muhammad Waqas">
+      <img src="public/waqas.jpg.png" alt="Muhammad Waqas" onerror="this.onerror=null;this.src='public/profile.png';">
       <b>Muhammad Waqas</b>
       <span>● Online</span>
     </div>
@@ -629,6 +629,7 @@ const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let itemsMaster = [];
 let editOGPId = null;
+let originalOGPNo = "";
 
 /* =========================================================
    GENERAL HELPERS
@@ -1521,6 +1522,78 @@ function validateForm(){
   return true;
 }
 
+
+function findOGPMasterItem(itemRow){
+  return itemsMaster.find(item =>
+    String(item.id) === String(itemRow.item_id)
+  ) || itemsMaster.find(item =>
+    String(item.item_code || item.code || "").trim().toLowerCase() ===
+    String(itemRow.item_code || "").trim().toLowerCase()
+  ) || itemsMaster.find(item =>
+    String(item.item_name || "").trim().toLowerCase() ===
+    String(itemRow.item_name || "").trim().toLowerCase() &&
+    String(item.size || "").trim().toLowerCase() ===
+    String(itemRow.size || "").trim().toLowerCase()
+  );
+}
+
+async function replaceOGPStockTransactions(masterData,items){
+  const numbersToDelete = [
+    originalOGPNo,
+    masterData.ogp_no
+  ].filter(Boolean);
+
+  for(const number of [...new Set(numbersToDelete)]){
+    const {error:deleteError} = await db
+      .from("stock_transactions")
+      .delete()
+      .eq("transaction_type","OGP Out")
+      .eq("bill_no",number);
+
+    if(deleteError){
+      throw new Error("Old OGP Stock Ledger rows could not be removed: " + deleteError.message);
+    }
+  }
+
+  const stockRows = items.map(item => {
+    const masterItem = findOGPMasterItem(item);
+
+    return {
+      transaction_date:masterData.ogp_date,
+      item_code:item.item_code || masterItem?.item_code || "",
+      item_name:item.item_name || masterItem?.item_name || "",
+      category:masterItem?.category || "Inventory",
+      store_type:masterItem?.store_type || "Inventory",
+      transaction_type:"OGP Out",
+      quantity_in:0,
+      quantity_out:Number(item.qty || 0),
+      unit:item.unit || masterItem?.unit || "",
+      unit_rate:Number(item.rate || 0),
+      freight:0,
+      bill_no:masterData.ogp_no,
+      supplier:masterData.workshop_name || "",
+      vehicle_no:masterData.vehicle_no || "",
+      purchased_by:masterData.department || "",
+      remarks:[
+        masterData.purpose,
+        masterData.carrier_name ? "Carrier: " + masterData.carrier_name : "",
+        masterData.authorized_by ? "Authorized By: " + masterData.authorized_by : "",
+        masterData.bill_detail ? "Bill/Challan: " + masterData.bill_detail : "",
+        masterData.remarks
+      ].filter(Boolean).join(" | "),
+      size:item.size || masterItem?.size || ""
+    };
+  });
+
+  const {error:insertError} = await db
+    .from("stock_transactions")
+    .insert(stockRows);
+
+  if(insertError){
+    throw new Error("OGP saved, but Stock Ledger update failed: " + insertError.message);
+  }
+}
+
 /* =========================================================
    SAVE OR UPDATE OGP
 ========================================================= */
@@ -1641,6 +1714,8 @@ async function saveOGP(){
       throw itemInsertError;
     }
 
+    await replaceOGPStockTransactions(masterData,items);
+
     alert(
       editOGPId
         ? "OGP updated successfully."
@@ -1728,6 +1803,8 @@ async function loadEditOGP(){
 
   document.getElementById("saveButton").textContent =
     "Update OGP";
+
+  originalOGPNo = master.ogp_no || "";
 
   document.getElementById("ogp_no").value =
     formatOGPNumber(master.ogp_no || master.id);
