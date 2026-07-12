@@ -95,13 +95,13 @@
       <a href="purchase.html?v=1">🛒 Purchase Entry</a>
       <a href="issue.html?v=1">↪ Issue Entry</a>
       <a class="active" href="gate-pass.html?v=1">🚚 Gate Pass</a>
-      <a href="#">▤ Stock Ledger</a>
+      <a href="stock-ledger.html">▤ Stock Ledger</a>
       <a href="#">▥ Reports</a>
       <a href="suppliers.html?v=1">▰ Suppliers</a>
       <a href="workshops.html?v=1">⚙ Workshop / Party</a>
     </nav>
     <div class="profile">
-      <img src="public/profile.png?v=2" class="profile-img">
+      <img src="public/waqas.jpg.png" class="profile-img" onerror="this.onerror=null;this.src='public/profile.png';">
       <b>Muhammad Waqas</b><br>
       <span style="color:#22c55e">● Online</span>
     </div>
@@ -341,16 +341,138 @@ tr.querySelector(".rate").value = item.rate || item.unit_rate || item.last_rate 
     tr.querySelector(".pending_value").value = (qty * rate).toFixed(2);
   }
 
+
+  function parseDateForDatabase(value){
+    const text = String(value || "").trim();
+    if(!text) return null;
+
+    if(/^\d{4}-\d{2}-\d{2}$/.test(text)){
+      return text;
+    }
+
+    const monthNames = {
+      jan:"01", feb:"02", mar:"03", apr:"04",
+      may:"05", jun:"06", jul:"07", aug:"08",
+      sep:"09", oct:"10", nov:"11", dec:"12"
+    };
+
+    const named = text.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/);
+
+    if(named){
+      let year = named[3];
+      if(year.length === 2) year = "20" + year;
+
+      const month = monthNames[named[2].toLowerCase()];
+      if(!month) return null;
+
+      return `${year}-${month}-${named[1].padStart(2,"0")}`;
+    }
+
+    const parts = text.replace(/\//g,"-").split("-").map(x => x.trim());
+
+    if(parts.length < 2) return null;
+
+    const day = Number(parts[0]);
+    const month = Number(parts[1]);
+
+    if(!day || !month || day < 1 || day > 31 || month < 1 || month > 12){
+      return null;
+    }
+
+    let year = parts[2] || String(new Date().getFullYear());
+
+    if(year.length === 2){
+      year = "20" + year;
+    }
+
+    return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  }
+
+  function findMasterItem(itemRow){
+    return itemsMaster.find(item =>
+      String(item.item_code || item.code || "").trim().toLowerCase() ===
+      String(itemRow.item_code || "").trim().toLowerCase()
+    ) || itemsMaster.find(item =>
+      String(item.item_name || "").trim().toLowerCase() ===
+      String(itemRow.item_name || "").trim().toLowerCase() &&
+      String(item.size || "").trim().toLowerCase() ===
+      String(itemRow.size || "").trim().toLowerCase()
+    );
+  }
+
+  async function saveRGPStockTransactions(master,itemRows){
+    const stockRows = itemRows.map(itemRow => {
+      const masterItem = findMasterItem(itemRow);
+
+      return {
+        transaction_date:master.rgp_date,
+        item_code:itemRow.item_code || masterItem?.item_code || "",
+        item_name:itemRow.item_name || masterItem?.item_name || "",
+        category:masterItem?.category || "Inventory",
+        store_type:masterItem?.store_type || "Inventory",
+        transaction_type:"RGP Out",
+        quantity_in:0,
+        quantity_out:Number(itemRow.qty || 0),
+        unit:itemRow.unit || masterItem?.unit || "",
+        unit_rate:Number(itemRow.rate || 0),
+        freight:0,
+        bill_no:master.rgp_no,
+        supplier:master.workshop_name || "",
+        vehicle_no:"",
+        purchased_by:master.department || "",
+        remarks:[
+          master.purpose,
+          master.carrier_name ? "Carrier: " + master.carrier_name : "",
+          master.authorized_by ? "Authorized By: " + master.authorized_by : "",
+          master.bill_detail ? "Bill Detail: " + master.bill_detail : "",
+          master.remarks
+        ].filter(Boolean).join(" | "),
+        size:itemRow.size || masterItem?.size || ""
+      };
+    });
+
+    const {error} = await db
+      .from("stock_transactions")
+      .insert(stockRows);
+
+    if(error){
+      throw new Error("RGP saved, but Stock Ledger update failed: " + error.message);
+    }
+  }
+
   async function saveRGP(){
     const rgpNo = document.getElementById("rgp_no").value.trim();
-    const rgpDate = formatShortDate(document.getElementById("rgp_date").value.trim());
-    const dueDate = formatShortDate(document.getElementById("due_date").value.trim());
+    const rgpDate = parseDateForDatabase(
+      document.getElementById("rgp_date").value
+    );
+    const dueDate = document.getElementById("due_date").value.trim()
+      ? parseDateForDatabase(document.getElementById("due_date").value)
+      : null;
 
-    if(!rgpNo){ alert("Please enter RGP No."); return; }
-    if(!rgpDate){ alert("Please enter RGP Date."); return; }
+    if(!rgpNo){
+      alert("Please enter RGP No.");
+      document.getElementById("rgp_no").focus();
+      return;
+    }
+
+    if(!rgpDate){
+      alert("Please enter a valid RGP Date like 25-6.");
+      document.getElementById("rgp_date").focus();
+      return;
+    }
+
+    if(document.getElementById("due_date").value.trim() && !dueDate){
+      alert("Please enter a valid Due Date like 25-6.");
+      document.getElementById("due_date").focus();
+      return;
+    }
 
     const rows = [...document.querySelectorAll("#itemBody tr")];
-    if(rows.length === 0){ alert("Please add item."); return; }
+
+    if(rows.length === 0){
+      alert("Please add item.");
+      return;
+    }
 
     const itemRows = [];
 
@@ -361,56 +483,73 @@ tr.querySelector(".rate").value = item.rate || item.unit_rate || item.last_rate 
 
       if(!itemName || qty <= 0){
         alert("Please enter item and qty correctly.");
+        tr.querySelector(".item_name").focus();
         return;
       }
 
       itemRows.push({
-        item_code: tr.querySelector(".item_code").value,
-        item_name: itemName,
-        size: tr.querySelector(".size").value,
-        unit: tr.querySelector(".unit").value,
-        qty: qty,
-        rate: rate,
-        value: qty * rate,
-        qty_received: 0,
-        qty_pending: qty,
-        pending_value: qty * rate,
-        condition: "",
-        remarks: ""
+        item_code:tr.querySelector(".item_code").value,
+        item_name:itemName,
+        size:tr.querySelector(".size").value,
+        unit:tr.querySelector(".unit").value,
+        qty:qty,
+        rate:rate,
+        value:qty * rate,
+        qty_received:0,
+        qty_pending:qty,
+        pending_value:qty * rate,
+        condition:"",
+        remarks:""
       });
     }
 
-    const masterInsert = await db.from("rgp_master").insert([{
-      rgp_no: rgpNo,
-      rgp_date: rgpDate,
-      due_date: dueDate,
-      department: document.getElementById("department").value,
-      workshop_name: document.getElementById("workshop_name").value,
-      carrier_name: document.getElementById("carrier_name").value,
-      authorized_by: document.getElementById("authorized_by").value,
-      bill_detail: document.getElementById("bill_detail").value,
-      purpose: document.getElementById("purpose").value,
-      remarks: document.getElementById("remarks").value,
-      status: "Pending"
-    }]).select().single();
+    const masterData = {
+      rgp_no:rgpNo,
+      rgp_date:rgpDate,
+      due_date:dueDate,
+      department:document.getElementById("department").value,
+      workshop_name:document.getElementById("workshop_name").value,
+      carrier_name:document.getElementById("carrier_name").value,
+      authorized_by:document.getElementById("authorized_by").value,
+      bill_detail:document.getElementById("bill_detail").value,
+      purpose:document.getElementById("purpose").value,
+      remarks:document.getElementById("remarks").value,
+      status:"Pending"
+    };
 
-    if(masterInsert.error){
-      alert("RGP master save error: " + masterInsert.error.message);
-      return;
+    try{
+      const masterInsert = await db
+        .from("rgp_master")
+        .insert([masterData])
+        .select()
+        .single();
+
+      if(masterInsert.error){
+        throw masterInsert.error;
+      }
+
+      const rgpId = masterInsert.data.id;
+      const databaseItemRows = itemRows.map(item => ({
+        ...item,
+        rgp_id:rgpId
+      }));
+
+      const itemInsert = await db
+        .from("rgp_items")
+        .insert(databaseItemRows);
+
+      if(itemInsert.error){
+        throw itemInsert.error;
+      }
+
+      await saveRGPStockTransactions(masterData,itemRows);
+
+      alert("RGP saved successfully and added to Stock Ledger.");
+      location.href = "rgp-list.html?v=" + Date.now();
     }
-
-    const rgpId = masterInsert.data.id;
-    itemRows.forEach(x => x.rgp_id = rgpId);
-
-    const itemInsert = await db.from("rgp_items").insert(itemRows);
-
-    if(itemInsert.error){
-      alert("RGP item save error: " + itemInsert.error.message);
-      return;
+    catch(error){
+      alert("RGP save error: " + (error.message || error));
     }
-
-    alert("RGP saved successfully.");
-    location.href = "rgp-list.html?v=15";
   }
 
   function clearForm(){
