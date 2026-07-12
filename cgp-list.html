@@ -1,1 +1,101 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<title>CGP List</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6fb;color:#0f172a}
+.sidebar{width:210px;height:100vh;position:fixed;left:0;top:0;padding:22px 14px;color:#fff;background:linear-gradient(180deg,#351000,#1a0600)}
+.brand{font-size:24px;line-height:1.05;font-weight:900}.brand-sub{color:#f59e0b;font-size:13px;font-weight:800;margin:6px 0 34px}
+.menu a{display:block;color:#fff;text-decoration:none;padding:12px;margin-bottom:7px;border-radius:10px;font-size:14px;font-weight:700}.menu a:hover,.menu a.active{color:#111827;background:#f59e0b}
+.profile{position:absolute;left:14px;right:14px;bottom:20px;padding:16px 10px;text-align:center;border-radius:14px;background:rgba(255,255,255,.10)}
+.profile img{display:block;width:72px;height:72px;margin:0 auto 10px;object-fit:cover;border:3px solid #f59e0b;border-radius:50%}.profile span{display:block;color:#22c55e;font-size:12px;font-weight:700}
+.main{width:calc(100% - 210px);margin-left:210px;min-height:100vh;padding:28px 34px}.title-row{display:flex;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid #dbe1ea}
+h1{margin:0;font-size:28px}.subtitle{margin-top:6px;color:#64748b;font-size:14px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.tab{padding:15px;color:#111827;background:#fff;border:1px solid #dbe1ea;border-radius:10px;text-align:center;text-decoration:none;font-weight:900}.tab.active{background:#f59e0b}
+.search-box{display:flex;gap:8px;align-items:center}.search-box input{width:360px;height:40px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px}
+button{border:0;border-radius:8px;cursor:pointer;font-weight:800}.btn{padding:10px 14px}.btn-dark{color:#fff;background:#111827}.btn-yellow{background:#f59e0b}.btn-green{color:#fff;background:#16a34a}.btn-blue{color:#fff;background:#2563eb}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.stat{padding:18px;background:#fff;border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.05)}.stat small{color:#64748b}.stat strong{display:block;margin-top:5px;font-size:22px}
+.card{padding:20px;background:#fff;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.06)}.table-wrap{overflow-x:auto}
+table{width:100%;min-width:1450px;border-collapse:collapse}th{padding:11px 9px;color:#fff;background:#0f172a;font-size:12px;text-align:left;white-space:nowrap}td{padding:10px 9px;border-bottom:1px solid #e5e7eb;font-size:13px;vertical-align:middle}
+.money{font-weight:900}.actions{white-space:nowrap}.actions button{margin-right:5px}.empty{text-align:center;color:#64748b;padding:28px!important}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(2,1fr)}.title-row{display:block}.search-box{margin-top:15px}.search-box input{width:100%}}
+@media print{.sidebar,.tabs,.title-row .search-box,.actions{display:none!important}.main{width:100%;margin:0;padding:0}.card{box-shadow:none}table{min-width:0}th{background:#f59e0b!important;color:#000}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">📦 Inventory<br>Store</div><div class="brand-sub">Management System</div>
+  <nav class="menu"><a href="index.html">⌂ Dashboard</a><a href="items.html">▣ Items Master</a><a href="purchase.html">🛒 Purchase Entry</a><a href="issue.html">↪ Issue Entry</a><a class="active" href="gate-pass.html">🚚 Gate Pass</a><a href="#">▣ Stock Ledger</a><a href="#">▥ Reports</a><a href="suppliers.html">▰ Suppliers</a><a href="workshops.html">⚙ Workshop / Party</a></nav>
+  <div class="profile"><img src="public/waqas.jpg.png" onerror="this.onerror=null;this.src='public/profile.png';"><b>Muhammad Waqas</b><span>● Online</span></div>
+</aside>
+<main class="main">
+  <div class="title-row">
+    <div><h1>CGP Management</h1><div class="subtitle">Cash Gate Pass item-wise list</div></div>
+    <div class="search-box"><input id="searchInput" placeholder="Search Gate Pass, scrapper, phone, vehicle, description" oninput="render()"><button class="btn btn-yellow" onclick="clearSearch()">Clear</button><button class="btn btn-green" onclick="window.print()">Print</button></div>
+  </div>
+  <div class="tabs"><a class="tab active" href="cgp-list.html">▦ CGP List</a><a class="tab" href="cgp-entry.html">⊕ CGP Entry</a><a class="tab" href="scrapper-detail.html">👤 Scrapper Detail</a></div>
+
+  <div class="stats">
+    <div class="stat"><small>Total CGPs</small><strong id="totalCGP">0</strong></div>
+    <div class="stat"><small>Total Quantity</small><strong id="totalQty">0</strong></div>
+    <div class="stat"><small>Today's CGPs</small><strong id="todayCGP">0</strong></div>
+    <div class="stat"><small>Total Amount</small><strong id="totalAmount">Rs. 0.00</strong></div>
+  </div>
+
+  <section class="card">
+    <h2>CGP List</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Gate Pass #</th><th>Date</th><th>Scrapper / Worker</th><th>Location / Department</th><th>Phone #</th><th>Vehicle #</th>
+          <th>Description</th><th>Unit</th><th>Quantity</th><th>Rate</th><th>Discount</th><th>Amount</th><th>Remarks</th><th>Action</th>
+        </tr></thead>
+        <tbody id="cgpBody"><tr><td colspan="14" class="empty">Loading records...</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL="https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let rows=[];
+
+function esc(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function displayDate(v){if(!v)return"-";const p=String(v).split("-"),m=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return p.length===3?`${p[2]}-${m[Number(p[1])]}-${p[0].slice(-2)}`:v}
+function money(v){return "Rs. "+Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
+async function load(){
+  const {data,error}=await db.from("cgp_items").select("*, cgp_master(*)").order("id",{ascending:false});
+  if(error){document.getElementById("cgpBody").innerHTML=`<tr><td colspan="14" class="empty">Load error: ${esc(error.message)}</td></tr>`;return}
+  rows=data||[];render();
+}
+function render(){
+  const q=document.getElementById("searchInput").value.trim().toLowerCase();
+  const filtered=rows.filter(r=>{const m=r.cgp_master||{};const text=`${m.gate_pass_no||""} ${m.scrapper_name||""} ${m.location_department||""} ${m.phone_no||""} ${m.vehicle_no||""} ${r.description||""} ${r.remarks||""}`.toLowerCase();return text.includes(q)});
+  const body=document.getElementById("cgpBody");
+  if(!filtered.length){body.innerHTML='<tr><td colspan="14" class="empty">No CGP record found.</td></tr>'}
+  else body.innerHTML=filtered.map(r=>{const m=r.cgp_master||{};return `<tr>
+    <td><strong>${esc(m.gate_pass_no||"-")}</strong></td><td>${displayDate(m.cgp_date)}</td><td>${esc(m.scrapper_name||"-")}</td><td>${esc(m.location_department||"-")}</td>
+    <td>${esc(m.phone_no||"-")}</td><td>${esc(m.vehicle_no||"-")}</td><td>${esc(r.description||"-")}</td><td>${esc(r.unit||"-")}</td>
+    <td>${Number(r.quantity||0).toLocaleString()}</td><td>${Number(r.rate||0).toFixed(2)}</td><td>${Number(r.discount||0).toFixed(2)}</td><td class="money">${Number(r.amount||0).toFixed(2)}</td><td>${esc(r.remarks||"-")}</td>
+    <td class="actions"><button class="btn btn-blue" onclick="location.href='cgp-entry.html?edit=${m.id}'">Edit</button><button class="btn btn-green" onclick="printCGP(${m.id})">Print PDF</button></td>
+  </tr>`}).join("");
+  const masters=new Map();filtered.forEach(r=>{if(r.cgp_master)masters.set(r.cgp_master.id,r.cgp_master)});
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById("totalCGP").textContent=masters.size;
+  document.getElementById("totalQty").textContent=filtered.reduce((s,r)=>s+Number(r.quantity||0),0).toLocaleString();
+  document.getElementById("todayCGP").textContent=[...masters.values()].filter(m=>m.cgp_date===today).length;
+  document.getElementById("totalAmount").textContent=money(filtered.reduce((s,r)=>s+Number(r.amount||0),0));
+}
+function clearSearch(){document.getElementById("searchInput").value="";render()}
+function printCGP(id){const old=document.getElementById("searchInput").value;const master=rows.find(r=>r.cgp_master?.id===id)?.cgp_master;if(!master)return;document.getElementById("searchInput").value=master.gate_pass_no;render();setTimeout(()=>{window.print();document.getElementById("searchInput").value=old;render()},100)}
+load();
+</script>
+</body>
+</html>
