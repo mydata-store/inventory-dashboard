@@ -77,13 +77,13 @@
       <a href="purchase.html?v=1">🛒 Purchase Entry</a>
       <a href="issue.html?v=1">↪ Issue Entry</a>
       <a class="active" href="gate-pass.html?v=1">🚚 Gate Pass</a>
-      <a href="#">▤ Stock Ledger</a>
+      <a href="stock-ledger.html">▤ Stock Ledger</a>
       <a href="#">▥ Reports</a>
       <a href="suppliers.html?v=1">▰ Suppliers</a>
       <a href="workshops.html?v=1">⚙ Workshop / Party</a>
     </nav>
    <div class="profile">
-  <img src="public/profile.png?v=2" alt="Muhammad Waqas">
+  <img src="public/waqas.jpg.png" alt="Muhammad Waqas" onerror="this.onerror=null;this.src='public/profile.png';">
   <b>Muhammad Waqas</b>
   <span>● Online</span>
 </div>
@@ -146,7 +146,11 @@
 
   let currentItem = null;
 
-  document.addEventListener("DOMContentLoaded", loadItem);
+  document.addEventListener("DOMContentLoaded", async () => {
+    setupReturnDate();
+    await loadItem();
+    document.getElementById("return_date").focus();
+  });
 
   function getParam(name){
     return new URLSearchParams(window.location.search).get(name);
@@ -191,7 +195,7 @@
     const pending = Number(data.qty_pending ?? (qty - received));
     const rate = Number(data.rate || 0);
 
-    document.getElementById("rgp_no").value =`RGP-${String(m.id).padStart(5, "0")}`;
+    document.getElementById("rgp_no").value = m.rgp_no || `RGP-${String(m.id).padStart(5, "0")}`;
     document.getElementById("item_code").value = data.item_code || "";
     document.getElementById("item_name").value = data.item_name || "";
     document.getElementById("size").value = data.size || "";
@@ -207,6 +211,196 @@
     document.getElementById("new_received").value = received;
     document.getElementById("new_pending").value = pending;
     document.getElementById("pending_value").value = (pending * rate).toFixed(2);
+  }
+
+
+  function parseTypedDate(value){
+    const text = String(value || "").trim();
+
+    if(!text){
+      return null;
+    }
+
+    if(/^\d{4}-\d{2}-\d{2}$/.test(text)){
+      return text;
+    }
+
+    const namedDate = text.match(
+      /^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/
+    );
+
+    if(namedDate){
+      const months = {
+        jan:"01", feb:"02", mar:"03", apr:"04",
+        may:"05", jun:"06", jul:"07", aug:"08",
+        sep:"09", oct:"10", nov:"11", dec:"12"
+      };
+
+      const month = months[namedDate[2].toLowerCase()];
+
+      if(!month){
+        return null;
+      }
+
+      let year = namedDate[3];
+
+      if(year.length === 2){
+        year = "20" + year;
+      }
+
+      return `${year}-${month}-${namedDate[1].padStart(2,"0")}`;
+    }
+
+    const parts = text
+      .replace(/\//g,"-")
+      .split("-")
+      .map(part => part.trim());
+
+    if(parts.length < 2){
+      return null;
+    }
+
+    const day = Number(parts[0]);
+    const month = Number(parts[1]);
+
+    if(
+      !day ||
+      !month ||
+      day < 1 ||
+      day > 31 ||
+      month < 1 ||
+      month > 12
+    ){
+      return null;
+    }
+
+    let year = parts[2] || String(new Date().getFullYear());
+
+    if(year.length === 2){
+      year = "20" + year;
+    }
+
+    return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  }
+
+  function displayDate(databaseDate){
+    if(!databaseDate){
+      return "";
+    }
+
+    const parts = String(databaseDate).split("-");
+
+    if(parts.length !== 3){
+      return databaseDate;
+    }
+
+    const months = [
+      "",
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
+
+    return `${parts[2]}-${months[Number(parts[1])]}-${parts[0].slice(-2)}`;
+  }
+
+  function setupReturnDate(){
+    const field = document.getElementById("return_date");
+
+    field.addEventListener("blur",() => {
+      if(!field.value.trim()){
+        return;
+      }
+
+      const date = parseTypedDate(field.value);
+
+      if(!date){
+        alert("Invalid Return Date. Type date like 25-6 or 25-6-26.");
+        field.focus();
+        return;
+      }
+
+      field.value = displayDate(date);
+    });
+  }
+
+  async function getItemMasterDetails(){
+    const itemCode = String(currentItem?.item_code || "").trim();
+
+    if(itemCode){
+      const {data,error} = await db
+        .from("items")
+        .select("*")
+        .eq("item_code",itemCode)
+        .limit(1);
+
+      if(!error && data && data.length){
+        return data[0];
+      }
+    }
+
+    const {data,error} = await db
+      .from("items")
+      .select("*")
+      .eq("item_name",currentItem?.item_name || "")
+      .eq("size",currentItem?.size || "")
+      .limit(1);
+
+    if(!error && data && data.length){
+      return data[0];
+    }
+
+    return null;
+  }
+
+  async function saveRGPReturnStockTransaction(returnData,receiveNow){
+    const master = currentItem.rgp_master || {};
+    const itemMaster = await getItemMasterDetails();
+
+    const stockRow = {
+      transaction_date:returnData.return_date,
+      item_code:currentItem.item_code || itemMaster?.item_code || "",
+      item_name:currentItem.item_name || itemMaster?.item_name || "",
+      category:itemMaster?.category || "Inventory",
+      store_type:itemMaster?.store_type || "Inventory",
+      transaction_type:"RGP Return",
+      quantity_in:Number(receiveNow || 0),
+      quantity_out:0,
+      unit:currentItem.unit || itemMaster?.unit || "",
+      unit_rate:Number(currentItem.rate || 0),
+      freight:0,
+      bill_no:master.rgp_no || document.getElementById("rgp_no").value,
+      supplier:master.workshop_name || "",
+      vehicle_no:"",
+      purchased_by:master.department || "",
+      remarks:[
+        returnData.incoming_carrier
+          ? "Incoming Carrier: " + returnData.incoming_carrier
+          : "",
+        returnData.received_by
+          ? "Received By: " + returnData.received_by
+          : "",
+        returnData.item_condition
+          ? "Condition: " + returnData.item_condition
+          : "",
+        returnData.remarks
+      ].filter(Boolean).join(" | "),
+      size:currentItem.size || itemMaster?.size || ""
+    };
+
+    const {data,error} = await db
+      .from("stock_transactions")
+      .insert([stockRow])
+      .select()
+      .single();
+
+    if(error){
+      throw new Error(
+        "Return history saved, but Stock Ledger update failed: " +
+        error.message
+      );
+    }
+
+    return data;
   }
 
   function calculateReturn(){
@@ -242,67 +436,158 @@
   }
 
   async function saveReturn(){
-  if(!currentItem) return;
+    if(!currentItem){
+      return;
+    }
 
-  const receiveNow = Number(document.getElementById("receive_now").value || 0);
-  if(receiveNow <= 0){
-    alert("Please enter received quantity.");
-    return;
+    const receiveNow = Number(
+      document.getElementById("receive_now").value || 0
+    );
+
+    if(receiveNow <= 0){
+      alert("Please enter received quantity.");
+      document.getElementById("receive_now").focus();
+      return;
+    }
+
+    const returnDate = parseTypedDate(
+      document.getElementById("return_date").value
+    );
+
+    if(!returnDate){
+      alert("Please enter a valid Return Date like 25-6.");
+      document.getElementById("return_date").focus();
+      return;
+    }
+
+    const qty = Number(currentItem.qty || 0);
+    const oldReceived = Number(currentItem.qty_received || 0);
+    const oldPending = Number(
+      currentItem.qty_pending ?? (qty - oldReceived)
+    );
+    const oldPendingValue = Number(
+      currentItem.pending_value ??
+      (oldPending * Number(currentItem.rate || 0))
+    );
+    const rate = Number(currentItem.rate || 0);
+
+    const newReceived = oldReceived + receiveNow;
+
+    if(newReceived > qty){
+      alert("Received quantity cannot be greater than sent quantity.");
+      return;
+    }
+
+    const newPending = qty - newReceived;
+    const newPendingValue = newPending * rate;
+
+    const returnData = {
+      rgp_id:currentItem.rgp_id,
+      rgp_item_id:currentItem.id,
+      return_date:returnDate,
+      qty_received:receiveNow,
+      incoming_carrier:document
+        .getElementById("incoming_carrier")
+        .value
+        .trim(),
+      received_by:document
+        .getElementById("received_by")
+        .value
+        .trim(),
+      item_condition:document
+        .getElementById("item_condition")
+        .value
+        .trim(),
+      remarks:document
+        .getElementById("remarks")
+        .value
+        .trim()
+    };
+
+    let returnHistoryId = null;
+    let stockTransactionId = null;
+
+    try{
+      const {data:returnHistory,error:returnError} = await db
+        .from("rgp_returns")
+        .insert([returnData])
+        .select()
+        .single();
+
+      if(returnError){
+        throw returnError;
+      }
+
+      returnHistoryId = returnHistory.id;
+
+      const stockTransaction =
+        await saveRGPReturnStockTransaction(
+          returnData,
+          receiveNow
+        );
+
+      stockTransactionId = stockTransaction.id;
+
+      const {error:itemUpdateError} = await db
+        .from("rgp_items")
+        .update({
+          qty_received:newReceived,
+          qty_pending:newPending,
+          pending_value:newPendingValue
+        })
+        .eq("id",currentItem.id);
+
+      if(itemUpdateError){
+        throw itemUpdateError;
+      }
+
+      await updateMasterStatus(currentItem.rgp_id);
+
+      alert(
+        "Return saved successfully and added to Stock Ledger."
+      );
+
+      location.href =
+        "rgp-detail.html?rgp=" +
+        currentItem.rgp_id +
+        "&v=" +
+        Date.now();
+    }
+    catch(error){
+      /*
+        Best-effort rollback so a failed save does not leave
+        duplicate or incomplete stock information.
+      */
+
+      if(stockTransactionId){
+        await db
+          .from("stock_transactions")
+          .delete()
+          .eq("id",stockTransactionId);
+      }
+
+      if(returnHistoryId){
+        await db
+          .from("rgp_returns")
+          .delete()
+          .eq("id",returnHistoryId);
+      }
+
+      await db
+        .from("rgp_items")
+        .update({
+          qty_received:oldReceived,
+          qty_pending:oldPending,
+          pending_value:oldPendingValue
+        })
+        .eq("id",currentItem.id);
+
+      alert(
+        "Return save error: " +
+        (error.message || error)
+      );
+    }
   }
-
-  const qty = Number(currentItem.qty || 0);
-  const oldReceived = Number(currentItem.qty_received || 0);
-  const rate = Number(currentItem.rate || 0);
-
-  const newReceived = oldReceived + receiveNow;
-  if(newReceived > qty){
-    alert("Received quantity cannot be greater than sent quantity.");
-    return;
-  }
-
-  const newPending = qty - newReceived;
-  const newPendingValue = newPending * rate;
-
-  const itemUpdate = await db
-    .from("rgp_items")
-    .update({
-      qty_received: newReceived,
-      qty_pending: newPending,
-      pending_value: newPendingValue
-    })
-    .eq("id", currentItem.id);
-
-  if(itemUpdate.error){
-    alert("Item update error: " + itemUpdate.error.message);
-    return;
-  }
-
- const returnData = {
-  rgp_id: currentItem.rgp_id,
-  rgp_item_id: currentItem.id,
-  return_date: document.getElementById("return_date").value,
-  qty_received: receiveNow,
-  incoming_carrier: document.getElementById("incoming_carrier").value.trim(),
-  received_by: document.getElementById("received_by").value.trim(),
-  item_condition: document.getElementById("item_condition").value.trim(),
-  remarks: document.getElementById("remarks").value.trim()
-};
-
-const returnSave = await db
-  .from("rgp_returns")
-  .insert([returnData]);
-    console.log("Return data saved:", returnData, returnSave);
-    
-  if(returnSave.error){
-    alert("Return history error: " + returnSave.error.message);
-    return;
-  }
-
-  await updateMasterStatus(currentItem.rgp_id);
-
-  alert("Return saved successfully. Item history has been updated.");
-  location.href = "rgp-detail.html?rgp=" + currentItem.rgp_id + "&v=27";
-}
   async function updateMasterStatus(rgpId){
   const {data, error} = await db
     .from("rgp_items")
