@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Global Search</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f4f6fb;
+  color:#0f172a
+}
+.sidebar{
+  width:210px;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:100;
+  padding:22px 14px;
+  color:#fff;
+  background:linear-gradient(180deg,#351000,#1a0600)
+}
+.brand{font-size:24px;font-weight:900;line-height:1.05}
+.brand-sub{color:#f59e0b;font-size:13px;font-weight:800;margin:6px 0 34px}
+.menu a{
+  display:block;
+  color:#fff;
+  text-decoration:none;
+  padding:12px;
+  margin-bottom:7px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700
+}
+.menu a:hover,.menu a.active{color:#111827;background:#f59e0b}
+.profile{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:20px;
+  padding:16px 10px;
+  text-align:center;
+  border-radius:14px;
+  background:rgba(255,255,255,.10)
+}
+.profile img{
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  object-fit:cover;
+  border:3px solid #f59e0b
+}
+.profile b{display:block;margin-top:8px}
+.profile span{display:block;color:#22c55e;font-size:12px;margin-top:3px}
+
+.main{
+  width:calc(100% - 210px);
+  min-height:100vh;
+  margin-left:210px;
+  padding:28px 34px
+}
+.title-row{
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  padding-bottom:18px;
+  border-bottom:1px solid #dbe1ea
+}
+h1{margin:0;font-size:28px}
+.subtitle{margin-top:6px;color:#64748b;font-size:14px}
+
+.search-card{
+  margin-top:18px;
+  padding:24px;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.06)
+}
+.search-line{
+  display:grid;
+  grid-template-columns:1fr 180px 110px;
+  gap:10px
+}
+.search-line input,.search-line select{
+  height:48px;
+  padding:0 14px;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  font-size:15px;
+  outline:none;
+  background:#fff
+}
+.search-line input:focus,.search-line select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37,99,235,.12)
+}
+button{
+  border:0;
+  border-radius:9px;
+  cursor:pointer;
+  font-weight:800
+}
+.btn{padding:11px 16px}
+.btn-blue{background:#2563eb;color:#fff}
+.btn-dark{background:#111827;color:#fff}
+.btn-yellow{background:#f59e0b;color:#111827}
+
+.quick{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px
+}
+.quick button{
+  padding:8px 11px;
+  background:#eef2ff;
+  color:#3730a3
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:12px;
+  margin-top:18px
+}
+.stat{
+  padding:16px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 8px 22px rgba(0,0,0,.05)
+}
+.stat small{color:#64748b}
+.stat strong{display:block;margin-top:5px;font-size:22px}
+
+.results{
+  margin-top:18px;
+  display:grid;
+  gap:12px
+}
+.result-card{
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+  box-shadow:0 6px 18px rgba(0,0,0,.05);
+  border-left:5px solid #cbd5e1
+}
+.result-card.item{border-left-color:#2563eb}
+.result-card.transaction{border-left-color:#16a34a}
+.result-card.rgp{border-left-color:#0ea5e9}
+.result-card.ogp{border-left-color:#8b5cf6}
+.result-card.cgp{border-left-color:#111827}
+.result-card.master{border-left-color:#f59e0b}
+.result-head{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start
+}
+.result-title{
+  margin:0;
+  font-size:17px;
+  color:#1d4ed8
+}
+.result-type{
+  display:inline-block;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#f1f5f9;
+  color:#334155;
+  font-size:11px;
+  font-weight:900
+}
+.result-meta{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-top:12px
+}
+.meta-box{
+  padding:10px;
+  border:1px solid #e5e7eb;
+  border-radius:9px;
+  background:#f8fafc
+}
+.meta-box span{
+  display:block;
+  color:#64748b;
+  font-size:10px;
+  font-weight:800
+}
+.meta-box strong{
+  display:block;
+  margin-top:4px;
+  font-size:12px;
+  word-break:break-word
+}
+.result-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px
+}
+.empty{
+  padding:34px;
+  text-align:center;
+  background:#fff;
+  border-radius:14px;
+  color:#64748b;
+  font-weight:700
+}
+.loading{
+  padding:18px;
+  text-align:center;
+  color:#64748b
+}
+mark{
+  background:#fef08a;
+  color:inherit;
+  padding:0 2px
+}
+
+@media(max-width:1150px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .result-meta{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:760px){
+  .sidebar{position:relative;width:100%;height:auto}
+  .profile{position:static;margin-top:20px}
+  .main{width:100%;margin:0;padding:18px}
+  .search-line{grid-template-columns:1fr}
+  .stats,.result-meta{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<aside class="sidebar">
+  <div class="brand">📦 Inventory<br>Store</div>
+  <div class="brand-sub">Management System</div>
+
+  <nav class="menu">
+    <a href="index.html">⌂ Dashboard</a>
+    <a class="active" href="global-search.html">🔎 Global Search</a>
+    <a href="items.html">▣ Items Master</a>
+    <a href="purchase.html">🛒 Purchase Entry</a>
+    <a href="issue.html">↪ Issue Entry</a>
+    <a href="gate-pass.html">🚚 Gate Pass</a>
+    <a href="stock-ledger.html">▣ Stock Ledger</a>
+    <a href="current-stock.html">◫ Current Stock</a>
+    <a href="reports.html">▥ Reports</a>
+    <a href="suppliers.html">▰ Suppliers</a>
+    <a href="workshops.html">⚙ Workshop / Party</a>
+  </nav>
+
+  <div class="profile">
+    <img src="public/waqas.jpg.png" onerror="this.onerror=null;this.src='public/profile.png';">
+    <b>Muhammad Waqas</b>
+    <span>● Online</span>
+  </div>
+</aside>
+
+<main class="main">
+
+  <div class="title-row">
+    <div>
+      <h1>Global Search</h1>
+      <div class="subtitle">
+        Search items, transactions, suppliers, workshops, RGP, OGP and CGP from one place
+      </div>
+    </div>
+  </div>
+
+  <section class="search-card">
+    <div class="search-line">
+      <input
+        id="searchInput"
+        autocomplete="off"
+        placeholder="Search item, bill, supplier, department, RGP, OGP, CGP..."
+      >
+      <select id="typeFilter">
+        <option value="all">All Records</option>
+        <option value="item">Items</option>
+        <option value="transaction">Stock Transactions</option>
+        <option value="rgp">RGP</option>
+        <option value="ogp">OGP</option>
+        <option value="cgp">CGP</option>
+        <option value="master">Master Data</option>
+      </select>
+      <button class="btn btn-blue" onclick="runSearch()">Search</button>
+    </div>
+
+    <div class="quick">
+      <button onclick="quickSearch('Mechanical')">Mechanical</button>
+      <button onclick="quickSearch('Purchase')">Purchases</button>
+      <button onclick="quickSearch('RGP')">RGP</button>
+      <button onclick="quickSearch('OGP')">OGP</button>
+      <button onclick="quickSearch('CGP')">CGP</button>
+      <button onclick="clearSearch()">Clear</button>
+    </div>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><small>Total Results</small><strong id="totalResults">0</strong></div>
+    <div class="stat"><small>Items</small><strong id="itemResults">0</strong></div>
+    <div class="stat"><small>Transactions</small><strong id="transactionResults">0</strong></div>
+    <div class="stat"><small>Gate Passes</small><strong id="gatePassResults">0</strong></div>
+    <div class="stat"><small>Master Records</small><strong id="masterResults">0</strong></div>
+  </div>
+
+  <div id="results" class="results">
+    <div class="empty">
+      Type one or two words to search the complete system.
+    </div>
+  </div>
+
+</main>
+
+<script>
+const SUPABASE_URL="https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let cache={
+  items:[],
+  transactions:[],
+  rgpMaster:[],
+  rgpItems:[],
+  ogpMaster:[],
+  ogpItems:[],
+  cgpMaster:[],
+  cgpItems:[],
+  suppliers:[],
+  workshops:[],
+  scrappers:[]
+};
+
+function esc(value){
+  return String(value??"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function normal(value){
+  return String(value||"").trim().toLowerCase();
+}
+
+function displayDate(value){
+  if(!value)return"-";
+  const m=String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m)return value;
+  const months=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${m[3]}-${months[Number(m[2])]}-${m[1].slice(-2)}`;
+}
+
+function money(value){
+  return "Rs. "+Number(value||0).toLocaleString(undefined,{
+    minimumFractionDigits:2,
+    maximumFractionDigits:2
+  });
+}
+
+async function safeLoad(table,orderColumn="id"){
+  const {data,error}=await db
+    .from(table)
+    .select("*")
+    .order(orderColumn,{ascending:false});
+
+  if(error){
+    console.warn(table,error.message);
+    return [];
+  }
+
+  return data||[];
+}
+
+async function loadAll(){
+  results.innerHTML='<div class="loading">Loading searchable records...</div>';
+
+  const [
+    items,transactions,rgpMaster,rgpItems,ogpMaster,ogpItems,
+    cgpMaster,cgpItems,suppliers,workshops,scrappers
+  ]=await Promise.all([
+    safeLoad("items"),
+    safeLoad("stock_transactions"),
+    safeLoad("rgp_master"),
+    safeLoad("rgp_items"),
+    safeLoad("ogp_master"),
+    safeLoad("ogp_items"),
+    safeLoad("cgp_master"),
+    safeLoad("cgp_items"),
+    safeLoad("suppliers"),
+    safeLoad("workshops"),
+    safeLoad("scrappers")
+  ]);
+
+  cache={
+    items,transactions,rgpMaster,rgpItems,ogpMaster,ogpItems,
+    cgpMaster,cgpItems,suppliers,workshops,scrappers
+  };
+
+  results.innerHTML='<div class="empty">Type one or two words to search the complete system.</div>';
+}
+
+function wordsMatch(text,query){
+  const words=normal(query).split(/\s+/).filter(Boolean);
+  const haystack=normal(text);
+  return words.every(word=>haystack.includes(word));
+}
+
+function highlight(text,query){
+  let output=esc(text||"");
+  const words=normal(query).split(/\s+/).filter(Boolean);
+
+  words.forEach(word=>{
+    const safe=word.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    output=output.replace(
+      new RegExp(`(${safe})`,"ig"),
+      "<mark>$1</mark>"
+    );
+  });
+
+  return output;
+}
+
+function addResult(list,result){
+  list.push(result);
+}
+
+function buildResults(query){
+  const found=[];
+
+  cache.items.forEach(row=>{
+    const text=[
+      row.item_code,row.item_name,row.size,row.unit,row.category
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"item",
+        title:`${row.item_name||""}${row.size?" - "+row.size:""}`,
+        subtitle:row.item_code||"",
+        fields:[
+          ["Category",row.category||"-"],
+          ["Unit",row.unit||"-"],
+          ["Item Code",row.item_code||"-"],
+          ["Size",row.size||"-"]
+        ],
+        url:`current-stock.html?item_code=${encodeURIComponent(row.item_code||"")}`
+      });
+    }
+  });
+
+  cache.transactions.forEach(row=>{
+    const text=[
+      row.transaction_type,row.bill_no,row.item_code,row.item_name,row.size,
+      row.supplier,row.purchased_by,row.department,row.issued_to,row.remarks
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"transaction",
+        title:`${row.transaction_type||"Transaction"} — ${row.item_name||""}`,
+        subtitle:row.bill_no||String(row.id||""),
+        fields:[
+          ["Date",displayDate(row.transaction_date)],
+          ["Qty In",row.quantity_in||0],
+          ["Qty Out",row.quantity_out||0],
+          ["Party / Department",row.supplier||row.purchased_by||row.department||row.issued_to||"-"]
+        ],
+        url:`stock-ledger.html?item_code=${encodeURIComponent(row.item_code||"")}`
+      });
+    }
+  });
+
+  cache.rgpMaster.forEach(master=>{
+    const related=cache.rgpItems.filter(x=>String(x.rgp_id)===String(master.id));
+    const text=[
+      master.rgp_no,master.department,master.workshop_name,master.carrier_name,
+      master.authorized_by,master.purpose,master.remarks,
+      related.map(x=>`${x.item_name} ${x.size} ${x.item_code}`).join(" ")
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"rgp",
+        title:master.rgp_no||`RGP-${String(master.id).padStart(5,"0")}`,
+        subtitle:master.workshop_name||"",
+        fields:[
+          ["Date",displayDate(master.rgp_date)],
+          ["Department",master.department||"-"],
+          ["Status",master.status||"-"],
+          ["Items",related.length]
+        ],
+        url:`rgp-detail.html?rgp=${master.id}`
+      });
+    }
+  });
+
+  cache.ogpMaster.forEach(master=>{
+    const related=cache.ogpItems.filter(x=>String(x.ogp_id)===String(master.id));
+    const text=[
+      master.ogp_no,master.department,master.workshop_name,master.carrier_name,
+      master.vehicle_no,master.authorized_by,master.purpose,master.remarks,
+      related.map(x=>`${x.item_name} ${x.size} ${x.item_code}`).join(" ")
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"ogp",
+        title:master.ogp_no||`OGP-${String(master.id).padStart(5,"0")}`,
+        subtitle:master.workshop_name||"",
+        fields:[
+          ["Date",displayDate(master.ogp_date)],
+          ["Department",master.department||"-"],
+          ["Vehicle",master.vehicle_no||"-"],
+          ["Items",related.length]
+        ],
+        url:`ogp-detail.html?ogp=${master.id}`
+      });
+    }
+  });
+
+  cache.cgpMaster.forEach(master=>{
+    const related=cache.cgpItems.filter(x=>String(x.cgp_id)===String(master.id));
+    const text=[
+      master.gate_pass_no,master.scrapper_name,master.location_department,
+      master.phone_no,master.vehicle_no,
+      related.map(x=>`${x.description} ${x.unit} ${x.remarks}`).join(" ")
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"cgp",
+        title:master.gate_pass_no||`CGP-${String(master.id).padStart(5,"0")}`,
+        subtitle:master.scrapper_name||"",
+        fields:[
+          ["Date",displayDate(master.cgp_date)],
+          ["Location",master.location_department||"-"],
+          ["Vehicle",master.vehicle_no||"-"],
+          ["Amount",money(master.total_amount)]
+        ],
+        url:`cgp-entry.html?edit=${master.id}`
+      });
+    }
+  });
+
+  cache.suppliers.forEach(row=>{
+    const text=[
+      row.supplier_name,row.proprietor_name,row.phone,row.address,row.items_detail
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"master",
+        title:row.supplier_name||"Supplier",
+        subtitle:"Supplier Master",
+        fields:[
+          ["Proprietor",row.proprietor_name||"-"],
+          ["Phone",row.phone||"-"],
+          ["Address",row.address||"-"],
+          ["Items",row.items_detail||"-"]
+        ],
+        url:"suppliers.html"
+      });
+    }
+  });
+
+  cache.workshops.forEach(row=>{
+    const text=[
+      row.workshop_name,row.proprietor_name,row.phone,row.address,row.remarks
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"master",
+        title:row.workshop_name||"Workshop",
+        subtitle:"Workshop / Party",
+        fields:[
+          ["Phone",row.phone||"-"],
+          ["Address",row.address||"-"],
+          ["Remarks",row.remarks||"-"],
+          ["Type",row.workshop_type||"-"]
+        ],
+        url:"workshops.html"
+      });
+    }
+  });
+
+  cache.scrappers.forEach(row=>{
+    const text=[
+      row.scrapper_name,row.nature,row.phone_no,row.vehicle_no,
+      row.location_department,row.address_card_no
+    ].join(" ");
+
+    if(wordsMatch(text,query)){
+      addResult(found,{
+        type:"master",
+        title:row.scrapper_name||"Scrapper",
+        subtitle:row.nature||"Scrapper / Worker",
+        fields:[
+          ["Phone",row.phone_no||"-"],
+          ["Vehicle",row.vehicle_no||"-"],
+          ["Location",row.location_department||"-"],
+          ["Status",row.status||"-"]
+        ],
+        url:"scrapper-detail.html"
+      });
+    }
+  });
+
+  return found;
+}
+
+function runSearch(){
+  const query=searchInput.value.trim();
+  const filter=typeFilter.value;
+
+  if(query.length<2){
+    results.innerHTML='<div class="empty">Please type at least two characters.</div>';
+    updateStats([]);
+    return;
+  }
+
+  let found=buildResults(query);
+
+  if(filter!=="all"){
+    if(filter==="master"){
+      found=found.filter(x=>x.type==="master");
+    }else{
+      found=found.filter(x=>x.type===filter);
+    }
+  }
+
+  renderResults(found,query);
+  updateStats(found);
+}
+
+function renderResults(found,query){
+  if(!found.length){
+    results.innerHTML='<div class="empty">No matching record found.</div>';
+    return;
+  }
+
+  results.innerHTML=found.slice(0,200).map(result=>`
+    <article class="result-card ${result.type}">
+      <div class="result-head">
+        <div>
+          <h3 class="result-title">${highlight(result.title,query)}</h3>
+          <div style="margin-top:4px;color:#64748b;font-size:12px">
+            ${highlight(result.subtitle,query)}
+          </div>
+        </div>
+        <span class="result-type">${esc(result.type.toUpperCase())}</span>
+      </div>
+
+      <div class="result-meta">
+        ${result.fields.map(field=>`
+          <div class="meta-box">
+            <span>${esc(field[0])}</span>
+            <strong>${highlight(field[1],query)}</strong>
+          </div>
+        `).join("")}
+      </div>
+
+      <div class="result-actions">
+        <button class="btn btn-blue" onclick="location.href='${result.url}'">
+          Open Record
+        </button>
+      </div>
+    </article>
+  `).join("");
+}
+
+function updateStats(found){
+  totalResults.textContent=found.length;
+  itemResults.textContent=found.filter(x=>x.type==="item").length;
+  transactionResults.textContent=found.filter(x=>x.type==="transaction").length;
+  gatePassResults.textContent=found.filter(x=>["rgp","ogp","cgp"].includes(x.type)).length;
+  masterResults.textContent=found.filter(x=>x.type==="master").length;
+}
+
+function quickSearch(value){
+  searchInput.value=value;
+  runSearch();
+}
+
+function clearSearch(){
+  searchInput.value="";
+  typeFilter.value="all";
+  results.innerHTML='<div class="empty">Type one or two words to search the complete system.</div>';
+  updateStats([]);
+  searchInput.focus();
+}
+
+searchInput.addEventListener("keydown",event=>{
+  if(event.key==="Enter"){
+    runSearch();
+  }
+});
+
+searchInput.addEventListener("input",()=>{
+  const value=searchInput.value.trim();
+
+  if(value.length>=2){
+    clearTimeout(window.searchTimer);
+    window.searchTimer=setTimeout(runSearch,250);
+  }
+});
+
+loadAll();
+</script>
+</body>
+</html>
