@@ -29,6 +29,7 @@ button{border:0;border-radius:8px;cursor:pointer;font-weight:800}
 .report-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .report-tab{padding:14px;background:#fff;border:1px solid #dbe1ea;border-radius:10px;font-weight:900}
 .report-tab.active{background:#f59e0b;color:#111827}
+.report-tab:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(15,23,42,.08)}
 
 .card{margin-top:18px;padding:20px;background:#fff;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.06)}
 .card-title{margin:0 0 16px}
@@ -77,6 +78,8 @@ td{padding:10px 9px;border-bottom:1px solid #e5e7eb;font-size:12px}
 .office-form{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:14px;padding:14px;background:#fff;border:1px solid #dbe1ea;border-radius:10px}
 .office-form .form-group{margin:0}
 
+
+.search-wrap{position:relative}.search-menu{display:none;position:absolute;left:0;right:0;top:68px;z-index:60;max-height:240px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 12px 28px rgba(15,23,42,.16)}.search-menu.open{display:block}.search-option{padding:10px 12px;cursor:pointer;border-bottom:1px solid #eef2f7;font-size:12px}.search-option:last-child{border-bottom:0}.search-option:hover,.search-option.active{background:#eff6ff}.search-option strong{display:block}.report-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}.report-count{color:#64748b;font-size:12px;font-weight:800}.report-title-large{margin:0;font-size:22px;font-weight:900}.report-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;color:#64748b;font-size:11px}.total-row td{font-weight:900;background:#fff7ed!important;border-top:2px solid #ea580c}
 @media(max-width:1200px){.report-tabs,.filters{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:760px){.sidebar{position:relative;width:100%;height:auto}.profile{position:static;margin-top:20px}.main{width:100%;margin:0;padding:18px}.report-tabs,.filters,.stats,.office-form{grid-template-columns:1fr}.title-row{display:block}.title-actions{margin-top:14px}}
 </style>
@@ -105,8 +108,8 @@ td{padding:10px 9px;border-bottom:1px solid #e5e7eb;font-size:12px}
 <div><h1>Reports Center</h1><div class="subtitle">Daily and filtered reports with two printable PDF themes</div></div>
 <div class="title-actions">
 <button class="btn btn-green" onclick="exportCSV()">Export Excel</button>
-<button class="btn btn-blue" onclick="openPreview('erp')">Preview ERP Report</button>
-<button class="btn btn-orange" onclick="openOfficeDialog()">Preview Office Report</button>
+<button class="btn btn-blue" onclick="openPreview('erp')">ERP Report Preview</button>
+<button class="btn btn-orange" onclick="openOfficeDialog()">Office Report Preview</button>
 </div>
 </div>
 
@@ -116,6 +119,7 @@ td{padding:10px 9px;border-bottom:1px solid #e5e7eb;font-size:12px}
 <button id="tabDailyIssue" class="report-tab" onclick="setReport('dailyIssue')">Daily Issue</button>
 <button id="tabDailyGatepass" class="report-tab" onclick="setReport('dailyGatepass')">Daily Gate Pass</button>
 <button id="tabDailySummary" class="report-tab" onclick="setReport('dailySummary')">Daily Stock Summary</button>
+<button id="tabTodayActivity" class="report-tab" onclick="setReport('todayActivity')">Today's Activity</button>
 </div>
 
 <div class="section-label">Filtered Reports</div>
@@ -133,12 +137,12 @@ td{padding:10px 9px;border-bottom:1px solid #e5e7eb;font-size:12px}
 <section class="card">
 <h2 class="card-title">Report Filters</h2>
 <div class="filters">
-<div class="form-group"><label>Item</label><input id="itemFilter" list="itemList" placeholder="Type item name, size or code"><datalist id="itemList"></datalist></div>
-<div class="form-group"><label>Department</label><input id="departmentFilter" list="departmentList" placeholder="Type department"><datalist id="departmentList"></datalist></div>
-<div class="form-group"><label>Supplier</label><input id="supplierFilter" list="supplierList" placeholder="Type supplier"><datalist id="supplierList"></datalist></div>
-<div class="form-group"><label>Category</label><input id="categoryFilter" list="categoryList" placeholder="Type category"><datalist id="categoryList"></datalist></div>
-<div class="form-group"><label>Store Type</label><input id="storeTypeFilter" list="storeList" placeholder="Type store type"><datalist id="storeList"></datalist></div>
-<div class="form-group"><label>Transaction</label><input id="transactionFilter" list="transactionList" placeholder="Type transaction"><datalist id="transactionList"></datalist></div>
+<div class="form-group search-wrap"><label>Item</label><input id="itemFilter" autocomplete="off" placeholder="Type item name, size or code"><div id="itemMenu" class="search-menu"></div></div>
+<div class="form-group search-wrap"><label>Department</label><input id="departmentFilter" autocomplete="off" placeholder="Type department"><div id="departmentMenu" class="search-menu"></div></div>
+<div class="form-group search-wrap"><label>Supplier</label><input id="supplierFilter" autocomplete="off" placeholder="Type supplier"><div id="supplierMenu" class="search-menu"></div></div>
+<div class="form-group search-wrap"><label>Category</label><input id="categoryFilter" autocomplete="off" placeholder="Type category"><div id="categoryMenu" class="search-menu"></div></div>
+<div class="form-group search-wrap"><label>Store Type</label><input id="storeTypeFilter" autocomplete="off" placeholder="Type store type"><div id="storeTypeMenu" class="search-menu"></div></div>
+<div class="form-group search-wrap"><label>Transaction</label><input id="transactionFilter" autocomplete="off" placeholder="Type transaction"><div id="transactionMenu" class="search-menu"></div></div>
 <div class="form-group"><label>From Date</label><input id="fromDate" placeholder="Example: 1-7"></div>
 <div class="form-group"><label>To Date</label><input id="toDate" placeholder="Example: 31-7"></div>
 </div>
@@ -159,8 +163,9 @@ td{padding:10px 9px;border-bottom:1px solid #e5e7eb;font-size:12px}
 </div>
 
 <section class="card">
-<h2 class="card-title" id="reportTitle">Department Consumption</h2>
+<div class="report-meta"><h2 class="report-title-large" id="reportTitle">Department Consumption</h2><div id="recordCount" class="report-count">Showing 0 records</div></div>
 <div class="table-wrap"><table id="mainReportTable"><thead id="reportHead"></thead><tbody id="reportBody"><tr><td class="empty">Loading...</td></tr></tbody></table></div>
+<div class="report-footer"><span id="footerCount">Showing 0 records</span><span>This is a computer generated report.</span><span>Page 1</span></div>
 </section>
 </main>
 
@@ -198,7 +203,8 @@ const SUPABASE_URL="https://lzsxtvkluqvcaetnnydu.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-let transactions=[],itemsMaster=[],filteredRows=[],currentReport="department",currentPreviewTheme="erp";
+let transactions=[],itemsMaster=[],filteredRows=[],currentReport="department",currentPreviewTheme="erp",currentRenderedCount=0;
+const searchState={};
 const esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const normal=v=>String(v||"").trim().toLowerCase();
 const num=v=>Number(v||0);
@@ -220,23 +226,17 @@ if(e){reportBody.innerHTML=`<tr><td class="empty">${esc(e.message)}</td></tr>`;r
 transactions=s||[];itemsMaster=i||[];buildDropdowns();applyFilters();
 }
 
-function unique(arr){return[...new Set(arr.map(v=>String(v||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
-function fillList(id,arr){document.getElementById(id).innerHTML=arr.map(v=>`<option value="${esc(v)}"></option>`).join("")}
-function buildDropdowns(){
-fillList("itemList",unique(transactions.map(r=>`${r.item_name||""}${r.size?" - "+r.size:""}${r.item_code?" | "+r.item_code:""}`)));
-fillList("departmentList",unique(transactions.map(department)));
-fillList("supplierList",unique(transactions.map(r=>r.supplier)));
-fillList("categoryList",unique(transactions.map(r=>r.category)));
-fillList("storeList",unique(transactions.map(r=>r.store_type)));
-fillList("transactionList",unique(transactions.map(r=>r.transaction_type)));
-}
+function unique(arr){return [...new Set(arr.map(v=>String(v||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));}
+function setupSearchDropdown(inputId,menuId,values){const input=document.getElementById(inputId),menu=document.getElementById(menuId);searchState[inputId]={values,filtered:values,index:-1};function render(){const state=searchState[inputId],q=normal(input.value);state.filtered=state.values.filter(v=>normal(v).includes(q)).slice(0,30);if(!q)state.filtered=state.values.slice(0,30);state.index=Math.min(state.index,state.filtered.length-1);menu.innerHTML=state.filtered.map((v,i)=>`<div class="search-option ${i===state.index?"active":""}" onmousedown="chooseSearchValue('${inputId}',${i})"><strong>${esc(v)}</strong></div>`).join("");menu.classList.toggle("open",state.filtered.length>0);}input.addEventListener("focus",()=>{searchState[inputId].index=-1;render();});input.addEventListener("input",()=>{searchState[inputId].index=-1;render();});input.addEventListener("keydown",e=>{const s=searchState[inputId];if(e.key==="ArrowDown"){e.preventDefault();s.index=Math.min(s.index+1,s.filtered.length-1);render();}else if(e.key==="ArrowUp"){e.preventDefault();s.index=Math.max(s.index-1,0);render();}else if((e.key==="Enter"||e.key==="Tab")&&s.filtered.length){if(s.index<0)s.index=0;chooseSearchValue(inputId,s.index);if(e.key==="Enter")e.preventDefault();}else if(e.key==="Escape")menu.classList.remove("open");});input.addEventListener("blur",()=>setTimeout(()=>menu.classList.remove("open"),150));}
+function chooseSearchValue(inputId,index){const state=searchState[inputId],value=state.filtered[index];if(value===undefined)return;document.getElementById(inputId).value=value;document.getElementById(inputId).closest(".search-wrap").querySelector(".search-menu").classList.remove("open");applyFilters();}
+function buildDropdowns(){setupSearchDropdown("itemFilter","itemMenu",unique(transactions.map(r=>`${r.item_name||""}${r.size?" - "+r.size:""}${r.item_code?" | "+r.item_code:""}`)));setupSearchDropdown("departmentFilter","departmentMenu",unique(transactions.map(department)));setupSearchDropdown("supplierFilter","supplierMenu",unique(transactions.map(r=>r.supplier)));setupSearchDropdown("categoryFilter","categoryMenu",unique(transactions.map(r=>r.category)));setupSearchDropdown("storeTypeFilter","storeTypeMenu",unique(transactions.map(r=>r.store_type)));setupSearchDropdown("transactionFilter","transactionMenu",unique(transactions.map(r=>r.transaction_type)));}
 
 function setReport(r){
 currentReport=r;
-["dailyPurchase","dailyIssue","dailyGatepass","dailySummary","department","supplier","category","valuation","purchase","issue","gatepass","low"].forEach(x=>{
+["dailyPurchase","dailyIssue","dailyGatepass","dailySummary","todayActivity","department","supplier","category","valuation","purchase","issue","gatepass","low"].forEach(x=>{
 const id="tab"+x[0].toUpperCase()+x.slice(1);document.getElementById(id).classList.toggle("active",x===r)
 });
-const t={dailyPurchase:"Daily Purchase Report",dailyIssue:"Daily Issue Report",dailyGatepass:"Daily Gate Pass Report",dailySummary:"Daily Stock Summary",department:"Department Consumption",supplier:"Supplier Purchases",category:"Category Report",valuation:"Stock Valuation",purchase:"Purchase Register",issue:"Issue Register",gatepass:"Gate Pass Register",low:"Low / Out Stock"};
+const t={dailyPurchase:"Daily Purchase Report",dailyIssue:"Daily Issue Report",dailyGatepass:"Daily Gate Pass Report",dailySummary:"Daily Stock Summary",todayActivity:"Today's Activity",department:"Department Consumption",supplier:"Supplier Purchases",category:"Category Report",valuation:"Stock Valuation",purchase:"Purchase Register",issue:"Issue Register",gatepass:"Gate Pass Register",low:"Low / Out Stock"};
 reportTitle.textContent=t[r];applyFilters();
 }
 
@@ -250,7 +250,8 @@ render();stats();
 }
 
 function head(cols){reportHead.innerHTML="<tr>"+cols.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>"}
-function body(rows,fn,n){reportBody.innerHTML=rows.length?rows.map(fn).join(""):`<tr><td colspan="${n}" class="empty">No report data found.</td></tr>`}
+function body(rows,fn,n){currentRenderedCount=rows.length;reportBody.innerHTML=rows.length?rows.map(fn).join(""):`<tr><td colspan="${n}" class="empty">No report data found.</td></tr>`;updateRecordCount();}
+function updateRecordCount(){const t=`Showing ${currentRenderedCount} record${currentRenderedCount===1?"":"s"}`;recordCount.textContent=t;footerCount.textContent=t;}
 function dailyRows(kind){const t=todayISO();return filteredRows.filter(r=>r.transaction_date===t&&(kind==="purchase"?normal(r.transaction_type).includes("purchase"):kind==="issue"?normal(r.transaction_type).includes("issue"):kind==="gatepass"?/rgp|ogp|cgp/i.test(r.transaction_type||""):true))}
 
 function render(){
@@ -258,6 +259,7 @@ if(currentReport==="dailyPurchase")return registerReport("purchase",dailyRows("p
 if(currentReport==="dailyIssue")return registerReport("issue",dailyRows("issue"));
 if(currentReport==="dailyGatepass")return gatepassReport(dailyRows("gatepass"));
 if(currentReport==="dailySummary")return dailySummaryReport();
+if(currentReport==="todayActivity")return todayActivityReport();
 if(currentReport==="department")return departmentReport();
 if(currentReport==="supplier")return supplierReport();
 if(currentReport==="category")return categoryReport();
@@ -305,6 +307,8 @@ const rows=[
 body(rows,r=>`<tr><td>${r.name}</td><td class="text-right">${r.a.length}</td><td class="text-right">${qty(r.a.reduce((s,x)=>s+num(x.quantity_in),0))}</td><td class="text-right">${qty(r.a.reduce((s,x)=>s+num(x.quantity_out),0))}</td><td class="text-right amount">${money(r.a.reduce((s,x)=>s+value(x),0))}</td></tr>`,5)
 }
 
+
+function todayActivityReport(){const a=dailyRows("all");const rows=[{name:"Purchases",items:a.filter(r=>normal(r.transaction_type).includes("purchase"))},{name:"Issues",items:a.filter(r=>normal(r.transaction_type).includes("issue")&&!normal(r.transaction_type).includes("auto"))},{name:"Auto Issues",items:a.filter(r=>normal(r.transaction_type).includes("auto"))},{name:"RGP Out",items:a.filter(r=>normal(r.transaction_type)==="rgp out")},{name:"RGP Returns",items:a.filter(r=>normal(r.transaction_type)==="rgp return")},{name:"OGP Out",items:a.filter(r=>normal(r.transaction_type)==="ogp out")},{name:"CGP Out",items:a.filter(r=>normal(r.transaction_type)==="cgp out")}].filter(r=>r.items.length);head(["Today's Activity","Transactions","Qty In","Qty Out","Value"]);body(rows,r=>`<tr><td>${esc(r.name)}</td><td class="text-right">${r.items.length}</td><td class="text-right">${qty(r.items.reduce((s,x)=>s+num(x.quantity_in),0))}</td><td class="text-right">${qty(r.items.reduce((s,x)=>s+num(x.quantity_out),0))}</td><td class="text-right amount">${money(r.items.reduce((s,x)=>s+value(x),0))}</td></tr>`,5);}
 function stats(){
 totalTransactions.textContent=filteredRows.length;
 totalIn.textContent=qty(filteredRows.reduce((s,r)=>s+num(r.quantity_in),0));
@@ -362,7 +366,7 @@ return `
 <div class="preview-kpi"><span>Unique Items</span><strong>${uniqueItems.textContent}</strong></div>
 </div>
 ${previewTableHTML()}
-<div class="preview-footer"><span>This is a computer generated report.</span><span>Page 1</span><span>Inventory Store Management System</span></div>`;
+<div class="preview-footer"><span>${esc(recordCount.textContent)} — This is a computer generated report.</span><span>Page 1</span><span>Inventory Store Management System</span></div>`;
 }
 function openOfficeDialog(){
 officeTitle.value=reportName();
@@ -376,7 +380,7 @@ previewHeading.textContent="Office Report Preview";
 previewPage.innerHTML=`
 <div class="office-heading">${esc(officeTitle.value||reportName())}<span class="office-date">Date: ${esc(displayDate(d))}</span></div>
 ${previewTableHTML()}
-<div class="preview-footer"><span>This is a computer generated report.</span><span>Page 1</span></div>`;
+<div class="preview-footer"><span>${esc(recordCount.textContent)} — This is a computer generated report.</span><span>Page 1</span></div>`;
 officeDialog.classList.remove("open");
 previewModal.classList.add("open");
 }
