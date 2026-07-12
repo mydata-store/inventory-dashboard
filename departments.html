@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Department Master</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#f4f6fb;color:#0f172a}
+aside{position:fixed;inset:0 auto 0 0;width:210px;padding:22px 14px;color:#fff;background:linear-gradient(#351000,#1a0600)}
+.brand{font-size:24px;font-weight:900}.sub{color:#f59e0b;font-size:13px;font-weight:800;margin:6px 0 30px}
+nav a{display:block;padding:12px;margin:6px 0;border-radius:10px;color:#fff;text-decoration:none;font-weight:700;font-size:14px}
+nav a:hover,nav a.active{background:#f59e0b;color:#111827}.profile{position:absolute;left:14px;right:14px;bottom:20px;text-align:center;padding:14px;background:#ffffff18;border-radius:14px}
+.profile img{width:70px;height:70px;object-fit:cover;border-radius:50%;border:3px solid #f59e0b}.profile b,.profile span{display:block}.profile span{color:#22c55e;font-size:12px;margin-top:3px}
+main{margin-left:210px;padding:28px 34px}.head{display:flex;justify-content:space-between;gap:15px;padding-bottom:18px;border-bottom:1px solid #dbe1ea}
+h1{margin:0}.muted{color:#64748b;font-size:14px;margin-top:5px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{border:0;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer}.blue{background:#2563eb;color:#fff}.green{background:#16a34a;color:#fff}.yellow{background:#f59e0b}.dark{background:#111827;color:#fff}.red{background:#dc2626;color:#fff}.orange{background:#ea580c;color:#fff}.small{padding:7px 9px;font-size:11px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.tab{background:#fff;border:1px solid #dbe1ea}.tab.active{background:#f59e0b}
+.card{margin-top:18px;padding:20px;background:#fff;border-radius:16px;box-shadow:0 8px 22px #00000010}.card h2{margin:0 0 16px;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.span2{grid-column:span 2}.span4{grid-column:1/5}
+label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}input,select{width:100%;height:40px;padding:0 11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+table{width:100%;min-width:1050px;border-collapse:separate;border-spacing:0}.wrap{max-height:520px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px}
+th{position:sticky;top:0;background:#0f172a;color:#fff;padding:10px;font-size:12px;text-align:left}td{padding:9px;border-bottom:1px solid #e5e7eb;font-size:12px}tbody tr:nth-child(even){background:#f8fafc}
+.badge{padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900}.activeB{background:#dcfce7;color:#166534}.inactiveB{background:#fee2e2;color:#991b1b}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:18px}.stat{background:#fff;padding:16px;border-radius:14px;box-shadow:0 8px 22px #0000000d}.stat small{color:#64748b}.stat strong{display:block;margin-top:5px;font-size:21px}
+.modal{display:none;position:fixed;inset:0;z-index:500;background:#0f172a99;padding:20px}.modal.open{display:flex;align-items:center;justify-content:center}.modalbox{width:min(1200px,97vw);max-height:92vh;overflow:auto;background:#fff;border-radius:16px}.modalhead{display:flex;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #ddd}.modalbody{padding:20px}
+.detail{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.detail div{padding:11px;border:1px solid #ddd;border-radius:9px;background:#f8fafc}.detail span{display:block;color:#64748b;font-size:10px}.detail strong{display:block;margin-top:4px}
+.preview{width:1120px;min-height:760px;background:#fff;padding:32px;margin:auto}.reporttitle{text-align:center;font-size:26px;font-weight:900;margin-bottom:24px}.date{float:right;font-size:15px}.orangehead th{background:#ea580c}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){aside{position:relative;width:100%;height:auto}main{margin:0;padding:18px}.profile{position:static;margin-top:20px}.tabs,.grid,.stats,.detail{grid-template-columns:1fr}.span2,.span4{grid-column:auto}.head{display:block}}
+</style>
+</head>
+<body>
+<aside>
+<div class="brand">📦 Inventory<br>Store</div><div class="sub">Management System</div>
+<nav>
+<a href="index.html">⌂ Dashboard</a><a href="global-search.html">🔎 Global Search</a><a href="items.html">▣ Items Master</a><a href="suppliers.html">▰ Suppliers</a><a class="active" href="departments.html">🏭 Departments</a><a href="purchase.html">🛒 Purchase Entry</a><a href="issue.html">↪ Issue Entry</a><a href="gate-pass.html">🚚 Gate Pass</a><a href="stock-ledger.html">▣ Stock Ledger</a><a href="current-stock.html">◫ Current Stock</a><a href="reports.html">▥ Reports</a><a href="workshops.html">⚙ Workshop / Party</a>
+</nav>
+<div class="profile"><img src="public/waqas.jpg.png" onerror="this.src='public/profile.png'"><b>Muhammad Waqas</b><span>● Online</span></div>
+</aside>
+
+<main>
+<div class="head"><div><h1>Department Master</h1><div class="muted">Manage departments and analyze Issue, RGP and OGP records</div></div>
+<div class="actions"><button class="green" onclick="exportMaster()">Export Excel</button><button class="yellow" onclick="templateFile()">Excel Template</button><button class="blue" onclick="excelFile.click()">Import Excel</button><input id="excelFile" type="file" accept=".xlsx,.xls,.csv" hidden></div></div>
+
+<div class="tabs">
+<button class="tab active" id="tMaster" onclick="showTab('master')">Department Master</button>
+<button class="tab" id="tAnalysis" onclick="showTab('analysis')">Search & Analysis</button>
+<button class="tab" id="tImport" onclick="showTab('import')">Excel Import</button>
+<button class="tab" id="tReports" onclick="showTab('reports')">PDF Reports</button>
+</div>
+
+<section id="master">
+<div class="card"><h2 id="formTitle">Department Information</h2>
+<div class="grid">
+<div><label>Department Code *</label><input id="code"></div><div><label>Department Name *</label><input id="name"></div>
+<div><label>Responsible Person</label><input id="person"></div><div><label>Phone</label><input id="phone"></div>
+<div class="span2"><label>Location</label><input id="location"></div><div><label>Status</label><select id="status"><option>Active</option><option>Inactive</option></select></div>
+<div class="span4"><label>Remarks</label><input id="remarks"></div>
+</div><div class="actions" style="margin-top:14px"><button id="saveBtn" class="green" onclick="saveDepartment()">Save Department</button><button class="yellow" onclick="clearForm()">Clear</button></div>
+</div>
+
+<div class="card"><h2>Department List</h2>
+<div class="grid"><div class="span2"><label>Search</label><input id="masterSearch" placeholder="Code, name, person, location" oninput="renderMaster()"></div><div><label>Status</label><select id="masterStatus" onchange="renderMaster()"><option value="">All Status</option><option>Active</option><option>Inactive</option></select></div></div>
+<div class="wrap" style="margin-top:14px"><table><thead><tr><th>Code</th><th>Department</th><th>Responsible Person</th><th>Phone</th><th>Location</th><th>Status</th><th>Action</th></tr></thead><tbody id="masterBody"></tbody></table></div>
+</div>
+</section>
+
+<section id="analysis" style="display:none">
+<div class="card"><h2>Department Search</h2><div class="grid">
+<div><label>Department</label><input id="fDepartment" placeholder="Type department"></div>
+<div><label>Item</label><input id="fItem" placeholder="Type item or size"></div>
+<div><label>Item Category</label><input id="fCategory" placeholder="Type category"></div>
+<div><label>Transaction</label><select id="fTransaction"><option value="">All Transactions</option><option>Issue</option><option>RGP Out</option><option>RGP Return</option><option>OGP Out</option></select></div>
+<div><label>From Date</label><input id="fromDate" placeholder="1-7"></div><div><label>To Date</label><input id="toDate" placeholder="31-7"></div>
+</div><div class="actions" style="margin-top:14px"><button class="blue" onclick="filterTransactions()">Search</button><button class="yellow" onclick="clearFilters()">Clear</button></div></div>
+
+<div class="stats">
+<div class="stat"><small>Transactions</small><strong id="sCount">0</strong></div><div class="stat"><small>Issue Qty</small><strong id="sIssue">0.00</strong></div><div class="stat"><small>RGP Out</small><strong id="sRgp">0.00</strong></div><div class="stat"><small>RGP Return</small><strong id="sReturn">0.00</strong></div><div class="stat"><small>OGP Out</small><strong id="sOgp">0.00</strong></div><div class="stat"><small>Total Value</small><strong id="sValue">Rs. 0.00</strong></div>
+</div>
+
+<div class="card"><h2>Department Transactions</h2><div class="wrap"><table><thead><tr><th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Category</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Rate</th><th>Value</th><th>Party</th><th>Remarks</th></tr></thead><tbody id="transactionBody"></tbody></table></div></div>
+</section>
+
+<section id="import" style="display:none"><div class="card"><h2>Excel Import Preview</h2>
+<div class="stats"><div class="stat"><small>Total</small><strong id="iTotal">0</strong></div><div class="stat"><small>Valid</small><strong id="iValid">0</strong></div><div class="stat"><small>Duplicate</small><strong id="iDuplicate">0</strong></div><div class="stat"><small>Invalid</small><strong id="iInvalid">0</strong></div></div>
+<div class="actions" style="margin:14px 0"><button class="green" onclick="saveImport()">Import Valid Rows</button><button class="yellow" onclick="clearImport()">Clear</button></div>
+<div class="wrap"><table><thead><tr><th>Row</th><th>Code</th><th>Name</th><th>Responsible Person</th><th>Phone</th><th>Location</th><th>Remarks</th><th>Status</th><th>Validation</th></tr></thead><tbody id="importBody"></tbody></table></div>
+</div></section>
+
+<section id="reports" style="display:none"><div class="card"><h2>Department Reports</h2><div class="grid">
+<div class="span2"><label>Office Report Title</label><input id="officeTitle" value="DEPARTMENT REPORT"></div><div><label>Office Report Date</label><input id="officeDate" placeholder="12-7"></div></div>
+<div class="actions" style="margin-top:14px"><button class="blue" onclick="preview('erp')">ERP Report Preview</button><button class="orange" onclick="preview('office')">Office Report Preview</button><button class="green" onclick="exportTransactions()">Export Filtered Excel</button></div>
+</div></section>
+</main>
+
+<div class="modal" id="detailModal"><div class="modalbox"><div class="modalhead"><h3 id="detailTitle">Department Detail</h3><button class="dark" onclick="closeModal('detailModal')">Close</button></div><div class="modalbody" id="detailBody"></div></div></div>
+<div class="modal" id="previewModal"><div class="modalbox" style="width:min(1200px,98vw)"><div class="modalhead"><h3>Report Preview</h3><div><button class="dark" onclick="printPreview()">Print / Save PDF</button> <button class="yellow" onclick="closeModal('previewModal')">Close</button></div></div><div class="modalbody" style="background:#d7dce3"><div class="preview" id="previewPage"></div></div></div></div>
+
+<script>
+const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
+let departments=[],transactions=[],filtered=[],editingId=null,importRows=[];
+const n=v=>String(v||"").trim().toLowerCase(),num=v=>Number(v||0),q=v=>num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),money=v=>"Rs. "+num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const tc=v=>String(v||"").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()),esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+function dep(r){return r.department||r.issued_to||r.location_department||r.purchased_by||""}function val(r){return (num(r.quantity_in)||num(r.quantity_out))*num(r.unit_rate)+num(r.freight)}
+function parseDate(v){const t=String(v||"").trim();if(!t)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const p=t.replace(/\//g,"-").split("-");if(p.length<2)return null;let y=p[2]||new Date().getFullYear();if(String(y).length===2)y="20"+y;return `${y}-${String(+p[1]).padStart(2,"0")}-${String(+p[0]).padStart(2,"0")}`}
+function ddate(v){if(!v)return"-";const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return v;const ms=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return `${m[3]}-${ms[+m[2]]}-${m[1].slice(-2)}`}
+
+async function init(){await Promise.all([loadDepartments(),loadTransactions()]);excelFile.onchange=handleImport;["fromDate","toDate","officeDate"].forEach(id=>document.getElementById(id).onblur=e=>{const d=parseDate(e.target.value);if(d)e.target.value=ddate(d)})}
+async function loadDepartments(){const {data,error}=await db.from("departments").select("*").order("id",{ascending:false});if(error){masterBody.innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;return}departments=data||[];renderMaster()}
+async function loadTransactions(){const {data}=await db.from("stock_transactions").select("*").order("transaction_date",{ascending:false}).order("id",{ascending:false});transactions=data||[];filtered=[...transactions];renderTransactions()}
+function showTab(x){["master","analysis","import","reports"].forEach(s=>{document.getElementById(s).style.display=s===x?"block":"none";document.getElementById("t"+s[0].toUpperCase()+s.slice(1)).classList.toggle("active",s===x)});if(x==="analysis")filterTransactions()}
+function renderMaster(){const s=n(masterSearch.value),st=n(masterStatus.value);const rows=departments.filter(d=>(!s||[d.department_code,d.department_name,d.responsible_person,d.location].join(" ").toLowerCase().includes(s))&&(!st||n(d.status)===st));masterBody.innerHTML=rows.length?rows.map(d=>`<tr><td>${esc(d.department_code)}</td><td><b>${esc(d.department_name)}</b></td><td>${esc(d.responsible_person||"-")}</td><td>${esc(d.phone||"-")}</td><td>${esc(d.location||"-")}</td><td><span class="badge ${d.status==="Inactive"?"inactiveB":"activeB"}">${esc(d.status||"Active")}</span></td><td><button class="blue small" onclick="detail(${d.id})">Detail</button> <button class="yellow small" onclick="editDep(${d.id})">Edit</button> <button class="red small" onclick="deleteDep(${d.id})">Delete</button></td></tr>`).join(""):`<tr><td colspan="7" class="empty">No department found.</td></tr>`}
+async function saveDepartment(){const c=code.value.trim().toUpperCase(),nm=tc(name.value);if(!c||!nm)return alert("Department Code and Name are required.");if(departments.some(d=>+d.id!==+editingId&&(n(d.department_code)===n(c)||n(d.department_name)===n(nm))))return alert("Department code or name already exists.");const rec={department_code:c,department_name:nm,responsible_person:tc(person.value),phone:phone.value.trim(),location:tc(location.value),remarks:tc(remarks.value),status:status.value};const r=editingId?await db.from("departments").update(rec).eq("id",editingId):await db.from("departments").insert([rec]);if(r.error)return alert(r.error.message);alert(editingId?"Department updated.":"Department saved.");clearForm(false);await loadDepartments()}
+function editDep(id){const d=departments.find(x=>+x.id===+id);editingId=id;formTitle.textContent="Edit Department";saveBtn.textContent="Update Department";code.value=d.department_code||"";name.value=d.department_name||"";person.value=d.responsible_person||"";phone.value=d.phone||"";location.value=d.location||"";remarks.value=d.remarks||"";status.value=d.status||"Active";scrollTo({top:0,behavior:"smooth"})}
+function clearForm(ask=true){if(ask&&(code.value||name.value)&&!confirm("Clear entered data?"))return;editingId=null;formTitle.textContent="Department Information";saveBtn.textContent="Save Department";[code,name,person,phone,location,remarks].forEach(x=>x.value="");status.value="Active"}
+async function deleteDep(id){const d=departments.find(x=>+x.id===+id);if(!confirm(`Delete ${d.department_name}?`))return;const {error}=await db.from("departments").delete().eq("id",id);if(error)return alert(error.message);loadDepartments()}
+function filterTransactions(){const d=n(fDepartment.value),it=n(fItem.value),cat=n(fCategory.value),tr=n(fTransaction.value),fr=parseDate(fromDate.value),to=parseDate(toDate.value);filtered=transactions.filter(r=>(!d||n(dep(r)).includes(d))&&(!it||[r.item_code,r.item_name,r.size].join(" ").toLowerCase().includes(it))&&(!cat||n(r.category).includes(cat))&&(!tr||n(r.transaction_type)===tr)&&(!fr||r.transaction_date>=fr)&&(!to||r.transaction_date<=to));renderTransactions();stats()}
+function clearFilters(){[fDepartment,fItem,fCategory,fromDate,toDate].forEach(x=>x.value="");fTransaction.value="";filterTransactions()}
+function renderTransactions(){transactionBody.innerHTML=filtered.length?filtered.map(r=>`<tr><td>${ddate(r.transaction_date)}</td><td>${esc(dep(r)||"-")}</td><td>${esc(r.transaction_type||"-")}</td><td>${esc(r.bill_no||r.id)}</td><td>${esc(r.item_name||"-")}</td><td>${esc(r.size||"-")}</td><td>${esc(r.category||"-")}</td><td>${esc(r.unit||"-")}</td><td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td><td>${money(r.unit_rate)}</td><td>${money(val(r))}</td><td>${esc(r.supplier||"-")}</td><td>${esc(r.remarks||"-")}</td></tr>`).join(""):`<tr><td colspan="14" class="empty">No transaction found.</td></tr>`}
+function stats(){sCount.textContent=filtered.length;sIssue.textContent=q(filtered.filter(r=>n(r.transaction_type)==="issue").reduce((s,r)=>s+num(r.quantity_out),0));sRgp.textContent=q(filtered.filter(r=>n(r.transaction_type)==="rgp out").reduce((s,r)=>s+num(r.quantity_out),0));sReturn.textContent=q(filtered.filter(r=>n(r.transaction_type)==="rgp return").reduce((s,r)=>s+num(r.quantity_in),0));sOgp.textContent=q(filtered.filter(r=>n(r.transaction_type)==="ogp out").reduce((s,r)=>s+num(r.quantity_out),0));sValue.textContent=money(filtered.reduce((s,r)=>s+val(r),0))}
+function detail(id){const d=departments.find(x=>+x.id===+id),rows=transactions.filter(r=>n(dep(r))===n(d.department_name));detailTitle.textContent=d.department_name;detailBody.innerHTML=`<div class="detail"><div><span>Code</span><strong>${esc(d.department_code)}</strong></div><div><span>Responsible Person</span><strong>${esc(d.responsible_person||"-")}</strong></div><div><span>Phone</span><strong>${esc(d.phone||"-")}</strong></div><div><span>Location</span><strong>${esc(d.location||"-")}</strong></div><div><span>Total Transactions</span><strong>${rows.length}</strong></div><div><span>Issue Qty</span><strong>${q(rows.filter(r=>n(r.transaction_type)==="issue").reduce((s,r)=>s+num(r.quantity_out),0))}</strong></div><div><span>RGP Out</span><strong>${q(rows.filter(r=>n(r.transaction_type)==="rgp out").reduce((s,r)=>s+num(r.quantity_out),0))}</strong></div><div><span>OGP Out</span><strong>${q(rows.filter(r=>n(r.transaction_type)==="ogp out").reduce((s,r)=>s+num(r.quantity_out),0))}</strong></div></div><h3>Recent Transactions</h3><div class="wrap"><table><thead><tr><th>Date</th><th>Transaction</th><th>Item</th><th>Qty In</th><th>Qty Out</th><th>Party</th></tr></thead><tbody>${rows.slice(0,100).map(r=>`<tr><td>${ddate(r.transaction_date)}</td><td>${esc(r.transaction_type)}</td><td>${esc(r.item_name)}</td><td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td><td>${esc(r.supplier||"-")}</td></tr>`).join("")||`<tr><td colspan="6">No transaction found.</td></tr>`}</tbody></table></div>`;detailModal.classList.add("open")}
+function closeModal(id){document.getElementById(id).classList.remove("open")}
+function exportMaster(){const ws=XLSX.utils.json_to_sheet(departments.map(d=>({"Department Code":d.department_code,"Department Name":d.department_name,"Responsible Person":d.responsible_person,"Phone":d.phone,"Location":d.location,"Remarks":d.remarks,"Status":d.status})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Departments");XLSX.writeFile(wb,"departments-master.xlsx")}
+function templateFile(){const ws=XLSX.utils.json_to_sheet([{"Department Code":"MECH","Department Name":"Mechanical","Responsible Person":"Muhammad Ali","Phone":"0300-0000000","Location":"Main Workshop","Remarks":"","Status":"Active"}]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Template");XLSX.writeFile(wb,"department-import-template.xlsx")}
+async function handleImport(e){const file=e.target.files[0];if(!file)return;const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}),raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});importRows=raw.map((r,i)=>{const x={row:i+2,department_code:String(r["Department Code"]||r.department_code||"").trim().toUpperCase(),department_name:tc(r["Department Name"]||r.department_name||""),responsible_person:tc(r["Responsible Person"]||r.responsible_person||""),phone:String(r.Phone||r.phone||""),location:tc(r.Location||r.location||""),remarks:tc(r.Remarks||r.remarks||""),status:String(r.Status||r.status||"Active")};x.validation=!x.department_code||!x.department_name?"Invalid":departments.some(d=>n(d.department_code)===n(x.department_code)||n(d.department_name)===n(x.department_name))?"Duplicate":"Valid";return x});renderImport();showTab("import")}
+function renderImport(){iTotal.textContent=importRows.length;iValid.textContent=importRows.filter(x=>x.validation==="Valid").length;iDuplicate.textContent=importRows.filter(x=>x.validation==="Duplicate").length;iInvalid.textContent=importRows.filter(x=>x.validation==="Invalid").length;importBody.innerHTML=importRows.length?importRows.map(x=>`<tr><td>${x.row}</td><td>${esc(x.department_code)}</td><td>${esc(x.department_name)}</td><td>${esc(x.responsible_person)}</td><td>${esc(x.phone)}</td><td>${esc(x.location)}</td><td>${esc(x.remarks)}</td><td>${esc(x.status)}</td><td>${x.validation}</td></tr>`).join(""):`<tr><td colspan="9" class="empty">Choose an Excel file.</td></tr>`}
+async function saveImport(){const rows=importRows.filter(x=>x.validation==="Valid").map(({row,validation,...x})=>x);if(!rows.length)return alert("No valid rows.");const {error}=await db.from("departments").insert(rows);if(error)return alert(error.message);alert(`${rows.length} departments imported.`);clearImport();loadDepartments()}
+function clearImport(){importRows=[];excelFile.value="";renderImport()}
+function exportTransactions(){const ws=XLSX.utils.json_to_sheet(filtered.map(r=>({Date:ddate(r.transaction_date),Department:dep(r),Transaction:r.transaction_type,Reference:r.bill_no||r.id,Item:r.item_name,Size:r.size,Unit:r.unit,"Qty In":r.quantity_in,"Qty Out":r.quantity_out,Rate:r.unit_rate,Value:val(r),Party:r.supplier,Remarks:r.remarks})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Transactions");XLSX.writeFile(wb,"department-transactions.xlsx")}
+function reportTable(){return `<table class="orangehead"><thead><tr><th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Value</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${ddate(r.transaction_date)}</td><td>${esc(dep(r))}</td><td>${esc(r.transaction_type)}</td><td>${esc(r.bill_no||r.id)}</td><td>${esc(r.item_name)}</td><td>${esc(r.size||"-")}</td><td>${esc(r.unit||"-")}</td><td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td><td>${money(val(r))}</td></tr>`).join("")}</tbody></table>`}
+function preview(theme){if(!filtered.length)return alert("No filtered data.");const d=parseDate(officeDate.value)||new Date().toISOString().slice(0,10);previewPage.innerHTML=theme==="office"?`<div class="reporttitle">${esc(officeTitle.value||"DEPARTMENT REPORT")}<span class="date">Date: ${ddate(d)}</span></div>${reportTable()}<p>This is a computer generated report.</p>`:`<h2 style="color:#ea580c">INVENTORY STORE MANAGEMENT SYSTEM</h2><div class="reporttitle" style="color:#ea580c">DEPARTMENT TRANSACTION REPORT</div>${reportTable()}<p>This is a computer generated report.</p>`;previewModal.classList.add("open")}
+function printPreview(){const w=window.open("","_blank");w.document.write(`<html><head><style>body{font-family:Arial;padding:25px}table{width:100%;border-collapse:collapse}th{background:#ea580c;color:#fff}th,td{border:1px solid #555;padding:6px}.reporttitle{text-align:center;font-size:26px;font-weight:900;margin-bottom:24px}.date{float:right;font-size:15px}</style></head><body>${previewPage.innerHTML}<script>onload=()=>print()<\/script></body></html>`);w.document.close()}
+init();
+</script>
+</body></html>
