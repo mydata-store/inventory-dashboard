@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Current Stock</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f4f6fb;
+  color:#0f172a;
+}
+
+.sidebar{
+  width:210px;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:100;
+  padding:22px 14px;
+  color:#fff;
+  background:linear-gradient(180deg,#351000,#1a0600);
+}
+
+.brand{
+  font-size:24px;
+  line-height:1.05;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.brand-sub{
+  color:#f59e0b;
+  font-size:13px;
+  font-weight:800;
+  margin-bottom:34px;
+}
+
+.menu a{
+  display:block;
+  color:#fff;
+  text-decoration:none;
+  padding:12px;
+  margin-bottom:7px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+}
+
+.menu a:hover,
+.menu a.active{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.profile{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:20px;
+  padding:16px 10px;
+  text-align:center;
+  border-radius:14px;
+  background:rgba(255,255,255,.10);
+}
+
+.profile img{
+  display:block;
+  width:72px;
+  height:72px;
+  margin:0 auto 10px;
+  object-fit:cover;
+  border:3px solid #f59e0b;
+  border-radius:50%;
+}
+
+.profile b{display:block;font-size:14px}
+.profile span{
+  display:block;
+  margin-top:3px;
+  color:#22c55e;
+  font-size:12px;
+  font-weight:700;
+}
+
+.main{
+  width:calc(100% - 210px);
+  min-height:100vh;
+  margin-left:210px;
+  padding:28px 34px;
+}
+
+.title-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  padding-bottom:18px;
+  border-bottom:1px solid #dbe1ea;
+}
+
+h1{
+  margin:0;
+  font-size:28px;
+}
+
+.subtitle{
+  margin-top:6px;
+  color:#64748b;
+  font-size:14px;
+}
+
+.top-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+button{
+  border:0;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:800;
+}
+
+.btn{
+  padding:10px 15px;
+}
+
+.btn-blue{color:#fff;background:#2563eb}
+.btn-green{color:#fff;background:#16a34a}
+.btn-yellow{color:#111827;background:#f59e0b}
+.btn-dark{color:#fff;background:#111827}
+
+.sticky-panel{
+  position:sticky;
+  top:0;
+  z-index:40;
+  background:#f4f6fb;
+  padding-top:1px;
+}
+
+.card{
+  margin-top:18px;
+  padding:20px;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.06);
+}
+
+.card-title{
+  margin:0 0 16px;
+  font-size:18px;
+}
+
+.filters{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.form-group{
+  position:relative;
+}
+
+.form-group label{
+  display:block;
+  margin-bottom:6px;
+  font-size:12px;
+  font-weight:800;
+}
+
+.form-group input,
+.form-group select{
+  width:100%;
+  height:40px;
+  padding:0 11px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  outline:none;
+  background:#fff;
+}
+
+.form-group input:focus,
+.form-group select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px rgba(37,99,235,.12);
+}
+
+.filter-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:12px;
+  margin-top:18px;
+}
+
+.stat{
+  padding:17px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 8px 22px rgba(0,0,0,.05);
+}
+
+.stat small{
+  color:#64748b;
+  font-size:12px;
+}
+
+.stat strong{
+  display:block;
+  margin-top:6px;
+  font-size:21px;
+}
+
+.good{color:#15803d}
+.warn{color:#b45309}
+.bad{color:#b91c1c}
+
+.table-wrap{
+  width:100%;
+  max-height:560px;
+  overflow:auto;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+}
+
+table{
+  width:100%;
+  min-width:1350px;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+th{
+  position:sticky;
+  top:0;
+  z-index:12;
+  padding:11px 9px;
+  color:#fff;
+  background:#0f172a;
+  font-size:12px;
+  text-align:left;
+  white-space:nowrap;
+}
+
+td{
+  padding:10px 9px;
+  border-bottom:1px solid #e5e7eb;
+  font-size:12px;
+  vertical-align:middle;
+}
+
+tbody tr:hover{
+  background:#f8fafc;
+}
+
+.row-low{background:#fffbeb}
+.row-out{background:#fef2f2}
+
+.text-right{text-align:right}
+.item-name{font-weight:800;color:#1d4ed8}
+.amount{font-weight:900}
+
+.badge{
+  display:inline-block;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+}
+
+.badge-normal{color:#166534;background:#dcfce7}
+.badge-low{color:#92400e;background:#fef3c7}
+.badge-out{color:#991b1b;background:#fee2e2}
+
+.action-group{
+  display:flex;
+  gap:6px;
+  white-space:nowrap;
+}
+
+.btn-small{
+  padding:7px 10px;
+  font-size:11px;
+}
+
+.empty{
+  padding:30px!important;
+  color:#64748b;
+  text-align:center;
+  font-weight:700;
+}
+
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:500;
+  background:rgba(15,23,42,.55);
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+.modal.open{display:flex}
+
+.modal-card{
+  width:min(980px,96vw);
+  max-height:88vh;
+  overflow:auto;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 24px 60px rgba(0,0,0,.28);
+}
+
+.modal-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:18px 20px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.modal-head h3{margin:0}
+.modal-close{
+  width:34px;
+  height:34px;
+  padding:0;
+  border-radius:50%;
+  background:#e2e8f0;
+  color:#0f172a;
+  font-size:18px;
+}
+
+.modal-body{padding:20px}
+
+.detail-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.detail-box{
+  padding:12px;
+  border:1px solid #dbe1ea;
+  border-radius:10px;
+  background:#f8fafc;
+}
+
+.detail-box span{
+  display:block;
+  color:#64748b;
+  font-size:11px;
+  font-weight:800;
+  margin-bottom:5px;
+}
+
+.detail-box strong{
+  display:block;
+  font-size:13px;
+  word-break:break-word;
+}
+
+.section-heading{
+  margin:22px 0 10px;
+  font-size:16px;
+}
+
+.history-table{
+  min-width:900px;
+}
+
+.note{
+  margin-top:12px;
+  color:#64748b;
+  font-size:12px;
+  line-height:1.5;
+}
+
+@media(max-width:1250px){
+  .filters{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:repeat(3,1fr)}
+}
+
+@media(max-width:760px){
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+  }
+
+  .profile{
+    position:static;
+    margin-top:20px;
+  }
+
+  .main{
+    width:100%;
+    margin:0;
+    padding:18px;
+  }
+
+  .title-row{display:block}
+  .top-actions{margin-top:14px}
+  .filters,.stats,.detail-grid{grid-template-columns:1fr}
+}
+
+@media print{
+  body{background:#fff}
+  .sidebar,
+  .top-actions,
+  .filters,
+  .filter-actions{
+    display:none!important;
+  }
+
+  .main{
+    width:100%;
+    margin:0;
+    padding:0;
+  }
+
+  .card,.stat{
+    box-shadow:none;
+    border:1px solid #dbe1ea;
+  }
+
+  .table-wrap{
+    max-height:none;
+    overflow:visible;
+    border:0;
+  }
+
+  table{min-width:0}
+  th{
+    position:static;
+    color:#000;
+    background:#f59e0b!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<aside class="sidebar">
+  <div class="brand">📦 Inventory<br>Store</div>
+  <div class="brand-sub">Management System</div>
+
+  <nav class="menu">
+    <a href="index.html">⌂ Dashboard</a>
+    <a href="items.html">▣ Items Master</a>
+    <a href="purchase.html">🛒 Purchase Entry</a>
+    <a href="issue.html">↪ Issue Entry</a>
+    <a href="gate-pass.html">🚚 Gate Pass</a>
+    <a href="stock-ledger.html">▣ Stock Ledger</a>
+    <a class="active" href="current-stock.html">◫ Current Stock</a>
+    <a href="#">▥ Reports</a>
+    <a href="suppliers.html">▰ Suppliers</a>
+    <a href="workshops.html">⚙ Workshop / Party</a>
+  </nav>
+
+  <div class="profile">
+    <img
+      src="public/waqas.jpg.png"
+      alt="Muhammad Waqas"
+      onerror="this.onerror=null;this.src='public/profile.png';"
+    >
+    <b>Muhammad Waqas</b>
+    <span>● Online</span>
+  </div>
+</aside>
+
+<main class="main">
+
+  <div class="title-row">
+    <div>
+      <h1>Current Stock</h1>
+      <div class="subtitle">
+        Live stock position, valuation, rates and item status
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn btn-green" onclick="exportCSV()">Export Excel</button>
+      <button class="btn btn-dark" onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+
+  <div class="sticky-panel">
+
+    <section class="card">
+      <h2 class="card-title">Search and Filters</h2>
+
+      <div class="filters">
+
+        <div class="form-group">
+          <label>Search Item</label>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Type item name, size or code"
+            oninput="applyFilters()"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <select id="categoryFilter" onchange="applyFilters()">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Store Type</label>
+          <select id="storeTypeFilter" onchange="applyFilters()">
+            <option value="">All Store Types</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Supplier</label>
+          <select id="supplierFilter" onchange="applyFilters()">
+            <option value="">All Suppliers</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Department / Purchased By</label>
+          <input
+            id="departmentFilter"
+            type="text"
+            placeholder="Mechanical, Electrical, Main Store"
+            oninput="applyFilters()"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Status</label>
+          <select id="statusFilter" onchange="applyFilters()">
+            <option value="">All Status</option>
+            <option value="normal">Normal</option>
+            <option value="low">Low Stock</option>
+            <option value="out">Out of Stock</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Sort By</label>
+          <select id="sortFilter" onchange="applyFilters()">
+            <option value="name">Item Name A-Z</option>
+            <option value="qty_desc">Current Qty High-Low</option>
+            <option value="qty_asc">Current Qty Low-High</option>
+            <option value="value_desc">Stock Value High-Low</option>
+            <option value="latest">Last Purchase Newest</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn-blue" onclick="applyFilters()">Show Stock</button>
+        <button class="btn btn-yellow" onclick="clearFilters()">Clear</button>
+        <button class="btn btn-dark" onclick="loadData()">Refresh Data</button>
+      </div>
+    </section>
+
+    <div class="stats">
+
+      <div class="stat">
+        <small>Total Items</small>
+        <strong id="totalItems">0</strong>
+      </div>
+
+      <div class="stat">
+        <small>Total Inventory Qty</small>
+        <strong id="totalQty" class="good">0.00</strong>
+      </div>
+
+      <div class="stat">
+        <small>Inventory Value</small>
+        <strong id="inventoryValue">Rs. 0.00</strong>
+      </div>
+
+      <div class="stat">
+        <small>Low Stock Items</small>
+        <strong id="lowStock" class="warn">0</strong>
+      </div>
+
+      <div class="stat">
+        <small>Out of Stock</small>
+        <strong id="outStock" class="bad">0</strong>
+      </div>
+
+      <div class="stat">
+        <small>Categories</small>
+        <strong id="categoryCount">0</strong>
+      </div>
+
+    </div>
+
+  </div>
+
+  <section class="card">
+    <h2 class="card-title">Current Stock List</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Item Code</th>
+            <th>Item Name</th>
+            <th>Size</th>
+            <th>Category</th>
+            <th class="text-right">Current Qty</th>
+            <th>Unit</th>
+            <th class="text-right">Last Purchase Rate</th>
+            <th class="text-right">Average Rate</th>
+            <th class="text-right">Stock Value</th>
+            <th>Last Purchase</th>
+            <th>Last Supplier</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody id="stockBody">
+          <tr>
+            <td colspan="13" class="empty">
+              Loading current stock...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      Current quantity is calculated from all Quantity In minus Quantity Out transactions. Mess and Cattle Farm purchases remain at zero after their automatic issue.
+    </div>
+  </section>
+
+  <div id="detailModal" class="modal" onclick="closeModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+
+      <div class="modal-head">
+        <h3 id="modalTitle">Item Detail</h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+
+      <div id="modalBody" class="modal-body"></div>
+
+    </div>
+  </div>
+
+</main>
+
+<script>
+const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db = supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let stockTransactions = [];
+let itemsMaster = [];
+let currentStock = [];
+let filteredStock = [];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function esc(value){
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function normal(value){
+  return String(value || "").trim().toLowerCase();
+}
+
+function number(value){
+  return Number(value || 0);
+}
+
+function qty(value){
+  return Number(value || 0).toLocaleString(undefined,{
+    minimumFractionDigits:2,
+    maximumFractionDigits:2
+  });
+}
+
+function money(value){
+  return "Rs. " + Number(value || 0).toLocaleString(undefined,{
+    minimumFractionDigits:2,
+    maximumFractionDigits:2
+  });
+}
+
+function displayDate(value){
+  if(!value){
+    return "-";
+  }
+
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if(!match){
+    return value;
+  }
+
+  const months = [
+    "","Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+
+  return `${match[3]}-${months[Number(match[2])]}-${match[1].slice(-2)}`;
+}
+
+function itemKey(row){
+  return [
+    normal(row.item_code),
+    normal(row.item_name),
+    normal(row.size),
+    normal(row.unit)
+  ].join("|");
+}
+
+function statusFor(item){
+  const reorder = number(
+    item.reorder_level ??
+    item.minimum_stock ??
+    item.min_stock ??
+    0
+  );
+
+  if(item.current_qty <= 0){
+    return "out";
+  }
+
+  if(reorder > 0 && item.current_qty <= reorder){
+    return "low";
+  }
+
+  return "normal";
+}
+
+function statusLabel(status){
+  if(status === "out"){
+    return "Out of Stock";
+  }
+
+  if(status === "low"){
+    return "Low Stock";
+  }
+
+  return "Normal";
+}
+
+function statusBadge(status){
+  const className =
+    status === "out"
+      ? "badge-out"
+      : status === "low"
+        ? "badge-low"
+        : "badge-normal";
+
+  return `<span class="badge ${className}">${statusLabel(status)}</span>`;
+}
+
+/* =========================================================
+   LOAD DATA
+========================================================= */
+
+async function loadData(){
+  document.getElementById("stockBody").innerHTML = `
+    <tr>
+      <td colspan="13" class="empty">
+        Loading current stock...
+      </td>
+    </tr>
+  `;
+
+  const [
+    {data:transactions,error:transactionError},
+    {data:items,error:itemError}
+  ] = await Promise.all([
+    db
+      .from("stock_transactions")
+      .select("*")
+      .order("transaction_date",{ascending:true})
+      .order("id",{ascending:true}),
+
+    db
+      .from("items")
+      .select("*")
+      .order("item_name",{ascending:true})
+  ]);
+
+  if(transactionError){
+    document.getElementById("stockBody").innerHTML = `
+      <tr>
+        <td colspan="13" class="empty">
+          Stock load error: ${esc(transactionError.message)}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  stockTransactions = transactions || [];
+  itemsMaster = itemError ? [] : (items || []);
+
+  buildCurrentStock();
+  buildFilterOptions();
+  applyFilters();
+}
+
+/* =========================================================
+   BUILD CURRENT STOCK
+========================================================= */
+
+function buildCurrentStock(){
+  const grouped = new Map();
+
+  stockTransactions.forEach(row => {
+    const key = itemKey(row);
+
+    if(!grouped.has(key)){
+      const master = itemsMaster.find(item =>
+        String(item.item_code || "") === String(row.item_code || "")
+      ) || itemsMaster.find(item =>
+        normal(item.item_name) === normal(row.item_name) &&
+        normal(item.size) === normal(row.size)
+      ) || {};
+
+      grouped.set(key,{
+        item_code:row.item_code || master.item_code || "",
+        item_name:row.item_name || master.item_name || "",
+        size:row.size || master.size || "",
+        category:row.category || master.category || "Inventory",
+        store_type:row.store_type || master.store_type || "Inventory",
+        unit:row.unit || master.unit || "",
+        reorder_level:number(
+          master.reorder_level ??
+          master.minimum_stock ??
+          master.min_stock ??
+          0
+        ),
+        current_qty:0,
+        total_purchase_qty:0,
+        total_purchase_value:0,
+        last_purchase_rate:0,
+        last_purchase_date:"",
+        last_supplier:"",
+        suppliers:new Set(),
+        departments:new Set(),
+        transaction_count:0
+      });
+    }
+
+    const item = grouped.get(key);
+
+    item.current_qty +=
+      number(row.quantity_in) -
+      number(row.quantity_out);
+
+    item.transaction_count += 1;
+
+    if(row.supplier){
+      item.suppliers.add(row.supplier);
+    }
+
+    const department =
+      row.purchased_by ||
+      row.department ||
+      row.issued_to ||
+      row.location_department;
+
+    if(department){
+      item.departments.add(department);
+    }
+
+    if(normal(row.transaction_type).includes("purchase")){
+      const purchaseQty = number(row.quantity_in);
+      const purchaseValue =
+        purchaseQty * number(row.unit_rate) +
+        number(row.freight);
+
+      item.total_purchase_qty += purchaseQty;
+      item.total_purchase_value += purchaseValue;
+
+      const rowDate = String(row.transaction_date || "");
+
+      if(
+        !item.last_purchase_date ||
+        rowDate > item.last_purchase_date
+      ){
+        item.last_purchase_date = rowDate;
+        item.last_purchase_rate = number(row.unit_rate);
+        item.last_supplier = row.supplier || "";
+      }
+    }
+  });
+
+  currentStock = [...grouped.values()].map(item => {
+    item.average_rate =
+      item.total_purchase_qty > 0
+        ? item.total_purchase_value / item.total_purchase_qty
+        : 0;
+
+    item.stock_value =
+      item.current_qty * item.last_purchase_rate;
+
+    item.status = statusFor(item);
+
+    item.suppliers = [...item.suppliers];
+    item.departments = [...item.departments];
+
+    return item;
+  });
+}
+
+/* =========================================================
+   FILTER OPTIONS
+========================================================= */
+
+function uniqueValues(rows,key){
+  return [...new Set(
+    rows.map(row => String(row[key] || "").trim())
+      .filter(Boolean)
+  )].sort((a,b) => a.localeCompare(b));
+}
+
+function fillSelect(id,values,firstText){
+  const select = document.getElementById(id);
+
+  select.innerHTML =
+    `<option value="">${firstText}</option>` +
+    values.map(value =>
+      `<option value="${esc(value)}">${esc(value)}</option>`
+    ).join("");
+}
+
+function buildFilterOptions(){
+  fillSelect(
+    "categoryFilter",
+    uniqueValues(currentStock,"category"),
+    "All Categories"
+  );
+
+  fillSelect(
+    "storeTypeFilter",
+    uniqueValues(currentStock,"store_type"),
+    "All Store Types"
+  );
+
+  const suppliers = [...new Set(
+    currentStock.flatMap(item => item.suppliers)
+  )].sort((a,b) => a.localeCompare(b));
+
+  fillSelect(
+    "supplierFilter",
+    suppliers,
+    "All Suppliers"
+  );
+}
+
+/* =========================================================
+   FILTER + RENDER
+========================================================= */
+
+function applyFilters(){
+  const search = normal(
+    document.getElementById("searchInput").value
+  );
+
+  const category = normal(
+    document.getElementById("categoryFilter").value
+  );
+
+  const storeType = normal(
+    document.getElementById("storeTypeFilter").value
+  );
+
+  const supplier = normal(
+    document.getElementById("supplierFilter").value
+  );
+
+  const department = normal(
+    document.getElementById("departmentFilter").value
+  );
+
+  const status = document
+    .getElementById("statusFilter")
+    .value;
+
+  const sortBy = document
+    .getElementById("sortFilter")
+    .value;
+
+  filteredStock = currentStock.filter(item => {
+    const searchText = [
+      item.item_code,
+      item.item_name,
+      item.size,
+      item.category,
+      item.unit
+    ].join(" ").toLowerCase();
+
+    const itemMatches =
+      !search ||
+      search.split(/\s+/).filter(Boolean)
+        .every(word => searchText.includes(word));
+
+    const categoryMatches =
+      !category ||
+      normal(item.category) === category;
+
+    const storeMatches =
+      !storeType ||
+      normal(item.store_type) === storeType;
+
+    const supplierMatches =
+      !supplier ||
+      item.suppliers.some(value =>
+        normal(value) === supplier
+      );
+
+    const departmentMatches =
+      !department ||
+      item.departments.some(value =>
+        normal(value).includes(department)
+      );
+
+    const statusMatches =
+      !status ||
+      item.status === status;
+
+    return (
+      itemMatches &&
+      categoryMatches &&
+      storeMatches &&
+      supplierMatches &&
+      departmentMatches &&
+      statusMatches
+    );
+  });
+
+  filteredStock.sort((a,b) => {
+    if(sortBy === "qty_desc"){
+      return b.current_qty - a.current_qty;
+    }
+
+    if(sortBy === "qty_asc"){
+      return a.current_qty - b.current_qty;
+    }
+
+    if(sortBy === "value_desc"){
+      return b.stock_value - a.stock_value;
+    }
+
+    if(sortBy === "latest"){
+      return String(b.last_purchase_date || "")
+        .localeCompare(String(a.last_purchase_date || ""));
+    }
+
+    return String(a.item_name || "")
+      .localeCompare(String(b.item_name || ""));
+  });
+
+  renderStock();
+  updateStats();
+}
+
+function renderStock(){
+  const body = document.getElementById("stockBody");
+
+  if(!filteredStock.length){
+    body.innerHTML = `
+      <tr>
+        <td colspan="13" class="empty">
+          No current stock record found.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  body.innerHTML = filteredStock.map((item,index) => {
+    const rowClass =
+      item.status === "out"
+        ? "row-out"
+        : item.status === "low"
+          ? "row-low"
+          : "";
+
+    return `
+      <tr class="${rowClass}">
+        <td>${esc(item.item_code || "-")}</td>
+
+        <td class="item-name">
+          ${esc(item.item_name || "-")}
+        </td>
+
+        <td>${esc(item.size || "-")}</td>
+        <td>${esc(item.category || "-")}</td>
+
+        <td class="text-right amount">
+          ${qty(item.current_qty)}
+        </td>
+
+        <td>${esc(item.unit || "-")}</td>
+
+        <td class="text-right">
+          ${money(item.last_purchase_rate)}
+        </td>
+
+        <td class="text-right">
+          ${money(item.average_rate)}
+        </td>
+
+        <td class="text-right amount">
+          ${money(item.stock_value)}
+        </td>
+
+        <td>${esc(displayDate(item.last_purchase_date))}</td>
+        <td>${esc(item.last_supplier || "-")}</td>
+
+        <td>${statusBadge(item.status)}</td>
+
+        <td>
+          <div class="action-group">
+
+            <button
+              class="btn btn-blue btn-small"
+              onclick="showItemDetail(${index})"
+            >
+              Detail
+            </button>
+
+            <button
+              class="btn btn-yellow btn-small"
+              onclick="openLedger('${String(item.item_code || "").replace(/'/g,"\\'")}')"
+            >
+              Ledger
+            </button>
+
+            <button
+              class="btn btn-dark btn-small"
+              onclick="printItem(${index})"
+            >
+              Print
+            </button>
+
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function updateStats(){
+  document.getElementById("totalItems").textContent =
+    filteredStock.length;
+
+  document.getElementById("totalQty").textContent =
+    qty(
+      filteredStock.reduce(
+        (sum,item) => sum + number(item.current_qty),
+        0
+      )
+    );
+
+  document.getElementById("inventoryValue").textContent =
+    money(
+      filteredStock.reduce(
+        (sum,item) => sum + number(item.stock_value),
+        0
+      )
+    );
+
+  document.getElementById("lowStock").textContent =
+    filteredStock.filter(item =>
+      item.status === "low"
+    ).length;
+
+  document.getElementById("outStock").textContent =
+    filteredStock.filter(item =>
+      item.status === "out"
+    ).length;
+
+  document.getElementById("categoryCount").textContent =
+    new Set(
+      filteredStock.map(item => item.category).filter(Boolean)
+    ).size;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+function itemTransactions(item){
+  return stockTransactions.filter(row =>
+    String(row.item_code || "") === String(item.item_code || "")
+  );
+}
+
+function showItemDetail(index){
+  const item = filteredStock[index];
+
+  if(!item){
+    return;
+  }
+
+  const history = itemTransactions(item)
+    .sort((a,b) => {
+      const dateCompare =
+        String(b.transaction_date || "")
+        .localeCompare(String(a.transaction_date || ""));
+
+      if(dateCompare !== 0){
+        return dateCompare;
+      }
+
+      return number(b.id) - number(a.id);
+    })
+    .slice(0,12);
+
+  document.getElementById("modalTitle").textContent =
+    `${item.item_name || ""}${item.size ? " - " + item.size : ""}`;
+
+  document.getElementById("modalBody").innerHTML = `
+    <div class="detail-grid">
+
+      <div class="detail-box">
+        <span>Current Stock</span>
+        <strong>${qty(item.current_qty)} ${esc(item.unit || "")}</strong>
+      </div>
+
+      <div class="detail-box">
+        <span>Current Value</span>
+        <strong>${money(item.stock_value)}</strong>
+      </div>
+
+      <div class="detail-box">
+        <span>Last Purchase Rate</span>
+        <strong>${money(item.last_purchase_rate)}</strong>
+      </div>
+
+      <div class="detail-box">
+        <span>Average Purchase Rate</span>
+        <strong>${money(item.average_rate)}</strong>
+      </div>
+
+      <div class="detail-box">
+        <span>Last Purchase</span>
+        <strong>${esc(displayDate(item.last_purchase_date))}</strong>
+      </div>
+
+      <div class="detail-box">
+        <span>Last Supplier</span>
+        <strong>${esc(item.last_supplier || "-")}</strong>
+      </div>
+
+      <div class="detail-box">
+        <span>Category</span>
+        <strong>${esc(item.category || "-")}</strong>
+      </div>
+
+      <div class="detail-box">
+        <span>Status</span>
+        <strong>${esc(statusLabel(item.status))}</strong>
+      </div>
+
+    </div>
+
+    <h4 class="section-heading">Recent Transactions</h4>
+
+    <div class="table-wrap" style="max-height:330px">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Transaction</th>
+            <th>Qty In</th>
+            <th>Qty Out</th>
+            <th>Rate</th>
+            <th>Supplier / Party</th>
+            <th>Department</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${
+            history.length
+              ? history.map(row => `
+                <tr>
+                  <td>${esc(displayDate(row.transaction_date))}</td>
+                  <td>${esc(row.transaction_type || "-")}</td>
+                  <td>${row.quantity_in ? qty(row.quantity_in) : "-"}</td>
+                  <td>${row.quantity_out ? qty(row.quantity_out) : "-"}</td>
+                  <td>${money(row.unit_rate)}</td>
+                  <td>${esc(row.supplier || "-")}</td>
+                  <td>${esc(row.purchased_by || row.department || row.issued_to || "-")}</td>
+                </tr>
+              `).join("")
+              : `
+                <tr>
+                  <td colspan="7" class="empty">
+                    No transaction history found.
+                  </td>
+                </tr>
+              `
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  document.getElementById("detailModal").classList.add("open");
+}
+
+function closeModal(event){
+  if(event && event.target !== event.currentTarget){
+    return;
+  }
+
+  document.getElementById("detailModal").classList.remove("open");
+}
+
+function openLedger(itemCode){
+  const item = currentStock.find(row =>
+    String(row.item_code || "") === String(itemCode || "")
+  );
+
+  const label = item
+    ? `${item.item_name || ""}${item.size ? " - " + item.size : ""}`
+    : "";
+
+  location.href =
+    "stock-ledger.html?item_code=" +
+    encodeURIComponent(itemCode || "") +
+    "&item=" +
+    encodeURIComponent(label);
+}
+
+function printItem(index){
+  const item = filteredStock[index];
+
+  if(!item){
+    return;
+  }
+
+  const win = window.open("","_blank","width=900,height=700");
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${esc(item.item_name || "Current Stock")}</title>
+      <style>
+        body{font-family:Arial;padding:30px;color:#111827}
+        .head{background:#f59e0b;padding:14px;font-weight:bold;margin-bottom:18px}
+        h1{margin:0 0 6px}
+        .sub{color:#64748b;margin-bottom:20px}
+        table{width:100%;border-collapse:collapse}
+        td{padding:10px;border:1px solid #cbd5e1}
+        td:first-child{width:35%;font-weight:bold;background:#f8fafc}
+      </style>
+    </head>
+    <body>
+      <div class="head">Inventory Store - Current Stock Card</div>
+
+      <h1>${esc(item.item_name || "-")}</h1>
+      <div class="sub">${esc(item.size || "-")}</div>
+
+      <table>
+        <tr><td>Item Code</td><td>${esc(item.item_code || "-")}</td></tr>
+        <tr><td>Category</td><td>${esc(item.category || "-")}</td></tr>
+        <tr><td>Store Type</td><td>${esc(item.store_type || "-")}</td></tr>
+        <tr><td>Current Quantity</td><td>${qty(item.current_qty)} ${esc(item.unit || "")}</td></tr>
+        <tr><td>Last Purchase Rate</td><td>${money(item.last_purchase_rate)}</td></tr>
+        <tr><td>Average Rate</td><td>${money(item.average_rate)}</td></tr>
+        <tr><td>Stock Value</td><td>${money(item.stock_value)}</td></tr>
+        <tr><td>Last Purchase</td><td>${esc(displayDate(item.last_purchase_date))}</td></tr>
+        <tr><td>Last Supplier</td><td>${esc(item.last_supplier || "-")}</td></tr>
+        <tr><td>Status</td><td>${esc(statusLabel(item.status))}</td></tr>
+      </table>
+
+      <script>
+        window.onload=function(){
+          window.print();
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+
+  win.document.close();
+}
+
+/* =========================================================
+   CLEAR + EXPORT
+========================================================= */
+
+function clearFilters(){
+  document.getElementById("searchInput").value = "";
+  document.getElementById("categoryFilter").value = "";
+  document.getElementById("storeTypeFilter").value = "";
+  document.getElementById("supplierFilter").value = "";
+  document.getElementById("departmentFilter").value = "";
+  document.getElementById("statusFilter").value = "";
+  document.getElementById("sortFilter").value = "name";
+
+  applyFilters();
+}
+
+function exportCSV(){
+  if(!filteredStock.length){
+    alert("No current stock data is available to export.");
+    return;
+  }
+
+  const headers = [
+    "Item Code",
+    "Item Name",
+    "Size",
+    "Category",
+    "Current Qty",
+    "Unit",
+    "Last Purchase Rate",
+    "Average Rate",
+    "Stock Value",
+    "Last Purchase",
+    "Last Supplier",
+    "Status"
+  ];
+
+  const rows = filteredStock.map(item => [
+    item.item_code || "",
+    item.item_name || "",
+    item.size || "",
+    item.category || "",
+    item.current_qty || 0,
+    item.unit || "",
+    item.last_purchase_rate || 0,
+    item.average_rate || 0,
+    item.stock_value || 0,
+    displayDate(item.last_purchase_date),
+    item.last_supplier || "",
+    statusLabel(item.status)
+  ]);
+
+  const csv = [headers,...rows]
+    .map(row => row.map(value => {
+      const text = String(value ?? "").replace(/"/g,'""');
+      return `"${text}"`;
+    }).join(","))
+    .join("\n");
+
+  const blob = new Blob([csv],{
+    type:"text/csv;charset=utf-8;"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "current-stock.csv";
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+loadData();
+</script>
+
+</body>
+</html>
