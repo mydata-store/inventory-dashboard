@@ -188,13 +188,17 @@ button{
 .positive{color:#15803d}
 .negative{color:#b91c1c}
 .warning{color:#b45309}
-.table-wrap{width:100%;overflow-x:auto}
+.table-wrap{width:100%;max-height:520px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px}
 table{
   width:100%;
-  min-width:1550px;
-  border-collapse:collapse;
+  min-width:980px;
+  border-collapse:separate;
+  border-spacing:0;
 }
 th{
+  position:sticky;
+  top:0;
+  z-index:12;
   padding:11px 9px;
   color:#fff;
   background:#0f172a;
@@ -232,6 +236,18 @@ tbody tr:hover{background:#f8fafc}
   font-size:12px;
   line-height:1.5;
 }
+
+.action-group{display:flex;gap:6px;white-space:nowrap}
+.btn-small{padding:7px 10px;font-size:11px}
+.item-link{color:#1d4ed8;font-weight:800;cursor:pointer;text-decoration:none}
+.item-link:hover{text-decoration:underline}
+.modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(15,23,42,.55);align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}
+.modal-card{width:min(900px,96vw);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #e5e7eb}
+.modal-head h3{margin:0}.modal-close{width:34px;height:34px;padding:0;border-radius:50%;background:#e2e8f0;color:#0f172a;font-size:18px}.modal-body{padding:20px}
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.detail-box{padding:12px;border:1px solid #dbe1ea;border-radius:10px;background:#f8fafc}.detail-box span{display:block;color:#64748b;font-size:11px;font-weight:800;margin-bottom:5px}.detail-box strong{display:block;font-size:13px;word-break:break-word}.detail-box.span-3{grid-column:1 / 4}
+
 @media(max-width:1250px){
   .stats{grid-template-columns:repeat(3,1fr)}
   .filters{grid-template-columns:repeat(2,1fr)}
@@ -251,6 +267,7 @@ tbody tr:hover{background:#f8fafc}
   .card,.stat{box-shadow:none;border:1px solid #dbe1ea}
   table{min-width:0}
   th{
+    position:static;
     color:#000;
     background:#f59e0b!important;
     -webkit-print-color-adjust:exact;
@@ -415,29 +432,19 @@ tbody tr:hover{background:#f8fafc}
         <thead>
           <tr>
             <th>Date</th>
-            <th>Reference / Bill</th>
-            <th>Transaction</th>
-            <th>Item Code</th>
             <th>Item Name</th>
-            <th>Size</th>
-            <th>Category</th>
-            <th>Store Type</th>
-            <th>Unit</th>
+            <th class="text-right">Opening</th>
             <th class="text-right">Qty In</th>
             <th class="text-right">Qty Out</th>
             <th class="text-right">Balance</th>
-            <th class="text-right">Rate</th>
-            <th class="text-right">Value</th>
-            <th>Supplier</th>
-            <th>Department / Purchased By</th>
-            <th>Vehicle #</th>
-            <th>Remarks</th>
+            <th>Transaction</th>
+            <th>Action</th>
           </tr>
         </thead>
 
         <tbody id="ledgerBody">
           <tr>
-            <td colspan="18" class="empty">Loading stock transactions...</td>
+            <td colspan="8" class="empty">Loading stock transactions...</td>
           </tr>
         </tbody>
       </table>
@@ -446,6 +453,12 @@ tbody tr:hover{background:#f8fafc}
     <div class="report-note" id="reportNote"></div>
   </section>
 
+  <div id="detailModal" class="modal" onclick="closeDetailModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-head"><h3>Transaction Detail</h3><button class="modal-close" onclick="closeDetailModal()">×</button></div>
+      <div id="detailModalBody" class="modal-body"></div>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -583,20 +596,20 @@ function rowItemKey(row){
 async function loadData(){
   document.getElementById("ledgerBody").innerHTML = `
     <tr>
-      <td colspan="18" class="empty">Loading stock transactions...</td>
+      <td colspan="8" class="empty">Loading stock transactions...</td>
     </tr>
   `;
 
   const [{data:transactions,error:transactionError},{data:items,error:itemError}] =
     await Promise.all([
-      db.from("stock_transactions").select("*").order("transaction_date",{ascending:true}).order("id",{ascending:true}),
+      db.from("stock_transactions").select("*").order("transaction_date",{ascending:false}).order("id",{ascending:false}),
       db.from("items").select("*").order("item_name",{ascending:true})
     ]);
 
   if(transactionError){
     document.getElementById("ledgerBody").innerHTML = `
       <tr>
-        <td colspan="18" class="empty">
+        <td colspan="8" class="empty">
           Stock ledger load error: ${esc(transactionError.message)}
         </td>
       </tr>
@@ -907,115 +920,39 @@ function applyFilters(){
 
 function renderRows(opening){
   const body = document.getElementById("ledgerBody");
-
   if(!filteredRows.length){
-    body.innerHTML = `
-      <tr>
-        <td colspan="18" class="empty">
-          No stock transaction found for the selected filters.
-        </td>
-      </tr>
-    `;
-
-    updateStats(opening,0,0,opening,0,0);
-    updateNote();
-    return;
+    body.innerHTML = `<tr><td colspan="8" class="empty">No stock transaction found for the selected filters.</td></tr>`;
+    updateStats(opening,0,0,opening,0,0); updateNote(); return;
   }
-
-  const balances = new Map();
-  let singleBalance = opening;
-  const itemSpecific =
-    Boolean(selectedItemCode || document.getElementById("itemSearch").value.trim());
-
-  const html = filteredRows.map(row => {
-    let balance;
-
-    if(itemSpecific){
-      singleBalance += number(row.quantity_in) - number(row.quantity_out);
-      balance = singleBalance;
-    }
-    else{
-      const key = rowItemKey(row);
-      const previous = balances.get(key) || 0;
-      balance = previous + number(row.quantity_in) - number(row.quantity_out);
-      balances.set(key,balance);
-    }
-
-    const value =
-      (number(row.quantity_in) || number(row.quantity_out)) *
-      number(row.unit_rate) +
-      number(row.freight);
-
-    return `
-      <tr>
-        <td>${esc(displayDate(row.transaction_date))}</td>
-        <td class="ref">${esc(getReference(row))}</td>
-        <td>
-          <span class="badge ${transactionClass(row.transaction_type)}">
-            ${esc(row.transaction_type || "-")}
-          </span>
-        </td>
-        <td>${esc(row.item_code || "-")}</td>
-        <td>${esc(row.item_name || "-")}</td>
-        <td>${esc(row.size || "-")}</td>
-        <td>${esc(row.category || "-")}</td>
-        <td>${esc(row.store_type || "-")}</td>
-        <td>${esc(row.unit || "-")}</td>
-        <td class="text-right positive">
-          ${row.quantity_in ? qty(row.quantity_in) : "-"}
-        </td>
-        <td class="text-right negative">
-          ${row.quantity_out ? qty(row.quantity_out) : "-"}
-        </td>
-        <td class="text-right balance">${qty(balance)}</td>
-        <td class="text-right">${money(row.unit_rate)}</td>
-        <td class="text-right">${money(value)}</td>
-        <td>${esc(row.supplier || "-")}</td>
-        <td>${esc(row.purchased_by || row.department || row.issued_to || "-")}</td>
-        <td>${esc(row.vehicle_no || "-")}</td>
-        <td>${esc(row.remarks || "-")}</td>
-      </tr>
-    `;
+  const chronological=[...filteredRows].sort((a,b)=>String(a.transaction_date||"").localeCompare(String(b.transaction_date||"")) || Number(a.id||0)-Number(b.id||0));
+  const balances=new Map();
+  const calculated=[];
+  chronological.forEach(row=>{
+    const key=rowItemKey(row);
+    const rowOpening=balances.get(key)||0;
+    const rowBalance=rowOpening+number(row.quantity_in)-number(row.quantity_out);
+    balances.set(key,rowBalance);
+    calculated.push({...row,row_opening:rowOpening,row_balance:rowBalance});
+  });
+  const newestFirst=calculated.sort((a,b)=>String(b.transaction_date||"").localeCompare(String(a.transaction_date||"")) || Number(b.id||0)-Number(a.id||0));
+  body.innerHTML=newestFirst.map(row=>{
+    const itemDisplay=`${row.item_name||"-"}${row.size?" - "+row.size:""}`;
+    return `<tr ondblclick="showTransactionDetail(${Number(row.id||0)})">
+      <td>${esc(displayDate(row.transaction_date))}</td>
+      <td><a class="item-link" href="javascript:void(0)" onclick="showItemHistory('${String(row.item_code||"").replace(/'/g,"\'")}')">${esc(itemDisplay)}</a></td>
+      <td class="text-right">${qty(row.row_opening)}</td>
+      <td class="text-right positive">${row.quantity_in?qty(row.quantity_in):"-"}</td>
+      <td class="text-right negative">${row.quantity_out?qty(row.quantity_out):"-"}</td>
+      <td class="text-right balance">${qty(row.row_balance)}</td>
+      <td><span class="badge ${transactionClass(row.transaction_type)}">${esc(row.transaction_type||"-")}</span></td>
+      <td><div class="action-group"><button class="btn btn-blue btn-small" onclick="showTransactionDetail(${Number(row.id||0)})">Detail</button><button class="btn btn-dark btn-small" onclick="printTransaction(${Number(row.id||0)})">Print</button></div></td>
+    </tr>`;
   }).join("");
-
-  body.innerHTML = html;
-
-  const totalIn = filteredRows.reduce(
-    (sum,row) => sum + number(row.quantity_in),0
-  );
-
-  const totalOut = filteredRows.reduce(
-    (sum,row) => sum + number(row.quantity_out),0
-  );
-
-  const purchaseValue = filteredRows.reduce((sum,row) => {
-    if(!normal(row.transaction_type).includes("purchase")){
-      return sum;
-    }
-
-    return sum +
-      number(row.quantity_in) * number(row.unit_rate) +
-      number(row.freight);
-  },0);
-
-  const autoIssued = filteredRows.reduce((sum,row) => {
-    if(!normal(row.transaction_type).includes("auto")){
-      return sum;
-    }
-
-    return sum + number(row.quantity_out);
-  },0);
-
-  updateStats(
-    opening,
-    totalIn,
-    totalOut,
-    opening + totalIn - totalOut,
-    purchaseValue,
-    autoIssued
-  );
-
-  updateNote();
+  const totalIn=filteredRows.reduce((s,r)=>s+number(r.quantity_in),0);
+  const totalOut=filteredRows.reduce((s,r)=>s+number(r.quantity_out),0);
+  const purchaseValue=filteredRows.reduce((s,r)=>normal(r.transaction_type).includes("purchase")?s+number(r.quantity_in)*number(r.unit_rate)+number(r.freight):s,0);
+  const autoIssued=filteredRows.reduce((s,r)=>normal(r.transaction_type).includes("auto")?s+number(r.quantity_out):s,0);
+  updateStats(opening,totalIn,totalOut,opening+totalIn-totalOut,purchaseValue,autoIssued); updateNote();
 }
 
 function updateStats(opening,totalIn,totalOut,closing,purchaseValue,autoIssued){
@@ -1051,6 +988,47 @@ function updateNote(){
   );
 
   document.getElementById("reportNote").textContent = notes.join(" ");
+}
+
+
+function getTransactionById(id){return allRows.find(row=>Number(row.id||0)===Number(id));}
+function showTransactionDetail(id){
+  const row=getTransactionById(id); if(!row)return;
+  const value=(number(row.quantity_in)||number(row.quantity_out))*number(row.unit_rate)+number(row.freight);
+  document.getElementById("detailModalBody").innerHTML=`<div class="detail-grid">
+    <div class="detail-box"><span>Date</span><strong>${esc(displayDate(row.transaction_date))}</strong></div>
+    <div class="detail-box"><span>Reference / Bill</span><strong>${esc(getReference(row))}</strong></div>
+    <div class="detail-box"><span>Transaction</span><strong>${esc(row.transaction_type||"-")}</strong></div>
+    <div class="detail-box"><span>Item Code</span><strong>${esc(row.item_code||"-")}</strong></div>
+    <div class="detail-box"><span>Item Name</span><strong>${esc(row.item_name||"-")}</strong></div>
+    <div class="detail-box"><span>Size</span><strong>${esc(row.size||"-")}</strong></div>
+    <div class="detail-box"><span>Category</span><strong>${esc(row.category||"-")}</strong></div>
+    <div class="detail-box"><span>Store Type</span><strong>${esc(row.store_type||"-")}</strong></div>
+    <div class="detail-box"><span>Unit</span><strong>${esc(row.unit||"-")}</strong></div>
+    <div class="detail-box"><span>Quantity In</span><strong>${qty(row.quantity_in)}</strong></div>
+    <div class="detail-box"><span>Quantity Out</span><strong>${qty(row.quantity_out)}</strong></div>
+    <div class="detail-box"><span>Rate</span><strong>${money(row.unit_rate)}</strong></div>
+    <div class="detail-box"><span>Value</span><strong>${money(value)}</strong></div>
+    <div class="detail-box"><span>Supplier / Party</span><strong>${esc(row.supplier||"-")}</strong></div>
+    <div class="detail-box"><span>Department / Purchased By</span><strong>${esc(row.purchased_by||row.department||row.issued_to||"-")}</strong></div>
+    <div class="detail-box"><span>Vehicle #</span><strong>${esc(row.vehicle_no||"-")}</strong></div>
+    <div class="detail-box span-3"><span>Remarks</span><strong>${esc(row.remarks||"-")}</strong></div>
+  </div><div class="filter-actions"><button class="btn btn-dark" onclick="printTransaction(${Number(row.id||0)})">Print Transaction</button></div>`;
+  document.getElementById("detailModal").classList.add("open");
+}
+function closeDetailModal(event){if(event&&event.target!==event.currentTarget)return;document.getElementById("detailModal").classList.remove("open");}
+function printTransaction(id){
+  const row=getTransactionById(id); if(!row)return;
+  const value=(number(row.quantity_in)||number(row.quantity_out))*number(row.unit_rate)+number(row.freight);
+  const w=window.open("","_blank","width=900,height=700");
+  w.document.write(`<!DOCTYPE html><html><head><title>Transaction ${esc(getReference(row))}</title><style>body{font-family:Arial;padding:30px;color:#111827}.head{background:#f59e0b;padding:14px;margin-bottom:18px;font-weight:bold}table{width:100%;border-collapse:collapse}td{padding:10px;border:1px solid #cbd5e1}td:first-child{width:35%;font-weight:bold;background:#f8fafc}</style></head><body><div class="head">Inventory Store - Stock Transaction</div><h1>${esc(row.transaction_type||"Transaction")}</h1><table>
+  <tr><td>Date</td><td>${esc(displayDate(row.transaction_date))}</td></tr><tr><td>Reference / Bill</td><td>${esc(getReference(row))}</td></tr><tr><td>Item</td><td>${esc(row.item_name||"-")} ${row.size?"- "+esc(row.size):""}</td></tr><tr><td>Item Code</td><td>${esc(row.item_code||"-")}</td></tr><tr><td>Category</td><td>${esc(row.category||"-")}</td></tr><tr><td>Store Type</td><td>${esc(row.store_type||"-")}</td></tr><tr><td>Unit</td><td>${esc(row.unit||"-")}</td></tr><tr><td>Quantity In</td><td>${qty(row.quantity_in)}</td></tr><tr><td>Quantity Out</td><td>${qty(row.quantity_out)}</td></tr><tr><td>Rate</td><td>${money(row.unit_rate)}</td></tr><tr><td>Value</td><td>${money(value)}</td></tr><tr><td>Supplier / Party</td><td>${esc(row.supplier||"-")}</td></tr><tr><td>Department / Purchased By</td><td>${esc(row.purchased_by||row.department||row.issued_to||"-")}</td></tr><tr><td>Vehicle #</td><td>${esc(row.vehicle_no||"-")}</td></tr><tr><td>Remarks</td><td>${esc(row.remarks||"-")}</td></tr></table><script>window.onload=()=>window.print();<\/script></body></html>`);
+  w.document.close();
+}
+function showItemHistory(itemCode){
+  const item=itemsMaster.find(x=>String(x.item_code||"")===String(itemCode||"")); selectedItemCode=itemCode||"";
+  if(item)document.getElementById("itemSearch").value=`${item.item_name||""}${item.size?" - "+item.size:""}`;
+  setMode("item"); applyFilters(); document.getElementById("reportTitle").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 /* =========================================================
