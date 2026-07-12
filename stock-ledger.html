@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Stock Ledger</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f4f6fb;
+  color:#0f172a;
+}
+
+.sidebar{
+  width:210px;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:100;
+  padding:22px 14px;
+  color:#fff;
+  background:linear-gradient(180deg,#351000,#1a0600);
+}
+
+.brand{
+  font-size:24px;
+  line-height:1.05;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.brand-sub{
+  color:#f59e0b;
+  font-size:13px;
+  font-weight:800;
+  margin-bottom:34px;
+}
+
+.menu a{
+  display:block;
+  color:#fff;
+  text-decoration:none;
+  padding:12px;
+  margin-bottom:7px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+}
+
+.menu a:hover,
+.menu a.active{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.profile{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:20px;
+  padding:16px 10px;
+  text-align:center;
+  border-radius:14px;
+  background:rgba(255,255,255,.10);
+}
+
+.profile img{
+  display:block;
+  width:72px;
+  height:72px;
+  margin:0 auto 10px;
+  object-fit:cover;
+  border:3px solid #f59e0b;
+  border-radius:50%;
+}
+
+.profile b{
+  display:block;
+  font-size:14px;
+}
+
+.profile span{
+  display:block;
+  margin-top:3px;
+  color:#22c55e;
+  font-size:12px;
+  font-weight:700;
+}
+
+.main{
+  width:calc(100% - 210px);
+  min-height:100vh;
+  margin-left:210px;
+  padding:28px 34px;
+}
+
+.title-row{
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  padding-bottom:18px;
+  border-bottom:1px solid #dbe1ea;
+}
+
+h1{
+  margin:0;
+  font-size:28px;
+}
+
+.subtitle{
+  margin-top:6px;
+  color:#64748b;
+  font-size:14px;
+}
+
+.title-actions{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+}
+
+.card{
+  margin-top:18px;
+  padding:20px;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.06);
+}
+
+.card-title{
+  margin:0 0 16px;
+  font-size:18px;
+}
+
+.filters{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:12px;
+}
+
+.form-group{
+  position:relative;
+}
+
+.form-group label{
+  display:block;
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:6px;
+}
+
+.form-group input,
+.form-group select{
+  width:100%;
+  height:40px;
+  padding:0 11px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  outline:none;
+  background:#fff;
+}
+
+.form-group input:focus,
+.form-group select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px rgba(37,99,235,.12);
+}
+
+.suggestions{
+  display:none;
+  position:absolute;
+  left:0;
+  right:0;
+  top:68px;
+  z-index:30;
+  max-height:250px;
+  overflow-y:auto;
+  background:#fff;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  box-shadow:0 8px 18px rgba(0,0,0,.14);
+}
+
+.suggestion{
+  padding:10px 12px;
+  cursor:pointer;
+  border-bottom:1px solid #eef2f7;
+}
+
+.suggestion:last-child{border-bottom:0}
+.suggestion:hover,
+.suggestion.active{background:#eff6ff}
+
+.suggestion strong{
+  display:block;
+  font-size:13px;
+}
+
+.suggestion span{
+  display:block;
+  margin-top:3px;
+  color:#64748b;
+  font-size:11px;
+}
+
+.filter-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+
+button{
+  border:0;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:800;
+}
+
+.btn{
+  padding:10px 15px;
+}
+
+.btn-blue{color:#fff;background:#2563eb}
+.btn-yellow{color:#111827;background:#f59e0b}
+.btn-green{color:#fff;background:#16a34a}
+.btn-dark{color:#fff;background:#111827}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-top:18px;
+}
+
+.stat{
+  padding:18px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 8px 22px rgba(0,0,0,.05);
+}
+
+.stat small{
+  color:#64748b;
+  font-size:12px;
+}
+
+.stat strong{
+  display:block;
+  margin-top:6px;
+  font-size:23px;
+}
+
+.positive{color:#15803d}
+.negative{color:#b91c1c}
+
+.table-wrap{
+  width:100%;
+  overflow-x:auto;
+}
+
+table{
+  width:100%;
+  min-width:1550px;
+  border-collapse:collapse;
+}
+
+th{
+  padding:11px 9px;
+  color:#fff;
+  background:#0f172a;
+  font-size:12px;
+  text-align:left;
+  white-space:nowrap;
+}
+
+td{
+  padding:10px 9px;
+  border-bottom:1px solid #e5e7eb;
+  font-size:12px;
+  vertical-align:middle;
+}
+
+tbody tr:hover{
+  background:#f8fafc;
+}
+
+.text-right{text-align:right}
+.receipt{color:#15803d;font-weight:900}
+.issue{color:#b91c1c;font-weight:900}
+.balance{font-weight:900}
+.ref{font-weight:800;color:#1d4ed8}
+.empty{
+  padding:30px!important;
+  color:#64748b;
+  text-align:center;
+  font-weight:700;
+}
+
+.source-note{
+  margin-top:12px;
+  color:#64748b;
+  font-size:12px;
+  line-height:1.5;
+}
+
+@media(max-width:1150px){
+  .filters{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .title-row{display:block}
+  .title-actions{margin-top:14px}
+}
+
+@media(max-width:760px){
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+  }
+
+  .profile{
+    position:static;
+    margin-top:20px;
+  }
+
+  .main{
+    width:100%;
+    margin:0;
+    padding:18px;
+  }
+
+  .filters,
+  .stats{
+    grid-template-columns:1fr;
+  }
+}
+
+@media print{
+  body{background:#fff}
+  .sidebar,
+  .title-actions,
+  .filter-actions,
+  .filters{
+    display:none!important;
+  }
+
+  .main{
+    width:100%;
+    margin:0;
+    padding:0;
+  }
+
+  .card,
+  .stat{
+    box-shadow:none;
+    border:1px solid #dbe1ea;
+  }
+
+  table{min-width:0}
+  th{
+    color:#000;
+    background:#f59e0b!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<aside class="sidebar">
+  <div class="brand">📦 Inventory<br>Store</div>
+  <div class="brand-sub">Management System</div>
+
+  <nav class="menu">
+    <a href="index.html">⌂ Dashboard</a>
+    <a href="items.html">▣ Items Master</a>
+    <a href="purchase.html">🛒 Purchase Entry</a>
+    <a href="issue.html">↪ Issue Entry</a>
+    <a href="gate-pass.html">🚚 Gate Pass</a>
+    <a class="active" href="stock-ledger.html">▣ Stock Ledger</a>
+    <a href="#">▥ Reports</a>
+    <a href="suppliers.html">▰ Suppliers</a>
+    <a href="workshops.html">⚙ Workshop / Party</a>
+  </nav>
+
+  <div class="profile">
+    <img
+      src="public/waqas.jpg.png"
+      alt="Muhammad Waqas"
+      onerror="this.onerror=null;this.src='public/profile.png';"
+    >
+    <b>Muhammad Waqas</b>
+    <span>● Online</span>
+  </div>
+</aside>
+
+<main class="main">
+
+  <div class="title-row">
+    <div>
+      <h1>Stock Ledger</h1>
+      <div class="subtitle">
+        Item-wise receipts, issues and running stock balance
+      </div>
+    </div>
+
+    <div class="title-actions">
+      <button class="btn btn-green" onclick="exportCSV()">Export Excel</button>
+      <button class="btn btn-dark" onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2 class="card-title">Ledger Filters</h2>
+
+    <div class="filters">
+
+      <div class="form-group">
+        <label>Item</label>
+        <input
+          id="itemSearch"
+          type="text"
+          autocomplete="off"
+          placeholder="Type one or two words"
+        >
+        <div id="itemSuggestions" class="suggestions"></div>
+      </div>
+
+      <div class="form-group">
+        <label>From Date</label>
+        <input id="fromDate" type="text" placeholder="Example: 1-7">
+      </div>
+
+      <div class="form-group">
+        <label>To Date</label>
+        <input id="toDate" type="text" placeholder="Example: 31-7">
+      </div>
+
+      <div class="form-group">
+        <label>Transaction Type</label>
+        <select id="transactionType">
+          <option value="all">All Transactions</option>
+          <option value="receipt">Receipts Only</option>
+          <option value="issue">Issues Only</option>
+          <option value="purchase">Purchases Only</option>
+          <option value="rgp">RGP Only</option>
+          <option value="ogp">OGP Only</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn btn-blue" onclick="applyFilters()">Show Ledger</button>
+      <button class="btn btn-yellow" onclick="clearFilters()">Clear</button>
+      <button class="btn btn-dark" onclick="loadAllData()">Refresh Data</button>
+    </div>
+  </section>
+
+  <div class="stats">
+    <div class="stat">
+      <small>Opening Balance</small>
+      <strong id="openingBalance">0.00</strong>
+    </div>
+
+    <div class="stat">
+      <small>Total Received</small>
+      <strong id="totalReceived" class="positive">0.00</strong>
+    </div>
+
+    <div class="stat">
+      <small>Total Issued</small>
+      <strong id="totalIssued" class="negative">0.00</strong>
+    </div>
+
+    <div class="stat">
+      <small>Closing Balance</small>
+      <strong id="closingBalance">0.00</strong>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2 class="card-title">Transaction History</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Reference #</th>
+            <th>Transaction</th>
+            <th>Source</th>
+            <th>Item Name</th>
+            <th>Size</th>
+            <th>Unit</th>
+            <th class="text-right">Received</th>
+            <th class="text-right">Issued</th>
+            <th class="text-right">Rate</th>
+            <th class="text-right">Value</th>
+            <th>Supplier / Department / Party</th>
+            <th>Purpose / Remarks</th>
+            <th class="text-right">Balance</th>
+          </tr>
+        </thead>
+
+        <tbody id="ledgerBody">
+          <tr>
+            <td colspan="14" class="empty">Loading stock transactions...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="sourceNote" class="source-note"></div>
+  </section>
+
+</main>
+
+<script>
+const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db = supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let itemsMaster = [];
+let allTransactions = [];
+let filteredTransactions = [];
+let selectedItemId = null;
+let activeSuggestion = -1;
+let loadedSources = [];
+let failedSources = [];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function esc(value){
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function firstValue(object,names,defaultValue=""){
+  for(const name of names){
+    if(object && object[name] !== undefined && object[name] !== null && object[name] !== ""){
+      return object[name];
+    }
+  }
+  return defaultValue;
+}
+
+function numberValue(object,names){
+  return Number(firstValue(object,names,0) || 0);
+}
+
+function normalText(value){
+  return String(value || "").trim().toLowerCase();
+}
+
+function parseTypedDate(value){
+  const text = String(value || "").trim();
+  if(!text) return null;
+
+  if(/^\d{4}-\d{2}-\d{2}$/.test(text)){
+    return text;
+  }
+
+  const displayMatch = text.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/);
+
+  if(displayMatch){
+    const months = {
+      jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",
+      jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"
+    };
+
+    const month = months[displayMatch[2].toLowerCase()];
+    if(!month) return null;
+
+    let year = displayMatch[3];
+    if(year.length === 2) year = "20" + year;
+
+    return `${year}-${month}-${displayMatch[1].padStart(2,"0")}`;
+  }
+
+  const parts = text.replace(/\//g,"-").split("-").map(part => part.trim());
+
+  if(parts.length < 2) return null;
+
+  const day = Number(parts[0]);
+  const month = Number(parts[1]);
+
+  if(!day || !month || day < 1 || day > 31 || month < 1 || month > 12){
+    return null;
+  }
+
+  let year = parts[2] || String(new Date().getFullYear());
+  if(year.length === 2) year = "20" + year;
+
+  return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+}
+
+function displayDate(value){
+  if(!value) return "-";
+
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!match) return value;
+
+  const months = [
+    "","Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+
+  return `${match[3]}-${months[Number(match[2])]}-${match[1].slice(-2)}`;
+}
+
+function money(value){
+  return Number(value || 0).toLocaleString(undefined,{
+    minimumFractionDigits:2,
+    maximumFractionDigits:2
+  });
+}
+
+function itemKey(transaction){
+  if(transaction.item_id){
+    return "id:" + transaction.item_id;
+  }
+
+  return [
+    normalText(transaction.item_name),
+    normalText(transaction.size),
+    normalText(transaction.unit)
+  ].join("|");
+}
+
+async function fetchTable(tableName){
+  const {data,error} = await db
+    .from(tableName)
+    .select("*");
+
+  if(error){
+    failedSources.push(`${tableName}: ${error.message}`);
+    return [];
+  }
+
+  loadedSources.push(tableName);
+  return data || [];
+}
+
+/* =========================================================
+   ITEMS
+========================================================= */
+
+async function loadItems(){
+  const {data,error} = await db
+    .from("items")
+    .select("*")
+    .order("item_name",{ascending:true});
+
+  if(error){
+    failedSources.push("items: " + error.message);
+    itemsMaster = [];
+    return;
+  }
+
+  loadedSources.push("items");
+  itemsMaster = data || [];
+}
+
+function setupItemSearch(){
+  const input = document.getElementById("itemSearch");
+  const box = document.getElementById("itemSuggestions");
+
+  input.addEventListener("input",() => {
+    selectedItemId = null;
+    activeSuggestion = -1;
+    renderItemSuggestions();
+  });
+
+  input.addEventListener("keydown",event => {
+    const ids = (box.dataset.ids || "").split(",").filter(Boolean);
+
+    if(event.key === "ArrowDown"){
+      event.preventDefault();
+      activeSuggestion = Math.min(activeSuggestion + 1,ids.length - 1);
+      renderItemSuggestions();
+    }
+    else if(event.key === "ArrowUp"){
+      event.preventDefault();
+      activeSuggestion = Math.max(activeSuggestion - 1,0);
+      renderItemSuggestions();
+    }
+    else if((event.key === "Enter" || event.key === "Tab") && ids.length){
+      if(activeSuggestion < 0) activeSuggestion = 0;
+      selectItem(ids[activeSuggestion]);
+
+      if(event.key === "Enter"){
+        event.preventDefault();
+        document.getElementById("fromDate").focus();
+      }
+    }
+    else if(event.key === "Escape"){
+      box.style.display = "none";
+    }
+  });
+
+  input.addEventListener("blur",() => {
+    setTimeout(() => {
+      box.style.display = "none";
+    },150);
+  });
+}
+
+function renderItemSuggestions(){
+  const input = document.getElementById("itemSearch");
+  const box = document.getElementById("itemSuggestions");
+  const query = normalText(input.value);
+
+  if(!query){
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const words = query.split(/\s+/).filter(Boolean);
+
+  const matches = itemsMaster
+    .filter(item => {
+      const text = [
+        item.item_name,
+        item.size,
+        item.item_code,
+        item.unit,
+        item.category
+      ].join(" ").toLowerCase();
+
+      return words.every(word => text.includes(word));
+    })
+    .slice(0,15);
+
+  activeSuggestion = Math.min(activeSuggestion,matches.length - 1);
+
+  box.innerHTML = matches.map((item,index) => `
+    <div
+      class="suggestion ${index === activeSuggestion ? "active" : ""}"
+      onmousedown="selectItem('${item.id}')"
+    >
+      <strong>
+        ${esc(item.item_name || "")}
+        ${item.size ? " - " + esc(item.size) : ""}
+      </strong>
+      <span>
+        ${esc(item.item_code || "-")} |
+        ${esc(item.unit || "-")} |
+        ${esc(item.category || "-")}
+      </span>
+    </div>
+  `).join("");
+
+  box.dataset.ids = matches.map(item => item.id).join(",");
+  box.style.display = matches.length ? "block" : "none";
+}
+
+function selectItem(id){
+  const item = itemsMaster.find(record =>
+    String(record.id) === String(id)
+  );
+
+  if(!item) return;
+
+  selectedItemId = item.id;
+
+  document.getElementById("itemSearch").value =
+    `${item.item_name || ""}${item.size ? " - " + item.size : ""}`;
+
+  document.getElementById("itemSuggestions").style.display = "none";
+}
+
+/* =========================================================
+   SOURCE MAPPERS
+========================================================= */
+
+function mapPurchaseRows(rows,sourceName){
+  return rows.map(row => {
+    const qty = numberValue(row,[
+      "qty","quantity","net_qty","net_weight","weight","received_qty"
+    ]);
+
+    const rate = numberValue(row,[
+      "rate","unit_rate","purchase_rate","last_rate"
+    ]);
+
+    return {
+      date:firstValue(row,["purchase_date","date","entry_date","created_at"]),
+      reference:firstValue(row,["bill_no","bill_number","grn","igp_no","id"]),
+      transaction:"Receipt",
+      direction:"receipt",
+      category:"purchase",
+      source:sourceName,
+      item_id:firstValue(row,["item_id"]),
+      item_name:firstValue(row,["item_name","item"]),
+      size:firstValue(row,["size","item_size"]),
+      unit:firstValue(row,["unit"]),
+      received:qty,
+      issued:0,
+      rate:rate,
+      value:numberValue(row,["gross_total","total","amount","total_amount"]) || qty * rate,
+      party:firstValue(row,["supplier_name","supplier","vendor_name","purchase_by"]),
+      details:firstValue(row,["remarks","bill_detail","purchase_type"])
+    };
+  });
+}
+
+function mapIssueRows(rows,mastersById){
+  return rows.map(row => {
+    const masterId = firstValue(row,["issue_id","master_id"]);
+    const master = mastersById.get(String(masterId)) || row;
+
+    const qty = numberValue(row,["qty","quantity","issued_qty"]);
+    const rate = numberValue(row,["rate","unit_rate","last_rate"]);
+
+    return {
+      date:firstValue(master,["issue_date","date","entry_date","created_at"]),
+      reference:firstValue(master,["issue_no","ir_no","reference_no","id"]),
+      transaction:"Issue",
+      direction:"issue",
+      category:"issue",
+      source:"Issue Entry",
+      item_id:firstValue(row,["item_id"]),
+      item_name:firstValue(row,["item_name","item"]),
+      size:firstValue(row,["size","item_size"]),
+      unit:firstValue(row,["unit"]),
+      received:0,
+      issued:qty,
+      rate:rate,
+      value:numberValue(row,["amount","total_value"]) || qty * rate,
+      party:firstValue(master,["department","issued_to","location_department"]),
+      details:firstValue(master,["used_for","purpose","remarks"])
+    };
+  });
+}
+
+function mapRGPItems(rows,mastersById){
+  return rows.map(row => {
+    const master = mastersById.get(String(row.rgp_id)) || {};
+
+    const qty = numberValue(row,["qty","quantity","qty_sent"]);
+    const rate = numberValue(row,["rate","unit_rate","last_rate"]);
+
+    return {
+      date:firstValue(master,["rgp_date","date","created_at"]),
+      reference:firstValue(master,["rgp_no","id"]),
+      transaction:"RGP Out",
+      direction:"issue",
+      category:"rgp",
+      source:"RGP",
+      item_id:firstValue(row,["item_id"]),
+      item_name:firstValue(row,["item_name","item"]),
+      size:firstValue(row,["size"]),
+      unit:firstValue(row,["unit"]),
+      received:0,
+      issued:qty,
+      rate:rate,
+      value:numberValue(row,["total_value","pending_value"]) || qty * rate,
+      party:firstValue(master,["department","workshop_name","carrier_name"]),
+      details:firstValue(master,["purpose","remarks","bill_detail"])
+    };
+  });
+}
+
+function mapRGPReturns(rows,itemsById,mastersById){
+  return rows.map(row => {
+    const rgpItemId = firstValue(row,["rgp_item_id","item_id"]);
+    const rgpItem = itemsById.get(String(rgpItemId)) || {};
+    const master = mastersById.get(String(firstValue(row,["rgp_id"]) || rgpItem.rgp_id)) || {};
+
+    const qty = numberValue(row,["qty_received","quantity","qty"]);
+
+    return {
+      date:firstValue(row,["return_date","date","created_at"]),
+      reference:firstValue(master,["rgp_no","id"]),
+      transaction:"RGP Return",
+      direction:"receipt",
+      category:"rgp",
+      source:"RGP Return",
+      item_id:firstValue(rgpItem,["item_id"]),
+      item_name:firstValue(rgpItem,["item_name","item"]),
+      size:firstValue(rgpItem,["size"]),
+      unit:firstValue(rgpItem,["unit"]),
+      received:qty,
+      issued:0,
+      rate:numberValue(rgpItem,["rate","unit_rate"]),
+      value:qty * numberValue(rgpItem,["rate","unit_rate"]),
+      party:firstValue(row,["received_by","incoming_carrier"]),
+      details:firstValue(row,["condition","remarks"])
+    };
+  });
+}
+
+function mapOGPItems(rows,mastersById){
+  return rows.map(row => {
+    const master = mastersById.get(String(row.ogp_id)) || {};
+
+    const qty = numberValue(row,["qty","quantity"]);
+    const rate = numberValue(row,["rate","unit_rate"]);
+
+    return {
+      date:firstValue(master,["ogp_date","date","created_at"]),
+      reference:firstValue(master,["ogp_no","id"]),
+      transaction:"OGP Out",
+      direction:"issue",
+      category:"ogp",
+      source:"OGP",
+      item_id:firstValue(row,["item_id"]),
+      item_name:firstValue(row,["item_name","item"]),
+      size:firstValue(row,["size"]),
+      unit:firstValue(row,["unit"]),
+      received:0,
+      issued:qty,
+      rate:rate,
+      value:numberValue(row,["total_value","amount"]) || qty * rate,
+      party:firstValue(master,["department","workshop_name","carrier_name"]),
+      details:firstValue(master,["purpose","remarks","bill_detail"])
+    };
+  });
+}
+
+/* =========================================================
+   LOAD ALL DATA
+========================================================= */
+
+async function loadAllData(){
+  document.getElementById("ledgerBody").innerHTML = `
+    <tr>
+      <td colspan="14" class="empty">Loading stock transactions...</td>
+    </tr>
+  `;
+
+  loadedSources = [];
+  failedSources = [];
+  allTransactions = [];
+
+  await loadItems();
+
+  const [
+    localPurchases,
+    zafarPurchases,
+    boardPurchases,
+    issueItems,
+    issueMasters,
+    directIssues,
+    rgpMasters,
+    rgpItems,
+    rgpReturns,
+    ogpMasters,
+    ogpItems
+  ] = await Promise.all([
+    fetchTable("purchases_local"),
+    fetchTable("purchases_zafar"),
+    fetchTable("purchases_board"),
+    fetchTable("issue_items"),
+    fetchTable("issue_master"),
+    fetchTable("issues"),
+    fetchTable("rgp_master"),
+    fetchTable("rgp_items"),
+    fetchTable("rgp_returns"),
+    fetchTable("ogp_master"),
+    fetchTable("ogp_items")
+  ]);
+
+  allTransactions.push(
+    ...mapPurchaseRows(localPurchases,"Local Purchase"),
+    ...mapPurchaseRows(zafarPurchases,"Zafar Purchase"),
+    ...mapPurchaseRows(boardPurchases,"Board Purchase")
+  );
+
+  const issueMastersById = new Map(
+    issueMasters.map(row => [String(row.id),row])
+  );
+
+  if(issueItems.length){
+    allTransactions.push(
+      ...mapIssueRows(issueItems,issueMastersById)
+    );
+  }
+  else if(directIssues.length){
+    allTransactions.push(
+      ...mapIssueRows(directIssues,new Map())
+    );
+  }
+
+  const rgpMastersById = new Map(
+    rgpMasters.map(row => [String(row.id),row])
+  );
+
+  const rgpItemsById = new Map(
+    rgpItems.map(row => [String(row.id),row])
+  );
+
+  allTransactions.push(
+    ...mapRGPItems(rgpItems,rgpMastersById),
+    ...mapRGPReturns(rgpReturns,rgpItemsById,rgpMastersById)
+  );
+
+  const ogpMastersById = new Map(
+    ogpMasters.map(row => [String(row.id),row])
+  );
+
+  allTransactions.push(
+    ...mapOGPItems(ogpItems,ogpMastersById)
+  );
+
+  allTransactions = allTransactions
+    .filter(transaction =>
+      transaction.item_name ||
+      transaction.item_id
+    )
+    .map((transaction,index) => ({
+      ...transaction,
+      _index:index,
+      date:String(transaction.date || "").slice(0,10)
+    }))
+    .sort((a,b) => {
+      const dateCompare = String(a.date).localeCompare(String(b.date));
+      return dateCompare || a._index - b._index;
+    });
+
+  applyFilters();
+  updateSourceNote();
+}
+
+function updateSourceNote(){
+  const note = document.getElementById("sourceNote");
+
+  const loaded = loadedSources.length
+    ? `Loaded: ${[...new Set(loadedSources)].join(", ")}.`
+    : "No source table was loaded.";
+
+  const failed = failedSources.length
+    ? ` Unavailable sources: ${failedSources.join(" | ")}`
+    : "";
+
+  note.textContent = loaded + failed;
+}
+
+/* =========================================================
+   FILTER + BALANCE
+========================================================= */
+
+function applyFilters(){
+  const itemText = normalText(document.getElementById("itemSearch").value);
+  const fromDate = parseTypedDate(document.getElementById("fromDate").value);
+  const toDate = parseTypedDate(document.getElementById("toDate").value);
+  const type = document.getElementById("transactionType").value;
+
+  let opening = 0;
+
+  const itemFiltered = allTransactions.filter(transaction => {
+    if(selectedItemId){
+      return String(transaction.item_id) === String(selectedItemId);
+    }
+
+    if(itemText){
+      const text = [
+        transaction.item_name,
+        transaction.size,
+        transaction.unit
+      ].join(" ").toLowerCase();
+
+      return itemText.split(/\s+/).filter(Boolean).every(word =>
+        text.includes(word)
+      );
+    }
+
+    return true;
+  });
+
+  itemFiltered.forEach(transaction => {
+    if(fromDate && transaction.date && transaction.date < fromDate){
+      opening += Number(transaction.received || 0);
+      opening -= Number(transaction.issued || 0);
+    }
+  });
+
+  filteredTransactions = itemFiltered.filter(transaction => {
+    if(fromDate && transaction.date && transaction.date < fromDate){
+      return false;
+    }
+
+    if(toDate && transaction.date && transaction.date > toDate){
+      return false;
+    }
+
+    if(type === "receipt" && transaction.direction !== "receipt"){
+      return false;
+    }
+
+    if(type === "issue" && transaction.direction !== "issue"){
+      return false;
+    }
+
+    if(type === "purchase" && transaction.category !== "purchase"){
+      return false;
+    }
+
+    if(type === "rgp" && transaction.category !== "rgp"){
+      return false;
+    }
+
+    if(type === "ogp" && transaction.category !== "ogp"){
+      return false;
+    }
+
+    return true;
+  });
+
+  renderLedger(opening);
+}
+
+function renderLedger(opening){
+  const body = document.getElementById("ledgerBody");
+
+  if(!filteredTransactions.length){
+    body.innerHTML = `
+      <tr>
+        <td colspan="14" class="empty">
+          No stock transaction found for the selected filters.
+        </td>
+      </tr>
+    `;
+
+    updateStats(opening,0,0,opening);
+    return;
+  }
+
+  const balances = new Map();
+  let selectedBalance = opening;
+
+  if(selectedItemId || document.getElementById("itemSearch").value.trim()){
+    balances.set("selected",opening);
+  }
+
+  const renderedRows = filteredTransactions.map(transaction => {
+    let balance;
+
+    if(selectedItemId || document.getElementById("itemSearch").value.trim()){
+      selectedBalance += Number(transaction.received || 0);
+      selectedBalance -= Number(transaction.issued || 0);
+      balance = selectedBalance;
+    }
+    else{
+      const key = itemKey(transaction);
+      const previous = balances.get(key) || 0;
+      balance = previous +
+        Number(transaction.received || 0) -
+        Number(transaction.issued || 0);
+
+      balances.set(key,balance);
+    }
+
+    return `
+      <tr>
+        <td>${esc(displayDate(transaction.date))}</td>
+        <td class="ref">${esc(transaction.reference || "-")}</td>
+        <td>${esc(transaction.transaction || "-")}</td>
+        <td>${esc(transaction.source || "-")}</td>
+        <td>${esc(transaction.item_name || "-")}</td>
+        <td>${esc(transaction.size || "-")}</td>
+        <td>${esc(transaction.unit || "-")}</td>
+        <td class="text-right receipt">
+          ${transaction.received ? money(transaction.received) : "-"}
+        </td>
+        <td class="text-right issue">
+          ${transaction.issued ? money(transaction.issued) : "-"}
+        </td>
+        <td class="text-right">${money(transaction.rate)}</td>
+        <td class="text-right">${money(transaction.value)}</td>
+        <td>${esc(transaction.party || "-")}</td>
+        <td>${esc(transaction.details || "-")}</td>
+        <td class="text-right balance">${money(balance)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  body.innerHTML = renderedRows;
+
+  const received = filteredTransactions.reduce(
+    (sum,row) => sum + Number(row.received || 0),0
+  );
+
+  const issued = filteredTransactions.reduce(
+    (sum,row) => sum + Number(row.issued || 0),0
+  );
+
+  const closing = opening + received - issued;
+
+  updateStats(opening,received,issued,closing);
+}
+
+function updateStats(opening,received,issued,closing){
+  document.getElementById("openingBalance").textContent = money(opening);
+  document.getElementById("totalReceived").textContent = money(received);
+  document.getElementById("totalIssued").textContent = money(issued);
+  document.getElementById("closingBalance").textContent = money(closing);
+}
+
+/* =========================================================
+   CLEAR + DATE FORMAT
+========================================================= */
+
+function clearFilters(){
+  selectedItemId = null;
+
+  document.getElementById("itemSearch").value = "";
+  document.getElementById("fromDate").value = "";
+  document.getElementById("toDate").value = "";
+  document.getElementById("transactionType").value = "all";
+
+  applyFilters();
+}
+
+function setupDateFields(){
+  ["fromDate","toDate"].forEach(id => {
+    const field = document.getElementById(id);
+
+    field.addEventListener("blur",() => {
+      if(!field.value.trim()) return;
+
+      const date = parseTypedDate(field.value);
+
+      if(!date){
+        alert("Invalid date. Type date like 25-6 or 25-6-26.");
+        field.focus();
+        return;
+      }
+
+      field.value = displayDate(date);
+    });
+  });
+}
+
+/* =========================================================
+   CSV EXPORT
+========================================================= */
+
+function exportCSV(){
+  if(!filteredTransactions.length){
+    alert("No ledger data is available to export.");
+    return;
+  }
+
+  const headers = [
+    "Date","Reference #","Transaction","Source","Item Name","Size","Unit",
+    "Received","Issued","Rate","Value","Supplier / Department / Party",
+    "Purpose / Remarks"
+  ];
+
+  const rows = filteredTransactions.map(row => [
+    displayDate(row.date),
+    row.reference || "",
+    row.transaction || "",
+    row.source || "",
+    row.item_name || "",
+    row.size || "",
+    row.unit || "",
+    row.received || 0,
+    row.issued || 0,
+    row.rate || 0,
+    row.value || 0,
+    row.party || "",
+    row.details || ""
+  ]);
+
+  const csv = [headers,...rows]
+    .map(row => row.map(value => {
+      const text = String(value ?? "").replace(/"/g,'""');
+      return `"${text}"`;
+    }).join(","))
+    .join("\n");
+
+  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "stock-ledger.csv";
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+async function initializePage(){
+  setupItemSearch();
+  setupDateFields();
+  await loadAllData();
+}
+
+initializePage();
+</script>
+
+</body>
+</html>
