@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Scrapper Detail</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#f4f6fb;
+  color:#0f172a;
+}
+
+.layout{
+  min-height:100vh;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar{
+  width:210px;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:100;
+  padding:22px 14px;
+  color:white;
+  background:linear-gradient(180deg,#351000,#1a0600);
+}
+
+.brand{
+  font-size:24px;
+  line-height:1.05;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.brand-sub{
+  color:#f59e0b;
+  font-size:13px;
+  font-weight:800;
+  margin-bottom:34px;
+}
+
+.menu a{
+  display:block;
+  color:white;
+  text-decoration:none;
+  padding:12px;
+  margin-bottom:7px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+}
+
+.menu a:hover,
+.menu a.active{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.profile{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:20px;
+  padding:16px 10px;
+  text-align:center;
+  border-radius:14px;
+  background:rgba(255,255,255,.10);
+}
+
+.profile img{
+  display:block;
+  width:72px;
+  height:72px;
+  margin:0 auto 10px;
+  object-fit:cover;
+  object-position:center;
+  border:3px solid #f59e0b;
+  border-radius:50%;
+}
+
+.profile b{
+  display:block;
+  color:white;
+  font-size:14px;
+  font-weight:800;
+}
+
+.profile span{
+  display:block;
+  margin-top:3px;
+  color:#22c55e;
+  font-size:12px;
+  font-weight:700;
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.main{
+  width:calc(100% - 210px);
+  min-height:100vh;
+  margin-left:210px;
+  padding:28px 34px;
+}
+
+.title-row{
+  padding-bottom:18px;
+  border-bottom:1px solid #dbe1ea;
+}
+
+h1{
+  margin:0;
+  font-size:28px;
+}
+
+.subtitle{
+  margin-top:6px;
+  color:#64748b;
+  font-size:14px;
+}
+
+.tabs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:18px 0;
+}
+
+.tab{
+  padding:15px;
+  color:#111827;
+  background:white;
+  border:1px solid #dbe1ea;
+  border-radius:10px;
+  text-align:center;
+  text-decoration:none;
+  font-weight:900;
+}
+
+.tab.active{
+  background:#f59e0b;
+}
+
+.card{
+  margin-bottom:18px;
+  padding:20px;
+  background:white;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.06);
+}
+
+.card-title{
+  margin:0 0 16px;
+  font-size:18px;
+}
+
+/* =========================
+   FORM
+========================= */
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:13px;
+}
+
+.form-group label{
+  display:block;
+  font-size:13px;
+  font-weight:800;
+}
+
+.form-group input,
+.form-group select{
+  width:100%;
+  height:40px;
+  margin-top:6px;
+  padding:0 11px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  outline:none;
+  background:white;
+}
+
+.form-group input:focus,
+.form-group select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px rgba(37,99,235,.12);
+}
+
+.span-2{
+  grid-column:span 2;
+}
+
+.span-4{
+  grid-column:1 / 5;
+}
+
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:16px;
+}
+
+button{
+  border:0;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:800;
+}
+
+.btn{
+  padding:11px 17px;
+}
+
+.btn-green{
+  color:white;
+  background:#16a34a;
+}
+
+.btn-yellow{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.btn-dark{
+  color:white;
+  background:#111827;
+}
+
+.btn-blue{
+  color:white;
+  background:#2563eb;
+}
+
+.btn-red{
+  color:white;
+  background:#dc2626;
+}
+
+.btn-small{
+  padding:7px 10px;
+  font-size:12px;
+}
+
+/* =========================
+   FILTERS
+========================= */
+
+.filters{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.filters input,
+.filters select{
+  width:100%;
+  height:40px;
+  padding:0 11px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  outline:none;
+  background:white;
+}
+
+.filters input:focus,
+.filters select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px rgba(37,99,235,.12);
+}
+
+/* =========================
+   TABLE
+========================= */
+
+.table-wrap{
+  width:100%;
+  overflow-x:auto;
+}
+
+.data-table{
+  width:100%;
+  min-width:1050px;
+  border-collapse:collapse;
+}
+
+.data-table th{
+  padding:11px 9px;
+  color:white;
+  background:#0f172a;
+  font-size:12px;
+  text-align:left;
+  white-space:nowrap;
+}
+
+.data-table td{
+  padding:10px 9px;
+  border-bottom:1px solid #e5e7eb;
+  font-size:13px;
+  vertical-align:middle;
+}
+
+.data-table tbody tr:hover{
+  background:#f8fafc;
+}
+
+.status-active{
+  display:inline-block;
+  padding:5px 9px;
+  color:#166534;
+  background:#dcfce7;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+}
+
+.status-inactive{
+  display:inline-block;
+  padding:5px 9px;
+  color:#991b1b;
+  background:#fee2e2;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+}
+
+.empty{
+  padding:28px !important;
+  color:#64748b;
+  text-align:center;
+  font-weight:700;
+}
+
+.record-count{
+  margin-top:12px;
+  color:#64748b;
+  font-size:13px;
+  font-weight:700;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:1150px){
+  .form-grid,
+  .filters{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .span-4{
+    grid-column:1 / 3;
+  }
+}
+
+@media(max-width:760px){
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+  }
+
+  .profile{
+    position:static;
+    margin-top:20px;
+  }
+
+  .main{
+    width:100%;
+    margin-left:0;
+    padding:18px;
+  }
+
+  .tabs,
+  .form-grid,
+  .filters{
+    grid-template-columns:1fr;
+  }
+
+  .span-2,
+  .span-4{
+    grid-column:auto;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+  <aside class="sidebar">
+
+    <div class="brand">
+      📦 Inventory<br>Store
+    </div>
+
+    <div class="brand-sub">
+      Management System
+    </div>
+
+    <nav class="menu">
+      <a href="index.html">⌂ Dashboard</a>
+      <a href="items.html">▣ Items Master</a>
+      <a href="purchase.html">🛒 Purchase Entry</a>
+      <a href="issue.html">↪ Issue Entry</a>
+      <a class="active" href="gate-pass.html">🚚 Gate Pass</a>
+      <a href="#">▣ Stock Ledger</a>
+      <a href="#">▥ Reports</a>
+      <a href="suppliers.html">▰ Suppliers</a>
+      <a href="workshops.html">⚙ Workshop / Party</a>
+    </nav>
+
+    <div class="profile">
+      <img
+        src="public/waqas.jpg.png"
+        alt="Muhammad Waqas"
+        onerror="this.onerror=null;this.src='public/profile.png';"
+      >
+      <b>Muhammad Waqas</b>
+      <span>● Online</span>
+    </div>
+
+  </aside>
+
+  <main class="main">
+
+    <div class="title-row">
+      <h1>Scrapper Detail</h1>
+      <div class="subtitle">
+        Add and manage scrapper or worker master records
+      </div>
+    </div>
+
+    <div class="tabs">
+      <a class="tab" href="cgp-list.html">▦ CGP List</a>
+      <a class="tab" href="cgp-entry.html">⊕ CGP Entry</a>
+      <a class="tab active" href="scrapper-detail.html">👤 Scrapper Detail</a>
+    </div>
+
+    <section class="card">
+
+      <h2 class="card-title" id="formTitle">Add Scrapper / Worker</h2>
+
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>Scrapper / Worker Name *</label>
+          <input
+            id="scrapper_name"
+            type="text"
+            placeholder="Enter Scrapper / Worker Name"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Phone #</label>
+          <input
+            id="phone_no"
+            type="text"
+            placeholder="Enter Phone Number"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Vehicle #</label>
+          <input
+            id="vehicle_no"
+            type="text"
+            placeholder="Enter Vehicle Number"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Status</label>
+          <select id="status">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div class="form-group span-2">
+          <label>Address / Card No.</label>
+          <input
+            id="address_card_no"
+            type="text"
+            placeholder="Enter Address / Card No."
+          >
+        </div>
+
+        <div class="form-group span-2">
+          <label>Location / Department</label>
+          <input
+            id="location_department"
+            type="text"
+            placeholder="Enter Location / Department"
+          >
+        </div>
+
+        <div class="form-group span-4">
+          <label>Remarks</label>
+          <input
+            id="remarks"
+            type="text"
+            placeholder="Enter Remarks"
+          >
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button
+          id="saveButton"
+          type="button"
+          class="btn btn-green"
+          onclick="saveScrapper()"
+        >
+          Save Scrapper
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-yellow"
+          onclick="clearForm()"
+        >
+          Clear
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-dark"
+          onclick="location.href='cgp-entry.html'"
+        >
+          Back to CGP Entry
+        </button>
+
+      </div>
+
+    </section>
+
+    <section class="card">
+
+      <h2 class="card-title">Search Scrapper / Worker</h2>
+
+      <div class="filters">
+
+        <input
+          id="searchName"
+          type="text"
+          placeholder="Search Name"
+          oninput="applyFilters()"
+        >
+
+        <input
+          id="searchPhone"
+          type="text"
+          placeholder="Search Phone #"
+          oninput="applyFilters()"
+        >
+
+        <input
+          id="searchVehicle"
+          type="text"
+          placeholder="Search Vehicle #"
+          oninput="applyFilters()"
+        >
+
+        <input
+          id="searchLocation"
+          type="text"
+          placeholder="Search Location / Department"
+          oninput="applyFilters()"
+        >
+
+      </div>
+
+    </section>
+
+    <section class="card">
+
+      <h2 class="card-title">Saved Scrapper / Worker Records</h2>
+
+      <div class="table-wrap">
+
+        <table class="data-table">
+
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Scrapper / Worker Name</th>
+              <th>Phone #</th>
+              <th>Address / Card No.</th>
+              <th>Vehicle #</th>
+              <th>Location / Department</th>
+              <th>Remarks</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody id="scrapperBody">
+            <tr>
+              <td class="empty" colspan="9">
+                Loading records...
+              </td>
+            </tr>
+          </tbody>
+
+        </table>
+
+      </div>
+
+      <div class="record-count" id="recordCount">
+        0 records
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let scrappers = [];
+let editingId = null;
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function titleCase(value){
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\b\w/g,letter => letter.toUpperCase());
+}
+
+function escapeHTML(value){
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function normalText(value){
+  return String(value || "").trim().toLowerCase();
+}
+
+/* =========================================================
+   LOAD RECORDS
+========================================================= */
+
+async function loadScrappers(){
+  const {data,error} = await db
+    .from("scrappers")
+    .select("*")
+    .order("id",{ascending:false});
+
+  if(error){
+    document.getElementById("scrapperBody").innerHTML = `
+      <tr>
+        <td class="empty" colspan="9">
+          Scrapper load error: ${escapeHTML(error.message)}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  scrappers = data || [];
+  applyFilters();
+}
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+function applyFilters(){
+  const name = normalText(
+    document.getElementById("searchName").value
+  );
+
+  const phone = normalText(
+    document.getElementById("searchPhone").value
+  );
+
+  const vehicle = normalText(
+    document.getElementById("searchVehicle").value
+  );
+
+  const location = normalText(
+    document.getElementById("searchLocation").value
+  );
+
+  const filtered = scrappers.filter(item => {
+    return (
+      normalText(item.scrapper_name).includes(name) &&
+      normalText(item.phone_no).includes(phone) &&
+      normalText(item.vehicle_no).includes(vehicle) &&
+      normalText(item.location_department).includes(location)
+    );
+  });
+
+  renderTable(filtered);
+}
+
+/* =========================================================
+   RENDER TABLE
+========================================================= */
+
+function renderTable(records){
+  const body = document.getElementById("scrapperBody");
+
+  if(!records.length){
+    body.innerHTML = `
+      <tr>
+        <td class="empty" colspan="9">
+          No scrapper or worker record found.
+        </td>
+      </tr>
+    `;
+
+    document.getElementById("recordCount").textContent =
+      "0 records";
+
+    return;
+  }
+
+  body.innerHTML = records.map((item,index) => `
+    <tr>
+      <td>${index + 1}</td>
+
+      <td>
+        <strong>${escapeHTML(item.scrapper_name || "-")}</strong>
+      </td>
+
+      <td>${escapeHTML(item.phone_no || "-")}</td>
+
+      <td>${escapeHTML(item.address_card_no || "-")}</td>
+
+      <td>${escapeHTML(item.vehicle_no || "-")}</td>
+
+      <td>${escapeHTML(item.location_department || "-")}</td>
+
+      <td>${escapeHTML(item.remarks || "-")}</td>
+
+      <td>
+        <span class="${
+          item.status === "Inactive"
+            ? "status-inactive"
+            : "status-active"
+        }">
+          ${escapeHTML(item.status || "Active")}
+        </span>
+      </td>
+
+      <td>
+        <button
+          type="button"
+          class="btn btn-blue btn-small"
+          onclick="editScrapper(${item.id})"
+        >
+          Edit
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-red btn-small"
+          onclick="deleteScrapper(${item.id})"
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  `).join("");
+
+  document.getElementById("recordCount").textContent =
+    `${records.length} record${records.length === 1 ? "" : "s"}`;
+}
+
+/* =========================================================
+   VALIDATION
+========================================================= */
+
+function validateForm(){
+  const name = document
+    .getElementById("scrapper_name")
+    .value
+    .trim();
+
+  if(!name){
+    alert("Please enter Scrapper / Worker Name.");
+
+    document
+      .getElementById("scrapper_name")
+      .focus();
+
+    return false;
+  }
+
+  return true;
+}
+
+/* =========================================================
+   SAVE / UPDATE
+========================================================= */
+
+async function saveScrapper(){
+  if(!validateForm()){
+    return;
+  }
+
+  const saveButton =
+    document.getElementById("saveButton");
+
+  saveButton.disabled = true;
+  saveButton.textContent =
+    editingId ? "Updating..." : "Saving...";
+
+  const record = {
+    scrapper_name:titleCase(
+      document.getElementById("scrapper_name").value
+    ),
+
+    phone_no:
+      document.getElementById("phone_no").value.trim(),
+
+    address_card_no:titleCase(
+      document.getElementById("address_card_no").value
+    ),
+
+    vehicle_no:
+      document
+        .getElementById("vehicle_no")
+        .value
+        .toUpperCase()
+        .trim(),
+
+    location_department:titleCase(
+      document.getElementById("location_department").value
+    ),
+
+    remarks:titleCase(
+      document.getElementById("remarks").value
+    ),
+
+    status:
+      document.getElementById("status").value
+  };
+
+  try{
+    if(editingId){
+      const {error} = await db
+        .from("scrappers")
+        .update(record)
+        .eq("id",editingId);
+
+      if(error){
+        throw error;
+      }
+
+      alert("Scrapper / Worker updated successfully.");
+    }
+    else{
+      const duplicate = scrappers.find(item =>
+        normalText(item.scrapper_name) ===
+        normalText(record.scrapper_name) &&
+        normalText(item.phone_no) ===
+        normalText(record.phone_no)
+      );
+
+      if(duplicate){
+        alert(
+          "A record with the same name and phone number already exists."
+        );
+
+        saveButton.disabled = false;
+        saveButton.textContent = "Save Scrapper";
+
+        return;
+      }
+
+      const {error} = await db
+        .from("scrappers")
+        .insert([record]);
+
+      if(error){
+        throw error;
+      }
+
+      alert("Scrapper / Worker saved successfully.");
+    }
+
+    clearForm(false);
+    await loadScrappers();
+  }
+  catch(error){
+    alert(
+      "Scrapper save error: " +
+      (error.message || error)
+    );
+  }
+  finally{
+    saveButton.disabled = false;
+    saveButton.textContent =
+      editingId ? "Update Scrapper" : "Save Scrapper";
+  }
+}
+
+/* =========================================================
+   EDIT
+========================================================= */
+
+function editScrapper(id){
+  const item = scrappers.find(
+    record => Number(record.id) === Number(id)
+  );
+
+  if(!item){
+    return;
+  }
+
+  editingId = item.id;
+
+  document.getElementById("formTitle").textContent =
+    "Edit Scrapper / Worker";
+
+  document.getElementById("saveButton").textContent =
+    "Update Scrapper";
+
+  document.getElementById("scrapper_name").value =
+    item.scrapper_name || "";
+
+  document.getElementById("phone_no").value =
+    item.phone_no || "";
+
+  document.getElementById("address_card_no").value =
+    item.address_card_no || "";
+
+  document.getElementById("vehicle_no").value =
+    item.vehicle_no || "";
+
+  document.getElementById("location_department").value =
+    item.location_department || "";
+
+  document.getElementById("remarks").value =
+    item.remarks || "";
+
+  document.getElementById("status").value =
+    item.status || "Active";
+
+  window.scrollTo({
+    top:0,
+    behavior:"smooth"
+  });
+
+  setTimeout(() => {
+    document
+      .getElementById("scrapper_name")
+      .focus();
+  },300);
+}
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+async function deleteScrapper(id){
+  const item = scrappers.find(
+    record => Number(record.id) === Number(id)
+  );
+
+  if(!item){
+    return;
+  }
+
+  const confirmed = confirm(
+    `Delete ${item.scrapper_name || "this record"}?`
+  );
+
+  if(!confirmed){
+    return;
+  }
+
+  const {error} = await db
+    .from("scrappers")
+    .delete()
+    .eq("id",id);
+
+  if(error){
+    alert(
+      "Delete error: " +
+      error.message
+    );
+
+    return;
+  }
+
+  if(Number(editingId) === Number(id)){
+    clearForm(false);
+  }
+
+  alert("Scrapper / Worker deleted successfully.");
+
+  await loadScrappers();
+}
+
+/* =========================================================
+   CLEAR FORM
+========================================================= */
+
+function clearForm(askConfirmation = true){
+  if(askConfirmation){
+    const hasData =
+      document.getElementById("scrapper_name").value.trim() ||
+      document.getElementById("phone_no").value.trim() ||
+      document.getElementById("address_card_no").value.trim() ||
+      document.getElementById("vehicle_no").value.trim() ||
+      document.getElementById("location_department").value.trim() ||
+      document.getElementById("remarks").value.trim();
+
+    if(hasData){
+      const confirmed = confirm(
+        "Clear entered Scrapper / Worker data?"
+      );
+
+      if(!confirmed){
+        return;
+      }
+    }
+  }
+
+  editingId = null;
+
+  document.getElementById("formTitle").textContent =
+    "Add Scrapper / Worker";
+
+  document.getElementById("saveButton").textContent =
+    "Save Scrapper";
+
+  document.getElementById("scrapper_name").value = "";
+  document.getElementById("phone_no").value = "";
+  document.getElementById("address_card_no").value = "";
+  document.getElementById("vehicle_no").value = "";
+  document.getElementById("location_department").value = "";
+  document.getElementById("remarks").value = "";
+  document.getElementById("status").value = "Active";
+
+  document.getElementById("scrapper_name").focus();
+}
+
+/* =========================================================
+   KEYBOARD + CAPITALIZATION
+========================================================= */
+
+function setupFormBehavior(){
+  const fields = Array.from(
+    document.querySelectorAll(
+      ".form-grid input, .form-grid select"
+    )
+  );
+
+  fields.forEach((field,index) => {
+    field.addEventListener("keydown",event => {
+      if(event.key === "Enter"){
+        event.preventDefault();
+
+        const next = fields[index + 1];
+
+        if(next){
+          next.focus();
+        }
+        else{
+          saveScrapper();
+        }
+      }
+    });
+  });
+
+  [
+    "scrapper_name",
+    "address_card_no",
+    "location_department",
+    "remarks"
+  ].forEach(id => {
+    document.getElementById(id)
+      .addEventListener("blur",event => {
+        event.target.value =
+          titleCase(event.target.value);
+      });
+  });
+
+  document.getElementById("vehicle_no")
+    .addEventListener("blur",event => {
+      event.target.value =
+        event.target.value.toUpperCase();
+    });
+}
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+async function initializePage(){
+  setupFormBehavior();
+  await loadScrappers();
+
+  document
+    .getElementById("scrapper_name")
+    .focus();
+}
+
+initializePage();
+</script>
+
+</body>
+</html>
