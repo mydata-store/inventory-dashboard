@@ -1,1 +1,896 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>OGP Detail</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#f4f6fb;
+  color:#0f172a;
+}
+
+.layout{
+  min-height:100vh;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar{
+  width:210px;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:100;
+  padding:22px 14px;
+  color:white;
+  background:linear-gradient(180deg,#351000,#1a0600);
+}
+
+.brand{
+  font-size:24px;
+  line-height:1.05;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.brand-sub{
+  color:#f59e0b;
+  font-size:13px;
+  font-weight:800;
+  margin-bottom:34px;
+}
+
+.menu a{
+  display:block;
+  color:white;
+  text-decoration:none;
+  padding:12px;
+  margin-bottom:7px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+}
+
+.menu a:hover,
+.menu a.active{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.profile{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:20px;
+  padding:16px 10px;
+  text-align:center;
+  border-radius:14px;
+  background:rgba(255,255,255,.10);
+}
+
+.profile img{
+  display:block;
+  width:72px;
+  height:72px;
+  margin:0 auto 10px;
+  object-fit:cover;
+  object-position:center;
+  border:3px solid #f59e0b;
+  border-radius:50%;
+}
+
+.profile b{
+  display:block;
+  color:white;
+  font-size:14px;
+  font-weight:800;
+}
+
+.profile span{
+  display:block;
+  margin-top:3px;
+  color:#22c55e;
+  font-size:12px;
+  font-weight:700;
+}
+
+/* =========================
+   MAIN PAGE
+========================= */
+
+.main{
+  width:calc(100% - 210px);
+  min-height:100vh;
+  margin-left:210px;
+  padding:28px 34px;
+}
+
+.title-row{
+  padding-bottom:18px;
+  border-bottom:1px solid #dbe1ea;
+}
+
+h1{
+  margin:0;
+  font-size:28px;
+}
+
+.subtitle{
+  margin-top:6px;
+  color:#64748b;
+  font-size:14px;
+}
+
+.tabs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:18px 0;
+}
+
+.tab{
+  padding:15px;
+  color:#111827;
+  background:white;
+  border:1px solid #dbe1ea;
+  border-radius:10px;
+  text-align:center;
+  text-decoration:none;
+  font-weight:900;
+}
+
+.tab.active{
+  background:#f59e0b;
+}
+
+.card{
+  margin-bottom:18px;
+  padding:20px;
+  background:white;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.06);
+}
+
+.card-title-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+  margin-bottom:18px;
+}
+
+.card-title{
+  margin:0;
+  font-size:19px;
+}
+
+.status-badge{
+  padding:8px 13px;
+  color:#166534;
+  background:#dcfce7;
+  border:1px solid #86efac;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+
+/* =========================
+   DETAIL GRID
+========================= */
+
+.detail-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+}
+
+.detail-box{
+  min-height:76px;
+  padding:13px 14px;
+  border:1px solid #dbe1ea;
+  border-radius:10px;
+  background:#f8fafc;
+}
+
+.detail-box.span-2{
+  grid-column:span 2;
+}
+
+.detail-box.span-4{
+  grid-column:1 / 5;
+}
+
+.detail-label{
+  display:block;
+  margin-bottom:7px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:800;
+}
+
+.detail-value{
+  display:block;
+  color:#0f172a;
+  font-size:14px;
+  font-weight:800;
+  word-break:break-word;
+}
+
+/* =========================
+   MATERIAL TABLE
+========================= */
+
+.table-wrap{
+  width:100%;
+  overflow-x:auto;
+}
+
+.material-table{
+  width:100%;
+  min-width:960px;
+  border-collapse:collapse;
+}
+
+.material-table th{
+  padding:12px 10px;
+  color:white;
+  background:#0f172a;
+  font-size:12px;
+  text-align:left;
+  white-space:nowrap;
+}
+
+.material-table td{
+  padding:12px 10px;
+  border-bottom:1px solid #e5e7eb;
+  font-size:13px;
+}
+
+.material-table tbody tr:hover{
+  background:#f8fafc;
+}
+
+.text-right{
+  text-align:right !important;
+}
+
+.total-value{
+  font-weight:900;
+}
+
+.empty-row{
+  padding:25px !important;
+  color:#64748b;
+  text-align:center;
+}
+
+/* =========================
+   TOTAL + BUTTONS
+========================= */
+
+.summary-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+  margin-top:16px;
+}
+
+.total-content{
+  min-width:280px;
+  padding:15px 18px;
+  border:1px solid #dbe1ea;
+  border-radius:11px;
+  text-align:right;
+  background:#f8fafc;
+}
+
+.total-content span{
+  display:block;
+  color:#64748b;
+  font-size:12px;
+  font-weight:700;
+}
+
+.total-content strong{
+  display:block;
+  margin-top:5px;
+  font-size:23px;
+}
+
+.bottom-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:18px;
+}
+
+button,
+.btn-link{
+  border:0;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:800;
+}
+
+.btn-link{
+  display:inline-block;
+  padding:11px 17px;
+  text-decoration:none;
+}
+
+.btn-blue{
+  color:white;
+  background:#2563eb;
+}
+
+.btn-green{
+  color:white;
+  background:#16a34a;
+}
+
+.btn-yellow{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.btn-dark{
+  color:white;
+  background:#111827;
+}
+
+.loading,
+.error-message{
+  padding:35px 15px;
+  text-align:center;
+  font-weight:800;
+}
+
+.loading{
+  color:#64748b;
+}
+
+.error-message{
+  color:#b91c1c;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:1150px){
+  .detail-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .detail-box.span-4{
+    grid-column:1 / 3;
+  }
+}
+
+@media(max-width:760px){
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+  }
+
+  .profile{
+    position:static;
+    margin-top:20px;
+  }
+
+  .main{
+    width:100%;
+    margin-left:0;
+    padding:18px;
+  }
+
+  .tabs{
+    grid-template-columns:1fr;
+  }
+
+  .detail-grid{
+    grid-template-columns:1fr;
+  }
+
+  .detail-box.span-2,
+  .detail-box.span-4{
+    grid-column:auto;
+  }
+}
+
+/* =========================
+   PRINT
+========================= */
+
+@media print{
+  body{
+    background:white;
+  }
+
+  .sidebar,
+  .tabs,
+  .bottom-actions{
+    display:none !important;
+  }
+
+  .main{
+    width:100%;
+    margin:0;
+    padding:0;
+  }
+
+  .title-row{
+    margin-bottom:15px;
+  }
+
+  .card{
+    box-shadow:none;
+    border:1px solid #dbe1ea;
+    break-inside:avoid;
+  }
+
+  .material-table th{
+    color:#000;
+    background:#f59e0b !important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+  <aside class="sidebar">
+
+    <div class="brand">
+      📦 Inventory<br>Store
+    </div>
+
+    <div class="brand-sub">
+      Management System
+    </div>
+
+    <nav class="menu">
+      <a href="index.html">⌂ Dashboard</a>
+      <a href="items.html">▣ Items Master</a>
+      <a href="purchase.html">🛒 Purchase Entry</a>
+      <a href="issue.html">↪ Issue Entry</a>
+      <a class="active" href="gate-pass.html">🚚 Gate Pass</a>
+      <a href="#">▣ Stock Ledger</a>
+      <a href="#">▥ Reports</a>
+      <a href="suppliers.html">▰ Suppliers</a>
+      <a href="workshops.html">⚙ Workshop / Party</a>
+    </nav>
+
+    <div class="profile">
+      <img
+        src="public/waqas.jpg.png"
+        alt="Muhammad Waqas"
+        onerror="this.onerror=null;this.src='public/profile.png';"
+      >
+      <b>Muhammad Waqas</b>
+      <span>● Online</span>
+    </div>
+
+  </aside>
+
+  <main class="main">
+
+    <div class="title-row">
+      <h1>OGP Detail</h1>
+      <div class="subtitle">
+        Complete Outward Gate Pass information
+      </div>
+    </div>
+
+    <div class="tabs">
+      <a class="tab" href="ogp-list.html">▦ OGP List</a>
+      <a class="tab" href="ogp-entry.html">⊕ OGP Entry Form</a>
+      <a class="tab active" id="detailTab" href="ogp-detail.html">↪ OGP Detail</a>
+    </div>
+
+    <div id="pageContent">
+      <div class="card loading">
+        Loading OGP details...
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentOGPId = null;
+let currentOGPNo = "";
+
+function escapeHTML(value){
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function showValue(value){
+  const text = String(value ?? "").trim();
+  return text || "-";
+}
+
+function formatOGPNumber(value){
+  const text = String(value || "").trim();
+
+  if(/^OGP-\d+$/i.test(text)){
+    const number = text.replace(/\D/g,"");
+    return "OGP-" + number.padStart(5,"0");
+  }
+
+  const number = text.replace(/\D/g,"");
+
+  if(!number){
+    return text || "-";
+  }
+
+  return "OGP-" + number.padStart(5,"0");
+}
+
+function displayDate(value){
+  if(!value){
+    return "-";
+  }
+
+  const databaseMatch = String(value).match(
+    /^(\d{4})-(\d{2})-(\d{2})/
+  );
+
+  if(!databaseMatch){
+    return value;
+  }
+
+  const months = [
+    "",
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+
+  return `${databaseMatch[3]}-${months[Number(databaseMatch[2])]}-${databaseMatch[1].slice(-2)}`;
+}
+
+function money(value){
+  return "Rs. " + Number(value || 0).toLocaleString(undefined,{
+    minimumFractionDigits:2,
+    maximumFractionDigits:2
+  });
+}
+
+function getQueryReference(){
+  const params = new URLSearchParams(location.search);
+
+  return {
+    id:
+      params.get("id") ||
+      params.get("ogp_id") ||
+      params.get("edit"),
+
+    number:
+      params.get("ogp_no") ||
+      params.get("no") ||
+      params.get("ogp")
+  };
+}
+
+async function loadOGPDetail(){
+  const content = document.getElementById("pageContent");
+  const reference = getQueryReference();
+
+  if(!reference.id && !reference.number){
+    content.innerHTML = `
+      <section class="card">
+        <div class="error-message">
+          No OGP was selected. Open this page using the Detail button from the OGP List.
+        </div>
+
+        <div class="bottom-actions">
+          <a class="btn-link btn-dark" href="ogp-list.html">
+            Back to OGP List
+          </a>
+        </div>
+      </section>
+    `;
+    return;
+  }
+
+  try{
+    let query = db
+      .from("ogp_master")
+      .select("*");
+
+    if(reference.id){
+      query = query.eq("id",reference.id);
+    }
+    else{
+      const formattedNumber = formatOGPNumber(reference.number);
+
+      query = query.or(
+        `ogp_no.eq.${reference.number},ogp_no.eq.${formattedNumber}`
+      );
+    }
+
+    const {data:master,error:masterError} =
+      await query.single();
+
+    if(masterError){
+      throw masterError;
+    }
+
+    currentOGPId = master.id;
+    currentOGPNo = formatOGPNumber(
+      master.ogp_no || master.id
+    );
+
+    const {data:items,error:itemsError} = await db
+      .from("ogp_items")
+      .select("*")
+      .eq("ogp_id",master.id)
+      .order("id",{ascending:true});
+
+    if(itemsError){
+      throw itemsError;
+    }
+
+    renderDetail(master,items || []);
+  }
+  catch(error){
+    console.error(error);
+
+    content.innerHTML = `
+      <section class="card">
+        <div class="error-message">
+          Unable to load OGP details.<br>
+          ${escapeHTML(error.message || error)}
+        </div>
+
+        <div class="bottom-actions">
+          <a class="btn-link btn-dark" href="ogp-list.html">
+            Back to OGP List
+          </a>
+        </div>
+      </section>
+    `;
+  }
+}
+
+function renderDetail(master,items){
+  const content = document.getElementById("pageContent");
+
+  const totalValue = items.reduce(
+    (sum,item) =>
+      sum + Number(
+        item.total_value ??
+        (Number(item.qty || 0) * Number(item.rate || 0))
+      ),
+    0
+  );
+
+  const rowsHTML = items.length
+    ? items.map((item,index) => {
+        const qty = Number(item.qty || 0);
+        const rate = Number(item.rate || 0);
+        const total = Number(
+          item.total_value ?? qty * rate
+        );
+
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${escapeHTML(showValue(item.item_code))}</td>
+            <td>${escapeHTML(showValue(item.item_name))}</td>
+            <td>${escapeHTML(showValue(item.size))}</td>
+            <td class="text-right">${qty.toLocaleString()}</td>
+            <td>${escapeHTML(showValue(item.unit))}</td>
+            <td class="text-right">${money(rate)}</td>
+            <td class="text-right total-value">${money(total)}</td>
+          </tr>
+        `;
+      }).join("")
+    : `
+      <tr>
+        <td class="empty-row" colspan="8">
+          No material items were found for this OGP.
+        </td>
+      </tr>
+    `;
+
+  const editLink =
+    `ogp-entry.html?edit=${encodeURIComponent(master.id)}`;
+
+  document.title = `${currentOGPNo} - OGP Detail`;
+
+  document.getElementById("detailTab").href =
+    `ogp-detail.html?id=${encodeURIComponent(master.id)}`;
+
+  content.innerHTML = `
+    <section class="card">
+
+      <div class="card-title-row">
+        <h2 class="card-title">
+          Outward Gate Pass Details
+        </h2>
+
+        <span class="status-badge">
+          ${escapeHTML(showValue(master.status || "Issued"))}
+        </span>
+      </div>
+
+      <div class="detail-grid">
+
+        <div class="detail-box">
+          <span class="detail-label">OGP No</span>
+          <span class="detail-value">
+            ${escapeHTML(currentOGPNo)}
+          </span>
+        </div>
+
+        <div class="detail-box">
+          <span class="detail-label">OGP Date</span>
+          <span class="detail-value">
+            ${escapeHTML(displayDate(master.ogp_date))}
+          </span>
+        </div>
+
+        <div class="detail-box">
+          <span class="detail-label">Department</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.department))}
+          </span>
+        </div>
+
+        <div class="detail-box">
+          <span class="detail-label">Workshop / Party</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.workshop_name))}
+          </span>
+        </div>
+
+        <div class="detail-box">
+          <span class="detail-label">Carrier Name</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.carrier_name))}
+          </span>
+        </div>
+
+        <div class="detail-box">
+          <span class="detail-label">Vehicle No</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.vehicle_no))}
+          </span>
+        </div>
+
+        <div class="detail-box">
+          <span class="detail-label">Authorized By</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.authorized_by))}
+          </span>
+        </div>
+
+        <div class="detail-box">
+          <span class="detail-label">Purpose</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.purpose))}
+          </span>
+        </div>
+
+        <div class="detail-box span-2">
+          <span class="detail-label">Bill / Challan Detail</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.bill_detail))}
+          </span>
+        </div>
+
+        <div class="detail-box span-2">
+          <span class="detail-label">Remarks</span>
+          <span class="detail-value">
+            ${escapeHTML(showValue(master.remarks))}
+          </span>
+        </div>
+
+      </div>
+
+    </section>
+
+    <section class="card">
+
+      <div class="card-title-row">
+        <h2 class="card-title">Material Details</h2>
+      </div>
+
+      <div class="table-wrap">
+
+        <table class="material-table">
+
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Item Code</th>
+              <th>Item Name</th>
+              <th>Size</th>
+              <th class="text-right">Qty</th>
+              <th>Unit</th>
+              <th class="text-right">Rate</th>
+              <th class="text-right">Total Value</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${rowsHTML}
+          </tbody>
+
+        </table>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="total-content">
+          <span>Grand Total Value</span>
+          <strong>${money(totalValue)}</strong>
+        </div>
+      </div>
+
+      <div class="bottom-actions">
+
+        <button
+          type="button"
+          class="btn-link btn-green"
+          onclick="window.print()"
+        >
+          Print / Save PDF
+        </button>
+
+        <a
+          class="btn-link btn-yellow"
+          href="${editLink}"
+        >
+          Edit OGP
+        </a>
+
+        <a
+          class="btn-link btn-dark"
+          href="ogp-list.html"
+        >
+          Back to OGP List
+        </a>
+
+      </div>
+
+    </section>
+  `;
+}
+
+loadOGPDetail();
+</script>
+
+</body>
+</html>
