@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Scrapper Detail</title>
+<title>Scrapper Master</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -444,9 +444,9 @@ button{
   <main class="main">
 
     <div class="title-row">
-      <h1>Scrapper Detail</h1>
+      <h1>Scrapper Master</h1>
       <div class="subtitle">
-        Add and manage scrapper or worker master records
+        Add and manage scrapper, worker and contractor master records
       </div>
     </div>
 
@@ -458,7 +458,7 @@ button{
 
     <section class="card">
 
-      <h2 class="card-title" id="formTitle">Add Scrapper / Worker</h2>
+      <h2 class="card-title" id="formTitle">Scrapper Information</h2>
 
       <div class="form-grid">
 
@@ -469,6 +469,15 @@ button{
             type="text"
             placeholder="Enter Scrapper / Worker Name"
           >
+        </div>
+
+        <div class="form-group">
+          <label>Nature *</label>
+          <select id="nature">
+            <option value="Scrapper">Scrapper</option>
+            <option value="Worker">Worker</option>
+            <option value="Contractor">Contractor</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -597,7 +606,7 @@ button{
 
     <section class="card">
 
-      <h2 class="card-title">Saved Scrapper / Worker Records</h2>
+      <h2 class="card-title">Scrapper List</h2>
 
       <div class="table-wrap">
 
@@ -607,6 +616,7 @@ button{
             <tr>
               <th>#</th>
               <th>Scrapper / Worker Name</th>
+              <th>Nature</th>
               <th>Phone #</th>
               <th>Address / Card No.</th>
               <th>Vehicle #</th>
@@ -619,7 +629,7 @@ button{
 
           <tbody id="scrapperBody">
             <tr>
-              <td class="empty" colspan="9">
+              <td class="empty" colspan="10">
                 Loading records...
               </td>
             </tr>
@@ -683,7 +693,7 @@ async function loadScrappers(){
   if(error){
     document.getElementById("scrapperBody").innerHTML = `
       <tr>
-        <td class="empty" colspan="9">
+        <td class="empty" colspan="10">
           Scrapper load error: ${escapeHTML(error.message)}
         </td>
       </tr>
@@ -738,7 +748,7 @@ function renderTable(records){
   if(!records.length){
     body.innerHTML = `
       <tr>
-        <td class="empty" colspan="9">
+        <td class="empty" colspan="10">
           No scrapper or worker record found.
         </td>
       </tr>
@@ -757,6 +767,8 @@ function renderTable(records){
       <td>
         <strong>${escapeHTML(item.scrapper_name || "-")}</strong>
       </td>
+
+      <td>${escapeHTML(item.nature || "Scrapper")}</td>
 
       <td>${escapeHTML(item.phone_no || "-")}</td>
 
@@ -845,6 +857,9 @@ async function saveScrapper(){
     scrapper_name:titleCase(
       document.getElementById("scrapper_name").value
     ),
+
+    nature:
+      document.getElementById("nature").value,
 
     phone_no:
       document.getElementById("phone_no").value.trim(),
@@ -947,13 +962,16 @@ function editScrapper(id){
   editingId = item.id;
 
   document.getElementById("formTitle").textContent =
-    "Edit Scrapper / Worker";
+    "Edit Scrapper Information";
 
   document.getElementById("saveButton").textContent =
     "Update Scrapper";
 
   document.getElementById("scrapper_name").value =
     item.scrapper_name || "";
+
+  document.getElementById("nature").value =
+    item.nature || "Scrapper";
 
   document.getElementById("phone_no").value =
     item.phone_no || "";
@@ -1057,12 +1075,13 @@ function clearForm(askConfirmation = true){
   editingId = null;
 
   document.getElementById("formTitle").textContent =
-    "Add Scrapper / Worker";
+    "Scrapper Information";
 
   document.getElementById("saveButton").textContent =
     "Save Scrapper";
 
   document.getElementById("scrapper_name").value = "";
+  document.getElementById("nature").value = "Scrapper";
   document.getElementById("phone_no").value = "";
   document.getElementById("address_card_no").value = "";
   document.getElementById("vehicle_no").value = "";
