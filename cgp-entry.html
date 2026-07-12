@@ -58,7 +58,7 @@ button{border:0;border-radius:8px;cursor:pointer;font-weight:800}.btn{padding:11
   <nav class="menu">
     <a href="index.html">⌂ Dashboard</a><a href="items.html">▣ Items Master</a><a href="purchase.html">🛒 Purchase Entry</a>
     <a href="issue.html">↪ Issue Entry</a><a class="active" href="gate-pass.html">🚚 Gate Pass</a>
-    <a href="#">▣ Stock Ledger</a><a href="#">▥ Reports</a><a href="suppliers.html">▰ Suppliers</a><a href="workshops.html">⚙ Workshop / Party</a>
+    <a href="stock-ledger.html">▣ Stock Ledger</a><a href="#">▥ Reports</a><a href="suppliers.html">▰ Suppliers</a><a href="workshops.html">⚙ Workshop / Party</a>
   </nav>
   <div class="profile">
     <img src="public/waqas.jpg.png" alt="Muhammad Waqas" onerror="this.onerror=null;this.src='public/profile.png';">
@@ -117,7 +117,7 @@ const SUPABASE_URL="https://lzsxtvkluqvcaetnnydu.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-let scrappers=[], selectedScrapperId=null, activeSuggestion=-1, editId=null;
+let scrappers=[], itemsMaster=[], selectedScrapperId=null, activeSuggestion=-1, editId=null, originalCGPNo="";
 
 function titleCase(v){return String(v||"").toLowerCase().replace(/\b\w/g,l=>l.toUpperCase())}
 function parseTypedDate(value){
@@ -132,6 +132,85 @@ function parseTypedDate(value){
 }
 function displayDate(v){if(!v)return"";const p=v.split("-");const m=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return p.length===3?`${p[2]}-${m[Number(p[1])]}-${p[0].slice(-2)}`:v}
 function formatGP(v){const n=String(v||"").replace(/\D/g,"");return n?"CGP-"+n.padStart(5,"0"):String(v||"").trim().toUpperCase()}
+
+
+async function loadItemsMaster(){
+  const {data,error}=await db
+    .from("items")
+    .select("*")
+    .order("item_name",{ascending:true});
+
+  if(error){
+    console.error("Items load error:",error.message);
+    itemsMaster=[];
+    return;
+  }
+
+  itemsMaster=data||[];
+}
+
+function matchCGPItem(row){
+  const description=String(row.description||"").trim().toLowerCase();
+
+  return itemsMaster.find(item =>
+    `${item.item_name||""}${item.size ? " - "+item.size : ""}`.trim().toLowerCase() === description
+  ) || itemsMaster.find(item =>
+    String(item.item_name||"").trim().toLowerCase() === description &&
+    (!row.unit || String(item.unit||"").trim().toLowerCase() === String(row.unit||"").trim().toLowerCase())
+  );
+}
+
+async function replaceCGPStockTransactions(master,rows){
+  const numbersToDelete=[originalCGPNo,master.gate_pass_no].filter(Boolean);
+
+  for(const number of [...new Set(numbersToDelete)]){
+    const {error:deleteError}=await db
+      .from("stock_transactions")
+      .delete()
+      .eq("transaction_type","CGP Out")
+      .eq("bill_no",number);
+
+    if(deleteError){
+      throw new Error("Old CGP Stock Ledger rows could not be removed: "+deleteError.message);
+    }
+  }
+
+  const stockRows=rows.map(row=>{
+    const item=matchCGPItem(row);
+
+    return {
+      transaction_date:master.cgp_date,
+      item_code:item?.item_code || "",
+      item_name:item?.item_name || row.description,
+      category:item?.category || "Scrap",
+      store_type:item?.store_type || "Non-Inventory",
+      transaction_type:"CGP Out",
+      quantity_in:0,
+      quantity_out:Number(row.quantity||0),
+      unit:row.unit || item?.unit || "",
+      unit_rate:Number(row.rate||0),
+      freight:0,
+      bill_no:master.gate_pass_no,
+      supplier:master.scrapper_name || "",
+      vehicle_no:master.vehicle_no || "",
+      purchased_by:master.location_department || "",
+      remarks:[
+        row.remarks,
+        row.discount ? "Discount: "+Number(row.discount).toFixed(2) : "",
+        master.phone_no ? "Phone: "+master.phone_no : ""
+      ].filter(Boolean).join(" | "),
+      size:item?.size || ""
+    };
+  });
+
+  const {error:insertError}=await db
+    .from("stock_transactions")
+    .insert(stockRows);
+
+  if(insertError){
+    throw new Error("CGP saved, but Stock Ledger update failed: "+insertError.message);
+  }
+}
 
 async function loadScrappers(){
   const {data,error}=await db.from("scrappers").select("*").eq("status","Active").order("scrapper_name",{ascending:true});
@@ -227,7 +306,8 @@ async function saveCGP(){
     }
     const rows=collectRows().map(x=>({...x,cgp_id:id}));
     const {error:ie}=await db.from("cgp_items").insert(rows);if(ie)throw ie;
-    alert(editId?"CGP updated successfully.":"CGP saved successfully.");
+    await replaceCGPStockTransactions(master,rows);
+    alert(editId?"CGP updated successfully and Stock Ledger refreshed.":"CGP saved successfully and added to Stock Ledger.");
     location.href="cgp-list.html?v="+Date.now();
   }catch(e){alert("CGP save error: "+(e.message||e))}
   finally{btn.disabled=false;btn.textContent=editId?"Update CGP":"Save CGP"}
@@ -238,6 +318,7 @@ async function loadEdit(){
   const {data:m,error}=await db.from("cgp_master").select("*").eq("id",id).single();if(error){alert(error.message);return}
   const {data:rows,error:re}=await db.from("cgp_items").select("*").eq("cgp_id",id).order("id");if(re){alert(re.message);return}
   document.getElementById("pageTitle").textContent="Edit CGP";document.getElementById("saveButton").textContent="Update CGP";
+  originalCGPNo=m.gate_pass_no||"";
   document.getElementById("gate_pass_no").value=m.gate_pass_no||"";document.getElementById("cgp_date").value=displayDate(m.cgp_date);
   document.getElementById("scrapper_name").value=m.scrapper_name||"";selectedScrapperId=m.scrapper_id||null;
   document.getElementById("location_department").value=m.location_department||"";document.getElementById("phone_no").value=m.phone_no||"";document.getElementById("vehicle_no").value=m.vehicle_no||"";
@@ -247,7 +328,7 @@ async function loadEdit(){
 }
 function clearForm(){if(!confirm("Clear all entered CGP data?"))return;document.querySelectorAll("input").forEach(i=>{if(!i.classList.contains("amount")&&!i.classList.contains("discount"))i.value="";});document.getElementById("itemBody").innerHTML="";addRow(false);calcGrand();selectedScrapperId=null;document.getElementById("gate_pass_no").focus()}
 function setupHeader(){document.getElementById("gate_pass_no").addEventListener("blur",e=>e.target.value=formatGP(e.target.value));document.getElementById("cgp_date").addEventListener("blur",e=>{const d=parseTypedDate(e.target.value);if(d)e.target.value=displayDate(d)});document.getElementById("vehicle_no").addEventListener("blur",e=>e.target.value=e.target.value.toUpperCase())}
-(async function(){await loadScrappers();setupScrapperDropdown();setupHeader();await loadEdit();if(!editId)addRow(false)})();
+(async function(){await Promise.all([loadScrappers(),loadItemsMaster()]);setupScrapperDropdown();setupHeader();await loadEdit();if(!editId)addRow(false)})();
 </script>
 </body>
 </html>
