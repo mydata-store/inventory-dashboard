@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>OGP Entry</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#f4f6fb;
+  color:#0f172a;
+}
+
+.layout{
+  min-height:100vh;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar{
+  width:210px;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:100;
+  padding:22px 14px;
+  color:white;
+  background:linear-gradient(180deg,#351000,#1a0600);
+}
+
+.brand{
+  font-size:24px;
+  line-height:1.05;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.brand-sub{
+  color:#f59e0b;
+  font-size:13px;
+  font-weight:800;
+  margin-bottom:34px;
+}
+
+.menu a{
+  display:block;
+  color:white;
+  text-decoration:none;
+  padding:12px;
+  margin-bottom:7px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+}
+
+.menu a:hover,
+.menu a.active{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.profile{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:20px;
+  padding:16px 10px;
+  text-align:center;
+  border-radius:14px;
+  background:rgba(255,255,255,.10);
+}
+
+.profile img{
+  display:block;
+  width:72px;
+  height:72px;
+  margin:0 auto 10px;
+  object-fit:cover;
+  object-position:center;
+  border:3px solid #f59e0b;
+  border-radius:50%;
+}
+
+.profile b{
+  display:block;
+  color:white;
+  font-size:14px;
+  font-weight:800;
+}
+
+.profile span{
+  display:block;
+  margin-top:3px;
+  color:#22c55e;
+  font-size:12px;
+  font-weight:700;
+}
+
+/* =========================
+   MAIN PAGE
+========================= */
+
+.main{
+  width:calc(100% - 210px);
+  min-height:100vh;
+  margin-left:210px;
+  padding:28px 34px;
+}
+
+.title-row{
+  padding-bottom:18px;
+  border-bottom:1px solid #dbe1ea;
+}
+
+h1{
+  margin:0;
+  font-size:28px;
+}
+
+.subtitle{
+  margin-top:6px;
+  color:#64748b;
+  font-size:14px;
+}
+
+.tabs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:18px 0;
+}
+
+.tab{
+  padding:15px;
+  color:#111827;
+  background:white;
+  border:1px solid #dbe1ea;
+  border-radius:10px;
+  text-align:center;
+  text-decoration:none;
+  font-weight:900;
+}
+
+.tab.active{
+  background:#f59e0b;
+}
+
+.card{
+  margin-bottom:18px;
+  padding:20px;
+  background:white;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.06);
+}
+
+.card-title{
+  margin:0 0 16px;
+  font-size:18px;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:13px;
+}
+
+.form-group label{
+  display:block;
+  font-size:13px;
+  font-weight:800;
+}
+
+.form-group input,
+.form-group select{
+  width:100%;
+  height:40px;
+  margin-top:6px;
+  padding:0 11px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  outline:none;
+  background:white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.material-table input:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px rgba(37,99,235,.12);
+}
+
+.readonly{
+  background:#f1f5f9 !important;
+}
+
+.span-2{
+  grid-column:span 2;
+}
+
+.span-4{
+  grid-column:1 / 5;
+}
+
+/* =========================
+   MATERIAL TABLE
+========================= */
+
+.material-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+
+.material-header h2{
+  margin:0;
+  font-size:18px;
+}
+
+.table-wrap{
+  width:100%;
+  overflow-x:auto;
+}
+
+.material-table{
+  width:100%;
+  min-width:1050px;
+  border-collapse:collapse;
+}
+
+.material-table th{
+  padding:11px 9px;
+  color:white;
+  background:#0f172a;
+  font-size:12px;
+  text-align:left;
+  white-space:nowrap;
+}
+
+.material-table td{
+  padding:7px 6px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.material-table input{
+  width:100%;
+  height:36px;
+  padding:0 9px;
+  border:1px solid #cbd5e1;
+  border-radius:7px;
+  outline:none;
+}
+
+.material-table input[readonly]{
+  background:#f1f5f9;
+}
+
+.item-name{
+  min-width:190px;
+}
+
+.small-column{
+  min-width:95px;
+}
+
+.value-column{
+  min-width:115px;
+}
+
+.remove-btn{
+  padding:9px 12px;
+  color:white;
+  background:#dc2626;
+  border:0;
+  border-radius:7px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+button{
+  border:0;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:800;
+}
+
+.btn{
+  padding:11px 17px;
+}
+
+.btn-blue{
+  color:white;
+  background:#2563eb;
+}
+
+.btn-green{
+  color:white;
+  background:#16a34a;
+}
+
+.btn-yellow{
+  color:#111827;
+  background:#f59e0b;
+}
+
+.btn-dark{
+  color:white;
+  background:#111827;
+}
+
+.bottom-actions{
+  display:flex;
+  gap:9px;
+  margin-top:15px;
+}
+
+.total-box{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:14px;
+}
+
+.total-content{
+  min-width:260px;
+  padding:13px 16px;
+  border:1px solid #dbe1ea;
+  border-radius:10px;
+  text-align:right;
+  background:#f8fafc;
+}
+
+.total-content span{
+  display:block;
+  color:#64748b;
+  font-size:12px;
+}
+
+.total-content strong{
+  display:block;
+  margin-top:4px;
+  font-size:22px;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:1150px){
+  .form-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .span-4{
+    grid-column:1 / 3;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+  <aside class="sidebar">
+
+    <div class="brand">
+      📦 Inventory<br>Store
+    </div>
+
+    <div class="brand-sub">
+      Management System
+    </div>
+
+    <nav class="menu">
+      <a href="index.html">⌂ Dashboard</a>
+      <a href="items.html">▣ Items Master</a>
+      <a href="purchase.html">🛒 Purchase Entry</a>
+      <a href="issue.html">↪ Issue Entry</a>
+      <a class="active" href="gate-pass.html">🚚 Gate Pass</a>
+      <a href="#">▣ Stock Ledger</a>
+      <a href="#">▥ Reports</a>
+      <a href="suppliers.html">▰ Suppliers</a>
+      <a href="workshops.html">⚙ Workshop / Party</a>
+    </nav>
+
+    <div class="profile">
+      <img src="public/profile.png?v=2" alt="Muhammad Waqas">
+      <b>Muhammad Waqas</b>
+      <span>● Online</span>
+    </div>
+
+  </aside>
+
+  <main class="main">
+
+    <div class="title-row">
+      <h1 id="pageTitle">OGP Entry</h1>
+      <div class="subtitle" id="pageSubtitle">
+        Create a new Outward Gate Pass
+      </div>
+    </div>
+
+    <div class="tabs">
+      <a class="tab" href="ogp-list.html">▦ OGP List</a>
+      <a class="tab active" href="ogp-entry.html">⊕ OGP Entry Form</a>
+      <a class="tab" href="ogp-detail.html">↪ OGP Detail</a>
+    </div>
+
+    <section class="card">
+
+      <h2 class="card-title">Outward Gate Pass Details</h2>
+
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>OGP No *</label>
+          <input
+            id="ogp_no"
+            class="readonly"
+            type="text"
+            readonly
+            placeholder="Generating..."
+          >
+        </div>
+
+        <div class="form-group">
+          <label>OGP Date *</label>
+          <input
+            id="ogp_date"
+            type="text"
+            placeholder="Example: 25-6"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Department *</label>
+          <input
+            id="department"
+            list="departmentList"
+            type="text"
+            placeholder="Type Department"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Workshop / Party *</label>
+          <input
+            id="workshop_name"
+            list="workshopList"
+            type="text"
+            placeholder="Type Workshop / Party"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Receiver / Party *</label>
+          <input
+            id="receiver_party"
+            type="text"
+            placeholder="Enter Receiver / Party"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Carrier Name</label>
+          <input
+            id="carrier_name"
+            type="text"
+            placeholder="Enter Carrier Name"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Vehicle No</label>
+          <input
+            id="vehicle_no"
+            type="text"
+            placeholder="Enter Vehicle No"
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Authorized By</label>
+          <input
+            id="authorized_by"
+            type="text"
+            placeholder="Enter Authorized By"
+          >
+        </div>
+
+        <div class="form-group span-2">
+          <label>Purpose</label>
+          <input
+            id="purpose"
+            type="text"
+            placeholder="Enter Purpose"
+          >
+        </div>
+
+        <div class="form-group span-2">
+          <label>Bill / Challan Detail</label>
+          <input
+            id="bill_detail"
+            type="text"
+            placeholder="Enter Bill / Challan Detail"
+          >
+        </div>
+
+        <div class="form-group span-4">
+          <label>Remarks</label>
+          <input
+            id="remarks"
+            type="text"
+            placeholder="Enter Remarks"
+          >
+        </div>
+
+      </div>
+
+      <datalist id="departmentList">
+        <option value="Mechanical PM I"></option>
+        <option value="Mechanical PM II"></option>
+        <option value="Electrical"></option>
+        <option value="Main Store"></option>
+        <option value="Production"></option>
+        <option value="Finishing Hall"></option>
+        <option value="Boiler House"></option>
+      </datalist>
+
+      <datalist id="workshopList"></datalist>
+
+    </section>
+
+    <section class="card">
+
+      <div class="material-header">
+        <h2>Material Details</h2>
+
+        <button
+          type="button"
+          class="btn btn-blue"
+          onclick="addItemRow(true)"
+        >
+          + Add Item
+        </button>
+      </div>
+
+      <div class="table-wrap">
+
+        <table class="material-table">
+
+          <thead>
+            <tr>
+              <th>Item *</th>
+              <th>Item Code</th>
+              <th>Size</th>
+              <th>Unit</th>
+              <th>Qty *</th>
+              <th>Rate</th>
+              <th>Total Value</th>
+              <th>Remove</th>
+            </tr>
+          </thead>
+
+          <tbody id="itemBody"></tbody>
+
+        </table>
+
+      </div>
+
+      <datalist id="itemList"></datalist>
+
+      <div class="total-box">
+        <div class="total-content">
+          <span>Grand Total Value</span>
+          <strong id="grandTotal">Rs. 0.00</strong>
+        </div>
+      </div>
+
+      <div class="bottom-actions">
+
+        <button
+          id="saveButton"
+          type="button"
+          class="btn btn-green"
+          onclick="saveOGP()"
+        >
+          Save OGP
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-yellow"
+          onclick="clearForm()"
+        >
+          Clear
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-dark"
+          onclick="location.href='ogp-list.html'"
+        >
+          Back to List
+        </button>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+<script>
+
+/* =========================================================
+   COPY THESE TWO VALUES FROM YOUR WORKING rgp-entry.html
+========================================================= */
+
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY";
+
+const db = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+let itemsMaster = [];
+let editOGPId = null;
+
+/* =========================================================
+   GENERAL HELPERS
+========================================================= */
+
+function titleCase(value){
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function formatOGPNumber(value){
+  const number = String(value || "")
+    .replace(/\D/g, "");
+
+  return "OGP-" + String(number || "0").padStart(5,"0");
+}
+
+function parseTypedDate(value){
+
+  const text = String(value || "").trim();
+
+  if(!text){
+    return null;
+  }
+
+  /*
+    Already database format:
+    2026-07-25
+  */
+  if(/^\d{4}-\d{2}-\d{2}$/.test(text)){
+    return text;
+  }
+
+  /*
+    Display format:
+    25-Jul-26
+  */
+  const displayMatch = text.match(
+    /^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/
+  );
+
+  if(displayMatch){
+
+    const months = {
+      jan:"01",
+      feb:"02",
+      mar:"03",
+      apr:"04",
+      may:"05",
+      jun:"06",
+      jul:"07",
+      aug:"08",
+      sep:"09",
+      oct:"10",
+      nov:"11",
+      dec:"12"
+    };
+
+    const day = displayMatch[1].padStart(2,"0");
+    const month = months[displayMatch[2].toLowerCase()];
+
+    let year = displayMatch[3];
+
+    if(year.length === 2){
+      year = "20" + year;
+    }
+
+    if(!month){
+      return null;
+    }
+
+    return `${year}-${month}-${day}`;
+  }
+
+  /*
+    Typed formats:
+    25-6
+    25-6-26
+    25/6
+    25/6/2026
+  */
+
+  const parts = text
+    .replace(/\//g,"-")
+    .split("-")
+    .map(part => part.trim());
+
+  if(parts.length < 2){
+    return null;
+  }
+
+  const dayNumber = Number(parts[0]);
+  const monthNumber = Number(parts[1]);
+
+  if(
+    !dayNumber ||
+    !monthNumber ||
+    dayNumber < 1 ||
+    dayNumber > 31 ||
+    monthNumber < 1 ||
+    monthNumber > 12
+  ){
+    return null;
+  }
+
+  let year = parts[2];
+
+  if(!year){
+    year = String(new Date().getFullYear());
+  }
+  else if(year.length === 2){
+    year = "20" + year;
+  }
+
+  const day = String(dayNumber).padStart(2,"0");
+  const month = String(monthNumber).padStart(2,"0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function displayDate(databaseDate){
+
+  if(!databaseDate){
+    return "";
+  }
+
+  const parts = databaseDate.split("-");
+
+  if(parts.length !== 3){
+    return databaseDate;
+  }
+
+  const year = parts[0];
+  const month = Number(parts[1]);
+  const day = parts[2];
+
+  const months = [
+    "",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  ];
+
+  return `${day}-${months[month]}-${year.slice(-2)}`;
+}
+
+/* =========================================================
+   LOAD NEXT OGP NUMBER
+========================================================= */
+
+async function loadNextOGPNumber(){
+
+  if(editOGPId){
+    return;
+  }
+
+  const {data,error} = await db
+    .from("ogp_master")
+    .select("ogp_no,id")
+    .order("id",{ascending:false})
+    .limit(1);
+
+  if(error){
+    console.error(error);
+    document.getElementById("ogp_no").value = "OGP-00001";
+    return;
+  }
+
+  let nextNumber = 1;
+
+  if(data && data.length){
+
+    const lastNumber = Number(
+      String(data[0].ogp_no || data[0].id || 0)
+        .replace(/\D/g,"")
+    );
+
+    nextNumber = lastNumber + 1;
+  }
+
+  document.getElementById("ogp_no").value =
+    formatOGPNumber(nextNumber);
+}
+
+/* =========================================================
+   LOAD ITEMS
+========================================================= */
+
+async function loadItems(){
+
+  const {data,error} = await db
+    .from("items")
+    .select("*")
+    .order("item_name",{ascending:true});
+
+  if(error){
+    alert("Items load error: " + error.message);
+    return;
+  }
+
+  itemsMaster = data || [];
+
+  const itemList = document.getElementById("itemList");
+
+  itemList.innerHTML = "";
+
+  itemsMaster.forEach(item => {
+
+    const displayText =
+      `${item.item_name || ""}` +
+      `${item.size ? " - " + item.size : ""}`;
+
+    const option = document.createElement("option");
+
+    option.value = displayText;
+
+    itemList.appendChild(option);
+  });
+}
+
+/* =========================================================
+   LOAD WORKSHOPS
+========================================================= */
+
+async function loadWorkshops(){
+
+  const {data,error} = await db
+    .from("workshops")
+    .select("*")
+    .order("workshop_name",{ascending:true});
+
+  if(error){
+    console.error("Workshop load error:",error.message);
+    return;
+  }
+
+  const list = document.getElementById("workshopList");
+
+  list.innerHTML = "";
+
+  (data || []).forEach(workshop => {
+
+    const name =
+      workshop.workshop_name ||
+      workshop.name ||
+      "";
+
+    if(!name){
+      return;
+    }
+
+    const option = document.createElement("option");
+
+    option.value = name;
+
+    list.appendChild(option);
+  });
+}
+
+/* =========================================================
+   ADD ITEM ROW
+========================================================= */
+
+function addItemRow(focusNewRow = false){
+
+  const body = document.getElementById("itemBody");
+
+  body.insertAdjacentHTML("beforeend", `
+    <tr>
+
+      <td>
+        <input
+          class="item_name item-name"
+          list="itemList"
+          autocomplete="off"
+          placeholder="Type Item Name"
+          onchange="fillItem(this)"
+          onblur="fillItem(this)"
+          onkeydown="handleCellKeys(event,this)"
+        >
+      </td>
+
+      <td>
+        <input
+          class="item_code readonly small-column"
+          readonly
+          onkeydown="handleCellKeys(event,this)"
+        >
+      </td>
+
+      <td>
+        <input
+          class="size readonly small-column"
+          readonly
+          onkeydown="handleCellKeys(event,this)"
+        >
+      </td>
+
+      <td>
+        <input
+          class="unit readonly small-column"
+          readonly
+          onkeydown="handleCellKeys(event,this)"
+        >
+      </td>
+
+      <td>
+        <input
+          class="qty small-column"
+          type="number"
+          min="0"
+          step="any"
+          oninput="calculateRow(this)"
+          onkeydown="handleCellKeys(event,this)"
+        >
+      </td>
+
+      <td>
+        <input
+          class="rate small-column"
+          type="number"
+          min="0"
+          step="any"
+          oninput="calculateRow(this)"
+          onkeydown="handleCellKeys(event,this)"
+        >
+      </td>
+
+      <td>
+        <input
+          class="total_value readonly value-column"
+          readonly
+          value="0.00"
+          onkeydown="handleCellKeys(event,this)"
+        >
+      </td>
+
+      <td>
+        <button
+          type="button"
+          class="remove-btn"
+          onclick="removeItemRow(this)"
+        >
+          Delete
+        </button>
+      </td>
+
+    </tr>
+  `);
+
+  if(focusNewRow){
+
+    const lastRow = body.lastElementChild;
+
+    setTimeout(() => {
+      lastRow
+        ?.querySelector(".item_name")
+        ?.focus();
+    },50);
+  }
+}
+
+function removeItemRow(button){
+
+  const body = document.getElementById("itemBody");
+  const rows = body.querySelectorAll("tr");
+
+  if(rows.length === 1){
+
+    const row = button.closest("tr");
+
+    row.querySelectorAll("input").forEach(input => {
+
+      if(input.classList.contains("total_value")){
+        input.value = "0.00";
+      }
+      else{
+        input.value = "";
+      }
+    });
+
+    row.dataset.itemId = "";
+
+    calculateGrandTotal();
+
+    return;
+  }
+
+  button.closest("tr").remove();
+
+  calculateGrandTotal();
+}
+
+/* =========================================================
+   ITEM SELECTION
+========================================================= */
+
+function fillItem(input){
+
+  const row = input.closest("tr");
+  const selectedText = input.value.trim().toLowerCase();
+
+  if(!selectedText){
+    return;
+  }
+
+  let selectedItem = itemsMaster.find(item => {
+
+    const fullText =
+      `${item.item_name || ""}` +
+      `${item.size ? " - " + item.size : ""}`;
+
+    return fullText.trim().toLowerCase() === selectedText;
+  });
+
+  /*
+    If the input already shows only the item name,
+    use saved row item ID to retain the selected variant.
+  */
+
+  if(!selectedItem && row.dataset.itemId){
+
+    selectedItem = itemsMaster.find(item =>
+      String(item.id) === String(row.dataset.itemId)
+    );
+  }
+
+  if(!selectedItem){
+    return;
+  }
+
+  row.dataset.itemId = selectedItem.id || "";
+
+  /*
+    Dropdown displays Item + Size.
+    After selection, input shows Item Name only.
+  */
+
+  input.value = selectedItem.item_name || "";
+
+  row.querySelector(".item_code").value =
+    selectedItem.item_code ||
+    selectedItem.code ||
+    "";
+
+  row.querySelector(".size").value =
+    selectedItem.size || "";
+
+  row.querySelector(".unit").value =
+    selectedItem.unit || "";
+
+  row.querySelector(".rate").value =
+    selectedItem.last_rate ??
+    selectedItem.unit_rate ??
+    selectedItem.rate ??
+    0;
+
+  calculateRow(input);
+}
+
+/* =========================================================
+   CALCULATIONS
+========================================================= */
+
+function calculateRow(element){
+
+  const row = element.closest("tr");
+
+  const qty = Number(
+    row.querySelector(".qty").value || 0
+  );
+
+  const rate = Number(
+    row.querySelector(".rate").value || 0
+  );
+
+  const total = qty * rate;
+
+  row.querySelector(".total_value").value =
+    total.toFixed(2);
+
+  calculateGrandTotal();
+}
+
+function calculateGrandTotal(){
+
+  let total = 0;
+
+  document
+    .querySelectorAll("#itemBody .total_value")
+    .forEach(input => {
+      total += Number(input.value || 0);
+    });
+
+  document.getElementById("grandTotal").textContent =
+    "Rs. " +
+    total.toLocaleString(undefined,{
+      minimumFractionDigits:2,
+      maximumFractionDigits:2
+    });
+}
+
+/* =========================================================
+   EXCEL-STYLE KEYBOARD FUNCTIONS
+========================================================= */
+
+function getEditableCells(){
+
+  return Array.from(
+    document.querySelectorAll(
+      "#itemBody input:not([disabled])"
+    )
+  );
+}
+
+function handleCellKeys(event,input){
+
+  const row = input.closest("tr");
+
+  const allRows = Array.from(
+    document.querySelectorAll("#itemBody tr")
+  );
+
+  const rowIndex = allRows.indexOf(row);
+
+  const rowInputs = Array.from(
+    row.querySelectorAll("input")
+  );
+
+  const columnIndex = rowInputs.indexOf(input);
+
+  if(event.key === "ArrowRight"){
+
+    event.preventDefault();
+
+    rowInputs[columnIndex + 1]?.focus();
+  }
+
+  if(event.key === "ArrowLeft"){
+
+    event.preventDefault();
+
+    rowInputs[columnIndex - 1]?.focus();
+  }
+
+  if(event.key === "ArrowDown"){
+
+    event.preventDefault();
+
+    const nextRow = allRows[rowIndex + 1];
+
+    if(nextRow){
+
+      const nextInputs =
+        nextRow.querySelectorAll("input");
+
+      nextInputs[columnIndex]?.focus();
+    }
+    else{
+
+      addItemRow(false);
+
+      const updatedRows =
+        document.querySelectorAll("#itemBody tr");
+
+      const createdRow =
+        updatedRows[updatedRows.length - 1];
+
+      createdRow
+        ?.querySelectorAll("input")
+        [columnIndex]
+        ?.focus();
+    }
+  }
+
+  if(event.key === "ArrowUp"){
+
+    event.preventDefault();
+
+    const previousRow =
+      allRows[rowIndex - 1];
+
+    if(previousRow){
+
+      const previousInputs =
+        previousRow.querySelectorAll("input");
+
+      previousInputs[columnIndex]?.focus();
+    }
+  }
+
+  if(event.key === "Enter"){
+
+    event.preventDefault();
+
+    const editableCells = getEditableCells();
+    const currentIndex = editableCells.indexOf(input);
+
+    if(currentIndex === editableCells.length - 1){
+
+      addItemRow(true);
+    }
+    else{
+
+      editableCells[currentIndex + 1]?.focus();
+    }
+  }
+
+  if(
+    event.ctrlKey &&
+    event.key.toLowerCase() === "d"
+  ){
+
+    event.preventDefault();
+
+    const previousRow =
+      allRows[rowIndex - 1];
+
+    if(previousRow){
+
+      const previousInput =
+        previousRow.querySelectorAll("input")[columnIndex];
+
+      if(previousInput && !input.readOnly){
+
+        input.value = previousInput.value;
+
+        input.dispatchEvent(
+          new Event("input",{bubbles:true})
+        );
+      }
+    }
+  }
+
+  if(event.key === "Delete"){
+
+    if(!input.readOnly){
+
+      event.preventDefault();
+
+      input.value = "";
+
+      if(
+        input.classList.contains("qty") ||
+        input.classList.contains("rate")
+      ){
+        calculateRow(input);
+      }
+    }
+  }
+}
+
+/* =========================================================
+   HEADER KEYBOARD MOVEMENT
+========================================================= */
+
+function setupHeaderNavigation(){
+
+  const headerInputs = Array.from(
+    document.querySelectorAll(
+      ".form-grid input:not([readonly]), .form-grid select"
+    )
+  );
+
+  headerInputs.forEach((input,index) => {
+
+    input.addEventListener("keydown",event => {
+
+      if(event.key === "Enter"){
+
+        event.preventDefault();
+
+        const next = headerInputs[index + 1];
+
+        if(next){
+          next.focus();
+        }
+        else{
+          document
+            .querySelector("#itemBody .item_name")
+            ?.focus();
+        }
+      }
+
+      if(event.key === "ArrowRight"){
+
+        if(
+          input.selectionStart === input.value.length
+        ){
+          headerInputs[index + 1]?.focus();
+        }
+      }
+
+      if(event.key === "ArrowLeft"){
+
+        if(input.selectionStart === 0){
+          headerInputs[index - 1]?.focus();
+        }
+      }
+    });
+  });
+}
+
+/* =========================================================
+   AUTO CAPITALIZATION
+========================================================= */
+
+function setupCapitalization(){
+
+  const fields = [
+    "department",
+    "workshop_name",
+    "receiver_party",
+    "carrier_name",
+    "authorized_by",
+    "purpose",
+    "remarks"
+  ];
+
+  fields.forEach(id => {
+
+    const element = document.getElementById(id);
+
+    element.addEventListener("blur",() => {
+      element.value = titleCase(element.value);
+    });
+  });
+
+  document
+    .getElementById("vehicle_no")
+    .addEventListener("blur",event => {
+      event.target.value =
+        event.target.value.toUpperCase();
+    });
+}
+
+/* =========================================================
+   DATE DISPLAY BEHAVIOUR
+========================================================= */
+
+function setupDateField(){
+
+  const field = document.getElementById("ogp_date");
+
+  field.addEventListener("blur",() => {
+
+    if(!field.value.trim()){
+      return;
+    }
+
+    const databaseDate =
+      parseTypedDate(field.value);
+
+    if(!databaseDate){
+
+      alert(
+        "Invalid OGP date. Type date like 25-6 or 25-6-26."
+      );
+
+      field.focus();
+
+      return;
+    }
+
+    field.value = displayDate(databaseDate);
+  });
+}
+
+/* =========================================================
+   COLLECT MATERIAL ROWS
+========================================================= */
+
+function collectItemRows(){
+
+  const rows = Array.from(
+    document.querySelectorAll("#itemBody tr")
+  );
+
+  return rows
+    .map(row => {
+
+      const itemName =
+        row.querySelector(".item_name").value.trim();
+
+      const itemCode =
+        row.querySelector(".item_code").value.trim();
+
+      const size =
+        row.querySelector(".size").value.trim();
+
+      const unit =
+        row.querySelector(".unit").value.trim();
+
+      const qty =
+        Number(row.querySelector(".qty").value || 0);
+
+      const rate =
+        Number(row.querySelector(".rate").value || 0);
+
+      return {
+        item_id:
+          row.dataset.itemId
+            ? Number(row.dataset.itemId)
+            : null,
+
+        item_code:itemCode,
+        item_name:itemName,
+        size:size,
+        unit:unit,
+        qty:qty,
+        rate:rate,
+        total_value:qty * rate
+      };
+    })
+    .filter(item =>
+      item.item_name &&
+      item.qty > 0
+    );
+}
+
+/* =========================================================
+   VALIDATION
+========================================================= */
+
+function validateForm(){
+
+  const requiredFields = [
+    ["ogp_date","OGP Date"],
+    ["department","Department"],
+    ["workshop_name","Workshop / Party"],
+    ["receiver_party","Receiver / Party"]
+  ];
+
+  for(const [id,label] of requiredFields){
+
+    const element =
+      document.getElementById(id);
+
+    if(!element.value.trim()){
+
+      alert("Please enter " + label + ".");
+
+      element.focus();
+
+      return false;
+    }
+  }
+
+  const parsedDate =
+    parseTypedDate(
+      document.getElementById("ogp_date").value
+    );
+
+  if(!parsedDate){
+
+    alert(
+      "Invalid OGP date. Type date like 25-6."
+    );
+
+    document
+      .getElementById("ogp_date")
+      .focus();
+
+    return false;
+  }
+
+  const items = collectItemRows();
+
+  if(!items.length){
+
+    alert(
+      "Please add at least one item with quantity."
+    );
+
+    document
+      .querySelector("#itemBody .item_name")
+      ?.focus();
+
+    return false;
+  }
+
+  return true;
+}
+
+/* =========================================================
+   SAVE OR UPDATE OGP
+========================================================= */
+
+async function saveOGP(){
+
+  if(!validateForm()){
+    return;
+  }
+
+  const saveButton =
+    document.getElementById("saveButton");
+
+  saveButton.disabled = true;
+  saveButton.textContent =
+    editOGPId ? "Updating..." : "Saving...";
+
+  try{
+
+    const databaseDate =
+      parseTypedDate(
+        document.getElementById("ogp_date").value
+      );
+
+    const masterData = {
+
+      ogp_no:
+        document.getElementById("ogp_no").value,
+
+      ogp_date:databaseDate,
+
+      department:titleCase(
+        document.getElementById("department").value
+      ),
+
+      workshop_name:titleCase(
+        document.getElementById("workshop_name").value
+      ),
+
+      receiver_party:titleCase(
+        document.getElementById("receiver_party").value
+      ),
+
+      carrier_name:titleCase(
+        document.getElementById("carrier_name").value
+      ),
+
+      vehicle_no:
+        document
+          .getElementById("vehicle_no")
+          .value
+          .toUpperCase()
+          .trim(),
+
+      authorized_by:titleCase(
+        document.getElementById("authorized_by").value
+      ),
+
+      purpose:titleCase(
+        document.getElementById("purpose").value
+      ),
+
+      bill_detail:
+        document.getElementById("bill_detail").value.trim(),
+
+      remarks:titleCase(
+        document.getElementById("remarks").value
+      ),
+
+      status:"Issued"
+    };
+
+    const items = collectItemRows();
+
+    let ogpId = editOGPId;
+
+    if(editOGPId){
+
+      const {error:masterUpdateError} = await db
+        .from("ogp_master")
+        .update(masterData)
+        .eq("id",editOGPId);
+
+      if(masterUpdateError){
+        throw masterUpdateError;
+      }
+
+      const {error:deleteItemsError} = await db
+        .from("ogp_items")
+        .delete()
+        .eq("ogp_id",editOGPId);
+
+      if(deleteItemsError){
+        throw deleteItemsError;
+      }
+    }
+    else{
+
+      const {data,error:masterInsertError} = await db
+        .from("ogp_master")
+        .insert([masterData])
+        .select()
+        .single();
+
+      if(masterInsertError){
+        throw masterInsertError;
+      }
+
+      ogpId = data.id;
+    }
+
+    const itemRows = items.map(item => ({
+      ...item,
+      ogp_id:ogpId
+    }));
+
+    const {error:itemInsertError} = await db
+      .from("ogp_items")
+      .insert(itemRows);
+
+    if(itemInsertError){
+      throw itemInsertError;
+    }
+
+    alert(
+      editOGPId
+        ? "OGP updated successfully."
+        : "OGP saved successfully."
+    );
+
+    location.href =
+      "ogp-list.html?v=" + Date.now();
+  }
+  catch(error){
+
+    alert(
+      "OGP save error: " +
+      (error.message || error)
+    );
+  }
+  finally{
+
+    saveButton.disabled = false;
+
+    saveButton.textContent =
+      editOGPId ? "Update OGP" : "Save OGP";
+  }
+}
+
+/* =========================================================
+   LOAD OGP FOR EDIT
+========================================================= */
+
+async function loadEditOGP(){
+
+  const params =
+    new URLSearchParams(location.search);
+
+  const editValue =
+    params.get("edit");
+
+  if(!editValue){
+    return;
+  }
+
+  editOGPId = Number(editValue);
+
+  if(!editOGPId){
+    return;
+  }
+
+  const {data:master,error:masterError} = await db
+    .from("ogp_master")
+    .select("*")
+    .eq("id",editOGPId)
+    .single();
+
+  if(masterError){
+
+    alert(
+      "OGP edit load error: " +
+      masterError.message
+    );
+
+    return;
+  }
+
+  const {data:items,error:itemsError} = await db
+    .from("ogp_items")
+    .select("*")
+    .eq("ogp_id",editOGPId)
+    .order("id",{ascending:true});
+
+  if(itemsError){
+
+    alert(
+      "OGP items load error: " +
+      itemsError.message
+    );
+
+    return;
+  }
+
+  document.getElementById("pageTitle").textContent =
+    "Edit OGP";
+
+  document.getElementById("pageSubtitle").textContent =
+    "Update saved Outward Gate Pass";
+
+  document.getElementById("saveButton").textContent =
+    "Update OGP";
+
+  document.getElementById("ogp_no").value =
+    formatOGPNumber(master.ogp_no || master.id);
+
+  document.getElementById("ogp_date").value =
+    displayDate(master.ogp_date);
+
+  document.getElementById("department").value =
+    master.department || "";
+
+  document.getElementById("workshop_name").value =
+    master.workshop_name || "";
+
+  document.getElementById("receiver_party").value =
+    master.receiver_party || "";
+
+  document.getElementById("carrier_name").value =
+    master.carrier_name || "";
+
+  document.getElementById("vehicle_no").value =
+    master.vehicle_no || "";
+
+  document.getElementById("authorized_by").value =
+    master.authorized_by || "";
+
+  document.getElementById("purpose").value =
+    master.purpose || "";
+
+  document.getElementById("bill_detail").value =
+    master.bill_detail || "";
+
+  document.getElementById("remarks").value =
+    master.remarks || "";
+
+  const body =
+    document.getElementById("itemBody");
+
+  body.innerHTML = "";
+
+  (items || []).forEach(item => {
+
+    addItemRow(false);
+
+    const row = body.lastElementChild;
+
+    row.dataset.itemId =
+      item.item_id || "";
+
+    row.querySelector(".item_name").value =
+      item.item_name || "";
+
+    row.querySelector(".item_code").value =
+      item.item_code || "";
+
+    row.querySelector(".size").value =
+      item.size || "";
+
+    row.querySelector(".unit").value =
+      item.unit || "";
+
+    row.querySelector(".qty").value =
+      Number(item.qty || 0);
+
+    row.querySelector(".rate").value =
+      Number(item.rate || 0);
+
+    row.querySelector(".total_value").value =
+      Number(item.total_value || 0).toFixed(2);
+  });
+
+  if(!(items || []).length){
+    addItemRow(false);
+  }
+
+  calculateGrandTotal();
+}
+
+/* =========================================================
+   CLEAR FORM
+========================================================= */
+
+async function clearForm(){
+
+  const confirmed = confirm(
+    "Clear all entered OGP data?"
+  );
+
+  if(!confirmed){
+    return;
+  }
+
+  document
+    .querySelectorAll(
+      ".form-grid input:not(#ogp_no)"
+    )
+    .forEach(input => {
+      input.value = "";
+    });
+
+  document.getElementById("itemBody").innerHTML = "";
+
+  addItemRow(false);
+
+  calculateGrandTotal();
+
+  if(!editOGPId){
+    await loadNextOGPNumber();
+  }
+}
+
+/* =========================================================
+   INITIAL PAGE LOAD
+========================================================= */
+
+async function initializePage(){
+
+  await Promise.all([
+    loadItems(),
+    loadWorkshops()
+  ]);
+
+  setupHeaderNavigation();
+  setupCapitalization();
+  setupDateField();
+
+  const params =
+    new URLSearchParams(location.search);
+
+  if(params.get("edit")){
+
+    await loadEditOGP();
+  }
+  else{
+
+    await loadNextOGPNumber();
+
+    addItemRow(false);
+
+    document
+      .getElementById("ogp_date")
+      .focus();
+  }
+}
+
+initializePage();
+
+</script>
+
+</body>
+</html>
