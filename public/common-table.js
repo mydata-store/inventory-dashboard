@@ -404,14 +404,17 @@ window.AppTable = class {
       }
     });
 
-    searchInput?.addEventListener("blur",()=>{
-      setTimeout(()=>{
-        const currentInput = this.container.querySelector(".app-table-search");
-        const currentMenu = this.container.querySelector(".app-table-search-menu");
-        if(document.activeElement === currentInput) return;
-        currentMenu?.classList.remove("open");
-      },180);
-    });
+    // Do not close on input blur. The search input is rebuilt while filtering,
+    // and the old input's blur event would close the new dropdown immediately.
+    // Close only when the user clicks outside this table or presses Escape.
+    if(!this._searchOutsideBound){
+      this._searchOutsideBound = true;
+      document.addEventListener("mousedown",event=>{
+        if(this.container.contains(event.target)) return;
+        this.container.querySelector(".app-table-search-menu")?.classList.remove("open");
+        this.state.searchSuggestionIndex = -1;
+      });
+    }
 
     this.container.querySelectorAll(".app-table-search-option").forEach(option=>{
       option.addEventListener("mousedown",e=>{
