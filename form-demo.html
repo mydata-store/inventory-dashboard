@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Common Form Demo</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/pdf-settings.js"></script>
+<script src="public/common-pdf.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-form.js"></script>
+</head>
+<body>
+<div id="appSidebar"></div>
+
+<main class="app-main">
+  <div class="page-head">
+    <div>
+      <h1>Common Form Engine</h1>
+      <div class="page-subtitle">Keyboard-first forms, validation, auto draft, undo/redo and autofill</div>
+    </div>
+  </div>
+
+  <section class="card">
+    <div id="demoForm"></div>
+  </section>
+
+  <section class="card">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="detail-grid">
+      <div class="detail-box"><span>Save</span><strong>Ctrl + S</strong></div>
+      <div class="detail-box"><span>New</span><strong>Ctrl + N</strong></div>
+      <div class="detail-box"><span>Undo</span><strong>Ctrl + Z</strong></div>
+      <div class="detail-box"><span>Redo</span><strong>Ctrl + Y</strong></div>
+      <div class="detail-box"><span>Print</span><strong>Ctrl + P</strong></div>
+      <div class="detail-box"><span>Next Field</span><strong>Enter</strong></div>
+      <div class="detail-box"><span>Previous Field</span><strong>Shift + Enter</strong></div>
+      <div class="detail-box"><span>Global Search</span><strong>Ctrl + K</strong></div>
+    </div>
+  </section>
+</main>
+
+<section id="printReport"></section>
+
+<script>
+const departments=["Mechanical","Electrical","Main Store","Production","Administration"];
+const workshops=["Urhan Electric Store","ABC Engineering","City Lathe Works"];
+
+const form = new AppForm({
+  container:"#demoForm",
+  title:"RGP Entry Demo",
+  draftKey:"rgp_demo",
+  autoDraft:true,
+  buttons:["new","save","clear","print","history","back"],
+  fields:[
+    {name:"rgp_no",label:"RGP No.",required:true,readonly:true,defaultValue:"RGP-00001"},
+    {name:"date",label:"Date",required:true,date:true,placeholder:"25-6"},
+    {name:"item_name",label:"Item Name",required:true,capitalize:true,placeholder:"Type item name"},
+    {name:"size",label:"Size",capitalize:true},
+    {name:"qty",label:"Qty",required:true,numeric:true,number:true,min:0.001},
+    {name:"unit",label:"Unit",required:true,type:"select",options:["Kg","Nos","Ltr","Meter"]},
+    {name:"department",label:"Department",required:true,placeholder:"Type department"},
+    {name:"workshop",label:"Workshop / Party",required:true,placeholder:"Type workshop"},
+    {name:"carrier",label:"Carrier",capitalize:true},
+    {name:"authorized_by",label:"Authorized By",capitalize:true},
+    {name:"bill_no",label:"Bill No.",uppercase:true},
+    {name:"remarks",label:"Remarks",type:"textarea",capitalize:true,span:4}
+  ],
+  validate(values){
+    const errors={};
+    if(values.qty && Number(values.qty)>10000) errors.qty="Quantity looks unusually high.";
+    return errors;
+  },
+  async onSave(values){
+    await new Promise(resolve=>setTimeout(resolve,500));
+    console.log("Saved demo values:",values);
+  },
+  onPrint(values){
+    AppPDF.printStandardReport({
+      title:"RGP ENTRY REPORT",
+      subtitle:"Common Form Engine Demo",
+      meta:[
+        {label:"RGP No.",value:values.rgp_no},
+        {label:"Date",value:AppTools.displayDate(values.date)},
+        {label:"Department",value:values.department},
+        {label:"Workshop",value:values.workshop}
+      ],
+      columns:[
+        {key:"item_name",label:"Item"},
+        {key:"size",label:"Size"},
+        {key:"qty",label:"Qty"},
+        {key:"unit",label:"Unit"},
+        {key:"remarks",label:"Remarks"}
+      ],
+      rows:[values]
+    });
+  },
+  onHistory(){
+    AppTools.openModal("History","<p>This button is ready to connect with your Supabase history table.</p>");
+  }
+});
+
+AppSearch.setupTypeahead(form.getField("department"),{
+  values:departments,
+  onSelect:value=>form.setFieldValue("department",value)
+});
+AppSearch.setupTypeahead(form.getField("workshop"),{
+  values:workshops,
+  onSelect:value=>form.setFieldValue("workshop",value)
+});
+
+window.APP_COMMANDS=[
+  {title:"Dashboard",subtitle:"Open dashboard",href:"index.html"},
+  {title:"Form Demo",subtitle:"Open common form engine",href:"form-demo.html"},
+  {title:"Table Demo",subtitle:"Open common table engine",href:"table-demo.html"},
+  {title:"Theme Settings",subtitle:"Change theme and sidebar",href:"theme-settings.html"},
+  {title:"PDF Settings",subtitle:"Change PDF and logo",href:"pdf-settings.html"}
+];
+</script>
+</body>
+</html>
