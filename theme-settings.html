@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Theme & Sidebar Settings</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<style>
+.settings-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.check-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.check-item{display:flex;align-items:center;gap:7px;padding:8px;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;font-size:11px;font-weight:700}
+.settings-section{margin-bottom:16px}
+.settings-section h3{margin:0 0 10px;font-size:15px}
+.color-field input[type=color]{height:38px;padding:3px}
+.range-row{display:flex;align-items:center;gap:8px}
+.range-row input[type=range]{flex:1}
+.range-value{min-width:48px;text-align:center;font-weight:800;font-size:11px}
+.preset-row{display:flex;gap:8px;flex-wrap:wrap}
+.preview-shell{display:grid;grid-template-columns:220px 1fr;min-height:420px;border:1px solid #d1d5db;border-radius:12px;overflow:hidden;background:#f4f6fb}
+.preview-sidebar{padding:14px 10px;color:white;background:linear-gradient(#351000,#1a0600)}
+.preview-brand{display:flex;gap:8px;align-items:center;margin-bottom:15px}
+.preview-brand-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center}
+.preview-menu{display:flex;flex-direction:column;gap:5px}
+.preview-menu div{padding:9px;border-radius:8px;font-size:10px;font-weight:700}
+.preview-menu .active{background:#f5a316;color:#111827}
+.preview-content{padding:20px}
+.preview-card{background:#fff;padding:16px;border-radius:15px;margin-bottom:12px}
+@media(max-width:1050px){.settings-grid,.check-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:720px){.settings-grid,.check-grid{grid-template-columns:1fr}.preview-shell{grid-template-columns:1fr}.preview-sidebar{min-height:260px}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+
+<main class="app-main">
+  <div class="page-head">
+    <div>
+      <h1>Theme & Sidebar Settings</h1>
+      <div class="page-subtitle">Control sidebar size, colors, spacing, profile, brand, menus and the complete software theme</div>
+    </div>
+  </div>
+
+  <section class="card settings-section">
+    <h3>Theme Presets</h3>
+    <div class="preset-row">
+      <button class="btn btn-warning" onclick="applyPreset('current')">Current Orange</button>
+      <button class="btn btn-primary" onclick="applyPreset('navy')">Professional Navy</button>
+      <button class="btn btn-primary" onclick="applyPreset('blue')">Corporate Blue</button>
+      <button class="btn btn-success" onclick="applyPreset('green')">Store Green</button>
+      <button class="btn btn-dark" onclick="applyPreset('charcoal')">Charcoal</button>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Main Theme Colors</h3>
+    <div class="settings-grid" id="mainColors"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Sidebar Colors</h3>
+    <div class="settings-grid" id="sidebarColors"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Sidebar Size & Position</h3>
+    <div class="settings-grid">
+      <div class="form-field"><label>Sidebar Width (px)</label><div class="range-row"><input id="sidebarWidth" type="range" min="130" max="320"><span class="range-value" id="sidebarWidthValue"></span></div></div>
+      <div class="form-field"><label>Sidebar Position</label><select id="sidebarPosition"><option value="fixed">Fixed</option><option value="absolute">Absolute</option></select></div>
+      <div class="form-field"><label>Sidebar Height</label><select id="sidebarHeightMode"><option value="full">Full Screen</option><option value="custom">Custom VH</option></select></div>
+      <div class="form-field"><label>Custom Height (vh)</label><input id="sidebarCustomHeight" type="number" min="50" max="150"></div>
+      <div class="form-field"><label>Horizontal Padding (px)</label><input id="sidebarPadding" type="number" min="4" max="30"></div>
+      <div class="form-field"><label>Menu Item Height (px)</label><input id="sidebarItemHeight" type="number" min="24" max="60"></div>
+      <div class="form-field"><label>Menu Gap (px)</label><input id="sidebarItemGap" type="number" min="0" max="20"></div>
+      <div class="form-field"><label>Menu Font Size (px)</label><input id="sidebarFontSize" type="number" min="8" max="18"></div>
+      <div class="form-field"><label>Menu Radius (px)</label><input id="sidebarRadius" type="number" min="0" max="30"></div>
+      <div class="form-field"><label>Submenu Indent (px)</label><input id="submenuIndent" type="number" min="0" max="30"></div>
+      <div class="form-field"><label>Submenu Font Size (px)</label><input id="submenuFontSize" type="number" min="7" max="16"></div>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Brand</h3>
+    <div class="settings-grid">
+      <div class="form-field"><label>Brand Title</label><input id="brandTitle"></div>
+      <div class="form-field"><label>Brand Subtitle</label><input id="brandSubtitle"></div>
+      <div class="form-field"><label>Brand Icon</label><input id="brandIcon" maxlength="3"></div>
+      <div class="form-field color-field"><label>Icon Background</label><input id="brandIconBackground" type="color"></div>
+      <div class="form-field color-field"><label>Icon Color</label><input id="brandIconColor" type="color"></div>
+      <div class="form-field"><label>Icon Size (px)</label><input id="brandIconSize" type="number" min="20" max="70"></div>
+    </div>
+    <div class="check-grid" style="margin-top:10px">
+      <label class="check-item"><input type="checkbox" id="brandVisible"> Show Brand</label>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Profile Card</h3>
+    <div class="settings-grid">
+      <div class="form-field"><label>Profile Name</label><input id="profileName"></div>
+      <div class="form-field"><label>Status Text</label><input id="profileStatusText"></div>
+      <div class="form-field color-field"><label>Status Color</label><input id="profileStatusColor" type="color"></div>
+      <div class="form-field color-field"><label>Card Background</label><input id="profileCardBackground" type="color"></div>
+      <div class="form-field"><label>Image Size (px)</label><input id="profileImageSize" type="number" min="30" max="120"></div>
+      <div class="form-field color-field"><label>Image Border</label><input id="profileImageBorderColor" type="color"></div>
+    </div>
+    <div class="check-grid" style="margin-top:10px">
+      <label class="check-item"><input type="checkbox" id="profileVisible"> Show Profile Card</label>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Menu Behavior</h3>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" id="menuAccordion"> Only One Menu Open</label>
+      <label class="check-item"><input type="checkbox" id="autoOpenCurrentGroup"> Auto Open Current Group</label>
+      <label class="check-item"><input type="checkbox" id="rememberOpenGroup"> Remember Open Group</label>
+      <label class="check-item"><input type="checkbox" id="showChevrons"> Show Expand Arrows</label>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Cards, Inputs & Tables</h3>
+    <div class="settings-grid">
+      <div class="form-field"><label>Card Radius (px)</label><input id="cardRadius" type="number" min="0" max="40"></div>
+      <div class="form-field"><label>Button Radius (px)</label><input id="buttonRadius" type="number" min="0" max="30"></div>
+      <div class="form-field"><label>Input Radius (px)</label><input id="inputRadius" type="number" min="0" max="30"></div>
+      <div class="form-field color-field"><label>Table Header</label><input id="tableHeaderColor" type="color"></div>
+      <div class="form-field color-field"><label>Table Header Text</label><input id="tableHeaderTextColor" type="color"></div>
+      <div class="form-field color-field"><label>Table Row Hover</label><input id="tableRowHoverColor" type="color"></div>
+      <div class="form-field"><label>Shadow Strength</label><input id="shadowStrength" type="number" min="0" max="30"></div>
+    </div>
+    <div class="check-grid" style="margin-top:10px">
+      <label class="check-item"><input type="checkbox" id="compactMode"> Compact Mode</label>
+      <label class="check-item"><input type="checkbox" id="animationsEnabled"> Enable Animations</label>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Live Preview</h3>
+    <div class="preview-shell" id="previewShell">
+      <div class="preview-sidebar" id="previewSidebar">
+        <div class="preview-brand">
+          <div class="preview-brand-icon" id="previewBrandIcon">◆</div>
+          <div><strong id="previewBrandTitle">Inventory Store</strong><br><small id="previewBrandSubtitle">Management System</small></div>
+        </div>
+        <div class="preview-menu">
+          <div>⌂ Dashboard</div>
+          <div class="active">▦ Masters</div>
+          <div>🛒 Purchase Entry</div>
+          <div>↩ Issue Entry</div>
+          <div>▣ Gate Pass</div>
+          <div>▥ Reports</div>
+          <div>⚙ Settings</div>
+        </div>
+      </div>
+      <div class="preview-content" id="previewContent">
+        <div class="preview-card"><h2>Preview Card</h2><p>This preview changes as you adjust the theme.</p></div>
+        <div class="preview-card"><button class="btn btn-success">Save</button> <button class="btn btn-primary">Edit</button> <button class="btn btn-danger">Delete</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="actions">
+      <button class="btn btn-success" onclick="saveSettings()">Save Theme</button>
+      <button class="btn btn-primary" onclick="applyLive()">Apply Without Saving</button>
+      <button class="btn btn-warning" onclick="resetSettings()">Reset Default</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const mainColorFields=[
+ ["pageBackground","Page Background"],["cardBackground","Card Background"],
+ ["textColor","Main Text"],["mutedTextColor","Muted Text"],["borderColor","Borders"],
+ ["primaryColor","Primary / Accent"],["successColor","Success"],["dangerColor","Danger"],["infoColor","Info / Edit"]
+];
+const sidebarColorFields=[
+ ["sidebarBackgroundTop","Sidebar Top"],["sidebarBackgroundBottom","Sidebar Bottom"],
+ ["sidebarTextColor","Sidebar Text"],["sidebarActiveBackground","Active Background"],
+ ["sidebarActiveTextColor","Active Text"],["sidebarHoverBackground","Hover Background"],
+ ["sidebarHoverTextColor","Hover Text"],["tableHeaderColor","Table Header"]
+];
+
+document.addEventListener("DOMContentLoaded",()=>{
+ buildColorFields("mainColors",mainColorFields);
+ buildColorFields("sidebarColors",sidebarColorFields);
+ loadSettings();
+ document.querySelectorAll("input,select").forEach(el=>{
+   el.addEventListener("input",updatePreview);
+   el.addEventListener("change",updatePreview);
+ });
+ sidebarWidth.addEventListener("input",()=>sidebarWidthValue.textContent=sidebarWidth.value+"px");
+});
+
+function buildColorFields(hostId,items){
+ document.getElementById(hostId).innerHTML=items.map(([id,label])=>`
+   <div class="form-field color-field"><label>${label}</label><input id="${id}" type="color"></div>
+ `).join("");
+}
+function loadSettings(){
+ const s=ThemeSettings.get();
+ Object.entries(s).forEach(([key,value])=>{
+   const el=document.getElementById(key);if(!el)return;
+   if(el.type==="checkbox")el.checked=Boolean(value);else el.value=value??"";
+ });
+ sidebarWidthValue.textContent=sidebarWidth.value+"px";
+ updatePreview();
+}
+function collect(){
+ const out={};
+ Object.keys(ThemeSettings.defaults).forEach(key=>{
+   const el=document.getElementById(key);if(!el)return;
+   if(el.type==="checkbox")out[key]=el.checked;
+   else if(["number","range"].includes(el.type))out[key]=Number(el.value);
+   else out[key]=el.value;
+ });
+ return {...ThemeSettings.get(),...out};
+}
+function updatePreview(){
+ const s=collect();
+ previewSidebar.style.width=s.sidebarWidth+"px";
+ previewSidebar.style.background=`linear-gradient(${s.sidebarBackgroundTop},${s.sidebarBackgroundBottom})`;
+ previewSidebar.style.color=s.sidebarTextColor;
+ previewShell.style.gridTemplateColumns=`${Math.min(Math.max(s.sidebarWidth,150),300)}px 1fr`;
+ previewContent.style.background=s.pageBackground;
+ previewBrandIcon.style.background=s.brandIconBackground;
+ previewBrandIcon.style.color=s.brandIconColor;
+ previewBrandIcon.textContent=s.brandIcon||"◆";
+ previewBrandTitle.textContent=s.brandTitle||"Inventory Store";
+ previewBrandSubtitle.textContent=s.brandSubtitle||"Management System";
+ document.querySelectorAll(".preview-menu div").forEach(el=>{
+   el.style.borderRadius=s.sidebarRadius+"px";
+   el.style.minHeight=s.sidebarItemHeight+"px";
+   el.style.fontSize=s.sidebarFontSize+"px";
+   el.style.padding=`${Math.max((s.sidebarItemHeight-18)/2,3)}px 9px`;
+ });
+ const active=document.querySelector(".preview-menu .active");
+ active.style.background=s.sidebarActiveBackground;
+ active.style.color=s.sidebarActiveTextColor;
+ document.querySelectorAll(".preview-card").forEach(card=>{
+   card.style.background=s.cardBackground;
+   card.style.borderRadius=s.cardRadius+"px";
+   card.style.color=s.textColor;
+ });
+}
+function applyLive(){
+ const s=collect();
+ ThemeSettings.apply(s);
+ AppTools.toast("Theme applied temporarily. Click Save Theme to keep it.","info");
+}
+function saveSettings(){
+ const s=collect();
+ ThemeSettings.save(s);
+ ThemeSettings.apply(s);
+ buildSidebar();
+ AppTools.toast("Theme and sidebar settings saved.","success");
+}
+function applyPreset(name){
+ const s=ThemeSettings.applyPreset(name);
+ loadSettings();
+ ThemeSettings.apply(s);
+ buildSidebar();
+ AppTools.toast("Theme preset applied.","success");
+}
+function resetSettings(){
+ if(!confirm("Reset all theme and sidebar settings?"))return;
+ ThemeSettings.reset();
+ localStorage.removeItem("inventory_open_sidebar_group");
+ loadSettings();
+ ThemeSettings.apply();
+ buildSidebar();
+ AppTools.toast("Default theme restored.","success");
+}
+</script>
+</body>
+</html>
