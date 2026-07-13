@@ -7,6 +7,10 @@ window.AppTable = class {
       rowId: "id",
       pageSize: 20,
       searchable: true,
+      searchDropdown: true,
+      searchSuggestionLimit: 20,
+      searchSuggestionLabel: null,
+      searchSuggestionSubtitle: null,
       sortable: true,
       resizable: true,
       selectable: true,
@@ -36,7 +40,8 @@ window.AppTable = class {
       selected: new Set(),
       hiddenColumns: new Set(),
       columnWidths: {},
-      rows: [...this.options.rows]
+      rows: [...this.options.rows],
+      searchSuggestionIndex: -1
     };
 
     this.loadPreferences();
@@ -97,6 +102,101 @@ window.AppTable = class {
     return row[col.key];
   }
 
+  getSearchSuggestions(){
+    if(!this.options.searchDropdown) return [];
+
+    const query = this.state.query.trim().toLowerCase();
+    const seen = new Set();
+    const suggestions = [];
+
+    const preferredKeys = [
+      "item_name","workshop_name","department_name","department",
+      "supplier_name","supplier","person_name","name","title",
+      "item_code","workshop_code","department_code","code"
+    ];
+
+    for(const row of this.state.rows){
+      const allText = this.options.columns
+        .map(col => String(this.getCellValue(row,col) ?? ""))
+        .join(" ")
+        .trim();
+
+      if(query && !allText.toLowerCase().includes(query)) continue;
+
+      let label = "";
+      if(typeof this.options.searchSuggestionLabel === "function"){
+        label = this.options.searchSuggestionLabel(row);
+      }else{
+        for(const key of preferredKeys){
+          if(row[key] !== undefined && row[key] !== null && String(row[key]).trim()){
+            label = String(row[key]).trim();
+            break;
+          }
+        }
+        if(!label){
+          const firstColumn = this.options.columns.find(col => {
+            const value = this.getCellValue(row,col);
+            return value !== undefined && value !== null && String(value).trim();
+          });
+          label = firstColumn ? String(this.getCellValue(row,firstColumn)).trim() : allText;
+        }
+      }
+
+      let subtitle = "";
+      if(typeof this.options.searchSuggestionSubtitle === "function"){
+        subtitle = this.options.searchSuggestionSubtitle(row);
+      }else{
+        subtitle = this.options.columns
+          .map(col => String(this.getCellValue(row,col) ?? "").trim())
+          .filter(value => value && value !== label)
+          .slice(0,3)
+          .join(" • ");
+      }
+
+      const uniqueKey = `${label}|${subtitle}`.toLowerCase();
+      if(!label || seen.has(uniqueKey)) continue;
+      seen.add(uniqueKey);
+
+      suggestions.push({
+        label,
+        subtitle,
+        query: label,
+        rowId: row[this.options.rowId]
+      });
+
+      if(suggestions.length >= this.options.searchSuggestionLimit) break;
+    }
+
+    return suggestions;
+  }
+
+  renderSearchSuggestions(){
+    if(!this.options.searchDropdown) return "";
+    const suggestions = this.getSearchSuggestions();
+
+    if(!suggestions.length){
+      return this.state.query
+        ? `<div class="app-table-search-empty">No matching record</div>`
+        : "";
+    }
+
+    return suggestions.map((item,index)=>`
+      <div class="app-table-search-option ${index===this.state.searchSuggestionIndex?"active":""}"
+           data-search-index="${index}">
+        <strong>${AppTools.escapeHtml(item.label)}</strong>
+        ${item.subtitle ? `<span>${AppTools.escapeHtml(item.subtitle)}</span>` : ""}
+      </div>
+    `).join("");
+  }
+
+  focusSearchInput(caretPosition=null){
+    const input = this.container.querySelector(".app-table-search");
+    if(!input) return;
+    input.focus();
+    const position = caretPosition ?? input.value.length;
+    try{ input.setSelectionRange(position,position); }catch{}
+  }
+
   render(){
     this.container.innerHTML = `
       <div class="app-table-shell">
@@ -118,7 +218,11 @@ window.AppTable = class {
     return `
       <div class="app-table-toolbar">
         <div class="app-table-toolbar-left">
-          ${this.options.searchable ? `<input class="app-table-search" placeholder="Search table..." value="${AppTools.escapeHtml(this.state.query)}">` : ""}
+          ${this.options.searchable ? `
+            <div class="app-table-search-wrap">
+              <input class="app-table-search" autocomplete="off" placeholder="Search table..." value="${AppTools.escapeHtml(this.state.query)}">
+              <div class="app-table-search-menu">${this.renderSearchSuggestions()}</div>
+            </div>` : ""}
           ${this.options.selectable ? `<span class="app-table-selection-count">${this.state.selected.size} selected</span>` : ""}
         </div>
         <div class="app-table-toolbar-right">
@@ -237,10 +341,78 @@ window.AppTable = class {
   }
 
   bindEvents(){
-    this.container.querySelector(".app-table-search")?.addEventListener("input",e=>{
+    const searchInput = this.container.querySelector(".app-table-search");
+    const searchMenu = this.container.querySelector(".app-table-search-menu");
+
+    searchInput?.addEventListener("focus",()=>{
+      searchMenu?.classList.add("open");
+    });
+
+    searchInput?.addEventListener("input",e=>{
+      const caret = e.target.selectionStart;
       this.state.query = e.target.value;
       this.state.page = 1;
+      this.state.searchSuggestionIndex = -1;
       this.render();
+      setTimeout(()=>{
+        this.focusSearchInput(caret);
+        this.container.querySelector(".app-table-search-menu")?.classList.add("open");
+      },0);
+    });
+
+    searchInput?.addEventListener("keydown",e=>{
+      const suggestions = this.getSearchSuggestions();
+
+      if(e.key==="ArrowDown" && suggestions.length){
+        e.preventDefault();
+        this.state.searchSuggestionIndex = Math.min(
+          this.state.searchSuggestionIndex + 1,
+          suggestions.length - 1
+        );
+        this.render();
+        setTimeout(()=>{
+          this.focusSearchInput();
+          this.container.querySelector(".app-table-search-menu")?.classList.add("open");
+        },0);
+      }else if(e.key==="ArrowUp" && suggestions.length){
+        e.preventDefault();
+        this.state.searchSuggestionIndex = Math.max(
+          this.state.searchSuggestionIndex - 1,
+          0
+        );
+        this.render();
+        setTimeout(()=>{
+          this.focusSearchInput();
+          this.container.querySelector(".app-table-search-menu")?.classList.add("open");
+        },0);
+      }else if(e.key==="Enter" && suggestions.length && this.state.searchSuggestionIndex>=0){
+        e.preventDefault();
+        const selected = suggestions[this.state.searchSuggestionIndex];
+        this.state.query = selected.query;
+        this.state.page = 1;
+        this.state.searchSuggestionIndex = -1;
+        this.render();
+      }else if(e.key==="Escape"){
+        searchMenu?.classList.remove("open");
+        this.state.searchSuggestionIndex = -1;
+      }
+    });
+
+    searchInput?.addEventListener("blur",()=>{
+      setTimeout(()=>this.container.querySelector(".app-table-search-menu")?.classList.remove("open"),150);
+    });
+
+    this.container.querySelectorAll(".app-table-search-option").forEach(option=>{
+      option.addEventListener("mousedown",e=>{
+        e.preventDefault();
+        const suggestions = this.getSearchSuggestions();
+        const selected = suggestions[Number(option.dataset.searchIndex)];
+        if(!selected) return;
+        this.state.query = selected.query;
+        this.state.page = 1;
+        this.state.searchSuggestionIndex = -1;
+        this.render();
+      });
     });
 
     this.container.querySelectorAll("th[data-key]").forEach(th=>{

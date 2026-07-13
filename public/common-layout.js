@@ -16,6 +16,7 @@ window.APP_LAYOUT={menu:[
 {label:"RGP List",href:"rgp-list.html"},{label:"OGP Entry",href:"ogp-entry.html"},
 {label:"OGP List",href:"ogp-list.html"}]},
 {label:"▤ Stock Ledger",href:"stock-ledger.html"},
+{label:"◆ Inventory Intelligence",href:"inventory-intelligence.html"},
 {label:"▥ Reports",href:"reports.html"},
 {id:"settingsGroup",label:"⚙ Settings",children:[
 {label:"General Settings",href:"settings.html"},
