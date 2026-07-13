@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Master</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/common-pdf.js"></script>
+<script src="public/master-config.js"></script>
+</head>
+<body>
+<div id="appSidebar"></div>
+
+<main class="app-main">
+  <div class="page-head"><div><h1 id="pageTitle">Master</h1><div id="pageSubtitle" class="page-subtitle"></div></div></div>
+
+  <section class="card">
+    <h2 id="formTitle">Add New Record</h2>
+    <div id="masterForm" class="form-grid"></div>
+    <div class="actions">
+      <button class="btn btn-success" id="saveBtn">Save</button>
+      <button class="btn btn-warning" id="clearBtn">Clear</button>
+      <button class="btn btn-primary" id="exportBtn">Export Excel</button>
+      <button class="btn btn-danger" id="pdfBtn">Print / PDF</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="search-row">
+      <input id="searchBox" placeholder="Search records...">
+      <select id="statusFilter"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+    </div>
+    <div class="table-wrap" style="margin-top:13px">
+      <table class="data-table"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
+    </div>
+  </section>
+</main>
+
+<section id="printReport"></section>
+
+<script>
+const db=supabase.createClient(
+  "https://lzsxtvkluqvcaetnnydu.supabase.co",
+  "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma"
+);
+const type=new URLSearchParams(location.search).get("type")||"department";
+const config=MASTER_CONFIG[type]||MASTER_CONFIG.department;
+let records=[],editId=null,lastFormState=null;
+
+document.addEventListener("DOMContentLoaded",async()=>{
+  document.title=config.title;
+  pageTitle.textContent=config.title;
+  pageSubtitle.textContent=config.subtitle;
+  buildForm();buildTableHead();setupEvents();await loadRecords();
+});
+
+const fieldId=name=>"field_"+name;
+function labelFor(key){
+  if(key===config.codeField)return key.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
+  return config.fields.find(f=>f.name===key)?.label||key;
+}
+function buildForm(){
+  masterForm.innerHTML=`
+    <div class="form-field"><label>${labelFor(config.codeField)} *</label>
+    <input id="${fieldId(config.codeField)}" class="auto-code" readonly></div>`+
+    config.fields.map(field=>{
+      const cls=`form-field ${field.span?`span-${field.span}`:""}`;
+      const req=field.required?" *":"";
+      if(field.type==="select")return `<div class="${cls}"><label>${field.label}${req}</label>
+        <select id="${fieldId(field.name)}">${field.options.map(o=>`<option>${o}</option>`).join("")}</select></div>`;
+      return `<div class="${cls}"><label>${field.label}${req}</label>
+        <input id="${fieldId(field.name)}" ${field.capitalize?"data-capitalize":""} ${field.numeric?"data-numeric":""}></div>`;
+    }).join("");
+  AppTools.setupAutoCapitalize(masterForm);
+  AppTools.setupNumericFields(masterForm);
+  AppTools.setupEnterNavigation(masterForm,saveRecord);
+}
+function buildTableHead(){
+  const cols=[config.codeField,...config.fields.filter(f=>f.span!==4).map(f=>f.name)];
+  tableHead.innerHTML=`<tr>${cols.map(c=>`<th>${labelFor(c)}</th>`).join("")}<th>Action</th></tr>`;
+}
+function setupEvents(){
+  saveBtn.onclick=saveRecord;clearBtn.onclick=()=>clearForm();exportBtn.onclick=exportCSV;pdfBtn.onclick=printPDF;
+  searchBox.oninput=renderTable;statusFilter.onchange=renderTable;
+  AppTools.setupGlobalShortcuts({save:saveRecord,clear:()=>clearForm(false),search:searchBox,undo:restoreLastForm});
+}
+async function loadRecords(){
+  const {data,error}=await db.from(config.table).select("*").order("id",{ascending:false});
+  if(error){AppTools.toast("Load error: "+error.message,"error");tableBody.innerHTML=`<tr><td class="table-empty" colspan="20">${AppTools.escapeHtml(error.message)}</td></tr>`;return}
+  records=data||[];generateCode();renderTable();
+}
+function generateCode(){
+  if(editId)return;
+  let highest=0;
+  records.forEach(r=>{const m=String(r[config.codeField]||"").match(/(\d+)$/);if(m)highest=Math.max(highest,+m[1])});
+  document.getElementById(fieldId(config.codeField)).value=`${config.codePrefix}-${String(highest+1).padStart(4,"0")}`;
+}
+function getFormData(){
+  const r={[config.codeField]:document.getElementById(fieldId(config.codeField)).value.trim()};
+  config.fields.forEach(f=>{
+    let v=document.getElementById(fieldId(f.name)).value.trim();
+    if(f.capitalize)v=AppTools.titleCase(v);
+    r[f.name]=v;
+  });
+  return r;
+}
+function captureForm(){return{editId,data:getFormData()}}
+function restoreLastForm(){
+  if(!lastFormState)return AppTools.toast("No recent form change to undo.","error");
+  editId=lastFormState.editId||null;
+  Object.entries(lastFormState.data).forEach(([k,v])=>{const el=document.getElementById(fieldId(k));if(el)el.value=v??""});
+  updateEditUI();AppTools.toast("Previous form values restored.","success");
+}
+async function saveRecord(){
+  const record=getFormData();
+  for(const f of config.fields.filter(x=>x.required)){
+    if(!record[f.name]){AppTools.toast(`${f.label} is required.`,"error");document.getElementById(fieldId(f.name)).focus();return}
+  }
+  const primary=config.fields.find(f=>f.required)?.name;
+  if(records.some(r=>+r.id!==+editId&&String(r[primary]||"").trim().toLowerCase()===String(record[primary]||"").trim().toLowerCase()))
+    return AppTools.toast("This record already exists.","error");
+
+  const result=editId?await db.from(config.table).update(record).eq("id",editId):await db.from(config.table).insert([record]);
+  if(result.error)return AppTools.toast("Save error: "+result.error.message,"error");
+  AppTools.toast(editId?"Record updated successfully.":"Record saved successfully.","success");
+  clearForm(false);await loadRecords();
+}
+function getFiltered(){
+  const q=searchBox.value.trim().toLowerCase(),s=statusFilter.value.trim().toLowerCase();
+  return records.filter(r=>(!q||config.searchFields.some(k=>String(r[k]||"").toLowerCase().includes(q)))&&(!s||String(r.status||"").toLowerCase()===s));
+}
+function renderTable(){
+  const rows=getFiltered(),cols=[config.codeField,...config.fields.filter(f=>f.span!==4).map(f=>f.name)];
+  if(!rows.length){tableBody.innerHTML=`<tr><td class="table-empty" colspan="${cols.length+1}">No record found.</td></tr>`;return}
+  tableBody.innerHTML=rows.map(r=>`<tr>
+    ${cols.map(k=>k==="status"
+      ?`<td><span class="badge ${String(r[k]).toLowerCase()==="inactive"?"badge-inactive":"badge-active"}">${AppTools.escapeHtml(r[k]||"Active")}</span></td>`
+      :`<td>${AppTools.escapeHtml(r[k]??"")}</td>`).join("")}
+    <td><div class="table-actions">
+      <button class="btn btn-success btn-sm" onclick="showDetail(${+r.id})">Detail</button>
+      <button class="btn btn-primary btn-sm" onclick="editRecord(${+r.id})">Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteRecord(${+r.id})">Delete</button>
+    </div></td></tr>`).join("");
+}
+function showDetail(id){
+  const r=records.find(x=>+x.id===+id);if(!r)return;
+  const fields=[config.codeField,...config.fields.map(f=>f.name)];
+  AppTools.openModal(`${config.title} Detail`,`<div class="detail-grid">${fields.map(k=>`
+    <div class="detail-box"><span>${labelFor(k)}</span><strong>${AppTools.escapeHtml(r[k]??"-")}</strong></div>`).join("")}</div>`);
+}
+function editRecord(id){
+  const r=records.find(x=>+x.id===+id);if(!r)return;
+  lastFormState=captureForm();editId=id;
+  document.getElementById(fieldId(config.codeField)).value=r[config.codeField]??"";
+  config.fields.forEach(f=>document.getElementById(fieldId(f.name)).value=r[f.name]??"");
+  updateEditUI();scrollTo({top:0,behavior:"smooth"});
+}
+function updateEditUI(){formTitle.textContent=editId?`Edit ${config.title}`:`Add New ${config.title.replace(" Master","")}`;saveBtn.textContent=editId?"Update":"Save"}
+async function deleteRecord(id){
+  if(!confirm("Delete this record?"))return;
+  const {error}=await db.from(config.table).delete().eq("id",id);
+  if(error)return AppTools.toast("Delete error: "+error.message,"error");
+  AppTools.toast("Record deleted successfully.","success");await loadRecords();
+}
+function clearForm(saveUndo=true){
+  if(saveUndo)lastFormState=captureForm();editId=null;
+  config.fields.forEach(f=>{const el=document.getElementById(fieldId(f.name));el.value=f.type==="select"?(f.options[0]||""):""});
+  updateEditUI();generateCode();
+}
+function exportCSV(){
+  const rows=getFiltered(),cols=[config.codeField,...config.fields.map(f=>f.name)];
+  let csv=cols.map(labelFor).join(",")+"\n";
+  rows.forEach(r=>csv+=cols.map(k=>`"${String(r[k]??"").replaceAll('"','""')}"`).join(",")+"\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=`${type}-master.csv`;a.click();URL.revokeObjectURL(a.href);
+}
+function printPDF(){
+  const rows=getFiltered();if(!rows.length)return AppTools.toast("No data to print.","error");
+  AppPDF.printStandardReport({
+    title:config.title,subtitle:config.subtitle,
+    columns:[{key:config.codeField,label:labelFor(config.codeField)},...config.fields.map(f=>({key:f.name,label:f.label}))],
+    rows,meta:[{label:"Status Filter",value:statusFilter.value||"All"},{label:"Search",value:searchBox.value||"All Records"}]
+  });
+}
+</script>
+</body>
+</html>
