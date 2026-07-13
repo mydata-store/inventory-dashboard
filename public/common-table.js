@@ -11,6 +11,7 @@ window.AppTable = class {
       searchSuggestionLimit: 20,
       searchSuggestionLabel: null,
       searchSuggestionSubtitle: null,
+      searchSuggestionQuery: null,
       sortable: true,
       resizable: true,
       selectable: true,
@@ -157,10 +158,15 @@ window.AppTable = class {
       if(!label || seen.has(uniqueKey)) continue;
       seen.add(uniqueKey);
 
+      let selectedQuery = label;
+      if(typeof this.options.searchSuggestionQuery === "function"){
+        selectedQuery = this.options.searchSuggestionQuery(row);
+      }
+
       suggestions.push({
         label,
         subtitle,
-        query: label,
+        query: selectedQuery || label,
         rowId: row[this.options.rowId]
       });
 
@@ -399,7 +405,12 @@ window.AppTable = class {
     });
 
     searchInput?.addEventListener("blur",()=>{
-      setTimeout(()=>this.container.querySelector(".app-table-search-menu")?.classList.remove("open"),150);
+      setTimeout(()=>{
+        const currentInput = this.container.querySelector(".app-table-search");
+        const currentMenu = this.container.querySelector(".app-table-search-menu");
+        if(document.activeElement === currentInput) return;
+        currentMenu?.classList.remove("open");
+      },180);
     });
 
     this.container.querySelectorAll(".app-table-search-option").forEach(option=>{
