@@ -20,7 +20,9 @@ window.APP_LAYOUT={menu:[
 {id:"settingsGroup",label:"⚙ Settings",children:[
 {label:"General Settings",href:"settings.html"},
 {label:"PDF & Logo Settings",href:"pdf-settings.html"},
-{label:"Theme & Sidebar Settings",href:"theme-settings.html"}]}
+{label:"Theme & Sidebar Settings",href:"theme-settings.html"},
+{label:"Form Engine Demo",href:"form-demo.html"},
+{label:"Table Engine Demo",href:"table-demo.html"}]}
 ]};
 
 function currentPageKey(){const f=location.pathname.split("/").pop()||"index.html";return f+location.search}
