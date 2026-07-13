@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF & Logo Settings</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="public/common-layout.js"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/pdf-settings.js"></script>
+<style>
+.settings-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.settings-section{margin-bottom:18px}
+.settings-section h3{margin:0 0 10px;font-size:15px}
+.check-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.check-item{display:flex;align-items:center;gap:7px;padding:8px;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;font-size:11px;font-weight:700}
+.logo-box{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.logo-preview{width:150px;height:90px;border:1px dashed #94a3b8;border-radius:10px;display:grid;place-items:center;background:#f8fafc;overflow:hidden}
+.logo-preview img{max-width:100%;max-height:100%;object-fit:contain}
+.preview-card{background:#fff;border-radius:15px;padding:16px;box-shadow:0 8px 22px #00000010}
+.preview-paper{background:white;border:1px solid #ddd;min-height:300px;padding:18px}
+@media(max-width:1050px){.settings-grid,.check-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:720px){.settings-grid,.check-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+
+<main class="app-main">
+  <div class="page-head">
+    <div>
+      <h1>PDF & Logo Settings</h1>
+      <div class="page-subtitle">Select, replace or remove the logo and control every common PDF field</div>
+    </div>
+  </div>
+
+  <section class="card settings-section">
+    <h3>Logo</h3>
+    <div class="logo-box">
+      <div class="logo-preview" id="logoPreview"><span>No Logo</span></div>
+      <div>
+        <input type="file" id="logoInput" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        <div class="actions">
+          <button class="btn btn-primary" onclick="document.getElementById('logoInput').click()">Select / Change Logo</button>
+          <button class="btn btn-danger" onclick="removeLogo()">Remove Logo</button>
+        </div>
+        <div class="page-subtitle">Recommended: transparent PNG, less than 500 KB.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Company Information</h3>
+    <div class="settings-grid">
+      <div class="form-field"><label>Company Name</label><input id="companyName" data-capitalize></div>
+      <div class="form-field"><label>Company Subtitle</label><input id="companySubtitle" data-capitalize></div>
+      <div class="form-field span-2"><label>Address</label><input id="companyAddress" data-capitalize></div>
+      <div class="form-field"><label>Phone</label><input id="companyPhone"></div>
+      <div class="form-field"><label>Email</label><input id="companyEmail"></div>
+      <div class="form-field"><label>Tax / NTN / GST No.</label><input id="companyTaxNo"></div>
+    </div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Show or Hide Header Fields</h3>
+    <div class="check-grid" id="headerChecks"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Report Fields</h3>
+    <div class="check-grid" id="reportChecks"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Signature Fields</h3>
+    <div class="settings-grid">
+      <div class="form-field"><label>Prepared By Label</label><input id="preparedByLabel"></div>
+      <div class="form-field"><label>Prepared By Value</label><input id="preparedByValue" data-capitalize></div>
+      <div class="form-field"><label>Checked By Label</label><input id="checkedByLabel"></div>
+      <div class="form-field"><label>Checked By Value</label><input id="checkedByValue" data-capitalize></div>
+      <div class="form-field"><label>Approved By Label</label><input id="approvedByLabel"></div>
+      <div class="form-field"><label>Approved By Value</label><input id="approvedByValue" data-capitalize></div>
+    </div>
+    <div class="check-grid" id="signatureChecks" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Footer</h3>
+    <div class="settings-grid">
+      <div class="form-field span-2"><label>Footer Left</label><input id="footerLeft"></div>
+      <div class="form-field"><label>Footer Center</label><input id="footerCenter"></div>
+      <div class="form-field"><label>Footer Right</label><input id="footerRight"></div>
+    </div>
+    <div class="check-grid" id="footerChecks" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h3>Page Style</h3>
+    <div class="settings-grid">
+      <div class="form-field"><label>Theme Color</label><input id="themeColor" type="color"></div>
+      <div class="form-field"><label>Orientation</label><select id="orientation"><option>landscape</option><option>portrait</option></select></div>
+      <div class="form-field"><label>Paper Size</label><select id="paperSize"><option>A4</option><option>Letter</option><option>Legal</option></select></div>
+      <div class="form-field"><label>Margin (mm)</label><input id="marginMm" type="number" min="3" max="25"></div>
+      <div class="form-field"><label>Table Font Size (pt)</label><input id="fontSizePt" type="number" min="6" max="14"></div>
+      <div class="form-field"><label>Header Font Size (pt)</label><input id="headerFontSizePt" type="number" min="12" max="30"></div>
+      <div class="form-field"><label>Logo Width (mm)</label><input id="logoWidthMm" type="number" min="10" max="50"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="actions">
+      <button class="btn btn-success" onclick="saveSettings()">Save Settings</button>
+      <button class="btn btn-primary" onclick="previewPDF()">Preview PDF</button>
+      <button class="btn btn-warning" onclick="resetSettings()">Reset Default</button>
+    </div>
+  </section>
+</main>
+
+<section id="printReport"></section>
+
+<script>
+const headerOptions=[
+ ["logoVisible","Show Logo"],
+ ["showCompanyName","Show Company Name"],
+ ["showCompanySubtitle","Show Company Subtitle"],
+ ["showCompanyAddress","Show Address"],
+ ["showCompanyPhone","Show Phone"],
+ ["showCompanyEmail","Show Email"],
+ ["showCompanyTaxNo","Show Tax No."]
+];
+const reportOptions=[
+ ["showReportTitle","Show Report Title"],
+ ["showReportSubtitle","Show Report Subtitle"],
+ ["showDate","Show Date"],
+ ["showTime","Show Time"],
+ ["showRecordCount","Show Record Count"],
+ ["showMeta","Show Filter / Meta Fields"],
+ ["showPageNumber","Show Page Number"]
+];
+const signatureOptions=[
+ ["showPreparedBy","Show Prepared By"],
+ ["showCheckedBy","Show Checked By"],
+ ["showApprovedBy","Show Approved By"]
+];
+const footerOptions=[
+ ["showFooterLeft","Show Footer Left"],
+ ["showFooterCenter","Show Footer Center"],
+ ["showFooterRight","Show Footer Right"]
+];
+
+document.addEventListener("DOMContentLoaded",()=>{
+  buildChecks("headerChecks",headerOptions);
+  buildChecks("reportChecks",reportOptions);
+  buildChecks("signatureChecks",signatureOptions);
+  buildChecks("footerChecks",footerOptions);
+  loadSettings();
+  AppTools.setupAutoCapitalize(document);
+  logoInput.addEventListener("change",readLogo);
+});
+
+function buildChecks(hostId,items){
+  document.getElementById(hostId).innerHTML=items.map(([id,label])=>`
+    <label class="check-item"><input type="checkbox" id="${id}"> ${label}</label>
+  `).join("");
+}
+function loadSettings(){
+  const s=PDFSettings.get();
+  Object.entries(s).forEach(([key,value])=>{
+    const el=document.getElementById(key);
+    if(!el)return;
+    if(el.type==="checkbox")el.checked=Boolean(value);
+    else el.value=value??"";
+  });
+  renderLogo(s.logoDataUrl);
+}
+function collectSettings(){
+  const result={};
+  Object.keys(PDFSettings.defaults).forEach(key=>{
+    const el=document.getElementById(key);
+    if(!el)return;
+    if(el.type==="checkbox")result[key]=el.checked;
+    else if(["number","range"].includes(el.type))result[key]=Number(el.value);
+    else result[key]=el.value;
+  });
+  result.logoDataUrl=PDFSettings.get().logoDataUrl;
+  return result;
+}
+function saveSettings(){
+  const current=PDFSettings.get();
+  const next={...current,...collectSettings()};
+  PDFSettings.save(next);
+  AppTools.toast("PDF and logo settings saved.","success");
+}
+function readLogo(event){
+  const file=event.target.files?.[0];if(!file)return;
+  if(file.size>700*1024){
+    AppTools.toast("Logo is too large. Use an image below 700 KB.","error");
+    event.target.value="";return;
+  }
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const s=PDFSettings.get();
+    s.logoDataUrl=reader.result;
+    s.logoVisible=true;
+    PDFSettings.save(s);
+    logoVisible.checked=true;
+    renderLogo(reader.result);
+    AppTools.toast("Logo selected. Click Save Settings.","success");
+  };
+  reader.readAsDataURL(file);
+}
+function removeLogo(){
+  const s=PDFSettings.get();
+  s.logoDataUrl="";
+  s.logoVisible=false;
+  PDFSettings.save(s);
+  logoVisible.checked=false;
+  logoInput.value="";
+  renderLogo("");
+  AppTools.toast("Logo removed.","success");
+}
+function renderLogo(src){
+  logoPreview.innerHTML=src?`<img src="${src}" alt="Logo">`:`<span>No Logo</span>`;
+}
+function resetSettings(){
+  if(!confirm("Reset all PDF and logo settings to default?"))return;
+  PDFSettings.reset();
+  loadSettings();
+  AppTools.toast("Default PDF settings restored.","success");
+}
+function previewPDF(){
+  saveSettings();
+  const script=document.createElement("script");
+  script.src="public/common-pdf.js";
+  script.onload=()=>{
+    AppPDF.printStandardReport({
+      title:"SAMPLE INVENTORY REPORT",
+      subtitle:"Preview of common PDF engine",
+      meta:[
+        {label:"Department",value:"Mechanical"},
+        {label:"Date Range",value:"01-Jul-26 to 31-Jul-26"},
+        {label:"Status",value:"All Records"}
+      ],
+      columns:[
+        {key:"code",label:"Code"},
+        {key:"item",label:"Item Name"},
+        {key:"qty",label:"Qty"},
+        {key:"unit",label:"Unit"},
+        {key:"value",label:"Value"}
+      ],
+      rows:[
+        {code:"ITM-0001",item:"MS Nut Bolt 1/2x3",qty:"20.00",unit:"Kg",value:"PKR 6,600"},
+        {code:"ITM-0002",item:"MS Welding Rod 7018",qty:"50.00",unit:"Kg",value:"PKR 22,500"}
+      ]
+    });
+  };
+  document.body.appendChild(script);
+}
+</script>
+</body>
+</html>
