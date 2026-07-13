@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inventory Intelligence</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/pdf-settings.js"></script>
+<script src="public/common-pdf.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-table.js"></script>
+<script src="public/common-intelligence.js"></script>
+<style>
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:#fff;border-radius:14px;padding:16px;box-shadow:0 8px 22px #0001;border-left:4px solid var(--accent);cursor:pointer}
+.stat.warn{border-left-color:#f59e0b}.stat.danger{border-left-color:#dc2626}.stat.info{border-left-color:#2563eb}
+.stat small{color:var(--muted);font-size:10px}.stat strong{display:block;font-size:22px;margin-top:5px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tabs button.active{background:var(--accent);color:#111827}
+.loading{text-align:center;padding:30px;color:var(--muted)}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+<main class="app-main">
+  <div class="page-head">
+    <div><h1>Inventory Intelligence</h1><div class="page-subtitle">Stock value, rates, movement, reorder and consumption analysis</div></div>
+    <button class="btn btn-primary" onclick="loadData()">Refresh</button>
+  </div>
+
+  <section class="stats">
+    <div class="stat" onclick="showView('all')"><small>Total Items</small><strong id="totalItems">0</strong></div>
+    <div class="stat info"><small>Current Stock Value</small><strong id="stockValue">PKR 0</strong></div>
+    <div class="stat warn" onclick="showView('low')"><small>Low Stock</small><strong id="lowStock">0</strong></div>
+    <div class="stat danger" onclick="showView('negative')"><small>Negative Stock</small><strong id="negativeStock">0</strong></div>
+    <div class="stat warn" onclick="showView('slow')"><small>Slow Moving</small><strong id="slowMoving">0</strong></div>
+    <div class="stat danger" onclick="showView('dead')"><small>Dead Stock</small><strong id="deadStock">0</strong></div>
+    <div class="stat info"><small>Reserved Stock</small><strong id="reservedStock">0</strong></div>
+    <div class="stat"><small>Available Stock</small><strong id="availableStock">0</strong></div>
+  </section>
+
+  <section class="card">
+    <div class="tabs">
+      <button class="btn btn-light active" data-view="all" onclick="showView('all')">All Items</button>
+      <button class="btn btn-light" data-view="low" onclick="showView('low')">Low Stock</button>
+      <button class="btn btn-light" data-view="slow" onclick="showView('slow')">Slow Moving</button>
+      <button class="btn btn-light" data-view="dead" onclick="showView('dead')">Dead Stock</button>
+      <button class="btn btn-light" data-view="negative" onclick="showView('negative')">Negative Stock</button>
+      <button class="btn btn-light" data-view="reorder" onclick="showView('reorder')">Reorder Suggestions</button>
+      <button class="btn btn-light" data-view="department" onclick="showView('department')">Department Consumption</button>
+      <button class="btn btn-light" data-view="supplier" onclick="showView('supplier')">Supplier Performance</button>
+    </div>
+    <div id="intelligenceTable"><div class="loading">Loading data...</div></div>
+  </section>
+</main>
+<section id="printReport"></section>
+
+<script>
+const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
+const engine=new InventoryIntelligence({db,transactionTable:"stock_transactions",itemTable:"items",deadStockDays:180,slowMovingDays:90});
+let currentView="all";
+
+document.addEventListener("DOMContentLoaded",loadData);
+
+async function loadData(){
+  intelligenceTable.innerHTML='<div class="loading">Calculating inventory intelligence...</div>';
+  try{
+    await engine.load();
+    const s=engine.summary;
+    totalItems.textContent=s.total_items;
+    stockValue.textContent=`PKR ${Number(s.current_stock_value||0).toLocaleString("en-PK",{maximumFractionDigits:2})}`;
+    lowStock.textContent=s.low_stock_items;
+    negativeStock.textContent=s.negative_stock_items;
+    slowMoving.textContent=s.slow_moving_items;
+    deadStock.textContent=s.dead_stock_items;
+    reservedStock.textContent=Number(s.reserved_stock_qty||0).toLocaleString("en-PK",{maximumFractionDigits:3});
+    availableStock.textContent=Number(s.available_stock_qty||0).toLocaleString("en-PK",{maximumFractionDigits:3});
+    showView(currentView);
+    AppTools.toast("Inventory intelligence updated.","success");
+  }catch(error){
+    intelligenceTable.innerHTML=`<div class="table-empty">${AppTools.escapeHtml(error.message)}</div>`;
+    AppTools.toast("Load error: "+error.message,"error");
+  }
+}
+
+function activate(view){document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view))}
+function showView(view){
+  currentView=view;activate(view);
+  if(view==="department")return showDepartment();
+  if(view==="supplier")return showSupplier();
+
+  let rows=engine.itemMetrics;
+  if(view==="low")rows=engine.getLowStock();
+  if(view==="slow")rows=engine.getSlowMoving();
+  if(view==="dead")rows=engine.getDeadStock();
+  if(view==="negative")rows=engine.getNegativeStock();
+  if(view==="reorder")rows=engine.getReorderSuggestions();
+
+  intelligenceTable.innerHTML="";
+  new AppTable({
+    container:"#intelligenceTable",rows,rowId:"key",pageSize:20,searchable:true,sortable:true,resizable:true,selectable:true,stickyFirstColumn:true,
+    columns:[
+      {key:"item_code",label:"Item Code"},{key:"item_name",label:"Item Name"},{key:"size",label:"Size"},
+      {key:"category",label:"Category"},{key:"unit",label:"Unit"},
+      {key:"current_stock",label:"Current Stock",type:"number"},{key:"reserved_stock",label:"Reserved",type:"number"},
+      {key:"available_stock",label:"Available",type:"number"},{key:"last_purchase_rate",label:"Last Rate",type:"currency"},
+      {key:"average_rate",label:"Average Rate",type:"currency"},{key:"stock_value",label:"Stock Value",type:"currency"},
+      {key:"monthly_consumption",label:"Monthly Consumption",type:"number"},{key:"reorder_level",label:"Reorder Level",type:"number"},
+      ...(view==="reorder"?[{key:"suggested_order_qty",label:"Suggested Order",type:"number"}]:[]),
+      {key:"status",label:"Status",type:"status"}
+    ],
+    showTotals:true,totals:{current_stock:"sum",reserved_stock:"sum",available_stock:"sum",stock_value:"sum"},
+    preferencesKey:`intelligence_${view}`,pdfTitle:`INVENTORY ${view.toUpperCase()} REPORT`,
+    onDetail:showDetail,onRowOpen:showDetail
+  });
+}
+function showDepartment(){
+  intelligenceTable.innerHTML="";
+  new AppTable({container:"#intelligenceTable",rows:engine.getDepartmentConsumption(),rowId:"department",
+    columns:[{key:"department",label:"Department"},{key:"transactions",label:"Transactions",type:"number"},{key:"qty",label:"Issue Qty",type:"number"},{key:"value",label:"Value",type:"currency"}],
+    searchable:true,sortable:true,resizable:true,showTotals:true,totals:{qty:"sum",value:"sum"},preferencesKey:"intel_department",pdfTitle:"DEPARTMENT CONSUMPTION REPORT"});
+}
+function showSupplier(){
+  intelligenceTable.innerHTML="";
+  new AppTable({container:"#intelligenceTable",rows:engine.getSupplierPerformance(),rowId:"supplier",
+    columns:[{key:"supplier",label:"Supplier"},{key:"transactions",label:"Purchases",type:"number"},{key:"qty",label:"Purchase Qty",type:"number"},{key:"value",label:"Purchase Value",type:"currency"},{key:"last_purchase_date",label:"Last Purchase",type:"date"}],
+    searchable:true,sortable:true,resizable:true,showTotals:true,totals:{qty:"sum",value:"sum"},preferencesKey:"intel_supplier",pdfTitle:"SUPPLIER PERFORMANCE REPORT"});
+}
+function showDetail(row){
+  AppTools.openModal(`${row.item_name} Detail`,`<div class="detail-grid">${[
+    ["Item Code",row.item_code],["Item",row.item_name],["Size",row.size],["Unit",row.unit],["Category",row.category],
+    ["Current Stock",row.current_stock],["Reserved",row.reserved_stock],["Available",row.available_stock],
+    ["Last Rate",`PKR ${row.last_purchase_rate}`],["Average Rate",`PKR ${Number(row.average_rate||0).toFixed(2)}`],
+    ["Stock Value",`PKR ${Number(row.stock_value||0).toFixed(2)}`],["Monthly Consumption",row.monthly_consumption],
+    ["Last Purchase",AppTools.displayDate(row.last_purchase_date)],["Last Issue",AppTools.displayDate(row.last_issue_date)],["Status",row.status]
+  ].map(([a,b])=>`<div class="detail-box"><span>${a}</span><strong>${AppTools.escapeHtml(b??"-")}</strong></div>`).join("")}</div>`);
+}
+window.APP_COMMANDS=[
+ {title:"Inventory Intelligence",subtitle:"Stock value, low stock and movement",href:"inventory-intelligence.html"},
+ {title:"Item Master",subtitle:"Open items",href:"masters.html?type=item"},
+ {title:"Stock Ledger",subtitle:"Open ledger",href:"stock-ledger.html"}
+];
+</script>
+</body>
+</html>
