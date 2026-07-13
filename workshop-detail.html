@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workshop Detail</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --sidebar-width:220px;
+      --sidebar-bg:#241000;
+      --sidebar-card:#4a2718;
+      --accent:#f5a316;
+      --page-bg:#f5f6fb;
+      --text:#07142e;
+      --muted:#6b7280;
+      --border:#d9dee8;
+      --blue:#2563eb;
+      --red:#ef4444;
+      --green:#16a34a;
+      --purple:#7c3aed;
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--page-bg);color:var(--text)}
+
+    .sidebar{
+      position:fixed;left:0;top:0;width:var(--sidebar-width);height:100vh;
+      background:var(--sidebar-bg);color:white;padding:16px 14px;
+      display:flex;flex-direction:column;z-index:1000;overflow-y:auto;
+    }
+
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+    .brand-icon{
+      width:38px;height:38px;border-radius:11px;background:var(--accent);
+      display:grid;place-items:center;font-size:17px;
+    }
+    .brand h2{margin:0;font-size:17px}
+    .brand p{margin:3px 0 0;font-size:10px;color:#ffd58a}
+
+    .nav{display:flex;flex-direction:column;gap:7px}
+    .nav a,.nav button{
+      width:100%;border:0;background:transparent;color:white;text-decoration:none;
+      text-align:left;padding:11px 12px;border-radius:9px;font-size:13px;
+      cursor:pointer;font-weight:600;
+    }
+    .nav a:hover,.nav button:hover,.nav a.active,.nav button.active{
+      background:var(--accent);color:#111827;
+    }
+
+    .nav-group{display:flex;flex-direction:column;gap:5px}
+    .nav-group-title{display:flex;align-items:center;justify-content:space-between}
+    .submenu{
+      display:none;flex-direction:column;gap:4px;margin-left:8px;padding-left:8px;
+      border-left:1px solid rgba(255,255,255,.18);
+    }
+    .nav-group.open .submenu{display:flex}
+    .submenu a{padding:9px 10px;font-size:12px}
+
+    .profile-card{
+      margin-top:auto;background:var(--sidebar-card);border-radius:14px;
+      padding:14px;text-align:center;
+    }
+    .profile-card img{
+      width:62px;height:62px;border-radius:50%;object-fit:cover;
+      border:3px solid var(--accent);
+    }
+    .profile-card h3{font-size:13px;margin:8px 0 4px}
+    .profile-card p{margin:0;font-size:11px;color:#d1fae5}
+    .profile-card p span{
+      display:inline-block;width:7px;height:7px;border-radius:50%;
+      background:#22c55e;margin-right:5px;
+    }
+
+    .main{margin-left:var(--sidebar-width);padding:26px 22px;min-height:100vh}
+    .topbar{
+      display:flex;align-items:flex-start;justify-content:space-between;
+      gap:18px;margin-bottom:18px;
+    }
+    .topbar h1{margin:0;font-size:29px}
+    .topbar p{margin:5px 0 0;color:var(--muted)}
+    .back-btn{
+      border:0;background:#e5e7eb;color:#111827;padding:11px 16px;
+      border-radius:9px;font-weight:700;cursor:pointer;
+    }
+
+    .card{
+      background:white;border-radius:16px;padding:18px;margin-bottom:18px;
+      box-shadow:0 8px 20px rgba(0,0,0,.05);
+    }
+
+    .profile-grid{
+      display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;
+    }
+    .info-box{
+      border:1px solid #e5e7eb;border-radius:11px;padding:13px;background:#fafafa;
+    }
+    .info-box small{display:block;color:var(--muted);margin-bottom:5px}
+    .info-box strong{font-size:14px}
+
+    .summary-grid{
+      display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;
+      margin-bottom:18px;
+    }
+
+    .summary-card{
+      background:white;border-radius:15px;padding:18px;
+      box-shadow:0 8px 20px rgba(0,0,0,.05);border-left:5px solid var(--accent);
+      cursor:pointer;transition:.15s;
+    }
+    .summary-card:hover{transform:translateY(-2px)}
+    .summary-card.pending{border-left-color:var(--red)}
+    .summary-card.completed{border-left-color:var(--green)}
+    .summary-card.bill{border-left-color:var(--purple)}
+    .summary-card small{color:var(--muted)}
+    .summary-card h2{margin:8px 0 0;font-size:27px}
+
+    .filters{
+      display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;
+    }
+
+    .filters input,.filters select{
+      width:100%;padding:11px 12px;border:1px solid var(--border);
+      border-radius:9px;outline:none;background:white;
+    }
+
+    .filters input:focus,.filters select:focus{
+      border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,163,22,.15);
+    }
+
+    .filter-actions{display:flex;gap:8px;margin-top:12px}
+    .btn{
+      border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer;
+    }
+    .btn-clear{background:#e5e7eb}
+    .btn-pdf{background:var(--red);color:white}
+    .btn-excel{background:var(--blue);color:white}
+
+    .table-wrap{
+      max-height:470px;overflow:auto;border:1px solid #eef0f4;border-radius:10px;
+    }
+
+    table{width:100%;border-collapse:collapse;min-width:1500px}
+    th{
+      position:sticky;top:0;z-index:3;background:var(--accent);color:white;
+      text-align:left;padding:12px;white-space:nowrap;
+    }
+    td{padding:11px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+    tbody tr:hover{background:#fff8ec}
+
+    .status{
+      display:inline-flex;padding:5px 9px;border-radius:999px;
+      font-size:12px;font-weight:700;
+    }
+    .status.pending{background:#fee2e2;color:#991b1b}
+    .status.partial{background:#fef3c7;color:#92400e}
+    .status.completed{background:#dcfce7;color:#166534}
+
+    .action{
+      background:var(--blue);color:white;border:0;border-radius:7px;
+      padding:7px 11px;font-weight:700;cursor:pointer;
+    }
+
+    .empty{text-align:center;padding:30px;color:var(--muted)}
+    .loading{text-align:center;padding:18px;color:var(--muted)}
+
+    .toast{
+      position:fixed;right:22px;bottom:22px;padding:13px 17px;
+      border-radius:10px;color:white;font-weight:700;opacity:0;
+      transform:translateY(15px);transition:.25s;z-index:2000;
+    }
+    .toast.show{opacity:1;transform:translateY(0)}
+    .toast.success{background:#16a34a}
+    .toast.error{background:#dc2626}
+
+    @media(max-width:1150px){
+      :root{--sidebar-width:200px}
+      .profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+
+    @media(max-width:760px){
+      .sidebar{position:relative;width:100%;height:auto}
+      .main{margin-left:0;padding:18px 12px}
+      .topbar{display:block}
+      .back-btn{margin-top:12px}
+      .profile-grid,.summary-grid,.filters{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">◆</div>
+      <div>
+        <h2>Inventory Store</h2>
+        <p>Management System</p>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="index.html">⌂ Dashboard</a>
+
+      <div class="nav-group open" id="mastersGroup">
+        <button class="nav-group-title active" type="button" onclick="toggleMasters()">
+          <span>▦ Masters</span><span>⌃</span>
+        </button>
+        <div class="submenu">
+          <a href="items.html">Item Master</a>
+          <a href="suppliers.html">Supplier Master</a>
+          <a class="active" href="workshops.html">Workshop / Party Master</a>
+          <a href="departments.html">Department Master</a>
+          <a href="units.html">Unit Master</a>
+          <a href="categories.html">Category Master</a>
+          <a href="carriers.html">Carrier Master</a>
+          <a href="authorities.html">Authorized Person Master</a>
+        </div>
+      </div>
+
+      <a href="purchase.html">🛒 Purchase Entry</a>
+      <a href="issue.html">↩ Issue Entry</a>
+      <a href="rgp-list.html">▣ Gate Pass</a>
+      <a href="stock-ledger.html">▤ Stock Ledger</a>
+      <a href="reports.html">▥ Reports</a>
+      <a href="settings.html">⚙ Settings</a>
+    </nav>
+
+    <div class="profile-card">
+      <img src="public/waqas.jpg.png" alt="Muhammad Waqas" />
+      <h3>Muhammad Waqas</h3>
+      <p><span></span>Online</p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Workshop / Party Detail</h1>
+        <p>RGP activity, pending items, completed records and bill details</p>
+      </div>
+      <button class="back-btn" onclick="history.back()">← Back to Workshop Master</button>
+    </div>
+
+    <section class="card">
+      <div id="profileGrid" class="profile-grid">
+        <div class="loading">Loading workshop details...</div>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <div class="summary-card" onclick="setStatusFilter('All')">
+        <small>Total RGP</small>
+        <h2 id="totalRgp">0</h2>
+      </div>
+      <div class="summary-card pending" onclick="setStatusFilter('Pending')">
+        <small>Pending RGP</small>
+        <h2 id="pendingRgp">0</h2>
+      </div>
+      <div class="summary-card completed" onclick="setStatusFilter('Completed')">
+        <small>Completed RGP</small>
+        <h2 id="completedRgp">0</h2>
+      </div>
+      <div class="summary-card bill" onclick="setBillFilter('With Bill')">
+        <small>Total Bill Value</small>
+        <h2 id="totalBillValue">PKR 0</h2>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="filters">
+        <select id="statusFilter">
+          <option>All</option>
+          <option>Pending</option>
+          <option>Partial</option>
+          <option>Completed</option>
+        </select>
+
+        <input id="fromDate" placeholder="From Date (25-6)" />
+        <input id="toDate" placeholder="To Date (25-6)" />
+        <input id="itemFilter" list="itemList" placeholder="Type item name..." />
+        <datalist id="itemList"></datalist>
+        <input id="departmentFilter" list="departmentList" placeholder="Type department..." />
+        <datalist id="departmentList"></datalist>
+        <input id="rgpFilter" list="rgpList" placeholder="Type RGP No..." />
+        <datalist id="rgpList"></datalist>
+
+        <select id="billFilter">
+          <option>All Bills</option>
+          <option>With Bill</option>
+          <option>Without Bill</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn-clear" onclick="clearFilters()">Clear Filters</button>
+        <button class="btn btn-excel" onclick="exportCSV()">Export Excel</button>
+        <button class="btn btn-pdf" onclick="window.print()">Print / PDF</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>RGP No.</th>
+              <th>Date</th>
+              <th>Item with Size</th>
+              <th>Qty Sent</th>
+              <th>Qty Received</th>
+              <th>Pending</th>
+              <th>Unit</th>
+              <th>Department</th>
+              <th>Carrier</th>
+              <th>Authorized By</th>
+              <th>Bill Detail</th>
+              <th>Bill Value</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="detailBody">
+            <tr><td colspan="14" class="loading">Loading RGP records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+  const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const workshopId = new URLSearchParams(location.search).get("id");
+  let workshop = null;
+  let records = [];
+  let filteredRecords = [];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if(!workshopId){
+      showToast("Workshop ID is missing.", "error");
+      return;
+    }
+
+    loadPage();
+    setupFilters();
+    setupKeyboardTools();
+    setupDateInputs();
+  });
+
+  function toggleMasters(){
+    document.getElementById("mastersGroup").classList.toggle("open");
+  }
+
+  async function loadPage(){
+    const {data, error} = await db
+      .from("workshops")
+      .select("*")
+      .eq("id", workshopId)
+      .single();
+
+    if(error || !data){
+      showToast("Workshop record not found.", "error");
+      document.getElementById("profileGrid").innerHTML =
+        `<div class="empty">Workshop record not found.</div>`;
+      return;
+    }
+
+    workshop = data;
+    renderWorkshopProfile();
+    await loadRgpRecords();
+  }
+
+  function renderWorkshopProfile(){
+    document.getElementById("pageTitle").textContent =
+      `${workshop.workshop_name || "Workshop"} Detail`;
+
+    const fields = [
+      ["Workshop Code", workshop.workshop_code],
+      ["Workshop / Party Name", workshop.workshop_name],
+      ["Contact Person", workshop.contact_person],
+      ["Mobile Number", workshop.mobile_no],
+      ["City", workshop.city],
+      ["Specialization", workshop.specialization],
+      ["Address", workshop.address],
+      ["Status", workshop.status],
+      ["Remarks", workshop.remarks]
+    ];
+
+    document.getElementById("profileGrid").innerHTML = fields.map(([label,value]) => `
+      <div class="info-box">
+        <small>${escapeHtml(label)}</small>
+        <strong>${escapeHtml(value || "-")}</strong>
+      </div>
+    `).join("");
+  }
+
+  async function loadRgpRecords(){
+    const masterResult = await db.from("rgp_master").select("*").order("id",{ascending:false});
+
+    if(masterResult.error){
+      showToast("RGP load error: " + masterResult.error.message, "error");
+      renderRecords([]);
+      return;
+    }
+
+    const masters = (masterResult.data || []).filter(row => {
+      const rowWorkshopId = firstValue(row, ["workshop_id","party_id"]);
+      const rowWorkshopName = String(firstValue(row, [
+        "workshop_name","workshop","party_name","receiver_party"
+      ]) || "").trim().toLowerCase();
+
+      return String(rowWorkshopId || "") === String(workshopId) ||
+             rowWorkshopName === String(workshop.workshop_name || "").trim().toLowerCase();
+    });
+
+    const masterIds = masters.map(row => row.id).filter(Boolean);
+
+    let items = [];
+    if(masterIds.length){
+      const itemsResult = await db.from("rgp_items").select("*");
+      if(!itemsResult.error){
+        items = (itemsResult.data || []).filter(item =>
+          masterIds.map(String).includes(String(firstValue(item, [
+            "rgp_master_id","master_id","rgp_id"
+          ])))
+        );
+      }
+    }
+
+    let returns = [];
+    if(masterIds.length){
+      const returnResult = await db.from("rgp_returns").select("*");
+      if(!returnResult.error){
+        returns = returnResult.data || [];
+      }
+    }
+
+    records = buildRecords(masters, items, returns);
+    fillSearchLists();
+    applyFilters();
+  }
+
+  function buildRecords(masters, items, returns){
+    const rows = [];
+
+    masters.forEach(master => {
+      const masterItems = items.filter(item =>
+        String(firstValue(item, ["rgp_master_id","master_id","rgp_id"])) === String(master.id)
+      );
+
+      const sourceItems = masterItems.length ? masterItems : [master];
+
+      sourceItems.forEach(item => {
+        const itemId = firstValue(item, ["id","rgp_item_id"]);
+        const qtySent = numberValue(firstValue(item, ["qty","quantity","qty_sent","sent_qty"]));
+
+        const matchingReturns = returns.filter(ret => {
+          const retItemId = firstValue(ret, ["rgp_item_id","item_id"]);
+          const retMasterId = firstValue(ret, ["rgp_master_id","master_id","rgp_id"]);
+          return String(retItemId || "") === String(itemId || "") ||
+                 String(retMasterId || "") === String(master.id);
+        });
+
+        const qtyReceived = matchingReturns.reduce((sum, ret) =>
+          sum + numberValue(firstValue(ret, ["qty_received","received_qty","qty","quantity"])), 0
+        );
+
+        const pending = Math.max(qtySent - qtyReceived, 0);
+        const status = qtySent > 0 && pending === 0
+          ? "Completed"
+          : qtyReceived > 0
+            ? "Partial"
+            : "Pending";
+
+        const itemName = firstValue(item, ["item_name","item","product_name"]);
+        const size = firstValue(item, ["size","item_size"]);
+        const billDetail = firstValue(master, [
+          "bill_detail","bill_details","repair_bill","bill_no","bill"
+        ]);
+        const billValue = numberValue(firstValue(master, [
+          "bill_value","bill_amount","repair_bill_amount","pending_value","amount"
+        ]));
+
+        rows.push({
+          masterId: master.id,
+          rgpNo: firstValue(master, ["rgp_no","rgp_number","rgpno"]) || `RGP-${String(master.id).padStart(5,"0")}`,
+          date: firstValue(master, ["date","rgp_date","created_at"]),
+          item: [itemName,size].filter(Boolean).join(" "),
+          qtySent,
+          qtyReceived,
+          pending,
+          unit: firstValue(item, ["unit","unit_name"]),
+          department: firstValue(master, ["department","department_name"]),
+          carrier: firstValue(master, ["carrier","carrier_name"]),
+          authorizedBy: firstValue(master, ["authorized_by","authority","approved_by"]),
+          billDetail: billDetail || "",
+          billValue,
+          status
+        });
+      });
+    });
+
+    return rows;
+  }
+
+  function setupFilters(){
+    ["statusFilter","fromDate","toDate","itemFilter","departmentFilter","rgpFilter","billFilter"]
+      .forEach(id => {
+        document.getElementById(id).addEventListener("input", applyFilters);
+        document.getElementById(id).addEventListener("change", applyFilters);
+      });
+  }
+
+  function setupKeyboardTools(){
+    const filters = [...document.querySelectorAll(".filters input,.filters select")];
+
+    filters.forEach((field,index) => {
+      field.addEventListener("keydown", event => {
+        if(event.key === "Enter"){
+          event.preventDefault();
+          const next = filters[index + (event.shiftKey ? -1 : 1)];
+          if(next){
+            next.focus();
+            if(next.select) next.select();
+          }else{
+            applyFilters();
+          }
+        }
+
+        if(event.key === "ArrowDown" && field.tagName !== "SELECT"){
+          event.preventDefault();
+          if(filters[index+1]) filters[index+1].focus();
+        }
+
+        if(event.key === "ArrowUp" && field.tagName !== "SELECT"){
+          event.preventDefault();
+          if(filters[index-1]) filters[index-1].focus();
+        }
+      });
+    });
+
+    document.addEventListener("keydown", event => {
+      if(event.ctrlKey && event.key.toLowerCase() === "f"){
+        event.preventDefault();
+        document.getElementById("itemFilter").focus();
+      }
+
+      if(event.key === "Escape"){
+        clearFilters();
+      }
+    });
+  }
+
+  function setupDateInputs(){
+    ["fromDate","toDate"].forEach(id => {
+      const input = document.getElementById(id);
+      input.addEventListener("blur", () => {
+        if(input.value.trim()) input.value = formatTypedDate(input.value);
+        applyFilters();
+      });
+    });
+  }
+
+  function formatTypedDate(value){
+    const clean = value.trim().replace(/[./]/g,"-");
+    const parts = clean.split("-").filter(Boolean);
+    if(parts.length < 2) return value;
+
+    const now = new Date();
+    const day = Number(parts[0]);
+    const month = Number(parts[1]);
+    let year = parts[2] ? Number(parts[2]) : now.getFullYear();
+
+    if(year < 100) year += 2000;
+    if(!day || !month || month > 12) return value;
+
+    const date = new Date(year,month-1,day);
+    if(Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleDateString("en-GB",{
+      day:"2-digit",month:"short",year:"2-digit"
+    }).replace(/ /g,"-");
+  }
+
+  function applyFilters(){
+    const status = document.getElementById("statusFilter").value;
+    const fromDate = parseFlexibleDate(document.getElementById("fromDate").value);
+    const toDate = parseFlexibleDate(document.getElementById("toDate").value);
+    const item = document.getElementById("itemFilter").value.toLowerCase().trim();
+    const department = document.getElementById("departmentFilter").value.toLowerCase().trim();
+    const rgp = document.getElementById("rgpFilter").value.toLowerCase().trim();
+    const bill = document.getElementById("billFilter").value;
+
+    filteredRecords = records.filter(row => {
+      const rowDate = parseFlexibleDate(row.date);
+
+      return (status === "All" || row.status === status) &&
+        (!fromDate || (rowDate && rowDate >= fromDate)) &&
+        (!toDate || (rowDate && rowDate <= toDate)) &&
+        (!item || row.item.toLowerCase().includes(item)) &&
+        (!department || String(row.department || "").toLowerCase().includes(department)) &&
+        (!rgp || String(row.rgpNo || "").toLowerCase().includes(rgp)) &&
+        (bill === "All Bills" ||
+          (bill === "With Bill" && (row.billDetail || row.billValue > 0)) ||
+          (bill === "Without Bill" && !row.billDetail && row.billValue === 0));
+    });
+
+    renderSummary();
+    renderRecords(filteredRecords);
+  }
+
+  function renderSummary(){
+    document.getElementById("totalRgp").textContent = records.length;
+    document.getElementById("pendingRgp").textContent =
+      records.filter(r => r.status === "Pending" || r.status === "Partial").length;
+    document.getElementById("completedRgp").textContent =
+      records.filter(r => r.status === "Completed").length;
+
+    const total = records.reduce((sum,row) => sum + row.billValue,0);
+    document.getElementById("totalBillValue").textContent =
+      `PKR ${total.toLocaleString("en-PK",{maximumFractionDigits:2})}`;
+  }
+
+  function renderRecords(rows){
+    const body = document.getElementById("detailBody");
+
+    if(!rows.length){
+      body.innerHTML = `<tr><td colspan="14" class="empty">No matching RGP records found.</td></tr>`;
+      return;
+    }
+
+    body.innerHTML = rows.map(row => `
+      <tr>
+        <td><b>${escapeHtml(row.rgpNo)}</b></td>
+        <td>${escapeHtml(displayDate(row.date))}</td>
+        <td>${escapeHtml(row.item || "-")}</td>
+        <td>${formatNumber(row.qtySent)}</td>
+        <td>${formatNumber(row.qtyReceived)}</td>
+        <td>${formatNumber(row.pending)}</td>
+        <td>${escapeHtml(row.unit || "-")}</td>
+        <td>${escapeHtml(row.department || "-")}</td>
+        <td>${escapeHtml(row.carrier || "-")}</td>
+        <td>${escapeHtml(row.authorizedBy || "-")}</td>
+        <td>${escapeHtml(row.billDetail || "-")}</td>
+        <td>PKR ${row.billValue.toLocaleString("en-PK",{maximumFractionDigits:2})}</td>
+        <td><span class="status ${row.status.toLowerCase()}">${row.status}</span></td>
+        <td><button class="action" onclick="openRgp(${Number(row.masterId)})">View RGP</button></td>
+      </tr>
+    `).join("");
+  }
+
+  function fillSearchLists(){
+    fillDatalist("itemList", unique(records.map(r => r.item)));
+    fillDatalist("departmentList", unique(records.map(r => r.department)));
+    fillDatalist("rgpList", unique(records.map(r => r.rgpNo)));
+  }
+
+  function fillDatalist(id, values){
+    document.getElementById(id).innerHTML =
+      values.map(v => `<option value="${escapeHtml(v)}"></option>`).join("");
+  }
+
+  function unique(values){
+    return [...new Set(values.filter(Boolean).map(String))].sort();
+  }
+
+  function setStatusFilter(value){
+    document.getElementById("statusFilter").value = value;
+    applyFilters();
+  }
+
+  function setBillFilter(value){
+    document.getElementById("billFilter").value = value;
+    applyFilters();
+  }
+
+  function clearFilters(){
+    document.getElementById("statusFilter").value = "All";
+    document.getElementById("fromDate").value = "";
+    document.getElementById("toDate").value = "";
+    document.getElementById("itemFilter").value = "";
+    document.getElementById("departmentFilter").value = "";
+    document.getElementById("rgpFilter").value = "";
+    document.getElementById("billFilter").value = "All Bills";
+    applyFilters();
+  }
+
+  function exportCSV(){
+    let csv = "RGP No,Date,Item,Qty Sent,Qty Received,Pending,Unit,Department,Carrier,Authorized By,Bill Detail,Bill Value,Status\n";
+
+    filteredRecords.forEach(row => {
+      csv += [
+        row.rgpNo,displayDate(row.date),row.item,row.qtySent,row.qtyReceived,row.pending,
+        row.unit,row.department,row.carrier,row.authorizedBy,row.billDetail,row.billValue,row.status
+      ].map(v => `"${String(v ?? "").replaceAll('"','""')}"`).join(",") + "\n";
+    });
+
+    const blob = new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${workshop.workshop_name || "workshop"}-rgp-detail.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function openRgp(id){
+    window.location.href = `rgp-detail.html?id=${encodeURIComponent(id)}`;
+  }
+
+  function firstValue(object, keys){
+    for(const key of keys){
+      if(object && object[key] !== undefined && object[key] !== null && object[key] !== ""){
+        return object[key];
+      }
+    }
+    return "";
+  }
+
+  function numberValue(value){
+    const number = Number(String(value ?? "").replace(/,/g,""));
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  function formatNumber(value){
+    return Number(value || 0).toLocaleString("en-PK",{maximumFractionDigits:3});
+  }
+
+  function parseFlexibleDate(value){
+    if(!value) return null;
+
+    if(value instanceof Date) return value;
+    const text = String(value).trim();
+
+    const direct = new Date(text);
+    if(!Number.isNaN(direct.getTime())){
+      return new Date(direct.getFullYear(),direct.getMonth(),direct.getDate());
+    }
+
+    const match = text.match(/^(\d{1,2})-([A-Za-z]{3}|\d{1,2})-(\d{2,4})$/);
+    if(!match) return null;
+
+    const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+    const day = Number(match[1]);
+    const month = isNaN(Number(match[2]))
+      ? months.indexOf(match[2].toLowerCase())
+      : Number(match[2]) - 1;
+    let year = Number(match[3]);
+    if(year < 100) year += 2000;
+
+    const date = new Date(year,month,day);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function displayDate(value){
+    const date = parseFlexibleDate(value);
+    if(!date) return value || "-";
+    return date.toLocaleDateString("en-GB",{
+      day:"2-digit",month:"short",year:"2-digit"
+    }).replace(/ /g,"-");
+  }
+
+  function escapeHtml(value){
+    return String(value ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function showToast(message,type){
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `toast ${type} show`;
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove("show"),2600);
+  }
+</script>
+</body>
+</html>
