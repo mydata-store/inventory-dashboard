@@ -9,38 +9,257 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    .main{padding:28px;background:#f5f6fb;min-height:100vh}
-    .page-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-    .page-top h1{font-size:30px;margin:0;color:#07142e}
-    .page-top p{margin:5px 0 0;color:#6b7280}
-    .search-box{width:280px;padding:13px 18px;border:1px solid #d9dee8;border-radius:10px}
-
-    .card{background:white;border-radius:16px;padding:22px;margin-bottom:22px;box-shadow:0 8px 20px rgba(0,0,0,.05)}
-    .card h2{margin:0 0 16px;font-size:22px;color:#07142e}
-
-    .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-    .form-grid input,.form-grid select{
-      padding:13px 14px;border:1px solid #cfd6e1;border-radius:9px;font-size:14px;
+    :root{
+      --sidebar-width:220px;
+      --sidebar-bg:#241000;
+      --sidebar-card:#4a2718;
+      --accent:#f5a316;
+      --page-bg:#f5f6fb;
+      --text:#07142e;
+      --muted:#6b7280;
+      --border:#d9dee8;
+      --blue:#2563eb;
+      --red:#ef4444;
+      --green:#16a34a;
     }
 
-    .btn-row{display:flex;gap:10px;margin-top:16px}
-    button{border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer}
-    .save{background:#f5a316;color:white}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--page-bg);color:var(--text)}
+
+    .sidebar{
+      position:fixed;
+      left:0;
+      top:0;
+      width:var(--sidebar-width);
+      height:100vh;
+      background:var(--sidebar-bg);
+      color:white;
+      padding:16px 14px;
+      display:flex;
+      flex-direction:column;
+      z-index:1000;
+      overflow-y:auto;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:22px;
+    }
+
+    .brand-icon{
+      width:38px;
+      height:38px;
+      border-radius:11px;
+      background:var(--accent);
+      display:grid;
+      place-items:center;
+      font-size:17px;
+      box-shadow:0 8px 20px rgba(245,163,22,.25);
+    }
+
+    .brand h2{margin:0;font-size:17px}
+    .brand p{margin:3px 0 0;font-size:10px;color:#ffd58a}
+
+    .nav{display:flex;flex-direction:column;gap:7px}
+    .nav a,.nav button{
+      width:100%;
+      border:0;
+      background:transparent;
+      color:white;
+      text-decoration:none;
+      text-align:left;
+      padding:11px 12px;
+      border-radius:9px;
+      font-size:13px;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    .nav a:hover,.nav button:hover,.nav a.active,.nav button.active{
+      background:var(--accent);
+      color:#111827;
+    }
+
+    .nav-group{display:flex;flex-direction:column;gap:5px}
+    .nav-group-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .nav-group-title span:last-child{transition:.2s}
+    .nav-group.open .nav-group-title span:last-child{transform:rotate(180deg)}
+
+    .submenu{
+      display:none;
+      flex-direction:column;
+      gap:4px;
+      margin-left:8px;
+      padding-left:8px;
+      border-left:1px solid rgba(255,255,255,.18);
+    }
+
+    .nav-group.open .submenu{display:flex}
+    .submenu a{padding:9px 10px;font-size:12px}
+
+    .profile-card{
+      margin-top:auto;
+      background:var(--sidebar-card);
+      border-radius:14px;
+      padding:14px;
+      text-align:center;
+    }
+
+    .profile-card img{
+      width:62px;
+      height:62px;
+      border-radius:50%;
+      object-fit:cover;
+      border:3px solid var(--accent);
+    }
+
+    .profile-card h3{font-size:13px;margin:8px 0 4px}
+    .profile-card p{margin:0;font-size:11px;color:#d1fae5}
+    .profile-card p span{
+      display:inline-block;
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#22c55e;
+      margin-right:5px;
+    }
+
+    .main{
+      margin-left:var(--sidebar-width);
+      padding:28px 22px;
+      min-height:100vh;
+      background:var(--page-bg);
+    }
+
+    .page-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:20px;
+      margin-bottom:18px;
+    }
+
+    .page-top h1{font-size:29px;margin:0;color:var(--text)}
+    .page-top p{margin:5px 0 0;color:var(--muted)}
+    .search-box{
+      width:290px;
+      padding:13px 16px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      outline:none;
+    }
+
+    .search-box:focus,.form-grid input:focus,.form-grid select:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(245,163,22,.15);
+    }
+
+    .card{
+      background:white;
+      border-radius:16px;
+      padding:18px;
+      margin-bottom:20px;
+      box-shadow:0 8px 20px rgba(0,0,0,.05);
+    }
+
+    .card h2{margin:0 0 16px;font-size:21px;color:var(--text)}
+    .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+
+    .form-grid input,.form-grid select{
+      min-width:0;
+      padding:12px 13px;
+      border:1px solid #cfd6e1;
+      border-radius:9px;
+      font-size:14px;
+      outline:none;
+      background:white;
+    }
+
+    .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}
+    .save{background:var(--accent);color:white}
     .clear{background:#edf0f5;color:#111827}
-    .export{background:#2563eb;color:white}
-    .edit{background:#2563eb;color:white;padding:7px 16px}
-    .delete{background:#ef4444;color:white;padding:7px 16px}
+    .export{background:var(--blue);color:white}
+    .detail{background:var(--green);color:white;padding:7px 12px}
+    .edit{background:var(--blue);color:white;padding:7px 12px}
+    .delete{background:var(--red);color:white;padding:7px 12px}
+    .action-wrap{display:flex;gap:6px;flex-wrap:nowrap}
 
-    table{width:100%;border-collapse:collapse}
-    th{background:#f5a316;color:white;text-align:left;padding:13px}
-    td{padding:13px;border-bottom:1px solid #e5e7eb}
-    th:first-child{border-radius:10px 0 0 0}
-    th:last-child{border-radius:0 10px 0 0}
+    .table-wrap{
+      max-height:430px;
+      overflow:auto;
+      border-radius:10px;
+      border:1px solid #eef0f4;
+    }
 
-    @media(max-width:1000px){
-      .form-grid{grid-template-columns:repeat(2,1fr)}
+    table{width:100%;border-collapse:collapse;min-width:1180px}
+    thead th{
+      position:sticky;
+      top:0;
+      z-index:4;
+      background:var(--accent);
+      color:white;
+      text-align:left;
+      padding:12px;
+      white-space:nowrap;
+    }
+
+    td{padding:12px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+    tbody tr:hover{background:#fff8ec}
+    th:first-child{border-radius:9px 0 0 0}
+    th:last-child{border-radius:0 9px 0 0}
+
+    .status{
+      display:inline-flex;
+      align-items:center;
+      padding:5px 9px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .status.active{background:#dcfce7;color:#166534}
+    .status.inactive{background:#fee2e2;color:#991b1b}
+    .empty{text-align:center;color:var(--muted);padding:28px}
+
+    .toast{
+      position:fixed;
+      right:22px;
+      bottom:22px;
+      padding:13px 17px;
+      border-radius:10px;
+      color:white;
+      font-weight:700;
+      opacity:0;
+      transform:translateY(15px);
+      pointer-events:none;
+      transition:.25s;
+      z-index:2000;
+    }
+
+    .toast.show{opacity:1;transform:translateY(0)}
+    .toast.success{background:#16a34a}
+    .toast.error{background:#dc2626}
+
+    @media(max-width:1050px){
+      :root{--sidebar-width:200px}
+      .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .page-top{align-items:flex-start}
+    }
+
+    @media(max-width:760px){
+      .sidebar{position:relative;width:100%;height:auto}
+      .main{margin-left:0;padding:18px 12px}
       .page-top{display:block}
       .search-box{width:100%;margin-top:12px}
+      .form-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -57,20 +276,50 @@
 
     <nav class="nav">
       <a href="index.html">⌂ Dashboard</a>
-      <a href="items.html">▣ Items</a>
+
+      <div class="nav-group open" id="mastersGroup">
+        <button class="nav-group-title active" type="button" onclick="toggleMasters()">
+          <span>▦ Masters</span>
+          <span>⌃</span>
+        </button>
+        <div class="submenu">
+          <a href="items.html">Item Master</a>
+          <a href="suppliers.html">Supplier Master</a>
+          <a class="active" href="workshops.html">Workshop / Party Master</a>
+          <a href="departments.html">Department Master</a>
+          <a href="units.html">Unit Master</a>
+          <a href="categories.html">Category Master</a>
+          <a href="carriers.html">Carrier Master</a>
+          <a href="authorities.html">Authorized Person Master</a>
+        </div>
+      </div>
+
       <a href="purchase.html">🛒 Purchase Entry</a>
       <a href="issue.html">↩ Issue Entry</a>
-      <a href="#">▤ Stock Ledger</a>
-      <a href="#">▥ Reports</a>
-      <a href="suppliers.html">▰ Suppliers</a>
-      <a class="active" href="workshops.html">⚙ Workshop / Party</a>
-      <a href="#">⚙ Settings</a>
+
+      <div class="nav-group" id="gatePassGroup">
+        <button class="nav-group-title" type="button" onclick="toggleGatePass()">
+          <span>▣ Gate Pass</span>
+          <span>⌃</span>
+        </button>
+        <div class="submenu">
+          <a href="rgp-entry.html">RGP Entry</a>
+          <a href="rgp-return.html">RGP Return</a>
+          <a href="rgp-list.html">RGP List</a>
+          <a href="ogp-entry.html">OGP Entry</a>
+          <a href="ogp-list.html">OGP List</a>
+        </div>
+      </div>
+
+      <a href="stock-ledger.html">▤ Stock Ledger</a>
+      <a href="reports.html">▥ Reports</a>
+      <a href="settings.html">⚙ Settings</a>
     </nav>
 
     <div class="profile-card">
-      <img src="public/waqas.jpg.png" />
+      <img src="public/waqas.jpg.png" alt="Muhammad Waqas" />
       <h3>Muhammad Waqas</h3>
-      <p><span></span> Online</p>
+      <p><span></span>Online</p>
     </div>
   </aside>
 
@@ -80,72 +329,90 @@
         <h1>Workshop / Party Master</h1>
         <p>Manage repair workshops, outside parties, calibration labs and vendors</p>
       </div>
-      <input class="search-box" id="searchBox" placeholder="Search workshop, mobile, city..." oninput="renderWorkshops()" />
+      <input class="search-box" id="searchBox" placeholder="Search workshop, mobile, city..." />
     </div>
 
     <section class="card">
-      <h2>Add New Workshop / Party</h2>
+      <h2 id="formTitle">Add New Workshop / Party</h2>
 
-      <div class="form-grid">
+      <div class="form-grid" id="workshopForm">
         <input id="workshop_code" placeholder="Workshop Code" readonly />
-        <input id="workshop_name" placeholder="Workshop / Party Name *" />
-        <input id="contact_person" placeholder="Contact Person" />
-        <input id="mobile_no" placeholder="Mobile No." />
+        <input id="workshop_name" placeholder="Workshop / Party Name *" data-capitalize />
+        <input id="contact_person" placeholder="Contact Person" data-capitalize />
+        <input id="mobile_no" placeholder="Mobile No." inputmode="numeric" />
 
-        <input id="city" placeholder="City" />
-        <input id="address" placeholder="Address" />
-        <input id="specialization" placeholder="Specialization e.g. Lathe, Welding" />
+        <input id="city" placeholder="City" data-capitalize />
+        <input id="address" placeholder="Address" data-capitalize />
+        <input id="specialization" placeholder="Specialization e.g. Lathe, Welding" data-capitalize />
         <select id="status">
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
         </select>
 
-        <input id="remarks" placeholder="Remarks" />
+        <input id="remarks" placeholder="Remarks" data-capitalize />
       </div>
 
       <div class="btn-row">
-        <button class="save" onclick="saveWorkshop()">Save Workshop</button>
+        <button class="save" id="saveBtn" onclick="saveWorkshop()">Save Workshop</button>
         <button class="clear" onclick="clearForm()">Clear</button>
         <button class="export" onclick="exportExcel()">Export Excel</button>
       </div>
     </section>
 
     <section class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Workshop / Party Name</th>
-            <th>Contact Person</th>
-            <th>Mobile</th>
-            <th>City</th>
-            <th>Specialization</th>
-            <th>Address</th>
-            <th>Status</th>
-            <th>Remarks</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="workshopBody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Workshop / Party Name</th>
+              <th>Contact Person</th>
+              <th>Mobile</th>
+              <th>City</th>
+              <th>Specialization</th>
+              <th>Address</th>
+              <th>Status</th>
+              <th>Remarks</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="workshopBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
+  <div id="toast" class="toast"></div>
+
 <script>
   const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma"; 
+  const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let workshops = [];
   let editId = null;
+  let lastFormState = null;
 
-  document.addEventListener("DOMContentLoaded", loadWorkshops);
+  document.addEventListener("DOMContentLoaded", () => {
+    loadWorkshops();
+    setupKeyboardTools();
+    setupAutoCapitalize();
+    document.getElementById("searchBox").addEventListener("input", renderWorkshops);
+  });
+
+  function toggleMasters(){
+    document.getElementById("mastersGroup").classList.toggle("open");
+  }
+
+  function toggleGatePass(){
+    document.getElementById("gatePassGroup").classList.toggle("open");
+  }
 
   async function loadWorkshops(){
     const { data, error } = await db.from("workshops").select("*").order("id", { ascending:true });
 
     if(error){
-      alert("Load error: " + error.message);
+      showToast("Load error: " + error.message, "error");
       return;
     }
 
@@ -155,86 +422,210 @@
   }
 
   function generateCode(){
+    if(editId) return;
     const next = workshops.length ? Math.max(...workshops.map(w => Number(w.id) || 0)) + 1 : 1;
     document.getElementById("workshop_code").value = "WSP-" + String(next).padStart(4, "0");
+  }
+
+  function titleCase(value){
+    return value
+      .toLowerCase()
+      .replace(/\b\w/g, ch => ch.toUpperCase())
+      .replace(/\bAnd\b/g, "and")
+      .replace(/\bOf\b/g, "of");
+  }
+
+  function setupAutoCapitalize(){
+    document.querySelectorAll("[data-capitalize]").forEach(el => {
+      el.addEventListener("blur", () => {
+        el.value = titleCase(el.value.trim());
+      });
+    });
+
+    document.getElementById("mobile_no").addEventListener("input", e => {
+      e.target.value = e.target.value.replace(/[^\d+\-\s]/g, "");
+    });
+  }
+
+  function setupKeyboardTools(){
+    const fields = [...document.querySelectorAll("#workshopForm input, #workshopForm select")];
+
+    fields.forEach((field, index) => {
+      field.addEventListener("keydown", event => {
+        if(event.key === "Enter"){
+          event.preventDefault();
+          const direction = event.shiftKey ? -1 : 1;
+          const next = fields[index + direction];
+
+          if(next){
+            next.focus();
+            if(typeof next.select === "function") next.select();
+          }else if(!event.shiftKey){
+            saveWorkshop();
+          }
+        }
+
+        if(event.key === "ArrowDown" && field.tagName !== "SELECT"){
+          event.preventDefault();
+          const next = fields[index + 1];
+          if(next) next.focus();
+        }
+
+        if(event.key === "ArrowUp" && field.tagName !== "SELECT"){
+          event.preventDefault();
+          const previous = fields[index - 1];
+          if(previous) previous.focus();
+        }
+      });
+    });
+
+    document.addEventListener("keydown", event => {
+      if(event.ctrlKey && event.key.toLowerCase() === "s"){
+        event.preventDefault();
+        saveWorkshop();
+      }
+
+      if(event.ctrlKey && event.key.toLowerCase() === "z"){
+        event.preventDefault();
+        restoreLastFormState();
+      }
+
+      if(event.key === "Escape"){
+        clearForm();
+      }
+
+      if(event.ctrlKey && event.key.toLowerCase() === "f"){
+        event.preventDefault();
+        document.getElementById("searchBox").focus();
+        document.getElementById("searchBox").select();
+      }
+    });
+  }
+
+  function captureFormState(){
+    const state = {};
+    document.querySelectorAll("#workshopForm input, #workshopForm select").forEach(el => {
+      state[el.id] = el.value;
+    });
+    state.editId = editId;
+    return state;
+  }
+
+  function restoreLastFormState(){
+    if(!lastFormState){
+      showToast("No recent form change to undo.", "error");
+      return;
+    }
+
+    Object.entries(lastFormState).forEach(([key, value]) => {
+      if(key === "editId") return;
+      const el = document.getElementById(key);
+      if(el) el.value = value;
+    });
+
+    editId = lastFormState.editId || null;
+    updateEditUI();
+    showToast("Previous form values restored.", "success");
   }
 
   async function saveWorkshop(){
     const workshop_name = document.getElementById("workshop_name").value.trim();
 
     if(!workshop_name){
-      alert("Workshop / Party Name is required.");
+      showToast("Workshop / Party Name is required.", "error");
+      document.getElementById("workshop_name").focus();
+      return;
+    }
+
+    const duplicate = workshops.find(w =>
+      String(w.workshop_name || "").trim().toLowerCase() === workshop_name.toLowerCase() &&
+      Number(w.id) !== Number(editId)
+    );
+
+    if(duplicate){
+      showToast("This Workshop / Party already exists.", "error");
       return;
     }
 
     const record = {
       workshop_code: document.getElementById("workshop_code").value,
-      workshop_name: workshop_name,
-      contact_person: document.getElementById("contact_person").value,
-      mobile_no: document.getElementById("mobile_no").value,
-      city: document.getElementById("city").value,
-      address: document.getElementById("address").value,
-      specialization: document.getElementById("specialization").value,
+      workshop_name: titleCase(workshop_name),
+      contact_person: titleCase(document.getElementById("contact_person").value.trim()),
+      mobile_no: document.getElementById("mobile_no").value.trim(),
+      city: titleCase(document.getElementById("city").value.trim()),
+      address: titleCase(document.getElementById("address").value.trim()),
+      specialization: titleCase(document.getElementById("specialization").value.trim()),
       status: document.getElementById("status").value,
-      remarks: document.getElementById("remarks").value
+      remarks: titleCase(document.getElementById("remarks").value.trim())
     };
 
-    let result;
-
-    if(editId){
-      result = await db.from("workshops").update(record).eq("id", editId);
-    } else {
-      result = await db.from("workshops").insert([record]);
-    }
+    const result = editId
+      ? await db.from("workshops").update(record).eq("id", editId)
+      : await db.from("workshops").insert([record]);
 
     if(result.error){
-      alert("Save error: " + result.error.message);
+      showToast("Save error: " + result.error.message, "error");
       return;
     }
 
-    alert("Workshop saved successfully!");
-    clearForm();
+    showToast(editId ? "Workshop updated successfully." : "Workshop saved successfully.", "success");
+    clearForm(false);
     await loadWorkshops();
   }
 
   function renderWorkshops(){
-    const q = document.getElementById("searchBox").value.toLowerCase();
+    const q = document.getElementById("searchBox").value.toLowerCase().trim();
     const body = document.getElementById("workshopBody");
-    body.innerHTML = "";
+    const filtered = workshops.filter(w =>
+      [
+        w.workshop_code,
+        w.workshop_name,
+        w.contact_person,
+        w.mobile_no,
+        w.city,
+        w.specialization,
+        w.address,
+        w.status,
+        w.remarks
+      ].some(value => String(value || "").toLowerCase().includes(q))
+    );
 
-    workshops
-      .filter(w =>
-        (w.workshop_code || "").toLowerCase().includes(q) ||
-        (w.workshop_name || "").toLowerCase().includes(q) ||
-        (w.mobile_no || "").toLowerCase().includes(q) ||
-        (w.city || "").toLowerCase().includes(q) ||
-        (w.specialization || "").toLowerCase().includes(q)
-      )
-      .forEach(w => {
-        body.innerHTML += `
-          <tr>
-            <td>${w.workshop_code || ""}</td>
-            <td><b>${w.workshop_name || ""}</b></td>
-            <td>${w.contact_person || ""}</td>
-            <td>${w.mobile_no || ""}</td>
-            <td>${w.city || ""}</td>
-            <td>${w.specialization || ""}</td>
-            <td>${w.address || ""}</td>
-            <td>${w.status || ""}</td>
-            <td>${w.remarks || ""}</td>
-            <td>
-              <button class="edit" onclick="editWorkshop(${w.id})">Edit</button>
-              <button class="delete" onclick="deleteWorkshop(${w.id})">Delete</button>
-            </td>
-          </tr>
-        `;
-      });
+    if(!filtered.length){
+      body.innerHTML = `<tr><td colspan="10" class="empty">No workshop / party record found.</td></tr>`;
+      return;
+    }
+
+    body.innerHTML = filtered.map(w => `
+      <tr>
+        <td>${escapeHtml(w.workshop_code || "")}</td>
+        <td><b>${escapeHtml(w.workshop_name || "")}</b></td>
+        <td>${escapeHtml(w.contact_person || "")}</td>
+        <td>${escapeHtml(w.mobile_no || "")}</td>
+        <td>${escapeHtml(w.city || "")}</td>
+        <td>${escapeHtml(w.specialization || "")}</td>
+        <td>${escapeHtml(w.address || "")}</td>
+        <td><span class="status ${(w.status || "Active").toLowerCase()}">${escapeHtml(w.status || "Active")}</span></td>
+        <td>${escapeHtml(w.remarks || "")}</td>
+        <td>
+          <div class="action-wrap">
+            <button class="detail" onclick="openDetail(${Number(w.id)})">Detail</button>
+            <button class="edit" onclick="editWorkshop(${Number(w.id)})">Edit</button>
+            <button class="delete" onclick="deleteWorkshop(${Number(w.id)})">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function openDetail(id){
+    window.location.href = `workshop-detail.html?id=${encodeURIComponent(id)}`;
   }
 
   function editWorkshop(id){
-    const w = workshops.find(x => x.id === id);
+    const w = workshops.find(x => Number(x.id) === Number(id));
     if(!w) return;
 
+    lastFormState = captureFormState();
     editId = id;
 
     document.getElementById("workshop_code").value = w.workshop_code || "";
@@ -246,22 +637,41 @@
     document.getElementById("specialization").value = w.specialization || "";
     document.getElementById("status").value = w.status || "Active";
     document.getElementById("remarks").value = w.remarks || "";
+
+    updateEditUI();
+    document.getElementById("workshop_name").focus();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function updateEditUI(){
+    const isEditing = Boolean(editId);
+    document.getElementById("formTitle").textContent = isEditing
+      ? "Edit Workshop / Party"
+      : "Add New Workshop / Party";
+    document.getElementById("saveBtn").textContent = isEditing
+      ? "Update Workshop"
+      : "Save Workshop";
   }
 
   async function deleteWorkshop(id){
-    if(!confirm("Delete this workshop?")) return;
+    const w = workshops.find(x => Number(x.id) === Number(id));
+    if(!w) return;
+
+    if(!confirm(`Delete "${w.workshop_name}"?`)) return;
 
     const { error } = await db.from("workshops").delete().eq("id", id);
 
     if(error){
-      alert("Delete error: " + error.message);
+      showToast("Delete error: " + error.message, "error");
       return;
     }
 
+    showToast("Workshop deleted successfully.", "success");
     await loadWorkshops();
   }
 
-  function clearForm(){
+  function clearForm(saveUndo = true){
+    if(saveUndo) lastFormState = captureFormState();
     editId = null;
 
     ["workshop_name","contact_person","mobile_no","city","address","specialization","remarks"].forEach(id => {
@@ -269,7 +679,9 @@
     });
 
     document.getElementById("status").value = "Active";
+    updateEditUI();
     generateCode();
+    document.getElementById("workshop_name").focus();
   }
 
   function exportExcel(){
@@ -289,11 +701,29 @@
       ].map(v => `"${String(v || "").replaceAll('"','""')}"`).join(",") + "\n";
     });
 
-    const blob = new Blob([csv], {type:"text/csv"});
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "workshops.csv";
     a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function escapeHtml(value){
+    return String(value)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function showToast(message, type){
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `toast ${type} show`;
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove("show"), 2600);
   }
 </script>
 </body>
