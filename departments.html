@@ -1,217 +1,754 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Department Master</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#f4f6fb;color:#0f172a}
-aside{position:fixed;inset:0 auto 0 0;width:210px;padding:22px 14px;color:#fff;background:linear-gradient(#351000,#1a0600)}
-.brand{font-size:24px;font-weight:900}.sub{color:#f59e0b;font-size:13px;font-weight:800;margin:6px 0 30px}
-nav a{display:block;padding:12px;margin:6px 0;border-radius:10px;color:#fff;text-decoration:none;font-weight:700;font-size:14px}
-nav a:hover,nav a.active{background:#f59e0b;color:#111827}.profile{position:absolute;left:14px;right:14px;bottom:20px;text-align:center;padding:14px;background:#ffffff18;border-radius:14px}
-.profile img{width:70px;height:70px;object-fit:cover;border-radius:50%;border:3px solid #f59e0b}.profile b,.profile span{display:block}.profile span{color:#22c55e;font-size:12px;margin-top:3px}
-main{margin-left:210px;padding:28px 34px}.head{display:flex;justify-content:space-between;gap:15px;padding-bottom:18px;border-bottom:1px solid #dbe1ea}
-h1{margin:0}.muted{color:#64748b;font-size:14px;margin-top:5px}.actions{display:flex;gap:8px;flex-wrap:wrap}
-button{border:0;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer}.blue{background:#2563eb;color:#fff}.green{background:#16a34a;color:#fff}.yellow{background:#f59e0b}.dark{background:#111827;color:#fff}.red{background:#dc2626;color:#fff}.orange{background:#ea580c;color:#fff}.small{padding:7px 9px;font-size:11px}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.tab{background:#fff;border:1px solid #dbe1ea}.tab.active{background:#f59e0b}
-.card{margin-top:18px;padding:20px;background:#fff;border-radius:16px;box-shadow:0 8px 22px #00000010}.card h2{margin:0 0 16px;font-size:18px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.span2{grid-column:span 2}.span4{grid-column:1/5}
-label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}input,select{width:100%;height:40px;padding:0 11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
-table{width:100%;min-width:1050px;border-collapse:separate;border-spacing:0}.wrap{max-height:520px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px}
-th{position:sticky;top:0;background:#0f172a;color:#fff;padding:10px;font-size:12px;text-align:left}td{padding:9px;border-bottom:1px solid #e5e7eb;font-size:12px}tbody tr:nth-child(even){background:#f8fafc}
-.badge{padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900}.activeB{background:#dcfce7;color:#166534}.inactiveB{background:#fee2e2;color:#991b1b}
-.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:18px}.stat{background:#fff;padding:16px;border-radius:14px;box-shadow:0 8px 22px #0000000d}.stat small{color:#64748b}.stat strong{display:block;margin-top:5px;font-size:21px}
-.modal{display:none;position:fixed;inset:0;z-index:500;background:#0f172a99;padding:20px}.modal.open{display:flex;align-items:center;justify-content:center}.modalbox{width:min(1200px,97vw);max-height:92vh;overflow:auto;background:#fff;border-radius:16px}.modalhead{display:flex;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #ddd}.modalbody{padding:20px}
-.detail{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.detail div{padding:11px;border:1px solid #ddd;border-radius:9px;background:#f8fafc}.detail span{display:block;color:#64748b;font-size:10px}.detail strong{display:block;margin-top:4px}
-.preview{width:1120px;min-height:760px;background:#fff;padding:32px;margin:auto}.reporttitle{text-align:center;font-size:26px;font-weight:900;margin-bottom:24px}.date{float:right;font-size:15px}.orangehead th{background:#ea580c}
+:root{
+  --sidebar-width:165px;
+  --sidebar-bg:#2b1000;
+  --sidebar-card:#5b2f1c;
+  --accent:#f5a316;
+  --pdf-accent:#ffcc00;
+  --page-bg:#f4f6fb;
+  --text:#0f172a;
+  --muted:#64748b;
+  --border:#dbe1ea;
+  --blue:#2563eb;
+  --green:#16a34a;
+  --red:#dc2626;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--page-bg);color:var(--text)}
+button,input,select{font:inherit}
 
+.sidebar{
+  position:fixed;left:0;top:0;width:var(--sidebar-width);height:100vh;
+  padding:14px 10px;background:linear-gradient(#351000,#1a0600);color:#fff;
+  display:flex;flex-direction:column;z-index:1000;overflow-y:auto
+}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:17px}
+.brand-icon{
+  width:30px;height:30px;border-radius:9px;background:var(--accent);
+  display:grid;place-items:center;font-size:13px
+}
+.brand h2{font-size:13px;margin:0;line-height:1}
+.brand p{font-size:8px;margin:3px 0 0;color:#ffd58a}
+.nav{display:flex;flex-direction:column;gap:5px}
+.nav a,.nav button{
+  width:100%;border:0;background:transparent;color:white;text-decoration:none;text-align:left;
+  padding:9px 9px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer
+}
+.nav a:hover,.nav button:hover,.nav a.active,.nav button.active{background:var(--accent);color:#111827}
+.nav-group{display:flex;flex-direction:column;gap:3px}
+.nav-group-title{display:flex;justify-content:space-between;align-items:center}
+.submenu{display:none;flex-direction:column;margin-left:8px;padding-left:7px;border-left:1px solid #ffffff30}
+.nav-group.open .submenu{display:flex}
+.submenu a{padding:7px 6px;font-size:9px}
+.profile-card{
+  margin-top:auto;background:var(--sidebar-card);border-radius:12px;padding:10px;text-align:center
+}
+.profile-card img{width:52px;height:52px;object-fit:cover;border-radius:50%;border:2px solid var(--accent)}
+.profile-card h3{font-size:10px;margin:6px 0 2px}
+.profile-card p{font-size:8px;margin:0;color:#d1fae5}
+.profile-card p span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:4px}
+
+main{margin-left:var(--sidebar-width);padding:24px 16px;min-height:100vh}
+.head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;margin-bottom:16px}
+h1{margin:0;font-size:27px}
+.muted{color:var(--muted);font-size:13px;margin-top:4px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}
+.tab{border:1px solid var(--border);background:#fff;padding:10px;border-radius:9px;font-weight:800;cursor:pointer}
+.tab.active{background:var(--accent);color:#111827}
+
+.card{
+  background:#fff;border-radius:15px;padding:16px;margin-bottom:16px;
+  box-shadow:0 8px 22px #00000010
+}
+.card h2{font-size:18px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.span2{grid-column:span 2}.span4{grid-column:1/5}
+label{display:block;font-size:11px;font-weight:800;margin-bottom:5px}
+input,select{
+  width:100%;height:38px;padding:0 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;outline:none
+}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,163,22,.13)}
 .auto-code{background:#eef2f7!important;color:#334155;font-weight:900}
-.combo{position:relative}
-.combo-menu{display:none;position:absolute;left:0;right:0;top:67px;z-index:80;max-height:240px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:9px;box-shadow:0 14px 32px rgba(15,23,42,.18)}
-.combo-menu.open{display:block}.combo-option{padding:10px 12px;border-bottom:1px solid #eef2f7;cursor:pointer;font-size:12px}.combo-option:hover,.combo-option.active{background:#eff6ff}
-.report-list-meta{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px;color:#64748b;font-size:12px;font-weight:800}
-.preview{max-height:calc(92vh - 90px);overflow:auto}.preview table thead th{position:sticky;top:0;z-index:5}
-@media print{thead{display:table-header-group}tr{page-break-inside:avoid}}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+button{border:0;border-radius:8px;padding:9px 13px;font-weight:800;cursor:pointer}
+.blue{background:var(--blue);color:#fff}.green{background:var(--green);color:#fff}
+.yellow{background:var(--accent);color:#111827}.red{background:var(--red);color:#fff}
+.dark{background:#111827;color:#fff}.small{padding:6px 9px;font-size:10px}
 
-@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){aside{position:relative;width:100%;height:auto}main{margin:0;padding:18px}.profile{position:static;margin-top:20px}.tabs,.grid,.stats,.detail{grid-template-columns:1fr}.span2,.span4{grid-column:auto}.head{display:block}}
+.wrap{max-height:500px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px}
+table{width:100%;min-width:1050px;border-collapse:collapse}
+th{
+  position:sticky;top:0;z-index:4;background:var(--accent);color:white;
+  padding:10px;font-size:11px;text-align:left;white-space:nowrap
+}
+td{padding:9px;border-bottom:1px solid #e5e7eb;font-size:11px;vertical-align:middle}
+tbody tr:nth-child(even){background:#f8fafc}
+tbody tr:hover{background:#fff8ec}
+.badge{padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900}
+.activeB{background:#dcfce7;color:#166534}.inactiveB{background:#fee2e2;color:#991b1b}
+.action-row{display:flex;gap:5px;white-space:nowrap}
+.empty{text-align:center;color:var(--muted);padding:25px}
+
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.stat{background:#fff;padding:14px;border-radius:13px;box-shadow:0 8px 22px #0000000d;border-left:4px solid var(--accent)}
+.stat small{color:var(--muted);font-size:10px}
+.stat strong{display:block;margin-top:5px;font-size:19px}
+
+.combo{position:relative}
+.combo-menu{
+  display:none;position:absolute;left:0;right:0;top:60px;z-index:90;max-height:220px;overflow:auto;
+  background:#fff;border:1px solid #cbd5e1;border-radius:9px;box-shadow:0 14px 32px rgba(15,23,42,.18)
+}
+.combo-menu.open{display:block}
+.combo-option{padding:9px 11px;border-bottom:1px solid #eef2f7;cursor:pointer;font-size:11px}
+.combo-option:hover,.combo-option.active{background:#eff6ff}
+
+.modal{display:none;position:fixed;inset:0;z-index:3000;background:#0f172a99;padding:18px}
+.modal.open{display:flex;align-items:center;justify-content:center}
+.modalbox{width:min(820px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:15px}
+.modalhead{
+  position:sticky;top:0;z-index:2;background:var(--accent);color:white;
+  display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-radius:15px 15px 0 0
+}
+.modalhead h3{margin:0}.modalbody{padding:16px}
+.detail{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.detail div{padding:10px;border:1px solid #ddd;border-radius:9px;background:#f8fafc}
+.detail span{display:block;color:var(--muted);font-size:9px}
+.detail strong{display:block;margin-top:4px;font-size:12px}
+.modal-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.modal-summary div{background:#fff7e6;border:1px solid #f5d49c;border-radius:9px;padding:10px;text-align:center;font-weight:800;font-size:11px}
+
+.report-list-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:9px;color:var(--muted);font-size:11px;font-weight:800}
+.toast{
+  position:fixed;right:20px;bottom:20px;padding:12px 16px;border-radius:9px;color:#fff;
+  font-weight:800;opacity:0;transform:translateY(15px);transition:.2s;z-index:4000
+}
+.toast.show{opacity:1;transform:translateY(0)}.toast.success{background:#16a34a}.toast.error{background:#dc2626}
+#printReport{display:none}
+
+@media print{
+  @page{size:A4 landscape;margin:9mm}
+  body{background:#fff}
+  body>*:not(#printReport){display:none!important}
+  #printReport{display:block!important;color:#111;font-family:Arial,Helvetica,sans-serif}
+  .print-header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    border-bottom:3px solid var(--pdf-accent);padding-bottom:7px;margin-bottom:9px
+  }
+  .print-header h1{font-size:21px;margin:0}.print-header p{font-size:10px;margin:3px 0 0}
+  .print-date{font-size:10px;text-align:right}
+  .print-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;font-size:9px}
+  .print-filters div{border:1px solid #333;padding:5px}
+  .print-table{width:100%;border-collapse:collapse;font-size:8px;min-width:0}
+  .print-table thead{display:table-header-group}
+  .print-table th{position:static;background:var(--pdf-accent)!important;color:#111!important;border:1px solid #333;padding:4px;white-space:normal}
+  .print-table td{border:1px solid #333;padding:4px}
+  .print-footer{display:flex;justify-content:space-between;margin-top:7px;border-top:1px solid #777;padding-top:4px;font-size:8px}
+  tr{page-break-inside:avoid}
+}
+
+@media(max-width:1050px){
+  :root{--sidebar-width:155px}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .span4{grid-column:1/3}
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .detail{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:720px){
+  .sidebar{position:relative;width:100%;height:auto}
+  main{margin-left:0;padding:15px 10px}
+  .grid,.stats,.detail,.modal-summary{grid-template-columns:1fr}
+  .span2,.span4{grid-column:auto}
+  .head{display:block}
+}
 </style>
 </head>
+
 <body>
-<aside>
-<div class="brand">📦 Inventory<br>Store</div><div class="sub">Management System</div>
-<nav>
-<a href="index.html">⌂ Dashboard</a><a href="global-search.html">🔎 Global Search</a><a href="items.html">▣ Items Master</a><a href="suppliers.html">▰ Suppliers</a><a class="active" href="departments.html">🏭 Departments</a><a href="purchase.html">🛒 Purchase Entry</a><a href="issue.html">↪ Issue Entry</a><a href="gate-pass.html">🚚 Gate Pass</a><a href="stock-ledger.html">▣ Stock Ledger</a><a href="current-stock.html">◫ Current Stock</a><a href="reports.html">▥ Reports</a><a href="workshops.html">⚙ Workshop / Party</a>
-</nav>
-<div class="profile"><img src="public/waqas.jpg.png" onerror="this.src='public/profile.png'"><b>Muhammad Waqas</b><span>● Online</span></div>
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">◆</div>
+    <div><h2>Inventory Store</h2><p>Management System</p></div>
+  </div>
+
+  <nav class="nav">
+    <a href="index.html">⌂ Dashboard</a>
+
+    <div class="nav-group open" id="mastersGroup">
+      <button class="nav-group-title active" onclick="toggleGroup('mastersGroup')" type="button">
+        <span>▦ Masters</span><span>⌃</span>
+      </button>
+      <div class="submenu">
+        <a href="items.html">Item Master</a>
+        <a href="suppliers.html">Supplier Master</a>
+        <a href="workshops.html">Workshop / Party Master</a>
+        <a class="active" href="departments.html">Department Master</a>
+        <a href="units.html">Unit Master</a>
+        <a href="categories.html">Category Master</a>
+        <a href="carriers.html">Carrier Master</a>
+        <a href="authorities.html">Authorized Person Master</a>
+      </div>
+    </div>
+
+    <a href="purchase.html">🛒 Purchase Entry</a>
+    <a href="issue.html">↩ Issue Entry</a>
+
+    <div class="nav-group" id="gatePassGroup">
+      <button class="nav-group-title" onclick="toggleGroup('gatePassGroup')" type="button">
+        <span>▣ Gate Pass</span><span>⌃</span>
+      </button>
+      <div class="submenu">
+        <a href="rgp-entry.html">RGP Entry</a>
+        <a href="rgp-return.html">RGP Return</a>
+        <a href="rgp-list.html">RGP List</a>
+        <a href="ogp-entry.html">OGP Entry</a>
+        <a href="ogp-list.html">OGP List</a>
+      </div>
+    </div>
+
+    <a href="stock-ledger.html">▤ Stock Ledger</a>
+    <a href="reports.html">▥ Reports</a>
+    <a href="settings.html">⚙ Settings</a>
+  </nav>
+
+  <div class="profile-card">
+    <img src="public/waqas.jpg.png" onerror="this.src='public/profile.png'" alt="Muhammad Waqas">
+    <h3>Muhammad Waqas</h3><p><span></span>Online</p>
+  </div>
 </aside>
 
 <main>
-<div class="head"><div><h1>Department Master</h1><div class="muted">Manage departments and analyze Issue, RGP and OGP records</div></div>
-</div>
+  <div class="head">
+    <div><h1>Department Master</h1><div class="muted">Manage departments and analyze Issue, RGP and OGP records</div></div>
+  </div>
 
-<div class="tabs" style="grid-template-columns:repeat(3,1fr)">
-<button class="tab active" id="tMaster" onclick="showTab('master')">Department Master</button>
-<button class="tab" id="tAnalysis" onclick="showTab('analysis')">Search & Analysis</button>
-<button class="tab" id="tReports" onclick="showTab('reports')">PDF Reports</button>
-</div>
+  <div class="tabs">
+    <button class="tab active" id="tMaster" onclick="showTab('master')">Department Master</button>
+    <button class="tab" id="tAnalysis" onclick="showTab('analysis')">Search & Analysis</button>
+    <button class="tab" id="tReports" onclick="showTab('reports')">PDF Reports</button>
+  </div>
 
-<section id="master">
-<div class="card"><h2 id="formTitle">Department Information</h2>
-<div class="grid">
-<div><label>Department Code *</label><input id="code" class="auto-code" readonly></div>
-<div><label>Department Name *</label><input id="name"></div>
-<div><label>Responsible Person</label><input id="person"></div>
-<div><label>Signature Authority</label><input id="signatureAuthority" placeholder="Authorized Signatory"></div>
-<div><label>Phone</label><input id="phone"></div>
-<div class="span2"><label>Location</label><input id="location"></div>
-<div><label>Status</label><select id="status"><option>Active</option><option>Inactive</option></select></div>
-<div class="span4"><label>Remarks</label><input id="remarks"></div>
-</div><div class="actions" style="margin-top:14px"><button id="saveBtn" class="green" onclick="saveDepartment()">Save Department</button><button class="yellow" onclick="clearForm()">Clear</button></div>
-</div>
+  <section id="master">
+    <div class="card">
+      <h2 id="formTitle">Department Information</h2>
+      <div class="grid" id="departmentForm">
+        <div><label>Department Code *</label><input id="code" class="auto-code" readonly></div>
+        <div><label>Department Name *</label><input id="name" data-capitalize></div>
+        <div><label>Responsible Person</label><input id="person" data-capitalize></div>
+        <div><label>Signature Authority</label><input id="signatureAuthority" placeholder="Authorized Signatory" data-capitalize></div>
+        <div><label>Phone</label><input id="phone" inputmode="numeric"></div>
+        <div class="span2"><label>Location</label><input id="location" data-capitalize></div>
+        <div><label>Status</label><select id="status"><option>Active</option><option>Inactive</option></select></div>
+        <div class="span4"><label>Remarks</label><input id="remarks" data-capitalize></div>
+      </div>
+      <div class="actions">
+        <button id="saveBtn" class="green" onclick="saveDepartment()">Save Department</button>
+        <button class="yellow" onclick="clearForm()">Clear</button>
+      </div>
+    </div>
 
-<div class="card"><h2>Department List</h2>
-<div class="grid"><div class="span2"><label>Search</label><input id="masterSearch" placeholder="Code, name, person, location" oninput="renderMaster()"></div><div><label>Status</label><select id="masterStatus" onchange="renderMaster()"><option value="">All Status</option><option>Active</option><option>Inactive</option></select></div></div>
-<div class="wrap" style="margin-top:14px"><table><thead><tr><th>Code</th><th>Department</th><th>Responsible Person</th><th>Signature Authority</th><th>Phone</th><th>Location</th><th>Status</th><th>Action</th></tr></thead><tbody id="masterBody"></tbody></table></div>
-</div>
-</section>
+    <div class="card">
+      <h2>Department List</h2>
+      <div class="grid">
+        <div class="span2"><label>Search</label><input id="masterSearch" placeholder="Code, name, person, authority, location"></div>
+        <div><label>Status</label><select id="masterStatus"><option value="">All Status</option><option>Active</option><option>Inactive</option></select></div>
+      </div>
+      <div class="wrap" style="margin-top:13px">
+        <table>
+          <thead><tr><th>Code</th><th>Department</th><th>Responsible Person</th><th>Signature Authority</th><th>Phone</th><th>Location</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="masterBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-<section id="analysis" style="display:none">
-<div class="card"><h2>Department Search</h2><div class="grid">
-<div class="combo"><label>Department</label><input id="fDepartment" autocomplete="off" placeholder="Type one or two letters"><div id="departmentCombo" class="combo-menu"></div></div>
-<div class="combo"><label>Item</label><input id="fItem" autocomplete="off" placeholder="Type one or two letters"><div id="itemCombo" class="combo-menu"></div></div>
-<div class="combo"><label>Item Category</label><input id="fCategory" autocomplete="off" placeholder="Type one or two letters"><div id="categoryCombo" class="combo-menu"></div></div>
-<div class="combo"><label>Transaction</label><input id="fTransaction" autocomplete="off" placeholder="Type Issue, RGP, OGP"><div id="transactionCombo" class="combo-menu"></div></div>
-<div class="combo"><label>Party / Workshop</label><input id="fParty" autocomplete="off" placeholder="Type one or two letters"><div id="partyCombo" class="combo-menu"></div></div>
-<div><label>From Date</label><input id="fromDate" placeholder="1-7"></div>
-<div><label>To Date</label><input id="toDate" placeholder="31-7"></div>
-</div><div class="actions" style="margin-top:14px"><button class="blue" onclick="filterTransactions()">Search</button><button class="yellow" onclick="clearFilters()">Clear</button></div></div>
+  <section id="analysis" style="display:none">
+    <div class="card">
+      <h2>Department Search</h2>
+      <div class="grid" id="filterForm">
+        <div class="combo"><label>Department</label><input id="fDepartment" autocomplete="off" placeholder="Type one or two letters"><div id="departmentCombo" class="combo-menu"></div></div>
+        <div class="combo"><label>Item</label><input id="fItem" autocomplete="off" placeholder="Type one or two letters"><div id="itemCombo" class="combo-menu"></div></div>
+        <div class="combo"><label>Item Category</label><input id="fCategory" autocomplete="off" placeholder="Type one or two letters"><div id="categoryCombo" class="combo-menu"></div></div>
+        <div class="combo"><label>Transaction</label><input id="fTransaction" autocomplete="off" placeholder="Issue, RGP or OGP"><div id="transactionCombo" class="combo-menu"></div></div>
+        <div class="combo"><label>Party / Workshop</label><input id="fParty" autocomplete="off" placeholder="Type one or two letters"><div id="partyCombo" class="combo-menu"></div></div>
+        <div><label>From Date</label><input id="fromDate" placeholder="1-7"></div>
+        <div><label>To Date</label><input id="toDate" placeholder="31-7"></div>
+      </div>
+      <div class="actions"><button class="blue" onclick="filterTransactions()">Search</button><button class="yellow" onclick="clearFilters()">Clear</button></div>
+    </div>
 
-<div class="stats">
-<div class="stat"><small>Transactions</small><strong id="sCount">0</strong></div><div class="stat"><small>Issue Qty</small><strong id="sIssue">0.00</strong></div><div class="stat"><small>RGP Out</small><strong id="sRgp">0.00</strong></div><div class="stat"><small>RGP Return</small><strong id="sReturn">0.00</strong></div><div class="stat"><small>OGP Out</small><strong id="sOgp">0.00</strong></div><div class="stat"><small>Total Value</small><strong id="sValue">Rs. 0.00</strong></div>
-</div>
+    <div class="stats">
+      <div class="stat"><small>Transactions</small><strong id="sCount">0</strong></div>
+      <div class="stat"><small>Issue Qty</small><strong id="sIssue">0.00</strong></div>
+      <div class="stat"><small>RGP Out</small><strong id="sRgp">0.00</strong></div>
+      <div class="stat"><small>RGP Return</small><strong id="sReturn">0.00</strong></div>
+      <div class="stat"><small>OGP Out</small><strong id="sOgp">0.00</strong></div>
+      <div class="stat"><small>Total Value</small><strong id="sValue">PKR 0.00</strong></div>
+    </div>
 
-<div class="card"><h2>Department Transactions</h2><div class="wrap"><table><thead><tr><th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Category</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Rate</th><th>Value</th><th>Party</th><th>Remarks</th></tr></thead><tbody id="transactionBody"></tbody></table></div></div>
-</section>
+    <div class="card">
+      <h2>Department Transactions</h2>
+      <div class="wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Category</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Rate</th><th>Value</th><th>Party</th><th>Remarks</th></tr></thead>
+          <tbody id="transactionBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-<section id="reports" style="display:none"><div class="card"><h2>Department Reports</h2><div class="grid">
-<div class="span2"><label>Office Report Title</label><input id="officeTitle" value="DEPARTMENT REPORT"></div><div><label>Office Report Date</label><input id="officeDate" placeholder="12-7"></div></div>
-<div class="actions" style="margin-top:14px">
-<button class="blue" onclick="preview('erp')">ERP Report Preview</button>
-<button class="orange" onclick="preview('office')">Office Report Preview</button>
-</div>
-<h3 style="margin-top:24px">Report Data List</h3>
-<div class="report-list-meta"><span id="reportRecordCount">Showing 0 records</span><span>Headers remain frozen while scrolling</span></div>
-<div class="wrap"><table><thead><tr>
-<th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Category</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Rate</th><th>Value</th><th>Party / Workshop</th><th>Remarks</th>
-</tr></thead><tbody id="reportDataBody"></tbody></table></div>
-</div></section>
+  <section id="reports" style="display:none">
+    <div class="card">
+      <h2>Department PDF Report</h2>
+      <div class="grid">
+        <div class="span2"><label>Report Title</label><input id="officeTitle" value="DEPARTMENT TRANSACTION REPORT" data-capitalize></div>
+        <div><label>Report Date</label><input id="officeDate" placeholder="12-7"></div>
+      </div>
+      <div class="actions">
+        <button class="red" onclick="printReport()">Print / PDF</button>
+      </div>
+      <h3 style="margin-top:20px">Report Data List</h3>
+      <div class="report-list-meta"><span id="reportRecordCount">Showing 0 records</span><span>Headers remain frozen while scrolling</span></div>
+      <div class="wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Category</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Rate</th><th>Value</th><th>Party / Workshop</th><th>Remarks</th></tr></thead>
+          <tbody id="reportDataBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 </main>
 
-<div class="modal" id="detailModal"><div class="modalbox"><div class="modalhead"><h3 id="detailTitle">Department Detail</h3><button class="dark" onclick="closeModal('detailModal')">Close</button></div><div class="modalbody" id="detailBody"></div></div></div>
-<div class="modal" id="previewModal"><div class="modalbox" style="width:min(1200px,98vw)"><div class="modalhead"><h3>Report Preview</h3><div><button class="dark" onclick="printPreview()">Print / Save PDF</button> <button class="yellow" onclick="closeModal('previewModal')">Close</button></div></div><div class="modalbody" style="background:#d7dce3"><div class="preview" id="previewPage"></div></div></div></div>
+<div class="modal" id="detailModal" onclick="backdropClose(event)">
+  <div class="modalbox">
+    <div class="modalhead"><h3 id="detailTitle">Department Detail</h3><button class="dark" onclick="closeModal()">×</button></div>
+    <div class="modalbody" id="detailBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<section id="printReport"></section>
 
 <script>
-const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
-let departments=[],transactions=[],filtered=[],editingId=null;const comboStates={};
-const n=v=>String(v||"").trim().toLowerCase(),num=v=>Number(v||0),q=v=>num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),money=v=>"Rs. "+num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-const tc=v=>String(v||"").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()),esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-function dep(r){return r.department||r.issued_to||r.location_department||r.purchased_by||""}function val(r){return (num(r.quantity_in)||num(r.quantity_out))*num(r.unit_rate)+num(r.freight)}
+const db=supabase.createClient(
+  "https://lzsxtvkluqvcaetnnydu.supabase.co",
+  "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma"
+);
+
+let departments=[],transactions=[],filtered=[],editingId=null,lastFormState=null;
+const comboStates={};
+
+const n=v=>String(v||"").trim().toLowerCase();
+const num=v=>Number(v||0);
+const q=v=>num(v).toLocaleString("en-PK",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money=v=>"PKR "+num(v).toLocaleString("en-PK",{minimumFractionDigits:2,maximumFractionDigits:2});
+const tc=v=>String(v||"").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+const esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+
+function toggleGroup(id){document.getElementById(id).classList.toggle("open")}
+function dep(r){return r.department||r.issued_to||r.location_department||r.purchased_by||""}
+function val(r){return (num(r.quantity_in)||num(r.quantity_out))*num(r.unit_rate)+num(r.freight)}
+
 function parseDate(v){
-const t=String(v||"").trim();if(!t)return null;
-if(/^\d{4}-\d{2}-\d{2}$/.test(t))return t;
-const named=t.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/);
-if(named){const ms={jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};const m=ms[named[2].toLowerCase()];if(!m)return null;let y=named[3];if(y.length===2)y="20"+y;return `${y}-${m}-${named[1].padStart(2,"0")}`;}
-const p=t.replace(/\//g,"-").split("-").map(x=>x.trim());if(p.length<2)return null;
-const day=Number(p[0]),month=Number(p[1]);if(!day||!month||day<1||day>31||month<1||month>12)return null;
-let y=p[2]||new Date().getFullYear();if(String(y).length===2)y="20"+y;
-return `${y}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const t=String(v||"").trim();if(!t)return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(t))return t;
+  const named=t.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/);
+  if(named){
+    const ms={jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+    const m=ms[named[2].toLowerCase()];if(!m)return null;
+    let y=named[3];if(y.length===2)y="20"+y;
+    return `${y}-${m}-${named[1].padStart(2,"0")}`;
+  }
+  const p=t.replace(/[/.]/g,"-").split("-").map(x=>x.trim());
+  if(p.length<2)return null;
+  const day=Number(p[0]),month=Number(p[1]);
+  if(!day||!month||day<1||day>31||month<1||month>12)return null;
+  let y=p[2]||new Date().getFullYear();if(String(y).length===2)y="20"+y;
+  return `${y}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
 }
-function ddate(v){if(!v)return"-";const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return v;const ms=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return `${m[3]}-${ms[+m[2]]}-${m[1].slice(-2)}`}
+function ddate(v){
+  if(!v)return"-";
+  const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return v;
+  const ms=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${m[3]}-${ms[+m[2]]}-${m[1].slice(-2)}`;
+}
+
+document.addEventListener("DOMContentLoaded",init);
 
 async function init(){
-await Promise.all([loadDepartments(),loadTransactions()]);
-generateDepartmentCode();setupAllCombos();
-["fromDate","toDate","officeDate"].forEach(id=>document.getElementById(id).onblur=e=>{if(!e.target.value.trim())return;const d=parseDate(e.target.value);if(!d){alert("Invalid date. Type 12-7 or 12-Jul-26.");e.target.focus();return;}e.target.value=ddate(d);});
+  document.getElementById("masterSearch").addEventListener("input",renderMaster);
+  document.getElementById("masterStatus").addEventListener("change",renderMaster);
+  setupKeyboardTools();
+  setupCapitalization();
+
+  ["fromDate","toDate","officeDate"].forEach(id=>{
+    document.getElementById(id).addEventListener("blur",e=>{
+      if(!e.target.value.trim())return;
+      const d=parseDate(e.target.value);
+      if(!d){showToast("Invalid date. Type 12-7 or 12-Jul-26.","error");e.target.focus();return}
+      e.target.value=ddate(d);
+    });
+  });
+
+  await Promise.all([loadDepartments(),loadTransactions()]);
+  generateDepartmentCode();
+  setupAllCombos();
+  filterTransactions();
+}
+
+function setupCapitalization(){
+  document.querySelectorAll("[data-capitalize]").forEach(el=>{
+    el.addEventListener("blur",()=>el.value=tc(el.value.trim()));
+  });
+  phone.addEventListener("input",e=>e.target.value=e.target.value.replace(/[^\d+\-\s]/g,""));
+}
+
+function setupKeyboardTools(){
+  const formFields=[...document.querySelectorAll("#departmentForm input,#departmentForm select")];
+  formFields.forEach((field,index)=>{
+    field.addEventListener("keydown",e=>{
+      if(e.key==="Enter"){
+        e.preventDefault();
+        const next=formFields[index+(e.shiftKey?-1:1)];
+        if(next){next.focus();if(next.select)next.select()}else if(!e.shiftKey)saveDepartment();
+      }
+      if(e.key==="ArrowDown"&&field.tagName!=="SELECT"){e.preventDefault();formFields[index+1]?.focus()}
+      if(e.key==="ArrowUp"&&field.tagName!=="SELECT"){e.preventDefault();formFields[index-1]?.focus()}
+    });
+  });
+
+  document.addEventListener("keydown",e=>{
+    if(e.ctrlKey&&e.key.toLowerCase()==="s"){e.preventDefault();saveDepartment()}
+    if(e.ctrlKey&&e.key.toLowerCase()==="f"){e.preventDefault();masterSearch.focus();masterSearch.select()}
+    if(e.ctrlKey&&e.key.toLowerCase()==="z"){e.preventDefault();restoreLastForm()}
+    if(e.key==="Escape"){
+      if(detailModal.classList.contains("open"))closeModal();
+      else clearForm(false);
+    }
+  });
+}
+
+function captureForm(){
+  return {
+    editingId,
+    code:code.value,name:name.value,person:person.value,
+    signatureAuthority:signatureAuthority.value,phone:phone.value,
+    location:location.value,status:status.value,remarks:remarks.value
+  };
+}
+function restoreLastForm(){
+  if(!lastFormState)return showToast("No recent form change to undo.","error");
+  editingId=lastFormState.editingId||null;
+  ["code","name","person","signatureAuthority","phone","location","status","remarks"].forEach(id=>{
+    document.getElementById(id).value=lastFormState[id]||"";
+  });
+  updateEditUI();
+  showToast("Previous form values restored.","success");
 }
 
 function generateDepartmentCode(){
-if(editingId)return;let highest=0;
-departments.forEach(d=>{const m=String(d.department_code||"").match(/(\d+)$/);if(m)highest=Math.max(highest,Number(m[1]));});
-code.value=`DEP-${String(highest+1).padStart(4,"0")}`;
+  if(editingId)return;
+  let highest=0;
+  departments.forEach(d=>{
+    const m=String(d.department_code||"").match(/(\d+)$/);
+    if(m)highest=Math.max(highest,Number(m[1]));
+  });
+  code.value=`DEP-${String(highest+1).padStart(4,"0")}`;
 }
-function uniqueValues(v){return[...new Set(v.map(x=>String(x||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
-function setupAllCombos(){
-setupCombo("fDepartment","departmentCombo",uniqueValues(departments.map(d=>d.department_name)));
-setupCombo("fItem","itemCombo",uniqueValues(transactions.map(r=>`${r.item_name||""}${r.size?" - "+r.size:""}`)));
-setupCombo("fCategory","categoryCombo",uniqueValues(transactions.map(r=>r.category)));
-setupCombo("fTransaction","transactionCombo",uniqueValues(transactions.map(r=>r.transaction_type)));
-setupCombo("fParty","partyCombo",uniqueValues(transactions.map(r=>r.supplier)));
-}
-function setupCombo(inputId,menuId,values){
-const input=document.getElementById(inputId),menu=document.getElementById(menuId);
-comboStates[inputId]={values,filtered:values,index:-1};
-function render(){const s=comboStates[inputId],query=n(input.value);s.filtered=s.values.filter(v=>n(v).includes(query)).slice(0,30);s.index=Math.min(s.index,s.filtered.length-1);menu.innerHTML=s.filtered.map((v,i)=>`<div class="combo-option ${i===s.index?"active":""}" onmousedown="selectCombo('${inputId}',${i})">${esc(v)}</div>`).join("");menu.classList.toggle("open",s.filtered.length>0);}
-input.onfocus=()=>{comboStates[inputId].index=-1;render()};input.oninput=()=>{comboStates[inputId].index=-1;render()};
-input.onkeydown=e=>{const s=comboStates[inputId];if(e.key==="ArrowDown"){e.preventDefault();s.index=Math.min(s.index+1,s.filtered.length-1);render()}else if(e.key==="ArrowUp"){e.preventDefault();s.index=Math.max(s.index-1,0);render()}else if((e.key==="Enter"||e.key==="Tab")&&s.filtered.length){if(s.index<0)s.index=0;selectCombo(inputId,s.index);if(e.key==="Enter")e.preventDefault()}else if(e.key==="Escape")menu.classList.remove("open")};
-input.onblur=()=>setTimeout(()=>menu.classList.remove("open"),150);
-}
-function selectCombo(inputId,index){const s=comboStates[inputId],v=s.filtered[index];if(v===undefined)return;document.getElementById(inputId).value=v;document.getElementById(inputId).closest(".combo").querySelector(".combo-menu").classList.remove("open");filterTransactions();}
 
-async function loadDepartments(){const {data,error}=await db.from("departments").select("*").order("id",{ascending:false});if(error){masterBody.innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;return}departments=data||[];renderMaster();generateDepartmentCode();if(transactions.length)setupAllCombos()}
-async function loadTransactions(){const {data}=await db.from("stock_transactions").select("*").order("transaction_date",{ascending:false}).order("id",{ascending:false});transactions=data||[];filtered=[...transactions];renderTransactions();renderReportData();if(departments.length)setupAllCombos()}
-function showTab(x){["master","analysis","reports"].forEach(s=>{document.getElementById(s).style.display=s===x?"block":"none";document.getElementById("t"+s[0].toUpperCase()+s.slice(1)).classList.toggle("active",s===x)});if(x==="analysis")filterTransactions();if(x==="reports")renderReportData()}
+function uniqueValues(v){
+  return[...new Set(v.map(x=>String(x||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+
+function setupAllCombos(){
+  setupCombo("fDepartment","departmentCombo",uniqueValues(departments.map(d=>d.department_name)));
+  setupCombo("fItem","itemCombo",uniqueValues(transactions.map(r=>`${r.item_name||""}${r.size?" - "+r.size:""}`)));
+  setupCombo("fCategory","categoryCombo",uniqueValues(transactions.map(r=>r.category)));
+  setupCombo("fTransaction","transactionCombo",uniqueValues(transactions.map(r=>r.transaction_type)));
+  setupCombo("fParty","partyCombo",uniqueValues(transactions.map(r=>r.supplier||r.workshop_name)));
+}
+
+function setupCombo(inputId,menuId,values){
+  const input=document.getElementById(inputId),menu=document.getElementById(menuId);
+  comboStates[inputId]={values,filtered:values,index:-1};
+
+  function render(){
+    const s=comboStates[inputId],query=n(input.value);
+    s.filtered=s.values.filter(v=>n(v).includes(query)).slice(0,30);
+    s.index=Math.min(s.index,s.filtered.length-1);
+    menu.innerHTML=s.filtered.map((v,i)=>`<div class="combo-option ${i===s.index?"active":""}" onmousedown="selectCombo('${inputId}',${i})">${esc(v)}</div>`).join("");
+    menu.classList.toggle("open",s.filtered.length>0);
+  }
+
+  input.onfocus=()=>{comboStates[inputId].index=-1;render()};
+  input.oninput=()=>{comboStates[inputId].index=-1;render();filterTransactions()};
+  input.onkeydown=e=>{
+    const s=comboStates[inputId];
+    if(e.key==="ArrowDown"){e.preventDefault();s.index=Math.min(s.index+1,s.filtered.length-1);render()}
+    else if(e.key==="ArrowUp"){e.preventDefault();s.index=Math.max(s.index-1,0);render()}
+    else if((e.key==="Enter"||e.key==="Tab")&&s.filtered.length){
+      if(s.index<0)s.index=0;selectCombo(inputId,s.index);if(e.key==="Enter")e.preventDefault()
+    }else if(e.key==="Escape")menu.classList.remove("open");
+  };
+  input.onblur=()=>setTimeout(()=>menu.classList.remove("open"),150);
+}
+
+function selectCombo(inputId,index){
+  const s=comboStates[inputId],v=s.filtered[index];if(v===undefined)return;
+  document.getElementById(inputId).value=v;
+  document.getElementById(inputId).closest(".combo").querySelector(".combo-menu").classList.remove("open");
+  filterTransactions();
+}
+
+async function loadDepartments(){
+  const {data,error}=await db.from("departments").select("*").order("id",{ascending:false});
+  if(error){masterBody.innerHTML=`<tr><td colspan="8" class="empty">${esc(error.message)}</td></tr>`;return}
+  departments=data||[];
+  renderMaster();generateDepartmentCode();
+}
+
+async function loadTransactions(){
+  const {data,error}=await db.from("stock_transactions").select("*").order("transaction_date",{ascending:false}).order("id",{ascending:false});
+  if(error){showToast("Transaction load error: "+error.message,"error");transactions=[]}
+  else transactions=data||[];
+  filtered=[...transactions];
+  renderTransactions();renderReportData();stats();
+}
+
+function showTab(x){
+  ["master","analysis","reports"].forEach(s=>{
+    document.getElementById(s).style.display=s===x?"block":"none";
+    document.getElementById("t"+s[0].toUpperCase()+s.slice(1)).classList.toggle("active",s===x);
+  });
+  if(x==="analysis")filterTransactions();
+  if(x==="reports")renderReportData();
+}
+
 function renderMaster(){
-const s=n(masterSearch.value),st=n(masterStatus.value);
-const rows=departments.filter(d=>(!s||[d.department_code,d.department_name,d.responsible_person,d.signature_authority,d.location].join(" ").toLowerCase().includes(s))&&(!st||n(d.status)===st));
-masterBody.innerHTML=rows.length?rows.map(d=>`<tr><td>${esc(d.department_code)}</td><td><b>${esc(d.department_name)}</b></td><td>${esc(d.responsible_person||"-")}</td><td>${esc(d.signature_authority||"-")}</td><td>${esc(d.phone||"-")}</td><td>${esc(d.location||"-")}</td><td><span class="badge ${d.status==="Inactive"?"inactiveB":"activeB"}">${esc(d.status||"Active")}</span></td><td><button class="blue small" onclick="detail(${d.id})">Detail</button> <button class="yellow small" onclick="editDep(${d.id})">Edit</button> <button class="red small" onclick="deleteDep(${d.id})">Delete</button></td></tr>`).join(""):`<tr><td colspan="8" class="empty">No department found.</td></tr>`;
+  const s=n(masterSearch.value),st=n(masterStatus.value);
+  const rows=departments.filter(d=>
+    (!s||[d.department_code,d.department_name,d.responsible_person,d.signature_authority,d.location].join(" ").toLowerCase().includes(s))&&
+    (!st||n(d.status)===st)
+  );
+
+  masterBody.innerHTML=rows.length?rows.map(d=>`
+    <tr>
+      <td>${esc(d.department_code)}</td>
+      <td><b>${esc(d.department_name)}</b></td>
+      <td>${esc(d.responsible_person||"-")}</td>
+      <td>${esc(d.signature_authority||"-")}</td>
+      <td>${esc(d.phone||"-")}</td>
+      <td>${esc(d.location||"-")}</td>
+      <td><span class="badge ${d.status==="Inactive"?"inactiveB":"activeB"}">${esc(d.status||"Active")}</span></td>
+      <td><div class="action-row">
+        <button class="green small" onclick="detail(${d.id})">Detail</button>
+        <button class="blue small" onclick="editDep(${d.id})">Edit</button>
+        <button class="red small" onclick="deleteDep(${d.id})">Delete</button>
+      </div></td>
+    </tr>`).join(""):`<tr><td colspan="8" class="empty">No department found.</td></tr>`;
 }
+
 async function saveDepartment(){
-const c=code.value.trim().toUpperCase(),nm=tc(name.value);if(!c||!nm)return alert("Department Code and Name are required.");
-if(departments.some(d=>+d.id!==+editingId&&(n(d.department_code)===n(c)||n(d.department_name)===n(nm))))return alert("Department code or name already exists.");
-const rec={department_code:c,department_name:nm,responsible_person:tc(person.value),signature_authority:tc(signatureAuthority.value),phone:phone.value.trim(),location:tc(location.value),remarks:tc(remarks.value),status:status.value};
-const r=editingId?await db.from("departments").update(rec).eq("id",editingId):await db.from("departments").insert([rec]);
-if(r.error)return alert(r.error.message);alert(editingId?"Department updated.":"Department saved.");clearForm(false);await loadDepartments();
+  const c=code.value.trim().toUpperCase(),nm=tc(name.value.trim());
+  if(!c||!nm){showToast("Department Code and Name are required.","error");name.focus();return}
+
+  if(departments.some(d=>+d.id!==+editingId&&(n(d.department_code)===n(c)||n(d.department_name)===n(nm)))){
+    showToast("Department code or name already exists.","error");return;
+  }
+
+  const rec={
+    department_code:c,department_name:nm,responsible_person:tc(person.value.trim()),
+    signature_authority:tc(signatureAuthority.value.trim()),phone:phone.value.trim(),
+    location:tc(location.value.trim()),remarks:tc(remarks.value.trim()),status:status.value
+  };
+
+  const r=editingId
+    ?await db.from("departments").update(rec).eq("id",editingId)
+    :await db.from("departments").insert([rec]);
+
+  if(r.error){showToast(r.error.message,"error");return}
+  showToast(editingId?"Department updated successfully.":"Department saved successfully.","success");
+  clearForm(false);
+  await loadDepartments();
+  setupAllCombos();
 }
+
 function editDep(id){
-const d=departments.find(x=>+x.id===+id);if(!d)return;editingId=id;formTitle.textContent="Edit Department";saveBtn.textContent="Update Department";
-code.value=d.department_code||"";name.value=d.department_name||"";person.value=d.responsible_person||"";signatureAuthority.value=d.signature_authority||"";phone.value=d.phone||"";location.value=d.location||"";remarks.value=d.remarks||"";status.value=d.status||"Active";scrollTo({top:0,behavior:"smooth"});
+  const d=departments.find(x=>+x.id===+id);if(!d)return;
+  lastFormState=captureForm();
+  editingId=id;
+  code.value=d.department_code||"";name.value=d.department_name||"";
+  person.value=d.responsible_person||"";signatureAuthority.value=d.signature_authority||"";
+  phone.value=d.phone||"";location.value=d.location||"";remarks.value=d.remarks||"";
+  status.value=d.status||"Active";
+  updateEditUI();scrollTo({top:0,behavior:"smooth"});name.focus();
 }
-function clearForm(ask=true){
-if(ask&&(name.value||person.value||signatureAuthority.value)&&!confirm("Clear entered data?"))return;
-editingId=null;formTitle.textContent="Department Information";saveBtn.textContent="Save Department";
-[name,person,signatureAuthority,phone,location,remarks].forEach(x=>x.value="");status.value="Active";generateDepartmentCode();
+
+function updateEditUI(){
+  formTitle.textContent=editingId?"Edit Department":"Department Information";
+  saveBtn.textContent=editingId?"Update Department":"Save Department";
 }
+
+function clearForm(saveUndo=true){
+  if(saveUndo)lastFormState=captureForm();
+  editingId=null;
+  [name,person,signatureAuthority,phone,location,remarks].forEach(x=>x.value="");
+  status.value="Active";updateEditUI();generateDepartmentCode();name.focus();
+}
+
 async function deleteDep(id){
-const d=departments.find(x=>+x.id===+id);if(!d)return;
-const linked=transactions.filter(r=>n(dep(r))===n(d.department_name));
-if(linked.length)return alert(`${d.department_name} is used in ${linked.length} transaction(s).\n\nIt cannot be deleted. Set Status to Inactive instead.`);
-if(!confirm(`Delete ${d.department_name}?`))return;
-const {error}=await db.from("departments").delete().eq("id",id);if(error)return alert(error.message);await loadDepartments();
+  const d=departments.find(x=>+x.id===+id);if(!d)return;
+  const linked=transactions.filter(r=>n(dep(r))===n(d.department_name));
+  if(linked.length){
+    showToast(`${d.department_name} is used in ${linked.length} transaction(s). Set it Inactive instead.`,"error");
+    return;
+  }
+  if(!confirm(`Delete ${d.department_name}?`))return;
+  const {error}=await db.from("departments").delete().eq("id",id);
+  if(error){showToast(error.message,"error");return}
+  showToast("Department deleted successfully.","success");
+  await loadDepartments();
 }
+
 function filterTransactions(){
-const d=n(fDepartment.value),it=n(fItem.value),cat=n(fCategory.value),tr=n(fTransaction.value),party=n(fParty.value),fr=parseDate(fromDate.value),to=parseDate(toDate.value);
-filtered=transactions.filter(r=>(!d||n(dep(r)).includes(d))&&(!it||[r.item_code,r.item_name,r.size].join(" ").toLowerCase().includes(it))&&(!cat||n(r.category).includes(cat))&&(!tr||n(r.transaction_type).includes(tr))&&(!party||n(r.supplier).includes(party))&&(!fr||r.transaction_date>=fr)&&(!to||r.transaction_date<=to));
-renderTransactions();renderReportData();stats();
+  const d=n(fDepartment.value),it=n(fItem.value),cat=n(fCategory.value),tr=n(fTransaction.value),party=n(fParty.value);
+  const fr=parseDate(fromDate.value),to=parseDate(toDate.value);
+
+  filtered=transactions.filter(r=>
+    (!d||n(dep(r)).includes(d))&&
+    (!it||[r.item_code,r.item_name,r.size].join(" ").toLowerCase().includes(it))&&
+    (!cat||n(r.category).includes(cat))&&
+    (!tr||n(r.transaction_type).includes(tr))&&
+    (!party||n(r.supplier||r.workshop_name).includes(party))&&
+    (!fr||String(r.transaction_date).slice(0,10)>=fr)&&
+    (!to||String(r.transaction_date).slice(0,10)<=to)
+  );
+  renderTransactions();renderReportData();stats();
 }
-function clearFilters(){[fDepartment,fItem,fCategory,fTransaction,fParty,fromDate,toDate].forEach(x=>x.value="");filterTransactions()}
-function renderTransactions(){transactionBody.innerHTML=filtered.length?filtered.map(r=>`<tr><td>${ddate(r.transaction_date)}</td><td>${esc(dep(r)||"-")}</td><td>${esc(r.transaction_type||"-")}</td><td>${esc(r.bill_no||r.id)}</td><td>${esc(r.item_name||"-")}</td><td>${esc(r.size||"-")}</td><td>${esc(r.category||"-")}</td><td>${esc(r.unit||"-")}</td><td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td><td>${money(r.unit_rate)}</td><td>${money(val(r))}</td><td>${esc(r.supplier||"-")}</td><td>${esc(r.remarks||"-")}</td></tr>`).join(""):`<tr><td colspan="14" class="empty">No transaction found.</td></tr>`}
+
+function clearFilters(){
+  [fDepartment,fItem,fCategory,fTransaction,fParty,fromDate,toDate].forEach(x=>x.value="");
+  filterTransactions();
+}
+
+function rowHtml(r){
+  return `<tr>
+    <td>${ddate(r.transaction_date)}</td><td>${esc(dep(r)||"-")}</td>
+    <td>${esc(r.transaction_type||"-")}</td><td>${esc(r.bill_no||r.reference_no||r.id)}</td>
+    <td>${esc(r.item_name||"-")}</td><td>${esc(r.size||"-")}</td>
+    <td>${esc(r.category||"-")}</td><td>${esc(r.unit||"-")}</td>
+    <td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td>
+    <td>${money(r.unit_rate)}</td><td>${money(val(r))}</td>
+    <td>${esc(r.supplier||r.workshop_name||"-")}</td><td>${esc(r.remarks||"-")}</td>
+  </tr>`;
+}
+
+function renderTransactions(){
+  transactionBody.innerHTML=filtered.length?filtered.map(rowHtml).join(""):`<tr><td colspan="14" class="empty">No transaction found.</td></tr>`;
+}
+
 function renderReportData(){
-reportRecordCount.textContent=`Showing ${filtered.length} record${filtered.length===1?"":"s"}`;
-reportDataBody.innerHTML=filtered.length?filtered.map(r=>`<tr><td>${ddate(r.transaction_date)}</td><td>${esc(dep(r)||"-")}</td><td>${esc(r.transaction_type||"-")}</td><td>${esc(r.bill_no||r.id)}</td><td>${esc(r.item_name||"-")}</td><td>${esc(r.size||"-")}</td><td>${esc(r.category||"-")}</td><td>${esc(r.unit||"-")}</td><td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td><td>${money(r.unit_rate)}</td><td>${money(val(r))}</td><td>${esc(r.supplier||"-")}</td><td>${esc(r.remarks||"-")}</td></tr>`).join(""):`<tr><td colspan="14" class="empty">No report data found.</td></tr>`;
+  reportRecordCount.textContent=`Showing ${filtered.length} record${filtered.length===1?"":"s"}`;
+  reportDataBody.innerHTML=filtered.length?filtered.map(rowHtml).join(""):`<tr><td colspan="14" class="empty">No report data found.</td></tr>`;
 }
-function stats(){sCount.textContent=filtered.length;sIssue.textContent=q(filtered.filter(r=>n(r.transaction_type)==="issue").reduce((s,r)=>s+num(r.quantity_out),0));sRgp.textContent=q(filtered.filter(r=>n(r.transaction_type)==="rgp out").reduce((s,r)=>s+num(r.quantity_out),0));sReturn.textContent=q(filtered.filter(r=>n(r.transaction_type)==="rgp return").reduce((s,r)=>s+num(r.quantity_in),0));sOgp.textContent=q(filtered.filter(r=>n(r.transaction_type)==="ogp out").reduce((s,r)=>s+num(r.quantity_out),0));sValue.textContent=money(filtered.reduce((s,r)=>s+val(r),0))}
-function detail(id){const d=departments.find(x=>+x.id===+id),rows=transactions.filter(r=>n(dep(r))===n(d.department_name));detailTitle.textContent=d.department_name;detailBody.innerHTML=`<div class="detail"><div><span>Code</span><strong>${esc(d.department_code)}</strong></div><div><span>Responsible Person</span><strong>${esc(d.responsible_person||"-")}</strong></div><div><span>Signature Authority</span><strong>${esc(d.signature_authority||"-")}</strong></div><div><span>Phone</span><strong>${esc(d.phone||"-")}</strong></div><div><span>Location</span><strong>${esc(d.location||"-")}</strong></div><div><span>Total Transactions</span><strong>${rows.length}</strong></div><div><span>Issue Qty</span><strong>${q(rows.filter(r=>n(r.transaction_type)==="issue").reduce((s,r)=>s+num(r.quantity_out),0))}</strong></div><div><span>RGP Out</span><strong>${q(rows.filter(r=>n(r.transaction_type)==="rgp out").reduce((s,r)=>s+num(r.quantity_out),0))}</strong></div><div><span>OGP Out</span><strong>${q(rows.filter(r=>n(r.transaction_type)==="ogp out").reduce((s,r)=>s+num(r.quantity_out),0))}</strong></div></div><h3>Recent Transactions</h3><div class="wrap"><table><thead><tr><th>Date</th><th>Transaction</th><th>Item</th><th>Qty In</th><th>Qty Out</th><th>Party</th></tr></thead><tbody>${rows.slice(0,100).map(r=>`<tr><td>${ddate(r.transaction_date)}</td><td>${esc(r.transaction_type)}</td><td>${esc(r.item_name)}</td><td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td><td>${esc(r.supplier||"-")}</td></tr>`).join("")||`<tr><td colspan="6">No transaction found.</td></tr>`}</tbody></table></div>`;detailModal.classList.add("open")}
-function closeModal(id){document.getElementById(id).classList.remove("open")}
-function reportTable(){return `<table class="orangehead"><thead><tr><th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Value</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${ddate(r.transaction_date)}</td><td>${esc(dep(r))}</td><td>${esc(r.transaction_type)}</td><td>${esc(r.bill_no||r.id)}</td><td>${esc(r.item_name)}</td><td>${esc(r.size||"-")}</td><td>${esc(r.unit||"-")}</td><td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td><td>${money(val(r))}</td></tr>`).join("")}</tbody></table>`}
-function preview(theme){
-if(!filtered.length)return alert("No filtered data.");
-let d=parseDate(officeDate.value);if(!d){d=new Date().toISOString().slice(0,10);officeDate.value=ddate(d);}
-previewPage.innerHTML=theme==="office"?`<div class="reporttitle">${esc(officeTitle.value||"DEPARTMENT REPORT")}<span class="date">Date: ${ddate(d)}</span></div>${reportTable()}<div style="display:flex;justify-content:space-between;margin-top:26px;font-size:11px"><span>This is a computer generated report.</span><span>${filtered.length} Records</span></div>`:`<h2 style="color:#ea580c;margin:0">INVENTORY STORE MANAGEMENT SYSTEM</h2><div class="reporttitle" style="color:#ea580c">DEPARTMENT TRANSACTION REPORT</div><div class="detail" style="margin-bottom:15px"><div><span>Department</span><strong>${esc(fDepartment.value||"All Departments")}</strong></div><div><span>Item</span><strong>${esc(fItem.value||"All Items")}</strong></div><div><span>Transaction</span><strong>${esc(fTransaction.value||"All Transactions")}</strong></div><div><span>Party / Workshop</span><strong>${esc(fParty.value||"All Parties")}</strong></div></div>${reportTable()}<div style="display:flex;justify-content:space-between;margin-top:26px;font-size:11px"><span>This is a computer generated report.</span><span>${filtered.length} Records</span><span>Inventory Store Management System</span></div>`;
-previewModal.classList.add("open");
+
+function stats(){
+  sCount.textContent=filtered.length;
+  sIssue.textContent=q(filtered.filter(r=>n(r.transaction_type)==="issue").reduce((s,r)=>s+num(r.quantity_out),0));
+  sRgp.textContent=q(filtered.filter(r=>n(r.transaction_type)==="rgp out").reduce((s,r)=>s+num(r.quantity_out),0));
+  sReturn.textContent=q(filtered.filter(r=>n(r.transaction_type)==="rgp return").reduce((s,r)=>s+num(r.quantity_in),0));
+  sOgp.textContent=q(filtered.filter(r=>n(r.transaction_type)==="ogp out").reduce((s,r)=>s+num(r.quantity_out),0));
+  sValue.textContent=money(filtered.reduce((s,r)=>s+val(r),0));
 }
-function printPreview(){const w=window.open("","_blank");w.document.write(`<html><head><style>body{font-family:Arial;padding:25px}table{width:100%;border-collapse:collapse}thead{display:table-header-group}tr{page-break-inside:avoid}th{background:#ea580c;color:#fff}th,td{border:1px solid #555;padding:6px}.reporttitle{text-align:center;font-size:26px;font-weight:900;margin-bottom:24px}.date{float:right;font-size:15px}</style></head><body>${previewPage.innerHTML}<script>onload=()=>print()<\/script></body></html>`);w.document.close()}
-init();
+
+function detail(id){
+  const d=departments.find(x=>+x.id===+id);if(!d)return;
+  const rows=transactions.filter(r=>n(dep(r))===n(d.department_name));
+  const issueQty=rows.filter(r=>n(r.transaction_type)==="issue").reduce((s,r)=>s+num(r.quantity_out),0);
+  const rgpQty=rows.filter(r=>n(r.transaction_type)==="rgp out").reduce((s,r)=>s+num(r.quantity_out),0);
+  const ogpQty=rows.filter(r=>n(r.transaction_type)==="ogp out").reduce((s,r)=>s+num(r.quantity_out),0);
+
+  detailTitle.textContent=d.department_name+" Detail";
+  detailBody.innerHTML=`
+    <div class="detail">
+      <div><span>Department Code</span><strong>${esc(d.department_code)}</strong></div>
+      <div><span>Department Name</span><strong>${esc(d.department_name)}</strong></div>
+      <div><span>Responsible Person</span><strong>${esc(d.responsible_person||"-")}</strong></div>
+      <div><span>Signature Authority</span><strong>${esc(d.signature_authority||"-")}</strong></div>
+      <div><span>Phone</span><strong>${esc(d.phone||"-")}</strong></div>
+      <div><span>Location</span><strong>${esc(d.location||"-")}</strong></div>
+      <div><span>Status</span><strong>${esc(d.status||"Active")}</strong></div>
+      <div><span>Remarks</span><strong>${esc(d.remarks||"-")}</strong></div>
+    </div>
+    <div class="modal-summary">
+      <div>Total Transactions<br>${rows.length}</div>
+      <div>Issue Qty<br>${q(issueQty)}</div>
+      <div>RGP Out<br>${q(rgpQty)}</div>
+      <div>OGP Out<br>${q(ogpQty)}</div>
+    </div>
+    <h3>Recent Transactions</h3>
+    <div class="wrap">
+      <table style="min-width:720px">
+        <thead><tr><th>Date</th><th>Transaction</th><th>Item</th><th>Qty In</th><th>Qty Out</th><th>Party / Workshop</th></tr></thead>
+        <tbody>${rows.slice(0,100).map(r=>`
+          <tr><td>${ddate(r.transaction_date)}</td><td>${esc(r.transaction_type||"-")}</td>
+          <td>${esc(`${r.item_name||""}${r.size?" - "+r.size:""}`)}</td>
+          <td>${r.quantity_in?q(r.quantity_in):"-"}</td><td>${r.quantity_out?q(r.quantity_out):"-"}</td>
+          <td>${esc(r.supplier||r.workshop_name||"-")}</td></tr>`).join("")||`<tr><td colspan="6" class="empty">No transaction found.</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+  detailModal.classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function closeModal(){detailModal.classList.remove("open");document.body.style.overflow=""}
+function backdropClose(e){if(e.target.id==="detailModal")closeModal()}
+
+function printReport(){
+  if(!filtered.length){showToast("No filtered data to print.","error");return}
+  let reportDate=parseDate(officeDate.value);
+  if(!reportDate){reportDate=new Date().toISOString().slice(0,10);officeDate.value=ddate(reportDate)}
+
+  printReportElement.innerHTML=`
+    <div class="print-header">
+      <div>
+        <h1>${esc(officeTitle.value||"DEPARTMENT TRANSACTION REPORT")}</h1>
+        <p>Inventory Store Management System</p>
+      </div>
+      <div class="print-date"><strong>Date:</strong> ${ddate(reportDate)}<br><strong>Records:</strong> ${filtered.length}</div>
+    </div>
+    <div class="print-filters">
+      <div><strong>Department:</strong> ${esc(fDepartment.value||"All Departments")}</div>
+      <div><strong>Item:</strong> ${esc(fItem.value||"All Items")}</div>
+      <div><strong>Transaction:</strong> ${esc(fTransaction.value||"All Transactions")}</div>
+      <div><strong>Party / Workshop:</strong> ${esc(fParty.value||"All Parties")}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>Department</th><th>Transaction</th><th>Reference</th><th>Item</th><th>Size</th><th>Category</th><th>Unit</th><th>Qty In</th><th>Qty Out</th><th>Rate</th><th>Value</th><th>Party / Workshop</th><th>Remarks</th></tr></thead>
+      <tbody>${filtered.map(rowHtml).join("")}</tbody>
+    </table>
+    <div class="print-footer">
+      <span>This is computer generated report.</span>
+      <span>Inventory Store Management System</span>
+    </div>`;
+  window.print();
+}
+
+const printReportElement=document.getElementById("printReport");
+
+function showToast(message,type){
+  toast.textContent=message;toast.className=`toast ${type} show`;
+  clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toast.classList.remove("show"),2600);
+}
 </script>
-</body></html>
+</body>
+</html>
