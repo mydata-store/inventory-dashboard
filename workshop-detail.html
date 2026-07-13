@@ -175,6 +175,80 @@
     .toast.success{background:#16a34a}
     .toast.error{background:#dc2626}
 
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(15,23,42,.55);
+      display:none;align-items:center;justify-content:center;
+      padding:18px;z-index:3000;
+    }
+    .modal-backdrop.show{display:flex}
+    .rgp-modal{
+      width:min(760px,96vw);max-height:88vh;overflow:auto;
+      background:white;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.28);
+    }
+    .modal-head{
+      position:sticky;top:0;z-index:2;background:#f5a316;color:white;
+      padding:14px 18px;display:flex;align-items:center;
+      justify-content:space-between;border-radius:16px 16px 0 0;
+    }
+    .modal-head h2{margin:0;font-size:20px}
+    .modal-close{
+      border:0;background:rgba(255,255,255,.22);color:white;
+      width:34px;height:34px;border-radius:9px;font-size:20px;cursor:pointer;
+    }
+    .modal-body{padding:18px}
+    .modal-grid{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
+    }
+    .modal-info{
+      border:1px solid #e5e7eb;border-radius:10px;padding:11px;background:#fafafa;
+    }
+    .modal-info small{display:block;color:#6b7280;margin-bottom:4px}
+    .modal-info strong{font-size:14px;word-break:break-word}
+    .modal-summary{
+      margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+    }
+    .modal-summary div{
+      padding:12px;border-radius:10px;text-align:center;font-weight:700;
+      background:#fff7e6;border:1px solid #f5d49c;
+    }
+    .modal-actions{
+      display:flex;justify-content:flex-end;gap:8px;margin-top:16px;
+    }
+    .modal-print{background:#ef4444;color:white}
+    .modal-open{background:#2563eb;color:white}
+
+    #printReport{display:none}
+
+    @media print{
+      @page{size:A4 landscape;margin:10mm}
+      body{background:white}
+      body > *:not(#printReport){display:none !important}
+      #printReport{display:block !important;color:#111;font-family:Arial,Helvetica,sans-serif}
+      .print-header{
+        display:flex;justify-content:space-between;align-items:flex-start;
+        border-bottom:3px solid #ffcc00;padding-bottom:8px;margin-bottom:10px;
+      }
+      .print-header h1{margin:0;font-size:22px}
+      .print-header p{margin:4px 0 0;font-size:11px}
+      .print-date{font-size:11px;text-align:right}
+      .print-workshop{
+        display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+        margin-bottom:10px;font-size:10px;
+      }
+      .print-workshop div{border:1px solid #333;padding:6px}
+      .print-table{width:100%;border-collapse:collapse;font-size:9px}
+      .print-table thead{display:table-header-group}
+      .print-table th{
+        position:static;background:#ffcc00 !important;color:#111 !important;
+        border:1px solid #333;padding:5px;white-space:normal;
+      }
+      .print-table td{border:1px solid #333;padding:5px}
+      .print-footer{
+        margin-top:8px;display:flex;justify-content:space-between;
+        font-size:9px;border-top:1px solid #777;padding-top:5px;
+      }
+    }
+
     @media(max-width:1150px){
       :root{--sidebar-width:200px}
       .profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -298,7 +372,7 @@
       <div class="filter-actions">
         <button class="btn btn-clear" onclick="clearFilters()">Clear Filters</button>
         <button class="btn btn-excel" onclick="exportCSV()">Export Excel</button>
-        <button class="btn btn-pdf" onclick="window.print()">Print / PDF</button>
+        <button class="btn btn-pdf" onclick="printWorkshopReport()">Print / PDF</button>
       </div>
     </section>
 
@@ -333,6 +407,24 @@
 
   <div id="toast" class="toast"></div>
 
+  <div id="rgpModalBackdrop" class="modal-backdrop" onclick="backdropClose(event)">
+    <div class="rgp-modal" role="dialog" aria-modal="true" aria-labelledby="rgpModalTitle">
+      <div class="modal-head">
+        <h2 id="rgpModalTitle">RGP Detail</h2>
+        <button class="modal-close" onclick="closeRgpModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="rgpModalContent"></div>
+        <div class="modal-actions">
+          <button class="btn modal-print" onclick="printSingleRgp()">Print / PDF</button>
+          <button class="btn modal-open" id="openFullRgpBtn">Open Full Detail</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="printReport"></section>
+
 <script>
   const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
@@ -342,6 +434,7 @@
   let workshop = null;
   let records = [];
   let filteredRecords = [];
+  let selectedRgpRecord = null;
 
   document.addEventListener("DOMContentLoaded", () => {
     if(!workshopId){
@@ -554,7 +647,11 @@
       }
 
       if(event.key === "Escape"){
-        clearFilters();
+        if(document.getElementById("rgpModalBackdrop").classList.contains("show")){
+          closeRgpModal();
+        }else{
+          clearFilters();
+        }
       }
     });
   }
@@ -712,7 +809,134 @@
   }
 
   function openRgp(id){
-    window.location.href = `rgp-detail.html?id=${encodeURIComponent(id)}`;
+    const row = records.find(record => Number(record.masterId) === Number(id));
+    if(!row) return;
+
+    selectedRgpRecord = row;
+    document.getElementById("rgpModalTitle").textContent = `${row.rgpNo} Detail`;
+
+    const fields = [
+      ["RGP No.", row.rgpNo],
+      ["Date", displayDate(row.date)],
+      ["Workshop / Party", workshop?.workshop_name || "-"],
+      ["Item with Size", row.item || "-"],
+      ["Department", row.department || "-"],
+      ["Unit", row.unit || "-"],
+      ["Carrier", row.carrier || "-"],
+      ["Authorized By", row.authorizedBy || "-"],
+      ["Bill Detail", row.billDetail || "-"],
+      ["Bill Value", `PKR ${row.billValue.toLocaleString("en-PK",{maximumFractionDigits:2})}`],
+      ["Status", row.status],
+      ["Workshop Contact", workshop?.contact_person || "-"]
+    ];
+
+    document.getElementById("rgpModalContent").innerHTML = `
+      <div class="modal-grid">
+        ${fields.map(([label,value]) => `
+          <div class="modal-info">
+            <small>${escapeHtml(label)}</small>
+            <strong>${escapeHtml(value)}</strong>
+          </div>
+        `).join("")}
+      </div>
+      <div class="modal-summary">
+        <div>Qty Sent<br>${formatNumber(row.qtySent)}</div>
+        <div>Qty Received<br>${formatNumber(row.qtyReceived)}</div>
+        <div>Qty Pending<br>${formatNumber(row.pending)}</div>
+      </div>
+    `;
+
+    document.getElementById("openFullRgpBtn").onclick = () => {
+      window.location.href = `rgp-detail.html?id=${encodeURIComponent(row.masterId)}`;
+    };
+
+    document.getElementById("rgpModalBackdrop").classList.add("show");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeRgpModal(){
+    document.getElementById("rgpModalBackdrop").classList.remove("show");
+    document.body.style.overflow = "";
+  }
+
+  function backdropClose(event){
+    if(event.target.id === "rgpModalBackdrop") closeRgpModal();
+  }
+
+  function printSingleRgp(){
+    if(!selectedRgpRecord) return;
+    buildPrintReport([selectedRgpRecord], `${selectedRgpRecord.rgpNo} Detail`);
+    window.print();
+  }
+
+  function printWorkshopReport(){
+    buildPrintReport(filteredRecords, `${workshop?.workshop_name || "Workshop"} RGP Report`);
+    window.print();
+  }
+
+  function buildPrintReport(rows, title){
+    const generatedDate = new Date().toLocaleDateString("en-GB",{
+      day:"2-digit",month:"short",year:"2-digit"
+    }).replace(/ /g,"-");
+
+    document.getElementById("printReport").innerHTML = `
+      <div class="print-header">
+        <div>
+          <h1>${escapeHtml(title)}</h1>
+          <p>Workshop / Party RGP Activity Report</p>
+        </div>
+        <div class="print-date">
+          <strong>Date:</strong> ${generatedDate}<br>
+          <strong>Records:</strong> ${rows.length}
+        </div>
+      </div>
+
+      <div class="print-workshop">
+        <div><strong>Code:</strong> ${escapeHtml(workshop?.workshop_code || "-")}</div>
+        <div><strong>Workshop:</strong> ${escapeHtml(workshop?.workshop_name || "-")}</div>
+        <div><strong>Contact:</strong> ${escapeHtml(workshop?.contact_person || "-")}</div>
+        <div><strong>Mobile:</strong> ${escapeHtml(workshop?.mobile_no || "-")}</div>
+        <div><strong>City:</strong> ${escapeHtml(workshop?.city || "-")}</div>
+        <div><strong>Specialization:</strong> ${escapeHtml(workshop?.specialization || "-")}</div>
+        <div><strong>Status:</strong> ${escapeHtml(workshop?.status || "-")}</div>
+        <div><strong>Total Bill Value:</strong> PKR ${rows.reduce((sum,r)=>sum+r.billValue,0).toLocaleString("en-PK",{maximumFractionDigits:2})}</div>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>RGP No.</th><th>Date</th><th>Item with Size</th>
+            <th>Qty Sent</th><th>Qty Received</th><th>Pending</th>
+            <th>Unit</th><th>Department</th><th>Carrier</th>
+            <th>Authorized By</th><th>Bill Detail</th><th>Bill Value</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => `
+            <tr>
+              <td>${escapeHtml(row.rgpNo)}</td>
+              <td>${escapeHtml(displayDate(row.date))}</td>
+              <td>${escapeHtml(row.item || "-")}</td>
+              <td>${formatNumber(row.qtySent)}</td>
+              <td>${formatNumber(row.qtyReceived)}</td>
+              <td>${formatNumber(row.pending)}</td>
+              <td>${escapeHtml(row.unit || "-")}</td>
+              <td>${escapeHtml(row.department || "-")}</td>
+              <td>${escapeHtml(row.carrier || "-")}</td>
+              <td>${escapeHtml(row.authorizedBy || "-")}</td>
+              <td>${escapeHtml(row.billDetail || "-")}</td>
+              <td>PKR ${row.billValue.toLocaleString("en-PK",{maximumFractionDigits:2})}</td>
+              <td>${escapeHtml(row.status)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+
+      <div class="print-footer">
+        <span>This is computer generated report.</span>
+        <span>Inventory Store Management System</span>
+      </div>
+    `;
   }
 
   function firstValue(object, keys){
