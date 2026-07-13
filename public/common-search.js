@@ -5,70 +5,112 @@ window.AppSearch = {
       getLabel=value=>String(value),
       minChars=0,
       maxResults=30,
-      onSelect
+      onSelect,
+      onInput
     } = options;
 
-    const wrap = input.closest(".combo") || (()=> {
-      const div=document.createElement("div");
-      div.className="combo";
-      input.parentNode.insertBefore(div,input);
-      div.appendChild(input);
-      return div;
-    })();
+    if(!input) return;
 
-    let menu=wrap.querySelector(".combo-menu");
+    let wrap = input.parentElement;
+    if(!wrap.classList.contains("typeahead-wrap")){
+      const newWrap = document.createElement("div");
+      newWrap.className = "typeahead-wrap";
+      input.parentNode.insertBefore(newWrap,input);
+      newWrap.appendChild(input);
+      wrap = newWrap;
+    }
+
+    let menu = wrap.querySelector(".typeahead-menu");
     if(!menu){
-      menu=document.createElement("div");
-      menu.className="combo-menu";
+      menu = document.createElement("div");
+      menu.className = "typeahead-menu";
       wrap.appendChild(menu);
     }
 
-    let filtered=[],index=-1;
+    let filtered = [];
+    let index = -1;
 
-    const render=()=>{
-      const query=input.value.trim().toLowerCase();
-      if(query.length<minChars){
-        menu.classList.remove("open");
+    const close = () => {
+      menu.classList.remove("open");
+      index = -1;
+    };
+
+    const choose = item => {
+      input.value = getLabel(item);
+      close();
+      onSelect?.(item);
+      input.dispatchEvent(new Event("change",{bubbles:true}));
+    };
+
+    const render = () => {
+      const query = input.value.trim().toLowerCase();
+      onInput?.(input.value);
+
+      if(query.length < minChars){
+        close();
         return;
       }
 
-      filtered=values.filter(item=>getLabel(item).toLowerCase().includes(query)).slice(0,maxResults);
-      index=Math.min(index,filtered.length-1);
+      filtered = values
+        .filter(item => getLabel(item).toLowerCase().includes(query))
+        .slice(0,maxResults);
 
-      menu.innerHTML=filtered.map((item,i)=>`
-        <div class="combo-option ${i===index?"active":""}" data-index="${i}">
+      if(!filtered.length){
+        menu.innerHTML = `<div class="typeahead-empty">No matching record</div>`;
+        menu.classList.add("open");
+        return;
+      }
+
+      index = Math.min(index,filtered.length-1);
+
+      menu.innerHTML = filtered.map((item,i)=>`
+        <div class="typeahead-option ${i===index?"active":""}" data-index="${i}">
           ${AppTools.escapeHtml(getLabel(item))}
         </div>
       `).join("");
 
-      menu.classList.toggle("open",filtered.length>0);
+      menu.classList.add("open");
 
-      menu.querySelectorAll(".combo-option").forEach(option=>{
-        option.addEventListener("mousedown",()=>{
-          const item=filtered[Number(option.dataset.index)];
-          input.value=getLabel(item);
-          menu.classList.remove("open");
-          onSelect?.(item);
+      menu.querySelectorAll(".typeahead-option").forEach(option=>{
+        option.addEventListener("mousedown",event=>{
+          event.preventDefault();
+          choose(filtered[Number(option.dataset.index)]);
         });
       });
     };
 
-    input.addEventListener("focus",()=>{index=-1;render()});
-    input.addEventListener("input",()=>{index=-1;render()});
-    input.addEventListener("keydown",e=>{
-      if(e.key==="ArrowDown"){e.preventDefault();index=Math.min(index+1,filtered.length-1);render()}
-      if(e.key==="ArrowUp"){e.preventDefault();index=Math.max(index-1,0);render()}
-      if(e.key==="Enter"&&filtered.length){
-        e.preventDefault();
-        if(index<0)index=0;
-        const item=filtered[index];
-        input.value=getLabel(item);
-        menu.classList.remove("open");
-        onSelect?.(item);
-      }
-      if(e.key==="Escape")menu.classList.remove("open");
+    input.addEventListener("focus",()=>{
+      index = -1;
+      render();
     });
-    input.addEventListener("blur",()=>setTimeout(()=>menu.classList.remove("open"),120));
+
+    input.addEventListener("input",()=>{
+      index = -1;
+      render();
+    });
+
+    input.addEventListener("keydown",event=>{
+      if(event.key==="ArrowDown"){
+        event.preventDefault();
+        if(!menu.classList.contains("open")) render();
+        index = Math.min(index+1,filtered.length-1);
+        render();
+      }else if(event.key==="ArrowUp"){
+        event.preventDefault();
+        index = Math.max(index-1,0);
+        render();
+      }else if(event.key==="Enter" && menu.classList.contains("open") && filtered.length){
+        event.preventDefault();
+        if(index<0) index=0;
+        choose(filtered[index]);
+      }else if(event.key==="Escape"){
+        close();
+      }else if(event.key==="Tab" && menu.classList.contains("open") && index>=0 && filtered[index]){
+        choose(filtered[index]);
+      }
+    });
+
+    input.addEventListener("blur",()=>setTimeout(close,150));
   },
 
   openCommandPalette(commands=[]){
