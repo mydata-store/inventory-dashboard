@@ -5,10 +5,13 @@
 <title>Master</title>
 <link rel="stylesheet" href="public/common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/theme-settings.js"></script>
 <script src="public/common-layout.js"></script>
 <script src="public/common-tools.js"></script>
 <script src="public/common-pdf.js"></script>
 <script src="public/master-config.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-table.js"></script>
 </head>
 <body>
 <div id="appSidebar"></div>
@@ -32,9 +35,7 @@
       <input id="searchBox" placeholder="Search records...">
       <select id="statusFilter"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
     </div>
-    <div class="table-wrap" style="margin-top:13px">
-      <table class="data-table"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
-    </div>
+    <div id="masterTableHost" style="margin-top:13px"></div>
   </section>
 </main>
 
@@ -47,13 +48,13 @@ const db=supabase.createClient(
 );
 const type=new URLSearchParams(location.search).get("type")||"department";
 const config=MASTER_CONFIG[type]||MASTER_CONFIG.department;
-let records=[],editId=null,lastFormState=null;
+let records=[],editId=null,lastFormState=null,masterTable=null;
 
 document.addEventListener("DOMContentLoaded",async()=>{
   document.title=config.title;
   pageTitle.textContent=config.title;
   pageSubtitle.textContent=config.subtitle;
-  buildForm();buildTableHead();setupEvents();await loadRecords();
+  buildForm();setupEvents();await loadRecords();
 });
 
 const fieldId=name=>"field_"+name;
@@ -77,10 +78,6 @@ function buildForm(){
   AppTools.setupNumericFields(masterForm);
   AppTools.setupEnterNavigation(masterForm,saveRecord);
 }
-function buildTableHead(){
-  const cols=[config.codeField,...config.fields.filter(f=>f.span!==4).map(f=>f.name)];
-  tableHead.innerHTML=`<tr>${cols.map(c=>`<th>${labelFor(c)}</th>`).join("")}<th>Action</th></tr>`;
-}
 function setupEvents(){
   saveBtn.onclick=saveRecord;clearBtn.onclick=()=>clearForm();exportBtn.onclick=exportCSV;pdfBtn.onclick=printPDF;
   searchBox.oninput=renderTable;statusFilter.onchange=renderTable;
@@ -88,7 +85,7 @@ function setupEvents(){
 }
 async function loadRecords(){
   const {data,error}=await db.from(config.table).select("*").order("id",{ascending:false});
-  if(error){AppTools.toast("Load error: "+error.message,"error");tableBody.innerHTML=`<tr><td class="table-empty" colspan="20">${AppTools.escapeHtml(error.message)}</td></tr>`;return}
+  if(error){AppTools.toast("Load error: "+error.message,"error");masterTableHost.innerHTML=`<div class="table-empty">${AppTools.escapeHtml(error.message)}</div>`;return}
   records=data||[];generateCode();renderTable();
 }
 function generateCode(){
@@ -132,17 +129,39 @@ function getFiltered(){
   return records.filter(r=>(!q||config.searchFields.some(k=>String(r[k]||"").toLowerCase().includes(q)))&&(!s||String(r.status||"").toLowerCase()===s));
 }
 function renderTable(){
-  const rows=getFiltered(),cols=[config.codeField,...config.fields.filter(f=>f.span!==4).map(f=>f.name)];
-  if(!rows.length){tableBody.innerHTML=`<tr><td class="table-empty" colspan="${cols.length+1}">No record found.</td></tr>`;return}
-  tableBody.innerHTML=rows.map(r=>`<tr>
-    ${cols.map(k=>k==="status"
-      ?`<td><span class="badge ${String(r[k]).toLowerCase()==="inactive"?"badge-inactive":"badge-active"}">${AppTools.escapeHtml(r[k]||"Active")}</span></td>`
-      :`<td>${AppTools.escapeHtml(r[k]??"")}</td>`).join("")}
-    <td><div class="table-actions">
-      <button class="btn btn-success btn-sm" onclick="showDetail(${+r.id})">Detail</button>
-      <button class="btn btn-primary btn-sm" onclick="editRecord(${+r.id})">Edit</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteRecord(${+r.id})">Delete</button>
-    </div></td></tr>`).join("");
+  const rows=getFiltered();
+  const columns=[
+    {key:config.codeField,label:labelFor(config.codeField)},
+    ...config.fields.filter(f=>f.span!==4).map(f=>({
+      key:f.name,
+      label:f.label,
+      type:f.name==="status"?"status":"text"
+    }))
+  ];
+
+  const options={
+    container:"#masterTableHost",
+    columns,
+    rows,
+    rowId:"id",
+    pageSize:20,
+    searchable:false,
+    sortable:true,
+    resizable:true,
+    selectable:true,
+    stickyFirstColumn:true,
+    showTotals:false,
+    preferencesKey:`master_${type}`,
+    pdfTitle:config.title,
+    pdfSubtitle:config.subtitle,
+    onDetail:row=>showDetail(row.id),
+    onEdit:row=>editRecord(row.id),
+    onDelete:row=>deleteRecord(row.id),
+    onRowOpen:row=>showDetail(row.id)
+  };
+
+  if(masterTable)masterTable.setRows(rows);
+  else masterTable=new AppTable(options);
 }
 function showDetail(id){
   const r=records.find(x=>+x.id===+id);if(!r)return;
@@ -184,6 +203,19 @@ function printPDF(){
     rows,meta:[{label:"Status Filter",value:statusFilter.value||"All"},{label:"Search",value:searchBox.value||"All Records"}]
   });
 }
+
+window.APP_COMMANDS = [
+  {title:"Dashboard",subtitle:"Open main dashboard",href:"index.html",keywords:"home"},
+  {title:"Item Master",subtitle:"Open item master",href:"masters.html?type=item",keywords:"items stock"},
+  {title:"Supplier Master",subtitle:"Open supplier master",href:"masters.html?type=supplier",keywords:"vendors"},
+  {title:"Workshop Master",subtitle:"Open workshop / party master",href:"masters.html?type=workshop",keywords:"party repair"},
+  {title:"Department Master",subtitle:"Open department master",href:"masters.html?type=department",keywords:"departments"},
+  {title:"RGP List",subtitle:"Open returnable gate pass list",href:"rgp-list.html",keywords:"gate pass"},
+  {title:"OGP List",subtitle:"Open outgoing gate pass list",href:"ogp-list.html",keywords:"gate pass"},
+  {title:"PDF Settings",subtitle:"Open PDF and logo settings",href:"pdf-settings.html",keywords:"print logo"},
+  {title:"Theme Settings",subtitle:"Open theme and sidebar settings",href:"theme-settings.html",keywords:"colors sidebar"}
+];
+
 </script>
 </body>
 </html>
