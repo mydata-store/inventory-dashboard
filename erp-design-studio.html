@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Design Studio</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-table.js"></script>
+<script src="public/design-studio-engine.js"></script>
+<script src="public/component-library.js"></script>
+<style>
+.studio-shell{display:grid;grid-template-columns:270px 1fr;gap:14px}
+.studio-sidebar,.studio-panel{background:var(--card-bg);border-radius:14px;border:1px solid #e5e7eb;box-shadow:0 8px 22px #0000000d}
+.studio-sidebar{padding:12px;position:sticky;top:12px;height:calc(100vh - 24px);overflow:auto}
+.studio-search{width:100%;height:38px;border:1px solid #cbd5e1;border-radius:9px;padding:0 10px;margin-bottom:10px}
+.page-group-title{font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#94a3b8;font-weight:900;margin:12px 5px 6px}
+.page-item{display:flex;justify-content:space-between;gap:8px;width:100%;padding:9px;border:0;border-radius:9px;background:transparent;text-align:left;font-size:10px;font-weight:700;cursor:pointer}
+.page-item:hover,.page-item.active{background:#eff6ff;color:#1d4ed8}
+.page-item small{font-size:7px;color:#94a3b8}
+.studio-main{min-width:0}
+.studio-toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+.studio-actions{display:flex;gap:8px;flex-wrap:wrap}
+.designer-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:10px;margin-bottom:12px}
+.designer-tab{border:1px solid #dbe3ee;background:#fff;border-radius:9px;padding:8px 11px;font-size:9px;font-weight:900;cursor:pointer}
+.designer-tab.active{background:var(--accent);border-color:var(--accent);color:#111827}
+.designer-view{display:none}.designer-view.active{display:block}
+.studio-panel{padding:14px;margin-bottom:12px}
+.settings-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.setting-field label{display:block;font-size:9px;font-weight:900;margin-bottom:5px}
+.setting-field input,.setting-field select,.setting-field textarea{width:100%;min-height:38px;border:1px solid #cbd5e1;border-radius:9px;padding:8px 9px;background:#fff}
+.setting-field textarea{min-height:74px}
+.span-2{grid-column:span 2}.span-4{grid-column:1/-1}
+.builder-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.builder-table{width:100%;border-collapse:collapse}
+.builder-table th{background:#0f172a;color:#fff;text-align:center;padding:8px;font-size:8px}
+.builder-table td{border-bottom:1px solid #e5e7eb;padding:7px;font-size:8px}
+.builder-table input,.builder-table select{width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:4px 6px;font-size:8px}
+.preview-frame{background:linear-gradient(180deg,#f8fafc,#eef3fb);border:1px solid #dbe3ee;border-radius:12px;padding:14px;min-height:420px}
+.preview-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.preview-card{background:#fff;border:1px solid #e5e7eb;border-radius:var(--preview-radius,14px);padding:12px;margin-bottom:var(--preview-gap,12px)}
+.preview-form{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.preview-field label{display:block;font-size:8px;font-weight:900;margin-bottom:4px}
+.preview-field input{width:100%;height:34px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px}
+.preview-table{width:100%;border-collapse:collapse}
+.preview-table th{height:var(--preview-header-height,42px);text-align:var(--preview-header-align,center);background:#78350f;color:#fff;font-size:8px}
+.preview-table td{height:var(--preview-row-height,38px);padding:6px;border-bottom:1px solid #e5e7eb;font-size:8px}
+.version-row{display:grid;grid-template-columns:80px 1fr 120px 120px;gap:8px;align-items:center;padding:9px;border-bottom:1px solid #e5e7eb;font-size:9px}
+.status-pill{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:900}
+.status-pill.published{background:#dcfce7;color:#166534}.status-pill.draft{background:#fef3c7;color:#92400e}
+
+.component-catalog{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.component-card{border:1px solid #dbe3ee;border-radius:11px;background:#fff;padding:12px;display:grid;grid-template-columns:38px 1fr;gap:10px;cursor:pointer;transition:.18s ease}
+.component-card:hover{transform:translateY(-2px);border-color:#93c5fd;box-shadow:0 8px 18px rgba(37,99,235,.10)}
+.component-card-icon{width:36px;height:36px;border-radius:10px;background:#eff6ff;color:#1d4ed8;display:grid;place-items:center;font-size:18px;font-weight:900}
+.component-card h3{font-size:10px;margin:0 0 3px}.component-card p{font-size:8px;line-height:1.45;color:#64748b;margin:0}.component-card small{display:block;margin-top:5px;color:#94a3b8;font-size:7px;text-transform:uppercase;font-weight:900}
+@media(max-width:1100px){.component-catalog{grid-template-columns:repeat(2,1fr)}
+{.studio-shell{grid-template-columns:1fr}.studio-sidebar{position:relative;height:auto}.settings-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.settings-grid,.preview-form{grid-template-columns:1fr}.span-2,.span-4{grid-column:auto}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+<main class="app-main">
+  <div class="page-head">
+    <div>
+      <h1>ERP Design Studio</h1>
+      <div class="page-subtitle">Control page titles, forms, tables, buttons, sections and PDF settings without editing code</div>
+    </div>
+  </div>
+
+  <div class="studio-shell">
+    <aside class="studio-sidebar">
+      <input id="pageSearch" class="studio-search" placeholder="Search ERP pages...">
+      <div id="pageList"></div>
+    </aside>
+
+    <section class="studio-main">
+      <div class="studio-toolbar">
+        <div>
+          <h2 id="selectedPageTitle" style="margin:0">Select a page</h2>
+          <div id="selectedPageMeta" class="page-subtitle">Choose any registered ERP page from the left.</div>
+        </div>
+        <div class="studio-actions">
+          <button class="btn btn-light" onclick="resetConfig()">Reset</button>
+          <button class="btn btn-warning" onclick="saveDraft()">Save Draft</button>
+          <button class="btn btn-primary" onclick="previewPage()">Preview</button>
+          <button class="btn btn-success" onclick="publishCurrent()">Publish</button>
+        </div>
+      </div>
+
+      <div class="studio-panel designer-tabs">
+        <button class="designer-tab active" data-tab="general" onclick="showDesigner('general')">Page</button>
+        <button class="designer-tab" data-tab="form" onclick="showDesigner('form')">Form Designer</button>
+        <button class="designer-tab" data-tab="table" onclick="showDesigner('table')">Table Designer</button>
+        <button class="designer-tab" data-tab="buttons" onclick="showDesigner('buttons')">Buttons</button>
+        <button class="designer-tab" data-tab="sections" onclick="showDesigner('sections')">Sections</button>
+        <button class="designer-tab" data-tab="components" onclick="showDesigner('components')">Component Library</button>
+        <button class="designer-tab" data-tab="pdf" onclick="showDesigner('pdf')">PDF</button>
+        <button class="designer-tab" data-tab="preview" onclick="showDesigner('preview')">Live Preview</button>
+        <button class="designer-tab" data-tab="versions" onclick="showDesigner('versions')">Versions</button>
+      </div>
+
+      <div id="general" class="designer-view active studio-panel">
+        <h2>Page Designer</h2>
+        <div class="settings-grid">
+          <div class="setting-field span-2"><label>Page Title</label><input id="page_title"></div>
+          <div class="setting-field span-2"><label>Page Subtitle</label><input id="page_subtitle"></div>
+          <div class="setting-field"><label>Menu Label</label><input id="menu_label"></div>
+          <div class="setting-field"><label>Page Type</label><select id="page_type"><option>standard</option><option>transaction</option><option>dashboard</option><option>report</option><option>settings</option></select></div>
+          <div class="setting-field"><label>Page Width</label><select id="page_width"><option value="full">Full Width</option><option value="wide">Wide</option><option value="compact">Compact</option></select></div>
+          <div class="setting-field"><label>Default Tab</label><input id="default_tab"></div>
+          <div class="setting-field"><label>Card Radius</label><input id="card_radius" type="number" min="0" max="30"></div>
+          <div class="setting-field"><label>Section Gap</label><input id="section_gap" type="number" min="0" max="40"></div>
+        </div>
+      </div>
+
+      <div id="form" class="designer-view studio-panel">
+        <div class="builder-head"><div><h2 style="margin:0">Form Designer</h2><div class="page-subtitle">Add, rename, reorder, show or hide configurable fields.</div></div><button class="btn btn-primary" onclick="addField()">Add Field</button></div>
+        <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Field Key</th><th>Label</th><th>Type</th><th>Width</th><th>Required</th><th>Visible</th><th>Protected</th><th>Action</th></tr></thead><tbody id="fieldRows"></tbody></table></div>
+      </div>
+
+      <div id="table" class="designer-view studio-panel">
+        <h2>Table Designer</h2>
+        <div class="settings-grid" style="margin-bottom:14px">
+          <div class="setting-field"><label>Header Alignment</label><select id="header_alignment"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select></div>
+          <div class="setting-field"><label>Header Height</label><input id="header_height" type="number"></div>
+          <div class="setting-field"><label>Header Font Size</label><input id="header_font_size" type="number"></div>
+          <div class="setting-field"><label>Row Height</label><input id="row_height" type="number"></div>
+          <div class="setting-field"><label>Freeze Header</label><select id="freeze_header"><option value="true">Yes</option><option value="false">No</option></select></div>
+          <div class="setting-field"><label>Alternate Rows</label><select id="zebra_rows"><option value="false">No</option><option value="true">Yes</option></select></div>
+        </div>
+        <div class="builder-head"><div><h3 style="margin:0">Table Columns</h3></div><button class="btn btn-primary" onclick="addColumn()">Add Column</button></div>
+        <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Key</th><th>Header</th><th>Header Align</th><th>Cell Align</th><th>Width</th><th>Visible</th><th>PDF</th><th>Action</th></tr></thead><tbody id="columnRows"></tbody></table></div>
+      </div>
+
+      <div id="buttons" class="designer-view studio-panel">
+        <div class="builder-head"><div><h2 style="margin:0">Button Designer</h2></div><button class="btn btn-primary" onclick="addButton()">Add Button</button></div>
+        <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Key</th><th>Label</th><th>Shortcut</th><th>Visible</th><th>Action</th></tr></thead><tbody id="buttonRows"></tbody></table></div>
+      </div>
+
+      <div id="sections" class="designer-view studio-panel">
+        <div class="builder-head"><div><h2 style="margin:0">Section Designer</h2></div><button class="btn btn-primary" onclick="addSection()">Add Section</button></div>
+        <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Section Key</th><th>Title</th><th>Type</th><th>Visible</th><th>Action</th></tr></thead><tbody id="sectionRows"></tbody></table></div>
+      </div>
+
+
+      <div id="components" class="designer-view studio-panel">
+        <div class="builder-head">
+          <div>
+            <h2 style="margin:0">ERP Component Library</h2>
+            <div class="page-subtitle">Add reusable ERP blocks to the selected page.</div>
+          </div>
+        </div>
+        <div id="componentCatalog" class="component-catalog"></div>
+
+        <div class="builder-head" style="margin-top:18px">
+          <div>
+            <h3 style="margin:0">Components on This Page</h3>
+            <div class="page-subtitle">Change order, title, visibility or remove a component.</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="builder-table">
+            <thead><tr><th>Order</th><th>Type</th><th>Key</th><th>Title</th><th>Visible</th><th>Action</th></tr></thead>
+            <tbody id="componentRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="pdf" class="designer-view studio-panel">
+        <h2>PDF Designer</h2>
+        <div class="settings-grid">
+          <div class="setting-field span-2"><label>PDF Title</label><input id="pdf_title"></div>
+          <div class="setting-field"><label>Orientation</label><select id="pdf_orientation"><option>landscape</option><option>portrait</option></select></div>
+          <div class="setting-field"><label>Show Logo</label><select id="pdf_logo"><option value="true">Yes</option><option value="false">No</option></select></div>
+          <div class="setting-field"><label>Show Footer</label><select id="pdf_footer"><option value="true">Yes</option><option value="false">No</option></select></div>
+        </div>
+      </div>
+
+      <div id="preview" class="designer-view studio-panel">
+        <div class="builder-head"><h2 style="margin:0">Live Preview</h2><button class="btn btn-primary" onclick="renderPreview()">Refresh Preview</button></div>
+        <div id="previewFrame" class="preview-frame"></div>
+      </div>
+
+      <div id="versions" class="designer-view studio-panel">
+        <h2>Version History</h2>
+        <div id="versionList"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
+const studio=new ERPDesignStudio({db});
+let config=null,currentPage=null,lastDraft=null;
+
+document.addEventListener("DOMContentLoaded",async()=>{
+  pageSearch.oninput=renderPageList;
+  try{
+    await studio.loadPages();
+    renderPageList();
+    if(studio.pages.length)selectPage(studio.pages[0].page_key);
+  }catch(error){AppTools.toast(error.message,"error")}
+});
+
+function renderPageList(){
+  const q=pageSearch.value.trim().toLowerCase();
+  const rows=studio.pages.filter(p=>`${p.page_name} ${p.page_group} ${p.page_type}`.toLowerCase().includes(q));
+  const groups=[...new Set(rows.map(r=>r.page_group||"Other"))];
+  pageList.innerHTML=groups.map(group=>`
+    <div class="page-group-title">${AppTools.escapeHtml(group)}</div>
+    ${rows.filter(r=>(r.page_group||"Other")===group).map(r=>`
+      <button class="page-item ${currentPage?.page_key===r.page_key?"active":""}" onclick="selectPage('${r.page_key}')">
+        <span>${AppTools.escapeHtml(r.page_name)}</span><small>${AppTools.escapeHtml(r.page_type)}</small>
+      </button>`).join("")}
+  `).join("");
+}
+
+async function selectPage(pageKey){
+  try{
+    const output=await studio.getPage(pageKey);
+    currentPage=output.page;
+    config=output.version?.config_json||studio.defaultConfig(currentPage);
+    config.components=config.components||{items:[]};
+    selectedPageTitle.textContent=currentPage.page_name;
+    selectedPageMeta.textContent=`${currentPage.page_group} • ${currentPage.page_type} • ${currentPage.page_url}`;
+    populateControls();
+    renderBuilders();
+    renderComponentCatalog();
+    renderComponentRows();
+    renderPreview();
+    await renderVersions();
+    renderPageList();
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+
+function showDesigner(tab){
+  document.querySelectorAll(".designer-tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  document.querySelectorAll(".designer-view").forEach(v=>v.classList.toggle("active",v.id===tab));
+  if(tab==="preview")renderPreview();
+  if(tab==="versions")renderVersions();
+}
+
+function populateControls(){
+  const g=config.general,t=config.table,p=config.pdf;
+  page_title.value=g.page_title||"";
+  page_subtitle.value=g.page_subtitle||"";
+  menu_label.value=g.menu_label||"";
+  page_type.value=g.page_type||"standard";
+  page_width.value=g.page_width||"full";
+  default_tab.value=g.default_tab||"";
+  card_radius.value=g.card_radius??14;
+  section_gap.value=g.section_gap??12;
+  header_alignment.value=t.header_alignment||"center";
+  header_height.value=t.header_height??42;
+  header_font_size.value=t.header_font_size??11;
+  row_height.value=t.row_height??38;
+  freeze_header.value=String(t.freeze_header!==false);
+  zebra_rows.value=String(Boolean(t.zebra_rows));
+  pdf_title.value=p.title||"";
+  pdf_orientation.value=p.orientation||"landscape";
+  pdf_logo.value=String(p.show_logo!==false);
+  pdf_footer.value=String(p.show_footer!==false);
+}
+
+function captureControls(){
+  config.general={
+    ...config.general,
+    page_title:page_title.value,
+    page_subtitle:page_subtitle.value,
+    menu_label:menu_label.value,
+    page_type:page_type.value,
+    page_width:page_width.value,
+    default_tab:default_tab.value,
+    card_radius:Number(card_radius.value||14),
+    section_gap:Number(section_gap.value||12)
+  };
+  config.table={
+    ...config.table,
+    header_alignment:header_alignment.value,
+    header_height:Number(header_height.value||42),
+    header_font_size:Number(header_font_size.value||11),
+    row_height:Number(row_height.value||38),
+    freeze_header:freeze_header.value==="true",
+    zebra_rows:zebra_rows.value==="true"
+  };
+  config.pdf={
+    ...config.pdf,
+    title:pdf_title.value,
+    orientation:pdf_orientation.value,
+    show_logo:pdf_logo.value==="true",
+    show_footer:pdf_footer.value==="true"
+  };
+  captureBuilderRows();
+}
+
+function renderBuilders(){
+  renderFieldRows();
+  renderColumnRows();
+  renderButtonRows();
+  renderSectionRows();
+  renderComponentRows();
+}
+
+function renderComponentCatalog(){
+  if(!window.ERPComponentLibrary)return;
+  componentCatalog.innerHTML=ERPComponentLibrary.list().map(component=>`
+    <button class="component-card" onclick="addComponent('${component.key}')">
+      <div class="component-card-icon">${component.icon}</div>
+      <div><h3>${AppTools.escapeHtml(component.title)}</h3><p>${AppTools.escapeHtml(component.description)}</p><small>${AppTools.escapeHtml(component.category)}</small></div>
+    </button>
+  `).join("");
+}
+
+function renderComponentRows(){
+  config.components=config.components||{items:[]};
+  componentRows.innerHTML=(config.components.items||[]).map((component,index)=>`
+    <tr data-index="${index}">
+      <td><input data-k="order" type="number" value="${component.order??index+1}"></td>
+      <td>${AppTools.escapeHtml(component.component_type||"")}</td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(component.key||"")}"></td>
+      <td><input data-k="title" value="${AppTools.escapeHtml(component.title||"")}"></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${component.visible===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeComponent(${index})">Delete</button></td>
+    </tr>
+  `).join("");
+}
+
+function addComponent(type){
+  captureControls();
+  const component=ERPComponentLibrary.create(type);
+  component.order=(config.components.items||[]).length+1;
+  component.key=`${type}_${Date.now()}`;
+  config.components.items.push(component);
+  renderComponentRows();
+  AppTools.toast(`${ERPComponentLibrary.definitions[type].title} added.`,"success");
+}
+
+function removeComponent(index){
+  captureControls();
+  config.components.items.splice(index,1);
+  renderComponentRows();
+}
+
+function renderFieldRows(){
+  fieldRows.innerHTML=(config.form.fields||[]).map((f,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${f.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(f.key||"")}"></td>
+      <td><input data-k="label" value="${AppTools.escapeHtml(f.label||"")}"></td>
+      <td><select data-k="type">${["text","number","date","select","textarea","checkbox","file"].map(x=>`<option ${x===f.type?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="span">${[1,2,3,4].map(x=>`<option ${x===Number(f.span||1)?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="required"><option value="false">No</option><option value="true" ${f.required?"selected":""}>Yes</option></select></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${f.visible===false?"selected":""}>No</option></select></td>
+      <td><span class="status-pill ${f.protected?"published":"draft"}">${f.protected?"Protected":"Normal"}</span></td>
+      <td><button class="btn btn-danger" ${f.protected?"disabled":""} onclick="removeField(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function renderColumnRows(){
+  columnRows.innerHTML=(config.table.columns||[]).map((c,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${c.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(c.key||"")}"></td>
+      <td><input data-k="label" value="${AppTools.escapeHtml(c.label||"")}"></td>
+      <td><select data-k="header_align">${["center","left","right"].map(x=>`<option ${x===(c.header_align||config.table.header_alignment)?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="cell_align">${["left","center","right"].map(x=>`<option ${x===(c.cell_align||"left")?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><input data-k="width" type="number" value="${c.width||120}"></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${c.visible===false?"selected":""}>No</option></select></td>
+      <td><select data-k="show_pdf"><option value="true">Yes</option><option value="false" ${c.show_pdf===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeColumn(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function renderButtonRows(){
+  buttonRows.innerHTML=(config.buttons.items||[]).map((b,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${b.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(b.key||"")}"></td>
+      <td><input data-k="label" value="${AppTools.escapeHtml(b.label||"")}"></td>
+      <td><input data-k="shortcut" value="${AppTools.escapeHtml(b.shortcut||"")}"></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${b.visible===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeButton(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function renderSectionRows(){
+  sectionRows.innerHTML=(config.sections.items||[]).map((s,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${s.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(s.key||"")}"></td>
+      <td><input data-k="title" value="${AppTools.escapeHtml(s.title||"")}"></td>
+      <td><select data-k="type">${["form","table","summary","filters","custom"].map(x=>`<option ${x===s.type?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${s.visible===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeSection(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function captureBuilderRows(){
+  config.form.fields=readRows(fieldRows,["order","key","label","type","span","required","visible"],["order","span"],["required","visible"]).map((x,i)=>({...config.form.fields[i],...x}));
+  config.table.columns=readRows(columnRows,["order","key","label","header_align","cell_align","width","visible","show_pdf"],["order","width"],["visible","show_pdf"]);
+  config.buttons.items=readRows(buttonRows,["order","key","label","shortcut","visible"],["order"],["visible"]);
+  config.sections.items=readRows(sectionRows,["order","key","title","type","visible"],["order"],["visible"]);
+  config.components=config.components||{items:[]};
+  const componentData=readRows(componentRows,["order","key","title","visible"],["order"],["visible"]);
+  config.components.items=componentData.map((row,index)=>({...config.components.items[index],...row}));
+}
+
+function readRows(tbody,keys,numberKeys=[],booleanKeys=[]){
+  return [...tbody.querySelectorAll("tr")].map(row=>{
+    const out={};
+    keys.forEach(k=>{
+      const el=row.querySelector(`[data-k="${k}"]`);
+      if(!el)return;
+      let value=el.value;
+      if(numberKeys.includes(k))value=Number(value||0);
+      if(booleanKeys.includes(k))value=value==="true";
+      out[k]=value;
+    });
+    return out;
+  });
+}
+
+function addField(){captureControls();config.form.fields.push({order:config.form.fields.length+1,key:"new_field",label:"New Field",type:"text",span:1,required:false,visible:true,protected:false});renderFieldRows()}
+function removeField(i){captureControls();if(config.form.fields[i]?.protected)return;config.form.fields.splice(i,1);renderFieldRows()}
+function addColumn(){captureControls();config.table.columns.push({order:config.table.columns.length+1,key:"new_column",label:"New Column",header_align:"center",cell_align:"left",width:120,visible:true,show_pdf:true});renderColumnRows()}
+function removeColumn(i){captureControls();config.table.columns.splice(i,1);renderColumnRows()}
+function addButton(){captureControls();config.buttons.items.push({order:config.buttons.items.length+1,key:"custom",label:"Custom",shortcut:"",visible:true});renderButtonRows()}
+function removeButton(i){captureControls();config.buttons.items.splice(i,1);renderButtonRows()}
+function addSection(){captureControls();config.sections.items.push({order:config.sections.items.length+1,key:"new_section",title:"New Section",type:"custom",visible:true});renderSectionRows()}
+function removeSection(i){captureControls();config.sections.items.splice(i,1);renderSectionRows()}
+
+function resetConfig(){
+  if(!currentPage)return;
+  if(!confirm("Reset this page to the default configuration?"))return;
+  config=studio.defaultConfig(currentPage);
+  populateControls();renderBuilders();renderPreview();
+}
+
+async function saveDraft(){
+  if(!currentPage)return;
+  try{
+    captureControls();
+    lastDraft=await studio.saveDraft(currentPage.page_key,config);
+    AppTools.toast(`Draft version ${lastDraft.version_no} saved.`,"success");
+    await renderVersions();
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+
+async function publishCurrent(){
+  if(!currentPage)return;
+  try{
+    captureControls();
+    if(!lastDraft)lastDraft=await studio.saveDraft(currentPage.page_key,config);
+    await studio.publishVersion(lastDraft.id,currentPage.page_key);
+    AppTools.toast(`Version ${lastDraft.version_no} published.`,"success");
+    lastDraft=null;
+    await renderVersions();
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+
+function previewPage(){
+  captureControls();
+  showDesigner("preview");
+  renderPreview();
+}
+
+function renderPreview(){
+  if(!config)return;
+  captureControls();
+  previewFrame.style.setProperty("--preview-radius",(config.general.card_radius||14)+"px");
+  previewFrame.style.setProperty("--preview-gap",(config.general.section_gap||12)+"px");
+  previewFrame.style.setProperty("--preview-header-height",(config.table.header_height||42)+"px");
+  previewFrame.style.setProperty("--preview-row-height",(config.table.row_height||38)+"px");
+  previewFrame.style.setProperty("--preview-header-align",config.table.header_alignment||"center");
+
+  const fields=(config.form.fields||[]).filter(f=>f.visible!==false).sort((a,b)=>a.order-b.order).slice(0,12);
+  const columns=(config.table.columns||[]).filter(c=>c.visible!==false).sort((a,b)=>a.order-b.order).slice(0,8);
+  const buttons=(config.buttons.items||[]).filter(b=>b.visible!==false).sort((a,b)=>a.order-b.order);
+
+  previewFrame.innerHTML=`
+    <div class="preview-header"><div><h2 style="margin:0">${AppTools.escapeHtml(config.general.page_title||currentPage?.page_name||"Page")}</h2><div class="page-subtitle">${AppTools.escapeHtml(config.general.page_subtitle||"")}</div></div></div>
+    <div class="preview-card">
+      <div class="preview-form">
+        ${fields.length?fields.map(f=>`<div class="preview-field" style="grid-column:span ${Math.min(Number(f.span||1),4)}"><label>${AppTools.escapeHtml(f.label)}${f.required?" *":""}</label><input placeholder="${AppTools.escapeHtml(f.label)}"></div>`).join(""):'<div class="empty">No visible form fields configured.</div>'}
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px">${buttons.map(b=>`<button class="btn btn-light">${AppTools.escapeHtml(b.label)}</button>`).join("")}</div>
+    </div>
+    ${(config.components?.items||[]).filter(c=>c.visible!==false).sort((a,b)=>a.order-b.order).map(c=>`
+      <div class="preview-card">
+        <h3 style="margin:0 0 8px">${AppTools.escapeHtml(c.title||c.component_type)}</h3>
+        <div class="page-subtitle">${AppTools.escapeHtml((ERPComponentLibrary.definitions[c.component_type]?.description)||"Reusable ERP component")}</div>
+      </div>
+    `).join("")}
+    <div class="preview-card">
+      <table class="preview-table">
+        <thead><tr>${columns.length?columns.map(c=>`<th style="text-align:${c.header_align||config.table.header_alignment};width:${c.width||120}px">${AppTools.escapeHtml(c.label)}</th>`).join(""):'<th>Table Header</th>'}</tr></thead>
+        <tbody>${[1,2,3].map(n=>`<tr>${columns.length?columns.map(c=>`<td style="text-align:${c.cell_align||"left"}">Sample ${n}</td>`).join(""):'<td>Sample Row</td>'}</tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+async function renderVersions(){
+  if(!currentPage)return;
+  try{
+    const rows=await studio.listVersions(currentPage.page_key);
+    versionList.innerHTML=rows.length?rows.map(v=>`
+      <div class="version-row">
+        <strong>V${v.version_no}</strong>
+        <span>${new Date(v.created_at).toLocaleString()} • ${AppTools.escapeHtml(v.created_by||"")}</span>
+        <span class="status-pill ${v.is_published?"published":"draft"}">${v.is_published?"Published":"Draft"}</span>
+        <button class="btn btn-light" onclick="restoreVersion(${v.id})">${v.is_published?"Current":"Restore"}</button>
+      </div>`).join(""):'<div class="table-empty">No saved versions.</div>';
+  }catch(error){versionList.innerHTML=`<div class="table-empty">${AppTools.escapeHtml(error.message)}</div>`}
+}
+
+async function restoreVersion(id){
+  if(!confirm("Publish this previous version?"))return;
+  try{
+    await studio.restoreVersion(id,currentPage.page_key);
+    AppTools.toast("Previous version restored and published.","success");
+    await selectPage(currentPage.page_key);
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+</script>
+</body>
+</html>
