@@ -35,4 +35,51 @@ window.ERPPageRenderer = {
     document.getElementById(style.id)?.remove();
     document.head.appendChild(style);
   }
+,
+
+  renderComponents(config,container){
+    const host=typeof container==="string"?document.querySelector(container):container;
+    if(!host || !config?.components?.items) return;
+
+    const components=[...config.components.items]
+      .filter(component=>component.visible!==false)
+      .sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+
+    host.innerHTML=components.map(component=>this.componentMarkup(component)).join("");
+  },
+
+  componentMarkup(component){
+    const title=AppTools.escapeHtml(component.title||"");
+    switch(component.component_type){
+      case "summary_cards":
+        return `<section class="studio-runtime-component" data-component="${component.key}">
+          <h2>${title}</h2>
+          <div class="studio-runtime-summary">${(component.items||[]).map(item=>`
+            <div class="studio-runtime-summary-card"><small>${AppTools.escapeHtml(item.label)}</small><strong data-value-source="${AppTools.escapeHtml(item.value_source||"")}">0</strong></div>
+          `).join("")}</div>
+        </section>`;
+      case "search_panel":
+        return `<section class="studio-runtime-component" data-component="${component.key}">
+          <h2>${title}</h2><div class="studio-runtime-form">${(component.fields||[]).map(field=>`
+            <label>${AppTools.escapeHtml(field.label)}<input data-filter-key="${AppTools.escapeHtml(field.key)}" type="${field.type==="date"?"text":"text"}"></label>
+          `).join("")}</div>
+        </section>`;
+      case "entry_form":
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><div data-component-host="form"></div></section>`;
+      case "data_table":
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><div data-component-host="table"></div></section>`;
+      case "chart_panel":
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><canvas data-component-host="chart"></canvas></section>`;
+      case "approval_panel":
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><div class="detail-box">Approval workflow will appear here.</div></section>`;
+      case "attachment_panel":
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><input type="file" ${component.multiple?"multiple":""}></section>`;
+      case "activity_timeline":
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><div data-component-host="timeline"></div></section>`;
+      case "notification_panel":
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><div data-component-host="notifications"></div></section>`;
+      default:
+        return `<section class="studio-runtime-component" data-component="${component.key}"><h2>${title}</h2><div data-component-host="${AppTools.escapeHtml(component.component_type||"custom")}"></div></section>`;
+    }
+  }
 };
