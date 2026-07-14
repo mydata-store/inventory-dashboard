@@ -5,10 +5,7 @@ window.APP_LAYOUT={menu:[
 {label:"Supplier Master",href:"masters.html?type=supplier",match:["suppliers.html","masters.html?type=supplier"]},
 {label:"Workshop / Party Master",href:"masters.html?type=workshop",match:["workshops.html","masters.html?type=workshop"]},
 {label:"Department Master",href:"masters.html?type=department",match:["departments.html","masters.html?type=department"]},
-{label:"Unit Master",href:"masters.html?type=unit"},
-{label:"Category Master",href:"masters.html?type=category"},
-{label:"Carrier Master",href:"masters.html?type=carrier"},
-{label:"Authorized Person Master",href:"masters.html?type=authority"}]},
+{label:"Other Masters Center",href:"master-center.html",match:["master-center.html"]}]},
 {label:"🛒 Purchase Entry",href:"purchase.html"},
 {label:"↩ Issue Entry",href:"issue.html"},
 {id:"gatePassGroup",label:"▣ Gate Pass",children:[
