@@ -21,6 +21,7 @@ window.APP_LAYOUT={menu:[
 {label:"PDF & Logo Settings",href:"pdf-settings.html"},
 {label:"Theme & Sidebar Settings",href:"theme-settings.html"},
 {label:"ERP Core Settings",href:"erp-core-settings.html"},
+{label:"ERP Design Studio",href:"erp-design-studio.html"},
 {label:"ERP Relationship Center",href:"erp-relationship-center.html"},
 {label:"ERP Data Health Center",href:"erp-health-center.html"},
 {label:"ERP Health Control Tower",href:"erp-health-control-tower.html"},
