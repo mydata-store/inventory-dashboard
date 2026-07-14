@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Relationship Center</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/pdf-settings.js"></script>
+<script src="public/common-pdf.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-table.js"></script>
+<script src="public/erp-relationships.js"></script>
+<style>
+.relation-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.relation-tabs button.active{background:var(--accent);color:#111827}
+.relation-panel{display:none}.relation-panel.active{display:block}
+.relation-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.relation-result{margin-top:14px}
+@media(max-width:900px){.relation-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.relation-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+
+<main class="app-main">
+  <div class="page-head">
+    <div>
+      <h1>ERP Relationship Center</h1>
+      <div class="page-subtitle">Test and manage automatic relationships between items, departments, workshops, carriers and vehicles</div>
+    </div>
+    <button class="btn btn-primary" onclick="loadAll()">Refresh</button>
+  </div>
+
+  <div class="relation-tabs">
+    <button class="btn btn-light active" data-tab="item" onclick="showTab('item')">Item Relations</button>
+    <button class="btn btn-light" data-tab="department" onclick="showTab('department')">Department Relations</button>
+    <button class="btn btn-light" data-tab="workshop" onclick="showTab('workshop')">Workshop Relations</button>
+    <button class="btn btn-light" data-tab="carrier" onclick="showTab('carrier')">Carrier Relations</button>
+    <button class="btn btn-light" data-tab="vehicle" onclick="showTab('vehicle')">Vehicle Relations</button>
+    <button class="btn btn-light" data-tab="saved" onclick="showTab('saved')">Saved Relationships</button>
+  </div>
+
+  <section id="item" class="relation-panel active">
+    <div class="card">
+      <div class="relation-grid">
+        <div class="form-field span-2"><label>Item</label><input id="itemInput" placeholder="Type item name or size"></div>
+      </div>
+      <div id="itemResult" class="relation-result"></div>
+    </div>
+  </section>
+
+  <section id="department" class="relation-panel">
+    <div class="card">
+      <div class="relation-grid">
+        <div class="form-field span-2"><label>Department</label><input id="departmentInput" placeholder="Type department"></div>
+      </div>
+      <div id="departmentResult" class="relation-result"></div>
+    </div>
+  </section>
+
+  <section id="workshop" class="relation-panel">
+    <div class="card">
+      <div class="relation-grid">
+        <div class="form-field span-2"><label>Workshop / Party</label><input id="workshopInput" placeholder="Type workshop"></div>
+      </div>
+      <div id="workshopResult" class="relation-result"></div>
+    </div>
+  </section>
+
+  <section id="carrier" class="relation-panel">
+    <div class="card">
+      <div class="relation-grid">
+        <div class="form-field span-2"><label>Carrier</label><input id="carrierInput" placeholder="Type carrier"></div>
+      </div>
+      <div id="carrierResult" class="relation-result"></div>
+    </div>
+  </section>
+
+  <section id="vehicle" class="relation-panel">
+    <div class="card">
+      <div class="relation-grid">
+        <div class="form-field span-2"><label>Vehicle</label><input id="vehicleInput" placeholder="Type vehicle number"></div>
+      </div>
+      <div id="vehicleResult" class="relation-result"></div>
+    </div>
+  </section>
+
+  <section id="saved" class="relation-panel">
+    <div class="card"><div id="savedTable"></div></div>
+  </section>
+</main>
+
+<section id="printReport"></section>
+
+<script>
+const db=supabase.createClient(
+  "https://lzsxtvkluqvcaetnnydu.supabase.co",
+  "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma"
+);
+const relations=new ERPRelations({db});
+
+document.addEventListener("DOMContentLoaded",loadAll);
+
+function showTab(tab){
+  document.querySelectorAll(".relation-tabs button").forEach(btn=>
+    btn.classList.toggle("active",btn.dataset.tab===tab)
+  );
+  document.querySelectorAll(".relation-panel").forEach(panel=>
+    panel.classList.toggle("active",panel.id===tab)
+  );
+}
+
+async function loadAll(){
+  try{
+    await relations.loadMasters();
+    setupTypeaheads();
+    await renderSaved();
+    AppTools.toast("Relationship engine loaded.","success");
+  }catch(error){
+    AppTools.toast(error.message,"error");
+  }
+}
+
+function setupTypeaheads(){
+  AppSearch.setupTypeahead(itemInput,{
+    values:relations.cache.items,
+    getLabel:item=>relations.itemLabel(item),
+    minChars:0,
+    onSelect:showItemRelations
+  });
+
+  AppSearch.setupTypeahead(departmentInput,{
+    values:relations.cache.departments,
+    getLabel:row=>row.department_name,
+    minChars:0,
+    onSelect:showDepartmentRelations
+  });
+
+  AppSearch.setupTypeahead(workshopInput,{
+    values:relations.cache.workshops,
+    getLabel:row=>row.workshop_name,
+    minChars:0,
+    onSelect:showWorkshopRelations
+  });
+
+  AppSearch.setupTypeahead(carrierInput,{
+    values:relations.cache.carriers,
+    getLabel:row=>row.carrier_name,
+    minChars:0,
+    onSelect:showCarrierRelations
+  });
+
+  AppSearch.setupTypeahead(vehicleInput,{
+    values:relations.cache.vehicles,
+    getLabel:row=>row.vehicle_no,
+    minChars:0,
+    onSelect:showVehicleRelations
+  });
+}
+
+function box(label,value){
+  return `<div class="detail-box"><span>${AppTools.escapeHtml(label)}</span><strong>${AppTools.escapeHtml(value??"-")}</strong></div>`;
+}
+
+async function showItemRelations(item){
+  const r=await relations.getItemRelations(item.id);
+  itemResult.innerHTML=`
+    <div class="detail-grid">
+      ${box("Item Code",r.item.item_code)}
+      ${box("Item Name",r.item.item_name)}
+      ${box("Size",r.item.size)}
+      ${box("Unit",r.item.unit)}
+      ${box("Category",r.item.category)}
+      ${box("Current Stock",r.current_stock)}
+      ${box("Allocated Stock",r.allocated_stock)}
+      ${box("Unallocated Stock",r.unallocated_stock)}
+      ${box("Last Purchase Rate",`PKR ${r.last_purchase_rate}`)}
+      ${box("Average Purchase Rate",`PKR ${r.average_purchase_rate.toFixed(2)}`)}
+      ${box("Last Supplier",r.last_supplier_name)}
+      ${box("Primary Rack",r.primary_rack?.location_name||"-")}
+    </div>
+    <h3>Rack Locations</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Rack</th><th>Qty</th><th>Unit</th><th>Primary</th></tr></thead>
+        <tbody>
+          ${r.rack_locations.length?r.rack_locations.map(x=>`
+            <tr><td>${AppTools.escapeHtml(x.location_name)}</td><td>${x.assigned_qty}</td><td>${AppTools.escapeHtml(x.unit)}</td><td>${AppTools.escapeHtml(x.primary_location)}</td></tr>
+          `).join(""):`<tr><td colspan="4" class="table-empty">No rack allocation found.</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function showDepartmentRelations(row){
+  const r=relations.getDepartmentRelations(row.id);
+  departmentResult.innerHTML=`
+    <div class="detail-grid">
+      ${box("Department",r.department.department_name)}
+      ${box("Responsible Person",r.responsible_person)}
+      ${box("Signature Authority",r.signature_authority)}
+      ${box("Authorized Persons",r.authorities.length)}
+      ${box("Employees",r.employees.length)}
+      ${box("Default Authority",r.default_authority?.person_name||"-")}
+    </div>`;
+}
+
+function showWorkshopRelations(row){
+  const r=relations.getWorkshopRelations(row.id);
+  workshopResult.innerHTML=`
+    <div class="detail-grid">
+      ${box("Workshop",r.workshop.workshop_name)}
+      ${box("Contact Person",r.workshop.contact_person)}
+      ${box("Mobile",r.workshop.mobile_no)}
+      ${box("City",r.workshop.city)}
+      ${box("Address",r.workshop.address)}
+      ${box("Specialization",r.workshop.specialization)}
+      ${box("Default Carrier",r.default_carrier?.carrier_name||"-")}
+    </div>`;
+}
+
+function showCarrierRelations(row){
+  const r=relations.getCarrierRelations(row.id);
+  carrierResult.innerHTML=`
+    <div class="detail-grid">
+      ${box("Carrier",r.carrier.carrier_name)}
+      ${box("Mobile",r.mobile_no)}
+      ${box("CNIC",r.cnic)}
+      ${box("Default Vehicle",r.default_vehicle?.vehicle_no||r.carrier.vehicle_no||"-")}
+      ${box("Driver",r.default_vehicle?.driver_name||"-")}
+    </div>`;
+}
+
+function showVehicleRelations(row){
+  const r=relations.getVehicleRelations(row.id);
+  vehicleResult.innerHTML=`
+    <div class="detail-grid">
+      ${box("Vehicle No.",r.vehicle.vehicle_no)}
+      ${box("Vehicle Type",r.vehicle.vehicle_type)}
+      ${box("Ownership",r.vehicle.ownership)}
+      ${box("Driver",r.driver_name)}
+      ${box("Driver Mobile",r.driver_mobile)}
+      ${box("Carrier",r.carrier?.carrier_name||"-")}
+      ${box("Registration Expiry",AppTools.displayDate(r.vehicle.registration_expiry))}
+    </div>`;
+}
+
+async function renderSaved(){
+  const rows=await relations.listRelationships();
+  new AppTable({
+    container:"#savedTable",
+    rows,
+    rowId:"id",
+    searchable:true,
+    searchDropdown:true,
+    sortable:true,
+    resizable:true,
+    preferencesKey:"erp_relationships",
+    pdfTitle:"ERP RELATIONSHIP REPORT",
+    columns:[
+      {key:"relation_type",label:"Relation Type"},
+      {key:"source_table",label:"Source Table"},
+      {key:"source_id",label:"Source ID"},
+      {key:"target_table",label:"Target Table"},
+      {key:"target_id",label:"Target ID"},
+      {key:"active",label:"Active"},
+      {key:"updated_at",label:"Updated At"}
+    ],
+    onDetail:row=>AppTools.openModal("Relationship Detail",`<pre style="white-space:pre-wrap">${AppTools.escapeHtml(JSON.stringify(row,null,2))}</pre>`)
+  });
+}
+</script>
+</body>
+</html>
