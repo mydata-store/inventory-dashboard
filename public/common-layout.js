@@ -23,6 +23,7 @@ window.APP_LAYOUT={menu:[
 {label:"ERP Core Settings",href:"erp-core-settings.html"},
 {label:"ERP Relationship Center",href:"erp-relationship-center.html"},
 {label:"ERP Data Health Center",href:"erp-health-center.html"},
+{label:"ERP Health Control Tower",href:"erp-health-control-tower.html"},
 {label:"Form Engine Demo",href:"form-demo.html"},
 {label:"Table Engine Demo",href:"table-demo.html"}]}
 ]};
