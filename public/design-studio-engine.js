@@ -144,6 +144,9 @@ window.ERPDesignStudio = class {
       },
       sections:{
         items:[]
+      },
+      components:{
+        items:[]
       }
     };
   }
