@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Core Settings</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/common-table.js"></script>
+<script src="public/erp-core.js"></script>
+<style>
+.core-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.core-tabs button.active{background:var(--accent);color:#111827}
+.core-panel{display:none}.core-panel.active{display:block}
+.sequence-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.preview-number{font-size:22px;font-weight:900;color:var(--blue)}
+@media(max-width:900px){.sequence-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.sequence-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+<main class="app-main">
+  <div class="page-head">
+    <div><h1>ERP Core Settings</h1><div class="page-subtitle">Control numbering, inventory rules, company defaults and system behavior</div></div>
+  </div>
+
+  <div class="core-tabs">
+    <button class="btn btn-light active" data-tab="general" onclick="showTab('general')">General</button>
+    <button class="btn btn-light" data-tab="inventory" onclick="showTab('inventory')">Inventory Rules</button>
+    <button class="btn btn-light" data-tab="numbering" onclick="showTab('numbering')">Numbering</button>
+    <button class="btn btn-light" data-tab="audit" onclick="showTab('audit')">Audit Log</button>
+  </div>
+
+  <section id="general" class="core-panel active">
+    <div class="card">
+      <h2>General ERP Settings</h2>
+      <div class="form-grid">
+        <div class="form-field"><label>Company Name</label><input id="company_name"></div>
+        <div class="form-field"><label>Default Store</label><input id="default_store"></div>
+        <div class="form-field"><label>Currency</label><select id="currency"><option>PKR</option><option>USD</option></select></div>
+        <div class="form-field"><label>Financial Year</label><input id="financial_year" placeholder="2026-27"></div>
+        <div class="form-field"><label>Date Format</label><select id="date_format"><option>DD-MMM-YY</option><option>DD-MM-YYYY</option></select></div>
+        <div class="form-field"><label>Default GST %</label><input id="default_gst" type="number"></div>
+      </div>
+      <div class="actions"><button class="btn btn-success" onclick="saveGeneral()">Save General Settings</button></div>
+    </div>
+  </section>
+
+  <section id="inventory" class="core-panel">
+    <div class="card">
+      <h2>Inventory Rules</h2>
+      <div class="form-grid">
+        <div class="form-field"><label>Costing Method</label><select id="costing_method"><option>Weighted Average</option><option>FIFO</option></select></div>
+        <div class="form-field"><label>Prevent Negative Stock</label><select id="prevent_negative_stock"><option value="true">Yes</option><option value="false">No</option></select></div>
+        <div class="form-field"><label>Default Decimal Places</label><input id="decimal_places" type="number" min="0" max="4"></div>
+        <div class="form-field"><label>Low Stock Warning</label><select id="low_stock_warning"><option value="true">Enabled</option><option value="false">Disabled</option></select></div>
+        <div class="form-field"><label>Auto Assign Primary Rack</label><select id="auto_assign_primary_rack"><option value="true">Yes</option><option value="false">No</option></select></div>
+        <div class="form-field"><label>Require Approval for RGP</label><select id="require_rgp_approval"><option value="true">Yes</option><option value="false">No</option></select></div>
+      </div>
+      <div class="actions"><button class="btn btn-success" onclick="saveInventory()">Save Inventory Rules</button></div>
+    </div>
+  </section>
+
+  <section id="numbering" class="core-panel">
+    <div class="card">
+      <h2>Document Numbering</h2>
+      <div id="sequenceTable"></div>
+    </div>
+  </section>
+
+  <section id="audit" class="core-panel">
+    <div class="card">
+      <h2>Audit Log</h2>
+      <div id="auditTable"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
+const core=new ERPCore({db});
+
+document.addEventListener("DOMContentLoaded",loadAll);
+
+function showTab(tab){
+  document.querySelectorAll(".core-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  document.querySelectorAll(".core-panel").forEach(p=>p.classList.toggle("active",p.id===tab));
+}
+async function loadAll(){
+  try{
+    await core.loadSettings();
+    company_name.value=core.getSetting("company_name","Flying Board & Paper Products Limited");
+    default_store.value=core.getSetting("default_store","Main Store");
+    currency.value=core.getSetting("currency","PKR");
+    financial_year.value=core.getSetting("financial_year","2026-27");
+    date_format.value=core.getSetting("date_format","DD-MMM-YY");
+    default_gst.value=core.getSetting("default_gst",18);
+    costing_method.value=core.getSetting("costing_method","Weighted Average");
+    prevent_negative_stock.value=String(core.getSetting("prevent_negative_stock",true));
+    decimal_places.value=core.getSetting("decimal_places",2);
+    low_stock_warning.value=String(core.getSetting("low_stock_warning",true));
+    auto_assign_primary_rack.value=String(core.getSetting("auto_assign_primary_rack",true));
+    require_rgp_approval.value=String(core.getSetting("require_rgp_approval",true));
+    await loadSequences(); await loadAudit();
+  }catch(e){AppTools.toast(e.message,"error")}
+}
+async function saveGeneral(){
+  try{
+    for(const [k,v] of Object.entries({company_name:company_name.value,default_store:default_store.value,currency:currency.value,financial_year:financial_year.value,date_format:date_format.value,default_gst:Number(default_gst.value||0)}))await core.saveSetting(k,v,"general");
+    AppTools.toast("General settings saved.","success")
+  }catch(e){AppTools.toast(e.message,"error")}
+}
+async function saveInventory(){
+  try{
+    const vals={costing_method:costing_method.value,prevent_negative_stock:prevent_negative_stock.value==="true",decimal_places:Number(decimal_places.value||2),low_stock_warning:low_stock_warning.value==="true",auto_assign_primary_rack:auto_assign_primary_rack.value==="true",require_rgp_approval:require_rgp_approval.value==="true"};
+    for(const [k,v] of Object.entries(vals))await core.saveSetting(k,v,"inventory");
+    AppTools.toast("Inventory rules saved.","success")
+  }catch(e){AppTools.toast(e.message,"error")}
+}
+async function loadSequences(){
+  const {data,error}=await db.from("erp_number_sequences").select("*").order("sequence_type");
+  if(error)throw error;
+  new AppTable({container:"#sequenceTable",rows:data||[],rowId:"id",searchable:true,sortable:true,resizable:true,columns:[
+    {key:"sequence_type",label:"Type"},{key:"prefix",label:"Prefix"},{key:"last_number",label:"Last Number",type:"number"},{key:"padding",label:"Padding",type:"number"},{key:"suffix",label:"Suffix"},{key:"active",label:"Active"}
+  ],onEdit:editSequence,onDetail:r=>AppTools.openModal("Number Preview",`<div class="preview-number">${r.prefix}${String(r.last_number+1).padStart(r.padding,"0")}${r.suffix||""}</div>`)});
+}
+function editSequence(r){
+  AppTools.openModal("Edit Number Sequence",`<div class="form-grid">
+    <div class="form-field"><label>Prefix</label><input id="seqPrefix" value="${AppTools.escapeHtml(r.prefix||"")}"></div>
+    <div class="form-field"><label>Last Number</label><input id="seqLast" type="number" value="${r.last_number}"></div>
+    <div class="form-field"><label>Padding</label><input id="seqPadding" type="number" value="${r.padding}"></div>
+    <div class="form-field"><label>Suffix</label><input id="seqSuffix" value="${AppTools.escapeHtml(r.suffix||"")}"></div>
+  </div><div class="actions"><button class="btn btn-success" onclick="saveSequence(${r.id})">Save</button></div>`);
+}
+async function saveSequence(id){
+  const {error}=await db.from("erp_number_sequences").update({prefix:seqPrefix.value,last_number:Number(seqLast.value),padding:Number(seqPadding.value),suffix:seqSuffix.value}).eq("id",id);
+  if(error)return AppTools.toast(error.message,"error");
+  AppTools.closeModal();AppTools.toast("Number sequence updated.","success");loadSequences();
+}
+async function loadAudit(){
+  const {data,error}=await db.from("audit_log").select("*").order("created_at",{ascending:false}).limit(500);
+  if(error)throw error;
+  new AppTable({container:"#auditTable",rows:data||[],rowId:"id",searchable:true,sortable:true,resizable:true,columns:[
+    {key:"created_at",label:"Date"},{key:"user_name",label:"User"},{key:"module",label:"Module"},{key:"action",label:"Action"},{key:"record_type",label:"Record Type"},{key:"record_id",label:"Record ID"}
+  ],onDetail:r=>AppTools.openModal("Audit Detail",`<pre style="white-space:pre-wrap">${AppTools.escapeHtml(JSON.stringify(r,null,2))}</pre>`)});
+}
+</script>
+</body></html>
