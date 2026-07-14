@@ -20,6 +20,7 @@ window.APP_LAYOUT={menu:[
 {label:"General Settings",href:"settings.html"},
 {label:"PDF & Logo Settings",href:"pdf-settings.html"},
 {label:"Theme & Sidebar Settings",href:"theme-settings.html"},
+{label:"ERP Core Settings",href:"erp-core-settings.html"},
 {label:"Form Engine Demo",href:"form-demo.html"},
 {label:"Table Engine Demo",href:"table-demo.html"}]}
 ]};
