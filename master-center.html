@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Master Center</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/pdf-settings.js"></script>
+<script src="public/common-pdf.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-table.js"></script>
+<script src="public/common-form.js"></script>
+<script src="public/master-center-config.js"></script>
+<style>
+.master-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.master-tab{
+  display:flex;align-items:center;gap:6px;border:1px solid var(--border);
+  background:var(--card-bg);color:var(--text);padding:10px 13px;
+  border-radius:var(--button-radius);font-weight:800;font-size:11px
+}
+.master-tab.active{background:var(--accent);color:#111827;border-color:var(--accent)}
+.master-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.master-summary-card{background:var(--card-bg);border-radius:var(--card-radius);padding:13px;box-shadow:0 8px 22px #0001;border-left:4px solid var(--accent)}
+.master-summary-card small{font-size:9px;color:var(--muted)}
+.master-summary-card strong{display:block;margin-top:4px;font-size:19px}
+.master-toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.master-toolbar input{width:320px;max-width:100%;height:38px;padding:0 10px;border:1px solid #cbd5e1;border-radius:var(--input-radius)}
+.setup-warning{display:none;padding:12px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;margin-bottom:14px;font-size:11px}
+.setup-warning.show{display:block}
+@media(max-width:900px){.master-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.master-summary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+
+<main class="app-main">
+  <div class="page-head">
+    <div>
+      <h1 id="pageTitle">Master Center</h1>
+      <div id="pageSubtitle" class="page-subtitle">Manage all supporting masters on one page</div>
+    </div>
+  </div>
+
+  <div class="master-tabs" id="masterTabs"></div>
+
+  <div id="setupWarning" class="setup-warning">
+    The selected Supabase table is not available yet. Run the included <b>master-center-tables.sql</b> file in Supabase SQL Editor, then refresh this page.
+  </div>
+
+  <section class="master-summary">
+    <div class="master-summary-card"><small>Selected Master</small><strong id="selectedMaster">-</strong></div>
+    <div class="master-summary-card"><small>Total Records</small><strong id="totalRecords">0</strong></div>
+    <div class="master-summary-card"><small>Active Records</small><strong id="activeRecords">0</strong></div>
+    <div class="master-summary-card"><small>Inactive Records</small><strong id="inactiveRecords">0</strong></div>
+  </section>
+
+  <section class="card">
+    <div id="masterFormHost"></div>
+  </section>
+
+  <section class="card">
+    <div class="master-toolbar">
+      <div>
+        <h2 id="listTitle" style="margin:0">Records</h2>
+        <div class="page-subtitle">Search, sort, resize columns, select rows, export and print</div>
+      </div>
+      <input id="externalSearch" placeholder="Search current master...">
+    </div>
+    <div id="masterTableHost" style="margin-top:13px"></div>
+  </section>
+</main>
+
+<section id="printReport"></section>
+
+<script>
+const db=supabase.createClient(
+  "https://lzsxtvkluqvcaetnnydu.supabase.co",
+  "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma"
+);
+
+let currentType=new URLSearchParams(location.search).get("type")||"unit";
+if(!MASTER_CENTER_CONFIG[currentType])currentType="unit";
+
+let config=null,records=[],editingId=null,masterForm=null,masterTable=null;
+
+document.addEventListener("DOMContentLoaded",()=>{
+  buildTabs();
+  externalSearch.addEventListener("input",renderTable);
+  switchMaster(currentType,false);
+});
+
+function buildTabs(){
+  masterTabs.innerHTML=Object.entries(MASTER_CENTER_CONFIG).map(([key,cfg])=>`
+    <button class="master-tab ${key===currentType?"active":""}" data-master="${key}" onclick="switchMaster('${key}')">
+      <span>${cfg.icon||"◆"}</span><span>${AppTools.escapeHtml(cfg.shortTitle)}</span>
+    </button>
+  `).join("");
+}
+
+async function switchMaster(type,updateUrl=true){
+  if(masterForm?.state?.dirty && !confirm("Discard unsaved changes and change master?"))return;
+
+  currentType=type;
+  config=MASTER_CENTER_CONFIG[type];
+
+  if(updateUrl){
+    const url=new URL(location.href);
+    url.searchParams.set("type",type);
+    history.replaceState({}, "", url);
+  }
+
+  document.querySelectorAll(".master-tab").forEach(btn=>btn.classList.toggle("active",btn.dataset.master===type));
+  pageTitle.textContent=config.title;
+  pageSubtitle.textContent=`Manage ${config.shortTitle.toLowerCase()} from the common Master Center`;
+  selectedMaster.textContent=config.shortTitle;
+  listTitle.textContent=`${config.shortTitle} List`;
+  externalSearch.value="";
+  editingId=null;
+  records=[];
+  masterTable=null;
+  setupWarning.classList.remove("show");
+
+  buildForm();
+  await loadRecords();
+}
+
+function buildForm(){
+  const fields=[
+    {name:config.codeField,label:config.codeField.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase()),readonly:true,defaultValue:""},
+    ...config.fields
+  ];
+
+  masterFormHost.innerHTML="";
+  masterForm=new AppForm({
+    container:"#masterFormHost",
+    title:`Add New ${config.title.replace(" Master","")}`,
+    draftKey:`master_center_${currentType}`,
+    autoDraft:true,
+    warnUnsaved:true,
+    buttons:["new","save","clear","print"],
+    fields,
+    async onSave(values){
+      return saveRecord(values);
+    },
+    onNew(form){
+      editingId=null;
+      generateCode();
+      updateFormTitle();
+      attachRelations();
+    },
+    onClear(form){
+      editingId=null;
+      generateCode();
+      updateFormTitle();
+      attachRelations();
+    },
+    onPrint(){
+      printCurrentMaster();
+    }
+  });
+
+  generateCode();
+  attachRelations();
+}
+
+function updateFormTitle(){
+  const title=masterFormHost.querySelector(".app-form-title");
+  if(title)title.textContent=editingId?`Edit ${config.title}`:`Add New ${config.title.replace(" Master","")}`;
+  const save=masterFormHost.querySelector("[data-form-action='save']");
+  if(save)save.textContent=editingId?"Update":"Save";
+}
+
+function generateCode(){
+  if(editingId)return;
+  let highest=0;
+  records.forEach(row=>{
+    const match=String(row[config.codeField]||"").match(/(\d+)$/);
+    if(match)highest=Math.max(highest,Number(match[1]));
+  });
+  masterForm.setFieldValue(config.codeField,`${config.codePrefix}-${String(highest+1).padStart(4,"0")}`);
+  masterForm.state.dirty=false;
+}
+
+function attachRelations(){
+  if(currentType==="location"){
+    ["store_name","zone","rack_no","shelf_no","bin_no"].forEach(name=>{
+      const field=masterForm.getField(name);
+      field?.addEventListener("input",updateFullLocation);
+      field?.addEventListener("change",updateFullLocation);
+    });
+    updateFullLocation();
+  }
+
+  const departmentField=masterForm.getField("department");
+  if(departmentField)loadTypeahead("departments","department_name",departmentField);
+
+  const vehicleField=masterForm.getField("vehicle_no");
+  if(vehicleField)loadTypeahead("vehicles","vehicle_no",vehicleField);
+
+  const carrierField=masterForm.getField("driver_name");
+  if(carrierField)loadTypeahead("carriers","carrier_name",carrierField);
+}
+
+async function loadTypeahead(table,column,input){
+  const {data,error}=await db.from(table).select(column).eq("status","Active").order(column);
+  if(error)return;
+  const values=[...new Set((data||[]).map(row=>row[column]).filter(Boolean))];
+  AppSearch.setupTypeahead(input,{values,minChars:0,onSelect:value=>masterForm.setFieldValue(input.name,value)});
+}
+
+function updateFullLocation(){
+  if(currentType!=="location")return;
+  const store=masterForm.getFieldValue("store_name")||"";
+  const zone=masterForm.getFieldValue("zone")||"";
+  const rack=masterForm.getFieldValue("rack_no")||"";
+  const shelf=masterForm.getFieldValue("shelf_no")||"";
+  const bin=masterForm.getFieldValue("bin_no")||"";
+  const code=[rack,shelf,bin].filter(Boolean).join("-");
+  const full=[store,zone,code].filter(Boolean).join(" / ");
+  const field=masterForm.getField("location_name");
+  if(field)field.value=full;
+  masterForm.state.values.location_name=full;
+}
+
+async function loadRecords(){
+  masterTableHost.innerHTML=`<div class="table-empty">Loading ${AppTools.escapeHtml(config.shortTitle)}...</div>`;
+  const {data,error}=await db.from(config.table).select("*").order("id",{ascending:false});
+
+  if(error){
+    records=[];
+    setupWarning.classList.add("show");
+    masterTableHost.innerHTML=`<div class="table-empty">${AppTools.escapeHtml(error.message)}</div>`;
+    updateSummary();
+    return;
+  }
+
+  setupWarning.classList.remove("show");
+  records=data||[];
+  generateCode();
+  updateSummary();
+  renderTable();
+}
+
+function updateSummary(){
+  totalRecords.textContent=records.length;
+  activeRecords.textContent=records.filter(r=>String(r.status||"Active").toLowerCase()==="active").length;
+  inactiveRecords.textContent=records.filter(r=>String(r.status||"").toLowerCase()==="inactive").length;
+}
+
+function duplicateExists(values){
+  const primary=config.primaryField;
+  return records.some(row=>
+    Number(row.id)!==Number(editingId) &&
+    String(row[primary]||"").trim().toLowerCase()===String(values[primary]||"").trim().toLowerCase()
+  );
+}
+
+async function saveRecord(values){
+  if(currentType==="location")updateFullLocation();
+
+  const payload={};
+  payload[config.codeField]=values[config.codeField];
+
+  config.fields.forEach(field=>{
+    let value=masterForm.getFieldValue(field.name);
+    if(field.number && value!=="")value=Number(value);
+    payload[field.name]=value===""?null:value;
+  });
+
+  if(duplicateExists(payload)){
+    AppTools.toast(`${config.fields.find(f=>f.name===config.primaryField)?.label||"Record"} already exists.`,"error");
+    return false;
+  }
+
+  const result=editingId
+    ?await db.from(config.table).update(payload).eq("id",editingId)
+    :await db.from(config.table).insert([payload]);
+
+  if(result.error){
+    AppTools.toast(result.error.message,"error");
+    return false;
+  }
+
+  AppTools.toast(editingId?"Record updated successfully.":"Record saved successfully.","success");
+  editingId=null;
+  masterForm.clear(false);
+  await loadRecords();
+  updateFormTitle();
+  return true;
+}
+
+function getFilteredRows(){
+  const query=externalSearch.value.trim().toLowerCase();
+  if(!query)return records;
+  return records.filter(row=>
+    Object.values(row).some(value=>String(value??"").toLowerCase().includes(query))
+  );
+}
+
+function tableColumns(){
+  return [
+    {key:config.codeField,label:config.codeField.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase())},
+    ...config.fields.filter(field=>field.span!==4).map(field=>({
+      key:field.name,
+      label:field.label,
+      type:field.name==="status"?"status":field.number?"number":field.date?"date":"text"
+    }))
+  ];
+}
+
+function renderTable(){
+  const rows=getFilteredRows();
+  masterTableHost.innerHTML="";
+  masterTable=new AppTable({
+    container:"#masterTableHost",
+    columns:tableColumns(),
+    rows,
+    rowId:"id",
+    pageSize:20,
+    searchable:true,
+    searchDropdown:true,
+    sortable:true,
+    resizable:true,
+    selectable:true,
+    stickyFirstColumn:true,
+    preferencesKey:`master_center_${currentType}`,
+    pdfTitle:config.title.toUpperCase(),
+    pdfSubtitle:`${config.shortTitle} Master List`,
+    searchSuggestionLabel:row=>row[config.primaryField]||row[config.codeField],
+    searchSuggestionSubtitle:row=>[
+      row[config.codeField],
+      row.status,
+      ...config.fields.slice(0,3).map(f=>row[f.name])
+    ].filter(Boolean).join(" • "),
+    onDetail:showDetail,
+    onEdit:editRecord,
+    onDelete:deleteRecord,
+    onRowOpen:showDetail
+  });
+}
+
+function showDetail(row){
+  const fields=[
+    [config.codeField.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase()),row[config.codeField]],
+    ...config.fields.map(field=>[field.label,row[field.name]])
+  ];
+
+  AppTools.openModal(`${config.title} Detail`,`
+    <div class="detail-grid">
+      ${fields.map(([label,value])=>`
+        <div class="detail-box">
+          <span>${AppTools.escapeHtml(label)}</span>
+          <strong>${AppTools.escapeHtml(value??"-")}</strong>
+        </div>`).join("")}
+    </div>
+  `);
+}
+
+function editRecord(row){
+  editingId=row.id;
+  const values={[config.codeField]:row[config.codeField]};
+  config.fields.forEach(field=>values[field.name]=row[field.name]??"");
+  masterForm.setValues(values,true);
+  updateFormTitle();
+  attachRelations();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function deleteRecord(row){
+  if(!confirm(`Delete "${row[config.primaryField]||row[config.codeField]}"?`))return;
+  const {error}=await db.from(config.table).delete().eq("id",row.id);
+  if(error){
+    AppTools.toast(error.message,"error");
+    return;
+  }
+  AppTools.toast("Record deleted successfully.","success");
+  await loadRecords();
+}
+
+function printCurrentMaster(){
+  const rows=getFilteredRows();
+  if(!rows.length){
+    AppTools.toast("No data to print.","error");
+    return;
+  }
+  AppPDF.printStandardReport({
+    title:config.title.toUpperCase(),
+    subtitle:`${config.shortTitle} Master List`,
+    columns:tableColumns().map(col=>({key:col.key,label:col.label})),
+    rows,
+    meta:[{label:"Search",value:externalSearch.value||"All Records"}]
+  });
+}
+
+window.APP_COMMANDS=Object.entries(MASTER_CENTER_CONFIG).map(([key,cfg])=>({
+  title:cfg.title,
+  subtitle:`Open ${cfg.shortTitle} in Master Center`,
+  href:`master-center.html?type=${key}`,
+  keywords:`master ${cfg.shortTitle}`
+}));
+</script>
+</body>
+</html>
