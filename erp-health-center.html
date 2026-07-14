@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Data Health Center</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-layout.js"></script>
+<script src="public/pdf-settings.js"></script>
+<script src="public/common-pdf.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-table.js"></script>
+<script src="public/erp-health.js"></script>
+<style>
+.health-hero{display:grid;grid-template-columns:220px 1fr;gap:16px;margin-bottom:16px}
+.score-card{background:var(--card-bg);border-radius:var(--card-radius);padding:22px;text-align:center;box-shadow:0 8px 22px #0001}
+.score-ring{width:145px;height:145px;border-radius:50%;margin:auto;display:grid;place-items:center;background:conic-gradient(var(--accent) calc(var(--score)*1%),#e5e7eb 0)}
+.score-ring:before{content:"";width:112px;height:112px;border-radius:50%;background:var(--card-bg);position:absolute}
+.score-ring strong,.score-ring span{position:relative}.score-ring strong{font-size:31px}.score-ring span{font-size:11px;color:var(--muted)}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.summary-box{padding:15px;border-radius:12px;background:var(--card-bg);border-left:4px solid var(--accent);box-shadow:0 8px 22px #0001}
+.summary-box.ok{border-color:#16a34a}.summary-box.warn{border-color:#f59e0b}.summary-box.error{border-color:#dc2626}
+.summary-box small{font-size:9px;color:var(--muted)}.summary-box strong{display:block;font-size:22px;margin-top:5px}
+.health-layout{display:grid;grid-template-columns:1fr 330px;gap:16px}.health-list{display:grid;gap:9px}
+.health-row{display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--card-bg);cursor:pointer}
+.health-row:hover{background:var(--table-row-hover)}.health-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:900}
+.health-row.ok .health-icon{background:#dcfce7;color:#166534}.health-row.warning .health-icon{background:#fef3c7;color:#92400e}.health-row.error .health-icon{background:#fee2e2;color:#991b1b}
+.health-row h3{font-size:12px;margin:0}.health-row p{font-size:9px;color:var(--muted);margin:3px 0 0}.health-count{font-size:18px;font-weight:900}
+.group-score{margin-bottom:12px}.group-score-head{display:flex;justify-content:space-between;font-size:10px;font-weight:800}.group-bar{height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:5px}.group-bar span{display:block;height:100%;background:var(--accent)}
+.advisor-item{padding:11px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;margin-bottom:8px;font-size:10px}.loading{text-align:center;padding:40px;color:var(--muted)}
+@media(max-width:1000px){.health-layout,.health-hero{grid-template-columns:1fr}.summary-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.summary-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="appSidebar"></div>
+<main class="app-main">
+<div class="page-head"><div><h1>ERP Data Health Center</h1><div class="page-subtitle">Database quality, missing master data, broken relationships, rack coverage and ERP recommendations</div></div><button class="btn btn-primary" onclick="runHealth()">Run Health Check</button></div>
+<section id="loadingBox" class="card loading">Preparing ERP health inspection...</section>
+<div id="healthContent" style="display:none">
+<section class="health-hero">
+<div class="score-card"><div class="score-ring" id="scoreRing" style="--score:0"><div><strong id="overallScore">0%</strong><br><span>Overall Health</span></div></div></div>
+<div class="summary-grid">
+<div class="summary-box ok"><small>Passed Checks</small><strong id="passedChecks">0</strong></div>
+<div class="summary-box warn"><small>Warnings</small><strong id="warningChecks">0</strong></div>
+<div class="summary-box error"><small>Errors</small><strong id="errorChecks">0</strong></div>
+<div class="summary-box"><small>Total Checks</small><strong id="totalChecks">0</strong></div>
+</div></section>
+<section class="health-layout">
+<div class="card">
+<div class="search-row" style="margin-bottom:12px"><input id="healthSearch" placeholder="Search health checks..."><select id="healthStatus"><option value="">All Status</option><option value="ok">Passed</option><option value="warning">Warning</option><option value="error">Error</option></select><select id="healthGroup"><option value="">All Groups</option></select><button class="btn btn-danger" onclick="printHealth()">Print / PDF</button></div>
+<div id="healthList" class="health-list"></div></div>
+<aside><div class="card"><h2>Quality Scores</h2><div id="groupScores"></div></div><div class="card"><h2>ERP Advisor</h2><div id="advisor"></div></div></aside>
+</section></div></main><section id="printReport"></section>
+<script>
+const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
+const health=new ERPHealth({db});let results=[],summary={};
+document.addEventListener("DOMContentLoaded",()=>{healthSearch.oninput=renderList;healthStatus.onchange=renderList;healthGroup.onchange=renderList;runHealth()});
+async function runHealth(){loadingBox.style.display="block";healthContent.style.display="none";try{const o=await health.run();results=o.results;summary=o.summary;renderSummary();renderFilters();renderList();renderScores();renderAdvisor();loadingBox.style.display="none";healthContent.style.display="block";AppTools.toast("ERP health check completed.","success")}catch(e){loadingBox.innerHTML="Health check failed: "+AppTools.escapeHtml(e.message);AppTools.toast(e.message,"error")}}
+function renderSummary(){overallScore.textContent=summary.overall_score+"%";scoreRing.style.setProperty("--score",summary.overall_score);passedChecks.textContent=summary.passed_checks;warningChecks.textContent=summary.warning_checks;errorChecks.textContent=summary.error_checks;totalChecks.textContent=summary.total_checks}
+function renderFilters(){const gs=[...new Set(results.map(r=>r.group))].sort();healthGroup.innerHTML='<option value="">All Groups</option>'+gs.map(g=>`<option>${AppTools.escapeHtml(g)}</option>`).join("")}
+function filtered(){const q=healthSearch.value.trim().toLowerCase();return results.filter(r=>(!q||`${r.title} ${r.group} ${r.recommendation}`.toLowerCase().includes(q))&&(!healthStatus.value||r.status===healthStatus.value)&&(!healthGroup.value||r.group===healthGroup.value))}
+function renderList(){const rows=filtered();healthList.innerHTML=rows.length?rows.map(r=>`<div class="health-row ${r.status}" onclick="showCheck('${r.id}')"><div class="health-icon">${r.status==="ok"?"✓":r.status==="warning"?"!":"×"}</div><div><h3>${AppTools.escapeHtml(r.title)}</h3><p>${AppTools.escapeHtml(r.group)} • ${AppTools.escapeHtml(r.recommendation)}</p></div><div class="health-count">${r.count}</div></div>`).join(""):'<div class="table-empty">No matching checks.</div>'}
+function showCheck(id){const r=results.find(x=>x.id===id);if(!r)return;const cols=r.records.length?Object.keys(r.records[0]).filter(k=>k!=="created_at").slice(0,8):[];const table=r.records.length?`<div class="table-wrap"><table class="data-table"><thead><tr>${cols.map(c=>`<th>${AppTools.escapeHtml(c.replaceAll("_"," "))}</th>`).join("")}</tr></thead><tbody>${r.records.map(row=>`<tr>${cols.map(c=>`<td>${AppTools.escapeHtml(typeof row[c]==="object"?JSON.stringify(row[c]):row[c]??"")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:"<p>No problems found.</p>";AppTools.openModal(r.title,`<div class="detail-grid"><div class="detail-box"><span>Status</span><strong>${r.status}</strong></div><div class="detail-box"><span>Count</span><strong>${r.count}</strong></div><div class="detail-box"><span>Score</span><strong>${r.score}%</strong></div><div class="detail-box"><span>Group</span><strong>${r.group}</strong></div></div><p><strong>Recommendation:</strong> ${AppTools.escapeHtml(r.recommendation)}</p>${table}${r.target_url?`<div class="actions"><a class="btn btn-primary" href="${r.target_url}">Open Related Page</a></div>`:""}`)}
+function renderScores(){groupScores.innerHTML=Object.entries(summary.groups||{}).map(([g,s])=>`<div class="group-score"><div class="group-score-head"><span>${AppTools.escapeHtml(g)}</span><span>${s}%</span></div><div class="group-bar"><span style="width:${s}%"></span></div></div>`).join("")}
+function renderAdvisor(){const p=results.filter(r=>r.status!=="ok").sort((a,b)=>a.score-b.score).slice(0,8);advisor.innerHTML=p.length?p.map(r=>`<div class="advisor-item"><strong>${AppTools.escapeHtml(r.title)}:</strong><br>${AppTools.escapeHtml(r.recommendation)}</div>`).join(""):'<div class="detail-box"><strong>All checked areas are healthy.</strong></div>'}
+function printHealth(){AppPDF.printStandardReport({title:"ERP DATA HEALTH REPORT",subtitle:`Overall Health Score: ${summary.overall_score}%`,columns:[{key:"group",label:"Group"},{key:"title",label:"Health Check"},{key:"status",label:"Status"},{key:"count",label:"Problem Count"},{key:"score",label:"Score"},{key:"recommendation",label:"Recommendation"}],rows:filtered(),meta:[{label:"Passed",value:summary.passed_checks},{label:"Warnings",value:summary.warning_checks},{label:"Errors",value:summary.error_checks},{label:"Overall Score",value:summary.overall_score+"%"}]})}
+</script></body></html>
