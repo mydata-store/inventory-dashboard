@@ -18,6 +18,13 @@
     sidebarWidth: 170,
     sidebarCollapsedWidth: 58,
     sidebarDefaultCollapsed: false,
+    sidebarAutoHide: true,
+    sidebarAutoHideDelay: 5000,
+    sidebarExpandOnHover: true,
+    sidebarCollapseOnLeave: true,
+    sidebarShowTooltips: true,
+    sidebarRememberState: true,
+    sidebarAnimationMs: 200,
     profileVisible: true,
     profilePosition: "left-bottom",
     profileLayout: "vertical",
@@ -62,13 +69,7 @@
       { label: "Purchase List", href: "purchase-list.html" }
     ]},
     { label: "Issue Entry", icon: "↩", href: "issue.html" },
-    { id: "gatepass", label: "Gate Pass", icon: "▣", children: [
-      { label: "RGP Entry", href: "rgp-entry.html" },
-      { label: "RGP Return", href: "rgp-return.html" },
-      { label: "RGP List", href: "rgp-list.html" },
-      { label: "OGP Entry", href: "ogp-entry.html" },
-      { label: "OGP List", href: "ogp-list.html" }
-    ]},
+    { label: "Gate Pass", icon: "▣", href: "gate-pass.html" },
     { label: "Stock Ledger", icon: "▤", href: "stock-ledger.html" },
     { label: "Rack Management", icon: "▥", href: "rack-management.html" },
     { label: "Inventory Intelligence", icon: "◆", href: "inventory-intelligence.html" },
@@ -151,13 +152,13 @@
   function sideMenu() {
     return MENU.map((item, index) => {
       if (!item.children) {
-        return `<a class="erp-side-item ${matches(item) ? "active" : ""}" href="${item.href}">
+        return `<a class="erp-side-item ${matches(item) ? "active" : ""}" href="${item.href}" data-label="${esc(item.label)}" title="${esc(item.label)}">
           <b>${item.icon}</b><span>${esc(item.label)}</span></a>`;
       }
       const open = item.children.some(matches);
       const id = `erpSideGroup_${item.id || index}`;
       return `<div class="erp-side-group ${open ? "open" : ""}" id="${id}">
-        <button type="button" onclick="window.ERPUniversalShell.toggleSide('${id}')">
+        <button type="button" data-label="${esc(item.label)}" title="${esc(item.label)}" onclick="window.ERPUniversalShell.toggleSide('${id}')">
           <span><b>${item.icon}</b><i>${esc(item.label)}</i></span><em>⌃</em>
         </button>
         <div>${item.children.map(child => `<a class="${matches(child) ? "active" : ""}" href="${child.href}">${esc(child.label)}</a>`).join("")}</div>
@@ -182,8 +183,72 @@
     }).join("");
   }
 
+
+  let autoHideTimer = null;
+  let currentSettings = { ...DEFAULTS };
+
+  function removeLegacyProfiles() {
+    const selectors = [
+      ".profile-card:not([data-universal-profile])",
+      ".sidebar-profile:not([data-universal-profile])",
+      ".user-profile:not([data-universal-profile])",
+      ".profile-box:not([data-universal-profile])",
+      ".sidebar-user:not([data-universal-profile])"
+    ];
+    document.querySelectorAll(selectors.join(",")).forEach(el => {
+      if (!el.closest(".erp-universal-profile")) el.remove();
+    });
+  }
+
+  function setCollapsed(collapsed, persist = true) {
+    const side = document.querySelector(".erp-universal-side");
+    if (!side) return;
+    side.classList.toggle("collapsed", collapsed);
+    document.body.classList.toggle("erp-shell-collapsed", collapsed);
+    if (persist && currentSettings.sidebarRememberState) {
+      localStorage.setItem("erp_sidebar_collapsed_v1", collapsed ? "1" : "0");
+    }
+  }
+
+  function clearAutoHideTimer() {
+    clearTimeout(autoHideTimer);
+    autoHideTimer = null;
+  }
+
+  function scheduleAutoHide() {
+    clearAutoHideTimer();
+    if (!currentSettings.sidebarAutoHide) return;
+    autoHideTimer = setTimeout(() => {
+      const side = document.querySelector(".erp-universal-side");
+      if (!side || side.matches(":hover") || side.querySelector(".erp-side-group.open")) return scheduleAutoHide();
+      setCollapsed(true);
+    }, Math.max(1000, Number(currentSettings.sidebarAutoHideDelay || 5000)));
+  }
+
+  function bindSidebarBehavior() {
+    const side = document.querySelector(".erp-universal-side");
+    if (!side) return;
+    side.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 200)}ms`);
+    side.addEventListener("mouseenter", () => {
+      clearAutoHideTimer();
+      if (currentSettings.sidebarExpandOnHover) setCollapsed(false, false);
+    });
+    side.addEventListener("mouseleave", () => {
+      if (currentSettings.sidebarCollapseOnLeave) scheduleAutoHide();
+    });
+    side.addEventListener("click", scheduleAutoHide);
+    if (currentSettings.sidebarRememberState) {
+      const saved = localStorage.getItem("erp_sidebar_collapsed_v1");
+      if (saved === "1") setCollapsed(true, false);
+      if (saved === "0") setCollapsed(false, false);
+    }
+    scheduleAutoHide();
+  }
+
   function render(settings) {
     const s = { ...DEFAULTS, ...settings };
+    currentSettings = s;
+    clearAutoHideTimer();
     const { sidebar, top } = ensureHosts();
 
     document.body.classList.remove("erp-shell-top", "erp-shell-left", "erp-shell-hybrid", "erp-shell-collapsed");
@@ -223,6 +288,8 @@
     requestAnimationFrame(() => {
       const topHeight = document.querySelector(".erp-universal-top")?.offsetHeight || 0;
       document.documentElement.style.setProperty("--erp-live-top-height", `${topHeight}px`);
+      removeLegacyProfiles();
+      bindSidebarBehavior();
     });
   }
 
@@ -280,8 +347,10 @@
       target.classList.toggle("open", opening);
     },
     toggleCollapse() {
-      document.querySelector(".erp-universal-side")?.classList.toggle("collapsed");
-      document.body.classList.toggle("erp-shell-collapsed");
+      const side = document.querySelector(".erp-universal-side");
+      if (!side) return;
+      setCollapsed(!side.classList.contains("collapsed"));
+      scheduleAutoHide();
     }
   };
 
