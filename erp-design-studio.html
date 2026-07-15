@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="public/common-tools.js"></script>
 <script src="public/theme-settings.js"></script>
+<script src="public/common-shell-settings.js"></script>
 <script src="public/common-layout.js"></script>
 <script src="public/common-search.js"></script>
 <script src="public/common-table.js"></script>
@@ -30,10 +31,10 @@
 }
 *{box-sizing:border-box}
 body{overflow:hidden;background:var(--studio-bg)}
-#appSidebar{display:none!important}
+#appSidebar:empty{display:none!important}
 .app-main{margin-left:0!important;padding:0!important;min-height:100vh!important}
 .studio-app{
-  height:100vh;
+  height:calc(100vh - var(--studio-shell-offset,0px));
   display:grid;
   grid-template-rows:54px 1fr;
   color:var(--studio-text);
@@ -213,7 +214,7 @@ body{overflow:hidden;background:var(--studio-bg)}
   overflow:hidden
 }
 .property-tabs{
-  display:grid;grid-template-columns:repeat(3,1fr);
+  display:grid;grid-template-columns:repeat(4,1fr);
   gap:4px;padding:7px;border-bottom:1px solid var(--studio-border)
 }
 .property-tab{
@@ -348,6 +349,7 @@ body{overflow:hidden;background:var(--studio-bg)}
         <button class="property-tab active" data-property-tab="properties" onclick="showPropertyTab('properties')">Properties</button>
         <button class="property-tab" data-property-tab="page" onclick="showPropertyTab('page')">Page</button>
         <button class="property-tab" data-property-tab="data" onclick="showPropertyTab('data')">Data</button>
+        <button class="property-tab" data-property-tab="layout" onclick="showPropertyTab('layout')">Layout</button>
       </div>
 
       <div class="property-content">
@@ -390,6 +392,80 @@ body{overflow:hidden;background:var(--studio-bg)}
               <div class="property-field"><label>Show Logo</label><select id="pdf_logo"><option value="true">Yes</option><option value="false">No</option></select></div>
               <div class="property-field"><label>Show Footer</label><select id="pdf_footer"><option value="true">Yes</option><option value="false">No</option></select></div>
             </div>
+          </div>
+        </div>
+
+
+        <div id="layoutPanel" class="property-panel">
+          <div class="property-group">
+            <h3>ERP Navigation Layout</h3>
+            <div class="property-grid">
+              <div class="property-field full"><label>Navigation Position</label>
+                <select id="shell_navigationPosition" onchange="updateShellPreview()">
+                  <option value="top">Top Navigation</option>
+                  <option value="left">Left Sidebar</option>
+                  <option value="hybrid">Top + Left Hybrid</option>
+                </select>
+              </div>
+              <div class="property-field full"><label>Startup / First Page</label>
+                <select id="shell_startupPage">
+                  <option value="erp-design-studio.html">ERP Design Studio</option>
+                  <option value="index.html">Dashboard</option>
+                  <option value="erp-health-control-tower.html">Health Control Tower</option>
+                  <option value="inventory-intelligence.html">Inventory Intelligence</option>
+                </select>
+              </div>
+              <div class="property-field"><label>Top Bar Height</label><input id="shell_topBarHeight" type="number" min="42" max="100"></div>
+              <div class="property-field"><label>Compact Top Bar</label><select id="shell_compactTopBar"><option value="false">No</option><option value="true">Yes</option></select></div>
+              <div class="property-field"><label>Sidebar Width</label><input id="shell_sidebarWidth" type="number" min="120" max="320"></div>
+              <div class="property-field"><label>Default Collapsed</label><select id="shell_sidebarDefaultCollapsed"><option value="false">No</option><option value="true">Yes</option></select></div>
+              <div class="property-field"><label>Show Date & Time</label><select id="shell_showDateTime"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Show Notifications</label><select id="shell_showNotifications"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Top Background</label><input id="shell_topBarBackground" type="color"></div>
+              <div class="property-field"><label>Active Color</label><input id="shell_activeColor" type="color"></div>
+            </div>
+          </div>
+
+          <div class="property-group">
+            <h3>Profile Card Controller</h3>
+            <div class="property-grid">
+              <div class="property-field"><label>Show Profile</label><select id="shell_profileVisible" onchange="renderShellProfilePreview()"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Position</label>
+                <select id="shell_profilePosition" onchange="renderShellProfilePreview()">
+                  <option value="top-left">Top Navigation Left</option>
+                  <option value="top-right">Top Navigation Right</option>
+                  <option value="left-top">Left Sidebar Top</option>
+                  <option value="left-bottom">Left Sidebar Bottom</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </div>
+              <div class="property-field"><label>Layout</label><select id="shell_profileLayout" onchange="renderShellProfilePreview()"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></div>
+              <div class="property-field"><label>Mode</label><select id="shell_profileMode" onchange="renderShellProfilePreview()"><option value="compact">Compact</option><option value="detailed">Detailed</option></select></div>
+              <div class="property-field full"><label>Display Name</label><input id="shell_profileName" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field full"><label>Designation</label><input id="shell_profileDesignation" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field full"><label>Department</label><input id="shell_profileDepartment" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Employee Code</label><input id="shell_profileEmployeeCode" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Status Text</label><input id="shell_profileStatusText" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field full"><label>Profile Image Path</label><input id="shell_profileImage" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Image Size</label><input id="shell_profileImageSize" type="number" min="24" max="100" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Image Shape</label><select id="shell_profileImageShape" onchange="renderShellProfilePreview()"><option value="circle">Circle</option><option value="square">Square</option></select></div>
+              <div class="property-field"><label>Card Width</label><input id="shell_profileCardWidth" type="number" min="80" max="360" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Card Height</label><input id="shell_profileCardHeight" type="number" min="40" max="180" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Background</label><input id="shell_profileCardBackground" type="color" onchange="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Text Color</label><input id="shell_profileTextColor" type="color" onchange="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Card Radius</label><input id="shell_profileRadius" type="number" min="0" max="40" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Show Status</label><select id="shell_profileShowStatus" onchange="renderShellProfilePreview()"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Show Department</label><select id="shell_profileShowDepartment" onchange="renderShellProfilePreview()"><option value="false">No</option><option value="true">Yes</option></select></div>
+              <div class="property-field"><label>Hide on Mobile</label><select id="shell_profileHideMobile"><option value="false">No</option><option value="true">Yes</option></select></div>
+            </div>
+            <div id="shellProfilePreview" style="margin-top:10px;padding:12px;background:#e9eef5;border-radius:10px;display:flex;justify-content:center"></div>
+          </div>
+
+          <div class="property-group">
+            <h3>Apply ERP Shell</h3>
+            <button class="topbar-btn success" style="width:100%" onclick="saveShellSettings()">Save Layout for Entire ERP</button>
+            <button class="topbar-btn" style="width:100%;margin-top:7px" onclick="resetShellSettings()">Reset ERP Layout</button>
+            <p style="font-size:7px;color:#64748b;line-height:1.5">The selected navigation and profile settings apply to every page that uses the common layout engine.</p>
           </div>
         </div>
 
@@ -440,7 +516,7 @@ body{overflow:hidden;background:var(--studio-bg)}
 
 const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
 const studio=new ERPDesignStudio({db});
-let config=null,currentPage=null,lastDraft=null,selectedComponentIndex=-1,currentDevice="desktop",studioHistory=[],studioFuture=[],isDirty=false;
+let config=null,currentPage=null,lastDraft=null,selectedComponentIndex=-1,currentDevice="desktop",studioHistory=[],studioFuture=[],isDirty=false,shellSettings=ERPShellSettings.getLocal();
 
 document.addEventListener("DOMContentLoaded",async()=>{
   pageSearch.oninput=renderPageList;
@@ -1003,6 +1079,69 @@ async function restoreVersion(id){
     await selectPage(currentPage.page_key);
   }catch(error){AppTools.toast(error.message,"error")}
 }
+
+function shellBool(id){
+  return document.getElementById(id).value==="true";
+}
+function populateShellControls(){
+  shellSettings=ERPShellSettings.getLocal();
+  Object.entries(shellSettings).forEach(([key,value])=>{
+    const el=document.getElementById(`shell_${key}`);
+    if(!el)return;
+    el.value=typeof value==="boolean"?String(value):value;
+  });
+}
+function captureShellControls(){
+  const keys=[
+    "navigationPosition","startupPage","topBarHeight","compactTopBar","sidebarWidth",
+    "sidebarDefaultCollapsed","showDateTime","showNotifications","topBarBackground","activeColor",
+    "profileVisible","profilePosition","profileLayout","profileMode","profileName",
+    "profileDesignation","profileDepartment","profileEmployeeCode","profileStatusText",
+    "profileImage","profileImageSize","profileImageShape","profileCardWidth","profileCardHeight",
+    "profileCardBackground","profileTextColor","profileRadius","profileShowStatus",
+    "profileShowDepartment","profileHideMobile"
+  ];
+  const numeric=new Set(["topBarHeight","sidebarWidth","profileImageSize","profileCardWidth","profileCardHeight","profileRadius"]);
+  const boolean=new Set(["compactTopBar","sidebarDefaultCollapsed","showDateTime","showNotifications","profileVisible","profileShowStatus","profileShowDepartment","profileHideMobile"]);
+  const out={...ERPShellSettings.getLocal()};
+  keys.forEach(key=>{
+    const el=document.getElementById(`shell_${key}`);
+    if(!el)return;
+    out[key]=numeric.has(key)?Number(el.value||0):boolean.has(key)?el.value==="true":el.value;
+  });
+  if(out.profilePosition==="hidden")out.profileVisible=false;
+  return out;
+}
+function renderShellProfilePreview(){
+  if(!document.getElementById("shellProfilePreview"))return;
+  const settings=captureShellControls();
+  settings.profileVisible=true;
+  const location=String(settings.profilePosition).startsWith("left")?"left":"top";
+  shellProfilePreview.innerHTML=ERPShellSettings.profileMarkup(settings,location)||"<span style='font-size:8px;color:#64748b'>Profile card is hidden.</span>";
+}
+function updateShellPreview(){
+  renderShellProfilePreview();
+}
+async function saveShellSettings(){
+  try{
+    const settings=captureShellControls();
+    const dbClient=window.db||window.supabaseClient||db;
+    shellSettings=await ERPShellSettings.save(dbClient,settings);
+    AppTools.toast("ERP layout and profile settings saved for all pages.","success");
+  }catch(error){
+    AppTools.toast(error.message,"error");
+  }
+}
+async function resetShellSettings(){
+  if(!confirm("Reset ERP navigation and profile settings?"))return;
+  shellSettings={...ERPShellSettings.defaults};
+  ERPShellSettings.setLocal(shellSettings);
+  populateShellControls();
+  renderShellProfilePreview();
+  window.dispatchEvent(new CustomEvent("erp-shell-settings-changed",{detail:shellSettings}));
+  AppTools.toast("ERP shell settings reset.","success");
+}
+
 window.addEventListener("beforeunload",event=>{
   if(!isDirty)return;
   event.preventDefault();
@@ -1023,7 +1162,9 @@ function showPropertyTab(tab){
   propertiesPanel.classList.toggle("active",tab==="properties");
   pagePanel.classList.toggle("active",tab==="page");
   dataPanel.classList.toggle("active",tab==="data");
+  layoutPanel.classList.toggle("active",tab==="layout");
   if(tab==="data"){renderBuilders();renderVersions()}
+  if(tab==="layout"){populateShellControls();renderShellProfilePreview()}
 }
 
 function addQuickComponent(type){
@@ -1174,6 +1315,12 @@ pageSearch.addEventListener("input",()=>{
   if(toolboxPanel.classList.contains("active"))renderVisualToolbox();
 });
 
+const resizeStudioForShell=()=>{
+  const top=document.querySelector(".erp-top-navigation");
+  document.documentElement.style.setProperty("--studio-shell-offset",(top?.offsetHeight||0)+"px");
+};
+window.addEventListener("erp-shell-settings-changed",()=>setTimeout(resizeStudioForShell,20));
+window.addEventListener("load",()=>setTimeout(resizeStudioForShell,100));
 </script>
 </body>
 </html>
