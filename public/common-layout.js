@@ -190,4 +190,5 @@ document.addEventListener("click",event=>{
   if(!event.target.closest(".erp-nav-dropdown"))closeAllERPNav();
 });
 document.addEventListener("DOMContentLoaded",buildERPLayout);
+window.addEventListener("erp-theme-changed",()=>buildERPLayout());
 window.addEventListener("erp-shell-settings-changed",event=>applyERPLayout(event.detail));
