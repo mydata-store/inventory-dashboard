@@ -1,144 +1,1463 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ERP Design Studio - Improved</title>
-<link rel="stylesheet" href="erp-design-studio.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Design Studio</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-theme-manager.js"></script>
+<script src="public/common-shell-engine.js"></script>
+<script src="public/common-search.js"></script>
+<script src="public/common-table.js"></script>
+<script src="public/design-studio-engine.js"></script>
+<script src="public/component-library.js"></script>
+<style>
+:root{
+  --studio-bg:#e9eef5;
+  --studio-panel:#ffffff;
+  --studio-border:#d8e0ea;
+  --studio-text:#111827;
+  --studio-muted:#64748b;
+  --studio-blue:#2563eb;
+  --studio-blue-soft:#eff6ff;
+  --studio-orange:#f59e0b;
+  --studio-green:#16a34a;
+  --studio-red:#dc2626;
+  --studio-shadow:0 8px 24px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{overflow:hidden;background:var(--studio-bg)}
+#appSidebar:empty{display:none!important}
+.app-main{margin-left:0!important;padding:0!important;min-height:100vh!important}
+.studio-app{
+  height:calc(100vh - var(--studio-shell-offset,0px));
+  display:grid;
+  grid-template-rows:54px 1fr;
+  color:var(--studio-text);
+  background:var(--studio-bg)
+}
+.studio-topbar{
+  background:#0f172a;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 14px;
+  border-bottom:1px solid #1e293b;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+  z-index:20
+}
+.brand-block{display:flex;align-items:center;gap:10px}
+.brand-mark{
+  width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#f59e0b,#f97316);
+  display:grid;place-items:center;font-weight:900;color:#111827
+}
+.brand-block h1{font-size:14px;margin:0}
+.brand-block span{font-size:8px;color:#94a3b8}
+.topbar-center{
+  display:flex;align-items:center;gap:8px;
+  font-size:9px;color:#cbd5e1
+}
+.unsaved-indicator{
+  display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;
+  background:#1e293b;color:#cbd5e1;font-weight:800
+}
+.unsaved-indicator.unsaved{background:#78350f;color:#fde68a}
+.unsaved-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.topbar-actions{display:flex;align-items:center;gap:7px}
+.topbar-btn{
+  border:1px solid #334155;background:#1e293b;color:#fff;border-radius:8px;
+  min-height:32px;padding:0 11px;font-size:8px;font-weight:900;cursor:pointer
+}
+.topbar-btn:hover{background:#334155}
+.topbar-btn.primary{background:var(--studio-blue);border-color:var(--studio-blue)}
+.topbar-btn.success{background:var(--studio-green);border-color:var(--studio-green)}
+.topbar-btn.warn{background:var(--studio-orange);border-color:var(--studio-orange);color:#111827}
+.studio-workspace{
+  min-height:0;
+  display:grid;
+  grid-template-columns:250px minmax(620px,1fr) 310px;
+  overflow:hidden
+}
+.left-rail,.right-rail,.center-stage{min-height:0}
+.left-rail{
+  background:#f8fafc;
+  border-right:1px solid var(--studio-border);
+  display:grid;
+  grid-template-rows:auto auto 1fr;
+  overflow:hidden
+}
+.left-tabs{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:4px;padding:8px;border-bottom:1px solid var(--studio-border)
+}
+.left-tab{
+  border:0;border-radius:8px;background:transparent;padding:8px;font-size:8px;font-weight:900;cursor:pointer
+}
+.left-tab.active{background:var(--studio-blue-soft);color:var(--studio-blue)}
+.left-search{padding:8px;border-bottom:1px solid var(--studio-border)}
+.left-search input{
+  width:100%;height:34px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;font-size:9px
+}
+.left-content{overflow:auto;padding:8px}
+.tree-group{margin-bottom:5px}
+.tree-header{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  border:0;background:transparent;padding:7px 6px;border-radius:7px;
+  font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#475569;cursor:pointer
+}
+.tree-header:hover{background:#eef2f7}
+.tree-items.collapsed{display:none}
+.tree-page{
+  width:100%;border:0;background:transparent;border-radius:7px;padding:7px 8px;
+  display:flex;justify-content:space-between;align-items:center;gap:6px;
+  text-align:left;font-size:9px;font-weight:700;cursor:pointer;color:#1f2937
+}
+.tree-page:hover,.tree-page.active{background:var(--studio-blue-soft);color:var(--studio-blue)}
+.tree-page small{font-size:7px;color:#94a3b8}
+.toolbox-section{display:none}
+.toolbox-section.active{display:block}
+.toolbox-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.toolbox-item{
+  min-height:82px;padding:9px;border:1px solid var(--studio-border);border-radius:9px;background:#fff;
+  cursor:grab;box-shadow:0 2px 8px rgba(15,23,42,.03)
+}
+.toolbox-item:hover{border-color:#60a5fa;box-shadow:0 6px 16px rgba(37,99,235,.09)}
+.toolbox-item span{font-size:18px}.toolbox-item b{display:block;font-size:8px;margin-top:5px}.toolbox-item small{display:block;font-size:7px;color:var(--studio-muted);line-height:1.35;margin-top:3px}
+.center-stage{
+  display:grid;
+  grid-template-rows:42px 44px 1fr;
+  overflow:hidden;
+  background:var(--studio-bg)
+}
+.stage-meta{
+  background:#fff;
+  border-bottom:1px solid var(--studio-border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px
+}
+.stage-meta-left{display:flex;align-items:center;gap:10px;min-width:0}
+.stage-meta-left h2{font-size:12px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage-meta-left span{font-size:8px;color:var(--studio-muted)}
+.stage-meta-right{display:flex;align-items:center;gap:7px}
+.meta-chip{
+  padding:5px 8px;border:1px solid var(--studio-border);border-radius:999px;
+  background:#fff;font-size:7px;font-weight:900;color:#475569
+}
+.stage-toolbar{
+  background:#f8fafc;
+  border-bottom:1px solid var(--studio-border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 10px
+}
+.stage-tools{display:flex;align-items:center;gap:5px}
+.icon-btn{
+  width:30px;height:30px;border:1px solid var(--studio-border);border-radius:8px;background:#fff;
+  display:grid;place-items:center;cursor:pointer;font-size:12px
+}
+.icon-btn:hover{background:var(--studio-blue-soft);border-color:#93c5fd}
+.device-switch{display:flex;gap:4px}
+.device-btn{
+  border:1px solid var(--studio-border);background:#fff;border-radius:7px;padding:6px 8px;
+  font-size:7px;font-weight:900;cursor:pointer
+}
+.device-btn.active{background:var(--studio-blue);color:#fff;border-color:var(--studio-blue)}
+.canvas-shell{overflow:auto;padding:18px}
+.canvas-board{
+  margin:0 auto;
+  min-height:620px;
+  background:#fff;
+  border:1px solid #cbd5e1;
+  box-shadow:0 18px 40px rgba(15,23,42,.14);
+  border-radius:12px;
+  padding:14px;
+  transition:width .2s ease
+}
+.canvas-board.desktop{width:100%}
+.canvas-board.laptop{width:980px}
+.canvas-board.tablet{width:720px}
+.canvas-board.mobile{width:390px}
+.canvas-page-header{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:6px 4px 12px;border-bottom:1px solid #edf0f4;margin-bottom:12px
+}
+.canvas-page-header h3{font-size:16px;margin:0}.canvas-page-header p{font-size:8px;color:var(--studio-muted);margin:4px 0 0}
+.canvas-components{min-height:460px}
+.canvas-empty{
+  min-height:360px;border:2px dashed #94a3b8;border-radius:11px;
+  display:grid;place-items:center;text-align:center;color:#64748b;font-size:9px;background:#f8fafc
+}
+.canvas-component{
+  border:1px solid #dbe3ee;border-radius:11px;background:#fff;padding:12px;margin-bottom:10px;
+  position:relative;cursor:default
+}
+.canvas-component:hover{border-color:#60a5fa}
+.canvas-component.selected{border:2px solid var(--studio-blue);background:#f8fbff}
+.component-toolbar{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:8px
+}
+.component-title{font-size:10px;font-weight:900}
+.component-actions{display:flex;gap:4px}
+.component-mini{
+  width:24px;height:24px;border:1px solid var(--studio-border);border-radius:6px;background:#fff;cursor:pointer;font-size:9px
+}
+.component-mini.drag{cursor:grab}
+.component-preview{font-size:8px;color:var(--studio-muted)}
+.right-rail{
+  background:#f8fafc;
+  border-left:1px solid var(--studio-border);
+  display:grid;
+  grid-template-rows:44px 1fr;
+  overflow:hidden
+}
+.property-tabs{
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:4px;padding:7px;border-bottom:1px solid var(--studio-border)
+}
+.property-tab{
+  border:0;border-radius:7px;background:transparent;padding:7px 4px;font-size:7px;font-weight:900;cursor:pointer
+}
+.property-tab.active{background:var(--studio-blue-soft);color:var(--studio-blue)}
+.property-content{overflow:auto;padding:10px}
+.property-panel{display:none}.property-panel.active{display:block}
+.property-group{
+  background:#fff;border:1px solid var(--studio-border);border-radius:10px;padding:10px;margin-bottom:9px
+}
+.property-group h3{font-size:9px;margin:0 0 9px}
+.property-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.property-field.full{grid-column:1/-1}
+.property-field label{display:block;font-size:7px;font-weight:900;margin-bottom:4px;color:#475569}
+.property-field input,.property-field select,.property-field textarea{
+  width:100%;min-height:32px;border:1px solid #cbd5e1;border-radius:7px;padding:6px 7px;font-size:8px;background:#fff
+}
+.property-field textarea{min-height:66px}
+.property-empty{
+  min-height:220px;display:grid;place-items:center;text-align:center;color:#94a3b8;font-size:8px
+}
+.builder-table{width:100%;border-collapse:collapse}
+.builder-table th{background:#0f172a;color:#fff;text-align:center;padding:7px;font-size:7px}
+.builder-table td{padding:6px;border-bottom:1px solid #e5e7eb;font-size:7px}
+.builder-table input,.builder-table select{width:100%;height:28px;border:1px solid #cbd5e1;border-radius:6px;padding:4px;font-size:7px}
+.hidden-builder{display:none!important}
+@media(max-width:1400px){
+  .studio-workspace{grid-template-columns:220px 1fr 280px}
+}
+@media(max-width:1100px){
+  body{overflow:auto}
+  .studio-app{height:auto}
+  .studio-workspace{grid-template-columns:1fr}
+  .left-rail,.right-rail{border:0;max-height:none}
+  .center-stage{min-height:800px}
+  .right-rail{grid-template-rows:auto auto}
+}
+</style>
 </head>
 <body>
-<div class="app-shell">
-  <header class="topbar">
-    <div class="top-brand">
-      <button class="icon-btn" id="sidebarToggle" title="Toggle builder navigator">☰</button>
+<div id="appSidebar"></div>
+<main class="app-main">
+<div class="studio-app">
+  <header class="studio-topbar">
+    <div class="brand-block">
       <div class="brand-mark">ERP</div>
-      <div><strong>ERP DESIGN STUDIO</strong><small>Visual page and layout builder</small></div>
+      <div><h1>ERP Design Studio</h1><span>Visual page builder and configuration workspace</span></div>
     </div>
-    <nav class="main-nav">
-      <button>Dashboard</button><button>Masters</button><button>Purchase</button>
-      <button>Issue</button><button>Gate Pass</button><button>Reports</button>
-    </nav>
-    <div class="top-actions">
-      <span class="save-state" id="saveState">Saved</span>
-      <button class="btn secondary" id="previewBtn">Preview</button>
-      <button class="btn primary" id="publishBtn">Publish</button>
+
+    <div class="topbar-center">
+      <div id="saveStatus" class="unsaved-indicator"><span class="unsaved-dot"></span><span>Saved</span></div>
+      <span id="topPageMeta">No page selected</span>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="topbar-btn" onclick="resetConfig()">Reset</button>
+      <button class="topbar-btn warn" onclick="saveDraft()">Save Draft</button>
+      <button class="topbar-btn primary" onclick="previewPage()">Preview</button>
+      <button class="topbar-btn success" onclick="publishCurrent()">Publish</button>
     </div>
   </header>
 
-  <main class="studio">
-    <aside class="navigator" id="navigator">
-      <div class="nav-tabs">
-        <button class="active" data-panel="pagesPanel">Pages</button>
-        <button data-panel="componentsPanel">Components</button>
+  <section class="studio-workspace">
+    <aside class="left-rail">
+      <div class="left-tabs">
+        <button class="left-tab active" data-left-tab="pages" onclick="showLeftTab('pages')">Pages</button>
+        <button class="left-tab" data-left-tab="toolbox" onclick="showLeftTab('toolbox')">Components</button>
       </div>
 
-      <div class="nav-body">
-        <section id="pagesPanel" class="nav-panel active">
-          <div class="search-wrap"><span>⌕</span><input id="pageSearch" placeholder="Search ERP pages..."></div>
+      <div class="left-search">
+        <input id="pageSearch" placeholder="Search pages or components...">
+      </div>
+
+      <div class="left-content">
+        <div id="pagesPanel" class="toolbox-section active">
           <div id="pageList"></div>
-        </section>
-
-        <section id="componentsPanel" class="nav-panel">
-          <p class="helper">Click a component to add it to the selected page.</p>
-          <div class="component-grid">
-            <button data-add="heading">T <span>Heading</span></button>
-            <button data-add="text">¶ <span>Text</span></button>
-            <button data-add="button">▣ <span>Button</span></button>
-            <button data-add="card">▤ <span>Card</span></button>
-            <button data-add="stat"># <span>Stat</span></button>
-            <button data-add="table">▦ <span>Table</span></button>
-          </div>
-        </section>
-      </div>
-
-      <div class="profile-card">
-        <div class="avatar">MW</div>
-        <div class="profile-copy"><strong>Muhammad Waqas</strong><span><i></i> Online</span></div>
+        </div>
+        <div id="toolboxPanel" class="toolbox-section">
+          <div id="visualToolbox" class="toolbox-grid"></div>
+        </div>
       </div>
     </aside>
 
-    <section class="workspace">
-      <div class="page-head">
-        <div>
-          <div class="crumb" id="breadcrumb">ERP Core / Dashboard</div>
-          <h1 id="pageTitle">ERP Health Control Tower</h1>
-          <p id="pageSubtitle">Executive ERP health monitoring and control page</p>
+    <section class="center-stage">
+      <div class="stage-meta">
+        <div class="stage-meta-left">
+          <h2 id="selectedPageTitle">Select a page</h2>
+          <span id="selectedPageMeta">Choose an ERP page from the left panel.</span>
         </div>
-        <div class="page-actions">
-          <button class="btn ghost" id="undoBtn">↶ Undo</button>
-          <button class="btn ghost" id="redoBtn">↷ Redo</button>
-          <button class="btn ghost" id="duplicateBtn">Duplicate</button>
-          <button class="btn danger" id="deleteBtn">Delete</button>
+        <div class="stage-meta-right">
+          <span class="meta-chip" id="metaVersion">Version —</span>
+          <span class="meta-chip" id="metaStatus">Status —</span>
+          <span class="meta-chip" id="metaModified">Modified —</span>
+          <span class="meta-chip" id="metaCreatedBy">By —</span>
         </div>
       </div>
 
-      <div class="toolbar">
-        <div class="mode-switch">
-          <button class="active" data-mode="design">Design</button>
-          <button data-mode="preview">Preview</button>
-          <button data-mode="live">Live Page</button>
+      <div class="stage-toolbar">
+        <div class="stage-tools">
+          <button class="icon-btn" onclick="undoStudio()" title="Undo">↶</button>
+          <button class="icon-btn" onclick="redoStudio()" title="Redo">↷</button>
+          <button class="icon-btn" onclick="addQuickComponent('entry_form')" title="Add Form">▤</button>
+          <button class="icon-btn" onclick="addQuickComponent('data_table')" title="Add Table">▦</button>
+          <button class="icon-btn" onclick="addQuickComponent('summary_cards')" title="Add KPI Cards">▥</button>
+          <button class="icon-btn" onclick="addQuickComponent('search_panel')" title="Add Search">⌕</button>
         </div>
+
         <div class="device-switch">
-          <button class="active" data-device="desktop">Desktop</button>
-          <button data-device="laptop">Laptop</button>
-          <button data-device="tablet">Tablet</button>
-          <button data-device="mobile">Mobile</button>
-        </div>
-        <div class="zoom">
-          <button id="zoomOut">−</button><span id="zoomValue">100%</span><button id="zoomIn">+</button>
+          <button class="device-btn active" data-device="desktop" onclick="setDevice('desktop')">Desktop</button>
+          <button class="device-btn" data-device="laptop" onclick="setDevice('laptop')">Laptop</button>
+          <button class="device-btn" data-device="tablet" onclick="setDevice('tablet')">Tablet</button>
+          <button class="device-btn" data-device="mobile" onclick="setDevice('mobile')">Mobile</button>
         </div>
       </div>
 
-      <div class="canvas-stage">
-        <div class="canvas desktop" id="canvas">
-          <div class="canvas-page" id="canvasPage"></div>
+      <div class="canvas-shell">
+        <div id="visualDevice" class="canvas-board desktop">
+          <div class="canvas-page-header">
+            <div>
+              <h3 id="canvasPageTitle">Page Title</h3>
+              <p id="canvasPageSubtitle">Page subtitle</p>
+            </div>
+          </div>
+          <div id="visualCanvas" class="canvas-components"></div>
         </div>
       </div>
     </section>
 
-    <aside class="inspector">
-      <div class="inspector-tabs">
-        <button class="active" data-inspector="properties">Properties</button>
-        <button data-inspector="styles">Styles</button>
-        <button data-inspector="events">Events</button>
+    <aside class="right-rail">
+      <div class="property-tabs">
+        <button class="property-tab active" data-property-tab="properties" onclick="showPropertyTab('properties')">Properties</button>
+        <button class="property-tab" data-property-tab="page" onclick="showPropertyTab('page')">Page</button>
+        <button class="property-tab" data-property-tab="data" onclick="showPropertyTab('data')">Data</button>
+        <button class="property-tab" data-property-tab="layout" onclick="showPropertyTab('layout')">Layout</button>
+        <button class="property-tab" data-property-tab="theme" onclick="showPropertyTab('theme')">Theme</button>
       </div>
-      <div class="inspector-body">
-        <div id="emptyInspector" class="empty-inspector">
-          <div class="empty-icon">◇</div>
-          <h3>Select a component</h3>
-          <p>Click any component in the canvas to edit its content, appearance and actions.</p>
+
+      <div class="property-content">
+        <div id="propertiesPanel" class="property-panel active">
+          <div id="componentProperties" class="property-empty">Select a component on the canvas.</div>
         </div>
-        <form id="propertyForm" class="property-form hidden">
-          <div class="selected-label">Selected: <strong id="selectedType"></strong></div>
-          <label>Content
-            <textarea id="propText" rows="3"></textarea>
-          </label>
-          <div class="field-grid">
-            <label>Font size
-              <input id="propFontSize" type="number" min="10" max="72">
-            </label>
-            <label>Weight
-              <select id="propWeight"><option value="400">Regular</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra Bold</option></select>
-            </label>
+
+        <div id="pagePanel" class="property-panel">
+          <div class="property-group">
+            <h3>Page Settings</h3>
+            <div class="property-grid">
+              <div class="property-field full"><label>Page Title</label><input id="page_title"></div>
+              <div class="property-field full"><label>Page Subtitle</label><input id="page_subtitle"></div>
+              <div class="property-field"><label>Menu Label</label><input id="menu_label"></div>
+              <div class="property-field"><label>Page Type</label><select id="page_type"><option>standard</option><option>transaction</option><option>dashboard</option><option>report</option><option>settings</option></select></div>
+              <div class="property-field"><label>Page Width</label><select id="page_width"><option value="full">Full Width</option><option value="wide">Wide</option><option value="compact">Compact</option></select></div>
+              <div class="property-field"><label>Default Tab</label><input id="default_tab"></div>
+              <div class="property-field"><label>Card Radius</label><input id="card_radius" type="number"></div>
+              <div class="property-field"><label>Section Gap</label><input id="section_gap" type="number"></div>
+            </div>
           </div>
-          <label>Text alignment
-            <select id="propAlign"><option>left</option><option>center</option><option>right</option></select>
-          </label>
-          <div class="field-grid">
-            <label>Text color<input id="propColor" type="color"></label>
-            <label>Background<input id="propBg" type="color"></label>
+
+          <div class="property-group">
+            <h3>Table Defaults</h3>
+            <div class="property-grid">
+              <div class="property-field"><label>Header Align</label><select id="header_alignment"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select></div>
+              <div class="property-field"><label>Header Height</label><input id="header_height" type="number"></div>
+              <div class="property-field"><label>Header Font</label><input id="header_font_size" type="number"></div>
+              <div class="property-field"><label>Row Height</label><input id="row_height" type="number"></div>
+              <div class="property-field"><label>Freeze Header</label><select id="freeze_header"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Alternate Rows</label><select id="zebra_rows"><option value="false">No</option><option value="true">Yes</option></select></div>
+            </div>
           </div>
-          <label>Border radius<input id="propRadius" type="range" min="0" max="30"></label>
-          <label>Link / action<input id="propLink" placeholder="e.g. items.html"></label>
-          <button type="button" class="btn primary full" id="applyProps">Apply Changes</button>
-          <button type="button" class="btn danger full" id="removeComponent">Remove Component</button>
-        </form>
+
+          <div class="property-group">
+            <h3>PDF Settings</h3>
+            <div class="property-grid">
+              <div class="property-field full"><label>PDF Title</label><input id="pdf_title"></div>
+              <div class="property-field"><label>Orientation</label><select id="pdf_orientation"><option>landscape</option><option>portrait</option></select></div>
+              <div class="property-field"><label>Show Logo</label><select id="pdf_logo"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Show Footer</label><select id="pdf_footer"><option value="true">Yes</option><option value="false">No</option></select></div>
+            </div>
+          </div>
+        </div>
+
+
+
+        <div id="themePanel" class="property-panel">
+          <div class="property-group">
+            <h3>ERP Theme Presets</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <button class="topbar-btn primary" onclick="applyThemePreset('eyeComfortNavy')">Eye Comfort Navy</button>
+              <button class="topbar-btn" onclick="applyThemePreset('professionalBlue')">Professional Blue</button>
+              <button class="topbar-btn" onclick="applyThemePreset('storeGreen')">Store Green</button>
+              <button class="topbar-btn" onclick="applyThemePreset('charcoal')">Charcoal</button>
+            </div>
+          </div>
+
+          <div class="property-group">
+            <h3>Theme Colors</h3>
+            <div class="property-grid">
+              <div class="property-field"><label>Page Background</label><input id="theme_pageBackground" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Workspace Background</label><input id="theme_workspaceBackground" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Card Background</label><input id="theme_cardBackground" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Primary Text</label><input id="theme_primaryText" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Muted Text</label><input id="theme_mutedText" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Borders</label><input id="theme_borderColor" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Primary / Blue</label><input id="theme_primaryColor" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Secondary / Gold</label><input id="theme_secondaryColor" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Success</label><input id="theme_successColor" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Warning</label><input id="theme_warningColor" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Danger</label><input id="theme_dangerColor" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Info</label><input id="theme_infoColor" type="color" onchange="updateThemePreview()"></div>
+            </div>
+          </div>
+
+          <div class="property-group">
+            <h3>Navigation & Table Colors</h3>
+            <div class="property-grid">
+              <div class="property-field"><label>Top Bar / Sidebar</label><input id="theme_sidebarBackground" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Navigation Text</label><input id="theme_sidebarText" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Active Background</label><input id="theme_activeBackground" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Active Text</label><input id="theme_activeText" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Hover Background</label><input id="theme_hoverBackground" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Table Header</label><input id="theme_tableHeaderBackground" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Table Header Text</label><input id="theme_tableHeaderText" type="color" onchange="updateThemePreview()"></div>
+              <div class="property-field"><label>Row Hover</label><input id="theme_tableRowHover" type="color" onchange="updateThemePreview()"></div>
+            </div>
+          </div>
+
+          <div class="property-group">
+            <h3>Shape, Font & Density</h3>
+            <div class="property-grid">
+              <div class="property-field"><label>Card Radius</label><input id="theme_cardRadius" type="number" min="0" max="30" oninput="updateThemePreview()"></div>
+              <div class="property-field"><label>Button Radius</label><input id="theme_buttonRadius" type="number" min="0" max="30" oninput="updateThemePreview()"></div>
+              <div class="property-field"><label>Input Radius</label><input id="theme_inputRadius" type="number" min="0" max="30" oninput="updateThemePreview()"></div>
+              <div class="property-field"><label>Base Font Size</label><input id="theme_baseFontSize" type="number" min="10" max="20" oninput="updateThemePreview()"></div>
+              <div class="property-field full"><label>Font Family</label><input id="theme_fontFamily" oninput="updateThemePreview()"></div>
+              <div class="property-field"><label>Shadow</label><select id="theme_shadowStrength" onchange="updateThemePreview()"><option value="none">None</option><option value="soft">Soft</option><option value="strong">Strong</option></select></div>
+              <div class="property-field"><label>Density</label><select id="theme_density" onchange="updateThemePreview()"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></div>
+            </div>
+          </div>
+
+          <div class="property-group">
+            <h3>Live Theme Preview</h3>
+            <div id="themePreview"></div>
+          </div>
+
+          <div class="property-group">
+            <button class="topbar-btn success" style="width:100%" onclick="saveGlobalTheme()">Save Theme for Entire ERP</button>
+            <button class="topbar-btn" style="width:100%;margin-top:7px" onclick="resetGlobalTheme()">Reset to Eye Comfort Navy</button>
+          </div>
+        </div>
+
+        <div id="layoutPanel" class="property-panel">
+          <div class="property-group">
+            <h3>ERP Navigation Layout</h3>
+            <div class="property-grid">
+              <div class="property-field full"><label>Navigation Position</label>
+                <select id="shell_navigationPosition" onchange="updateShellPreview()">
+                  <option value="top">Top Navigation</option>
+                  <option value="left">Left Sidebar</option>
+                  <option value="hybrid">Top + Left Hybrid</option>
+                </select>
+              </div>
+              <div class="property-field full"><label>Startup / First Page</label>
+                <select id="shell_startupPage">
+                  <option value="erp-design-studio.html">ERP Design Studio</option>
+                  <option value="index.html">Dashboard</option>
+                  <option value="erp-health-control-tower.html">Health Control Tower</option>
+                  <option value="inventory-intelligence.html">Inventory Intelligence</option>
+                </select>
+              </div>
+              <div class="property-field"><label>Top Bar Height</label><input id="shell_topBarHeight" type="number" min="42" max="100"></div>
+              <div class="property-field"><label>Compact Top Bar</label><select id="shell_compactTopBar"><option value="false">No</option><option value="true">Yes</option></select></div>
+              <div class="property-field"><label>Sidebar Width</label><input id="shell_sidebarWidth" type="number" min="120" max="320"></div>
+              <div class="property-field"><label>Default Collapsed</label><select id="shell_sidebarDefaultCollapsed"><option value="false">No</option><option value="true">Yes</option></select></div>
+<div class="property-field"><label>Auto Hide</label><select id="shell_sidebarAutoHide"><option value="true">Yes</option><option value="false">No</option></select></div>
+<div class="property-field"><label>Auto Hide Delay (ms)</label><input id="shell_sidebarAutoHideDelay" type="number" min="1000" max="30000" step="500"></div>
+<div class="property-field"><label>Expand on Hover</label><select id="shell_sidebarExpandOnHover"><option value="true">Yes</option><option value="false">No</option></select></div>
+<div class="property-field"><label>Collapse on Leave</label><select id="shell_sidebarCollapseOnLeave"><option value="true">Yes</option><option value="false">No</option></select></div>
+<div class="property-field"><label>Show Tooltips</label><select id="shell_sidebarShowTooltips"><option value="true">Yes</option><option value="false">No</option></select></div>
+<div class="property-field"><label>Remember State</label><select id="shell_sidebarRememberState"><option value="true">Yes</option><option value="false">No</option></select></div>
+<div class="property-field"><label>Animation (ms)</label><input id="shell_sidebarAnimationMs" type="number" min="0" max="1000" step="50"></div>
+              <div class="property-field"><label>Show Date & Time</label><select id="shell_showDateTime"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Show Notifications</label><select id="shell_showNotifications"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Top Background</label><input id="shell_topBarBackground" type="color"></div>
+              <div class="property-field"><label>Active Color</label><input id="shell_activeColor" type="color"></div>
+            </div>
+          </div>
+
+          <div class="property-group">
+            <h3>Profile Card Controller</h3>
+            <div class="property-grid">
+              <div class="property-field"><label>Show Profile</label><select id="shell_profileVisible" onchange="renderShellProfilePreview()"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Position</label>
+                <select id="shell_profilePosition" onchange="renderShellProfilePreview()">
+                  <option value="top-left">Top Navigation Left</option>
+                  <option value="top-right">Top Navigation Right</option>
+                  <option value="left-top">Left Sidebar Top</option>
+                  <option value="left-bottom">Left Sidebar Bottom</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </div>
+              <div class="property-field"><label>Layout</label><select id="shell_profileLayout" onchange="renderShellProfilePreview()"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></div>
+              <div class="property-field"><label>Mode</label><select id="shell_profileMode" onchange="renderShellProfilePreview()"><option value="compact">Compact</option><option value="detailed">Detailed</option></select></div>
+              <div class="property-field full"><label>Display Name</label><input id="shell_profileName" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field full"><label>Designation</label><input id="shell_profileDesignation" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field full"><label>Department</label><input id="shell_profileDepartment" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Employee Code</label><input id="shell_profileEmployeeCode" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Status Text</label><input id="shell_profileStatusText" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field full"><label>Profile Image Path</label><input id="shell_profileImage" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Image Size</label><input id="shell_profileImageSize" type="number" min="24" max="100" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Image Shape</label><select id="shell_profileImageShape" onchange="renderShellProfilePreview()"><option value="circle">Circle</option><option value="square">Square</option></select></div>
+              <div class="property-field"><label>Card Width</label><input id="shell_profileCardWidth" type="number" min="80" max="360" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Card Height</label><input id="shell_profileCardHeight" type="number" min="40" max="180" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Background</label><input id="shell_profileCardBackground" type="color" onchange="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Text Color</label><input id="shell_profileTextColor" type="color" onchange="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Card Radius</label><input id="shell_profileRadius" type="number" min="0" max="40" oninput="renderShellProfilePreview()"></div>
+              <div class="property-field"><label>Show Status</label><select id="shell_profileShowStatus" onchange="renderShellProfilePreview()"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="property-field"><label>Show Department</label><select id="shell_profileShowDepartment" onchange="renderShellProfilePreview()"><option value="false">No</option><option value="true">Yes</option></select></div>
+              <div class="property-field"><label>Hide on Mobile</label><select id="shell_profileHideMobile"><option value="false">No</option><option value="true">Yes</option></select></div>
+            </div>
+            <div id="shellProfilePreview" style="margin-top:10px;padding:12px;background:#e9eef5;border-radius:10px;display:flex;justify-content:center"></div>
+          </div>
+
+          <div class="property-group">
+            <h3>Apply ERP Shell</h3>
+            <button class="topbar-btn success" style="width:100%" onclick="saveShellSettings()">Save Layout for Entire ERP</button>
+            <button class="topbar-btn" style="width:100%;margin-top:7px" onclick="resetShellSettings()">Reset ERP Layout</button>
+            <p style="font-size:7px;color:#64748b;line-height:1.5">The selected navigation and profile settings apply to every page that uses the common layout engine.</p>
+          </div>
+        </div>
+
+        <div id="dataPanel" class="property-panel">
+          <div class="property-group">
+            <h3>Form Fields</h3>
+            <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Key</th><th>Label</th><th>Type</th><th>Visible</th></tr></thead><tbody id="fieldRows"></tbody></table></div>
+            <button class="topbar-btn primary" style="margin-top:8px" onclick="addField()">Add Field</button>
+          </div>
+
+          <div class="property-group">
+            <h3>Table Columns</h3>
+            <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Key</th><th>Header</th><th>Align</th><th>Visible</th></tr></thead><tbody id="columnRows"></tbody></table></div>
+            <button class="topbar-btn primary" style="margin-top:8px" onclick="addColumn()">Add Column</button>
+          </div>
+
+          <div class="property-group">
+            <h3>Buttons</h3>
+            <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Key</th><th>Label</th><th>Visible</th></tr></thead><tbody id="buttonRows"></tbody></table></div>
+            <button class="topbar-btn primary" style="margin-top:8px" onclick="addButton()">Add Button</button>
+          </div>
+
+          <div class="property-group">
+            <h3>Sections</h3>
+            <div class="table-wrap"><table class="builder-table"><thead><tr><th>Order</th><th>Key</th><th>Title</th><th>Visible</th></tr></thead><tbody id="sectionRows"></tbody></table></div>
+            <button class="topbar-btn primary" style="margin-top:8px" onclick="addSection()">Add Section</button>
+          </div>
+
+          <div class="property-group">
+            <h3>Version History</h3>
+            <div id="versionList"></div>
+          </div>
+        </div>
       </div>
     </aside>
-  </main>
+  </section>
 </div>
 
-<div class="toast" id="toast"></div>
-<script src="erp-design-studio.js"></script>
+<!-- Hidden compatibility nodes used by the existing engine -->
+<div class="hidden-builder">
+  <div id="general"></div><div id="form"></div><div id="table"></div><div id="buttons"></div><div id="sections"></div><div id="components"></div><div id="pdf"></div><div id="preview"></div><div id="versions"></div>
+  <div id="componentCatalog"></div><div id="componentRows"></div><div id="previewFrame"></div>
+  <input id="pageSearchCompat">
+</div>
+</main>
+
+<script>
+
+const db=supabase.createClient("https://lzsxtvkluqvcaetnnydu.supabase.co","sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma");
+const studio=new ERPDesignStudio({db});
+let config=null,currentPage=null,lastDraft=null,selectedComponentIndex=-1,currentDevice="desktop",studioHistory=[],studioFuture=[],isDirty=false,shellSettings=ERPShellSettings.getLocal(),globalTheme=ERPThemeManager.getLocal();
+
+document.addEventListener("DOMContentLoaded",async()=>{
+  pageSearch.oninput=renderPageList;
+  document.addEventListener("input",event=>{
+    if(event.target.closest(".studio-main"))markDirty();
+  });
+  document.addEventListener("change",event=>{
+    if(event.target.closest(".studio-main"))markDirty();
+  });
+  try{
+    await studio.loadPages();
+    renderPageList();
+    if(studio.pages.length)selectPage(studio.pages[0].page_key);
+  }catch(error){AppTools.toast(error.message,"error")}
+});
+
+function renderPageList(){
+  const q=pageSearch.value.trim().toLowerCase();
+  const rows=studio.pages.filter(p=>`${p.page_name} ${p.page_group} ${p.page_type}`.toLowerCase().includes(q));
+  const groups=[...new Set(rows.map(r=>r.page_group||"Other"))];
+  pageList.innerHTML=groups.map((group,index)=>`
+    <div class="page-group-block">
+      <button class="page-group-header" onclick="togglePageGroup(this)">
+        <span class="page-group-title">${AppTools.escapeHtml(group)}</span>
+        <span class="page-group-chevron">▾</span>
+      </button>
+      <div class="page-group-items">
+        ${rows.filter(r=>(r.page_group||"Other")===group).map(r=>`
+          <button class="page-item ${currentPage?.page_key===r.page_key?"active":""}" onclick="selectPage('${r.page_key}')">
+            <span>${AppTools.escapeHtml(r.page_name)}</span><small>${AppTools.escapeHtml(r.page_type)}</small>
+          </button>`).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+function togglePageGroup(button){
+  const items=button.nextElementSibling;
+  items.classList.toggle("collapsed");
+  button.querySelector(".page-group-chevron").textContent=items.classList.contains("collapsed")?"▸":"▾";
+}
+
+async function selectPage(pageKey){
+  try{
+    const output=await studio.getPage(pageKey);
+    currentPage=output.page;
+    config=output.version?.config_json||studio.defaultConfig(currentPage);
+    config.components=config.components||{items:[]};
+    selectedPageTitle.textContent=currentPage.page_name;
+    selectedPageMeta.textContent=`${currentPage.page_group} • ${currentPage.page_type} • ${currentPage.page_url}`;
+    metaVersion.textContent=output.version?`V${output.version.version_no}`:"Default";
+    metaStatus.textContent=output.version?.is_published?"Published":"Draft / Default";
+    metaModified.textContent=currentPage.updated_at?new Date(currentPage.updated_at).toLocaleString():"—";
+    metaCreatedBy.textContent=output.version?.created_by||"System";
+    selectedComponentIndex=-1;
+    studioHistory=[];
+    studioFuture=[];
+    isDirty=false;
+    updateSaveStatus();
+    populateControls();
+    renderBuilders();
+    renderComponentCatalog();
+    renderComponentRows();
+    renderPreview();
+    renderVisualToolbox();
+    renderVisualCanvas();
+    renderComponentProperties();
+    initDragDrop();
+    await renderVersions();
+    renderPageList();
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+
+function showDesigner(tab){
+  document.querySelectorAll(".designer-tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  document.querySelectorAll(".designer-view").forEach(v=>v.classList.toggle("active",v.id===tab));
+  if(tab==="preview")renderPreview();
+  if(tab==="versions")renderVersions();
+  if(tab==="visual"){renderVisualToolbox();renderVisualCanvas();renderComponentProperties();initDragDrop()}
+}
+
+function populateControls(){
+  const g=config.general,t=config.table,p=config.pdf;
+  page_title.value=g.page_title||"";
+  page_subtitle.value=g.page_subtitle||"";
+  menu_label.value=g.menu_label||"";
+  page_type.value=g.page_type||"standard";
+  page_width.value=g.page_width||"full";
+  default_tab.value=g.default_tab||"";
+  card_radius.value=g.card_radius??14;
+  section_gap.value=g.section_gap??12;
+  header_alignment.value=t.header_alignment||"center";
+  header_height.value=t.header_height??42;
+  header_font_size.value=t.header_font_size??11;
+  row_height.value=t.row_height??38;
+  freeze_header.value=String(t.freeze_header!==false);
+  zebra_rows.value=String(Boolean(t.zebra_rows));
+  pdf_title.value=p.title||"";
+  pdf_orientation.value=p.orientation||"landscape";
+  pdf_logo.value=String(p.show_logo!==false);
+  pdf_footer.value=String(p.show_footer!==false);
+}
+
+function captureControls(){
+  config.general={
+    ...config.general,
+    page_title:page_title.value,
+    page_subtitle:page_subtitle.value,
+    menu_label:menu_label.value,
+    page_type:page_type.value,
+    page_width:page_width.value,
+    default_tab:default_tab.value,
+    card_radius:Number(card_radius.value||14),
+    section_gap:Number(section_gap.value||12)
+  };
+  config.table={
+    ...config.table,
+    header_alignment:header_alignment.value,
+    header_height:Number(header_height.value||42),
+    header_font_size:Number(header_font_size.value||11),
+    row_height:Number(row_height.value||38),
+    freeze_header:freeze_header.value==="true",
+    zebra_rows:zebra_rows.value==="true"
+  };
+  config.pdf={
+    ...config.pdf,
+    title:pdf_title.value,
+    orientation:pdf_orientation.value,
+    show_logo:pdf_logo.value==="true",
+    show_footer:pdf_footer.value==="true"
+  };
+  captureBuilderRows();
+}
+
+function renderBuilders(){
+  renderFieldRows();
+  renderColumnRows();
+  renderButtonRows();
+  renderSectionRows();
+  renderComponentRows();
+}
+
+function renderComponentCatalog(){
+  if(!window.ERPComponentLibrary)return;
+  componentCatalog.innerHTML=ERPComponentLibrary.list().map(component=>`
+    <button class="component-card" onclick="addComponent('${component.key}')">
+      <div class="component-card-icon">${component.icon}</div>
+      <div><h3>${AppTools.escapeHtml(component.title)}</h3><p>${AppTools.escapeHtml(component.description)}</p><small>${AppTools.escapeHtml(component.category)}</small></div>
+    </button>
+  `).join("");
+}
+
+function renderComponentRows(){
+  config.components=config.components||{items:[]};
+  componentRows.innerHTML=(config.components.items||[]).map((component,index)=>`
+    <tr data-index="${index}">
+      <td><input data-k="order" type="number" value="${component.order??index+1}"></td>
+      <td>${AppTools.escapeHtml(component.component_type||"")}</td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(component.key||"")}"></td>
+      <td><input data-k="title" value="${AppTools.escapeHtml(component.title||"")}"></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${component.visible===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeComponent(${index})">Delete</button></td>
+    </tr>
+  `).join("");
+}
+
+function addComponent(type){
+  captureControls();
+  const component=ERPComponentLibrary.create(type);
+  component.order=(config.components.items||[]).length+1;
+  component.key=`${type}_${Date.now()}`;
+  config.components.items.push(component);
+  selectedComponentIndex=config.components.items.length-1;
+  renderComponentRows();
+  renderVisualCanvas();
+  renderComponentProperties();
+  initDragDrop();
+  markDirty();
+  AppTools.toast(`${ERPComponentLibrary.definitions[type].title} added.`,"success");
+}
+
+function removeComponent(index){
+  captureControls();
+  snapshotStudio();
+  config.components.items.splice(index,1);
+  selectedComponentIndex=-1;
+  renderComponentRows();
+  renderVisualCanvas();
+  renderComponentProperties();
+  initDragDrop();
+  markDirty();
+}
+
+function renderFieldRows(){
+  fieldRows.innerHTML=(config.form.fields||[]).map((f,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${f.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(f.key||"")}"></td>
+      <td><input data-k="label" value="${AppTools.escapeHtml(f.label||"")}"></td>
+      <td><select data-k="type">${["text","number","date","select","textarea","checkbox","file"].map(x=>`<option ${x===f.type?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="span">${[1,2,3,4].map(x=>`<option ${x===Number(f.span||1)?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="required"><option value="false">No</option><option value="true" ${f.required?"selected":""}>Yes</option></select></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${f.visible===false?"selected":""}>No</option></select></td>
+      <td><span class="status-pill ${f.protected?"published":"draft"}">${f.protected?"Protected":"Normal"}</span></td>
+      <td><button class="btn btn-danger" ${f.protected?"disabled":""} onclick="removeField(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function renderColumnRows(){
+  columnRows.innerHTML=(config.table.columns||[]).map((c,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${c.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(c.key||"")}"></td>
+      <td><input data-k="label" value="${AppTools.escapeHtml(c.label||"")}"></td>
+      <td><select data-k="header_align">${["center","left","right"].map(x=>`<option ${x===(c.header_align||config.table.header_alignment)?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="cell_align">${["left","center","right"].map(x=>`<option ${x===(c.cell_align||"left")?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><input data-k="width" type="number" value="${c.width||120}"></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${c.visible===false?"selected":""}>No</option></select></td>
+      <td><select data-k="show_pdf"><option value="true">Yes</option><option value="false" ${c.show_pdf===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeColumn(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function renderButtonRows(){
+  buttonRows.innerHTML=(config.buttons.items||[]).map((b,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${b.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(b.key||"")}"></td>
+      <td><input data-k="label" value="${AppTools.escapeHtml(b.label||"")}"></td>
+      <td><input data-k="shortcut" value="${AppTools.escapeHtml(b.shortcut||"")}"></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${b.visible===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeButton(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function renderSectionRows(){
+  sectionRows.innerHTML=(config.sections.items||[]).map((s,i)=>`
+    <tr data-index="${i}">
+      <td><input data-k="order" type="number" value="${s.order??i+1}"></td>
+      <td><input data-k="key" value="${AppTools.escapeHtml(s.key||"")}"></td>
+      <td><input data-k="title" value="${AppTools.escapeHtml(s.title||"")}"></td>
+      <td><select data-k="type">${["form","table","summary","filters","custom"].map(x=>`<option ${x===s.type?"selected":""}>${x}</option>`).join("")}</select></td>
+      <td><select data-k="visible"><option value="true">Yes</option><option value="false" ${s.visible===false?"selected":""}>No</option></select></td>
+      <td><button class="btn btn-danger" onclick="removeSection(${i})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function captureBuilderRows(){
+  config.form.fields=readRows(fieldRows,["order","key","label","type","span","required","visible"],["order","span"],["required","visible"]).map((x,i)=>({...config.form.fields[i],...x}));
+  config.table.columns=readRows(columnRows,["order","key","label","header_align","cell_align","width","visible","show_pdf"],["order","width"],["visible","show_pdf"]);
+  config.buttons.items=readRows(buttonRows,["order","key","label","shortcut","visible"],["order"],["visible"]);
+  config.sections.items=readRows(sectionRows,["order","key","title","type","visible"],["order"],["visible"]);
+  config.components=config.components||{items:[]};
+  const componentData=readRows(componentRows,["order","key","title","visible"],["order"],["visible"]);
+  config.components.items=componentData.map((row,index)=>({...config.components.items[index],...row}));
+}
+
+function readRows(tbody,keys,numberKeys=[],booleanKeys=[]){
+  return [...tbody.querySelectorAll("tr")].map(row=>{
+    const out={};
+    keys.forEach(k=>{
+      const el=row.querySelector(`[data-k="${k}"]`);
+      if(!el)return;
+      let value=el.value;
+      if(numberKeys.includes(k))value=Number(value||0);
+      if(booleanKeys.includes(k))value=value==="true";
+      out[k]=value;
+    });
+    return out;
+  });
+}
+
+function addField(){captureControls();config.form.fields.push({order:config.form.fields.length+1,key:"new_field",label:"New Field",type:"text",span:1,required:false,visible:true,protected:false});renderFieldRows()}
+function removeField(i){captureControls();if(config.form.fields[i]?.protected)return;config.form.fields.splice(i,1);renderFieldRows()}
+function addColumn(){captureControls();config.table.columns.push({order:config.table.columns.length+1,key:"new_column",label:"New Column",header_align:"center",cell_align:"left",width:120,visible:true,show_pdf:true});renderColumnRows()}
+function removeColumn(i){captureControls();config.table.columns.splice(i,1);renderColumnRows()}
+function addButton(){captureControls();config.buttons.items.push({order:config.buttons.items.length+1,key:"custom",label:"Custom",shortcut:"",visible:true});renderButtonRows()}
+function removeButton(i){captureControls();config.buttons.items.splice(i,1);renderButtonRows()}
+function addSection(){captureControls();config.sections.items.push({order:config.sections.items.length+1,key:"new_section",title:"New Section",type:"custom",visible:true});renderSectionRows()}
+function removeSection(i){captureControls();config.sections.items.splice(i,1);renderSectionRows()}
+
+
+function markDirty(){
+  isDirty=true;
+  updateSaveStatus();
+}
+
+function updateSaveStatus(){
+  saveStatus.classList.toggle("unsaved",isDirty);
+  saveStatus.querySelector("span:last-child").textContent=isDirty?"Unsaved Changes":"Saved";
+}
+
+function snapshotStudio(){
+  if(!config)return;
+  studioHistory.push(JSON.stringify(config));
+  if(studioHistory.length>30)studioHistory.shift();
+  studioFuture=[];
+}
+
+function undoStudio(){
+  if(!studioHistory.length)return AppTools.toast("Nothing to undo.","info");
+  studioFuture.push(JSON.stringify(config));
+  config=JSON.parse(studioHistory.pop());
+  populateControls();renderBuilders();renderVisualCanvas();renderComponentProperties();renderPreview();
+  markDirty();
+}
+
+function redoStudio(){
+  if(!studioFuture.length)return AppTools.toast("Nothing to redo.","info");
+  studioHistory.push(JSON.stringify(config));
+  config=JSON.parse(studioFuture.pop());
+  populateControls();renderBuilders();renderVisualCanvas();renderComponentProperties();renderPreview();
+  markDirty();
+}
+
+function setDevice(device){
+  currentDevice=device;
+  visualDevice.className=`visual-device ${device}`;
+  document.querySelectorAll(".device-btn").forEach(b=>b.classList.toggle("active",b.dataset.device===device));
+}
+
+function renderVisualToolbox(){
+  if(!window.ERPComponentLibrary)return;
+  visualToolbox.innerHTML=ERPComponentLibrary.list().map(c=>`
+    <div class="toolbox-item" draggable="true" data-component-type="${c.key}">
+      <span>${c.icon}</span>
+      <b>${AppTools.escapeHtml(c.title)}</b>
+      <small>${AppTools.escapeHtml(c.description)}</small>
+    </div>
+  `).join("");
+}
+
+function renderVisualCanvas(){
+  config.components=config.components||{items:[]};
+  const items=[...(config.components.items||[])].sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+  visualCanvas.innerHTML=items.length?items.map((component,index)=>{
+    const definition=ERPComponentLibrary.definitions[component.component_type]||{};
+    return `<div class="canvas-component ${selectedComponentIndex===index?"selected":""}" data-index="${index}" onclick="selectCanvasComponent(${index},event)">
+      <span class="canvas-component-handle">⋮⋮</span>
+      <div class="canvas-component-title">${definition.icon||"▦"} ${AppTools.escapeHtml(component.title||definition.title||component.component_type)}</div>
+      <div class="canvas-component-desc">${AppTools.escapeHtml(definition.description||"Reusable ERP component")}</div>
+      <div class="canvas-section">${visualComponentSample(component)}</div>
+    </div>`;
+  }).join(""):`<div class="canvas-drop-empty">Drag components here from the toolbox<br>or click a component in the Component Library.</div>`;
+}
+
+function visualComponentSample(component){
+  switch(component.component_type){
+    case "summary_cards":
+      return `<div style="display:grid;grid-template-columns:repeat(${Math.min(Number(component.columns||4),4)},1fr);gap:6px">${(component.items||[]).slice(0,4).map(x=>`<div style="padding:7px;border:1px solid #e5e7eb;border-radius:7px"><small>${AppTools.escapeHtml(x.label)}</small><b style="display:block;font-size:14px">0</b></div>`).join("")}</div>`;
+    case "search_panel":
+      return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">${(component.fields||[]).slice(0,4).map(x=>`<input style="height:28px;border:1px solid #cbd5e1;border-radius:6px;padding:0 6px" placeholder="${AppTools.escapeHtml(x.label)}">`).join("")}</div>`;
+    case "entry_form":
+      return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px"><input placeholder="Field 1"><input placeholder="Field 2"><input placeholder="Field 3"><input placeholder="Field 4"></div>`;
+    case "data_table":
+      return `<table style="width:100%;font-size:7px;border-collapse:collapse"><thead><tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr></thead><tbody><tr><td>Sample</td><td>Sample</td><td>Sample</td></tr></tbody></table>`;
+    case "chart_panel":
+      return `<div style="height:70px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border-radius:7px;display:grid;place-items:center">Chart Preview</div>`;
+    case "quick_actions":
+      return `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${[1,2,3,4].map(n=>`<button style="height:42px">Action ${n}</button>`).join("")}</div>`;
+    default:
+      return `<div style="font-size:8px;color:#64748b">${AppTools.escapeHtml(component.title||component.component_type)}</div>`;
+  }
+}
+
+function selectCanvasComponent(index,event){
+  event?.stopPropagation();
+  selectedComponentIndex=index;
+  renderVisualCanvas();
+  renderComponentProperties();
+  initDragDrop();
+}
+
+function renderComponentProperties(){
+  config.components=config.components||{items:[]};
+  const component=config.components.items[selectedComponentIndex];
+  if(!component){
+    componentProperties.className="properties-empty";
+    componentProperties.innerHTML="Select a component on the live canvas.";
+    return;
+  }
+  const definition=ERPComponentLibrary.definitions[component.component_type]||{};
+  componentProperties.className="properties-grid";
+  componentProperties.innerHTML=`
+    <div class="setting-field span-all"><label>Component Type</label><input value="${AppTools.escapeHtml(definition.title||component.component_type)}" readonly></div>
+    <div class="setting-field span-all"><label>Title</label><input id="prop_title" value="${AppTools.escapeHtml(component.title||"")}" oninput="updateSelectedProperty('title',this.value)"></div>
+    <div class="setting-field"><label>Order</label><input type="number" value="${component.order||1}" oninput="updateSelectedProperty('order',Number(this.value||1))"></div>
+    <div class="setting-field"><label>Visible</label><select onchange="updateSelectedProperty('visible',this.value==='true')"><option value="true" ${component.visible!==false?"selected":""}>Yes</option><option value="false" ${component.visible===false?"selected":""}>No</option></select></div>
+    ${["summary_cards","quick_actions","entry_form"].includes(component.component_type)?`<div class="setting-field"><label>Columns</label><input type="number" min="1" max="6" value="${component.columns||4}" oninput="updateSelectedProperty('columns',Number(this.value||1))"></div>`:""}
+    ${component.component_type==="chart_panel"?`<div class="setting-field"><label>Chart Type</label><select onchange="updateSelectedProperty('chart_type',this.value)">${["bar","line","doughnut","area"].map(x=>`<option ${x===component.chart_type?"selected":""}>${x}</option>`).join("")}</select></div>`:""}
+    ${component.component_type==="detail_panel"?`<div class="setting-field"><label>Display Mode</label><select onchange="updateSelectedProperty('display_mode',this.value)"><option value="modal" ${component.display_mode==="modal"?"selected":""}>Modal</option><option value="inline" ${component.display_mode==="inline"?"selected":""}>Inline</option></select></div>`:""}
+    <div class="setting-field span-all"><button class="btn btn-danger" onclick="deleteSelectedComponent()">Delete Component</button></div>
+  `;
+}
+
+function updateSelectedProperty(key,value){
+  if(selectedComponentIndex<0)return;
+  snapshotStudio();
+  config.components.items[selectedComponentIndex][key]=value;
+  renderVisualCanvas();
+  renderComponentRows();
+  renderPreview();
+  initDragDrop();
+  markDirty();
+}
+
+function deleteSelectedComponent(){
+  if(selectedComponentIndex<0)return;
+  snapshotStudio();
+  config.components.items.splice(selectedComponentIndex,1);
+  selectedComponentIndex=-1;
+  renderVisualCanvas();renderComponentRows();renderComponentProperties();renderPreview();initDragDrop();
+  markDirty();
+}
+
+function initDragDrop(){
+  if(!window.Sortable)return;
+
+  document.querySelectorAll(".toolbox-item").forEach(item=>{
+    item.ondragstart=event=>{
+      event.dataTransfer.setData("text/component-type",item.dataset.componentType);
+    };
+  });
+
+  visualCanvas.ondragover=event=>event.preventDefault();
+  visualCanvas.ondrop=event=>{
+    event.preventDefault();
+    const type=event.dataTransfer.getData("text/component-type");
+    if(type)addVisualComponent(type);
+  };
+
+  if(visualCanvas._sortable)visualCanvas._sortable.destroy();
+  visualCanvas._sortable=Sortable.create(visualCanvas,{
+    animation:150,
+    handle:".canvas-component-handle",
+    draggable:".canvas-component",
+    onStart(){snapshotStudio()},
+    onEnd(){
+      const order=[...visualCanvas.querySelectorAll(".canvas-component")].map(el=>Number(el.dataset.index));
+      config.components.items=order.map((oldIndex,newIndex)=>({...config.components.items[oldIndex],order:newIndex+1}));
+      selectedComponentIndex=-1;
+      renderVisualCanvas();renderComponentRows();renderPreview();renderComponentProperties();initDragDrop();
+      markDirty();
+    }
+  });
+}
+
+function addVisualComponent(type){
+  snapshotStudio();
+  const component=ERPComponentLibrary.create(type);
+  component.order=(config.components.items||[]).length+1;
+  component.key=`${type}_${Date.now()}`;
+  config.components.items.push(component);
+  selectedComponentIndex=config.components.items.length-1;
+  renderVisualCanvas();renderComponentRows();renderComponentProperties();renderPreview();initDragDrop();
+  markDirty();
+}
+
+function resetConfig(){
+  if(!currentPage)return;
+  if(!confirm("Reset this page to the default configuration?"))return;
+  snapshotStudio();
+  config=studio.defaultConfig(currentPage);
+  config.components=config.components||{items:[]};
+  selectedComponentIndex=-1;
+  populateControls();renderBuilders();renderPreview();renderVisualCanvas();renderComponentProperties();initDragDrop();markDirty();
+}
+
+async function saveDraft(){
+  if(!currentPage)return;
+  try{
+    captureControls();
+    lastDraft=await studio.saveDraft(currentPage.page_key,config);
+    isDirty=false;
+    updateSaveStatus();
+    metaVersion.textContent=`V${lastDraft.version_no}`;
+    metaStatus.textContent="Draft";
+    metaModified.textContent=new Date().toLocaleString();
+    metaCreatedBy.textContent="Muhammad Waqas";
+    AppTools.toast(`Draft version ${lastDraft.version_no} saved.`,"success");
+    await renderVersions();
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+
+async function publishCurrent(){
+  if(!currentPage)return;
+  try{
+    captureControls();
+    if(!lastDraft)lastDraft=await studio.saveDraft(currentPage.page_key,config);
+    await studio.publishVersion(lastDraft.id,currentPage.page_key);
+    AppTools.toast(`Version ${lastDraft.version_no} published.`,"success");
+    metaStatus.textContent="Published";
+    isDirty=false;
+    updateSaveStatus();
+    lastDraft=null;
+    await renderVersions();
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+
+function previewPage(){
+  captureControls();
+  showDesigner("preview");
+  renderPreview();
+}
+
+function renderPreview(){
+  if(!config)return;
+  captureControls();
+  previewFrame.style.setProperty("--preview-radius",(config.general.card_radius||14)+"px");
+  previewFrame.style.setProperty("--preview-gap",(config.general.section_gap||12)+"px");
+  previewFrame.style.setProperty("--preview-header-height",(config.table.header_height||42)+"px");
+  previewFrame.style.setProperty("--preview-row-height",(config.table.row_height||38)+"px");
+  previewFrame.style.setProperty("--preview-header-align",config.table.header_alignment||"center");
+
+  const fields=(config.form.fields||[]).filter(f=>f.visible!==false).sort((a,b)=>a.order-b.order).slice(0,12);
+  const columns=(config.table.columns||[]).filter(c=>c.visible!==false).sort((a,b)=>a.order-b.order).slice(0,8);
+  const buttons=(config.buttons.items||[]).filter(b=>b.visible!==false).sort((a,b)=>a.order-b.order);
+
+  previewFrame.innerHTML=`
+    <div class="preview-header"><div><h2 style="margin:0">${AppTools.escapeHtml(config.general.page_title||currentPage?.page_name||"Page")}</h2><div class="page-subtitle">${AppTools.escapeHtml(config.general.page_subtitle||"")}</div></div></div>
+    <div class="preview-card">
+      <div class="preview-form">
+        ${fields.length?fields.map(f=>`<div class="preview-field" style="grid-column:span ${Math.min(Number(f.span||1),4)}"><label>${AppTools.escapeHtml(f.label)}${f.required?" *":""}</label><input placeholder="${AppTools.escapeHtml(f.label)}"></div>`).join(""):'<div class="empty">No visible form fields configured.</div>'}
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px">${buttons.map(b=>`<button class="btn btn-light">${AppTools.escapeHtml(b.label)}</button>`).join("")}</div>
+    </div>
+    ${(config.components?.items||[]).filter(c=>c.visible!==false).sort((a,b)=>a.order-b.order).map(c=>`
+      <div class="preview-card">
+        <h3 style="margin:0 0 8px">${AppTools.escapeHtml(c.title||c.component_type)}</h3>
+        <div class="page-subtitle">${AppTools.escapeHtml((ERPComponentLibrary.definitions[c.component_type]?.description)||"Reusable ERP component")}</div>
+      </div>
+    `).join("")}
+    <div class="preview-card">
+      <table class="preview-table">
+        <thead><tr>${columns.length?columns.map(c=>`<th style="text-align:${c.header_align||config.table.header_alignment};width:${c.width||120}px">${AppTools.escapeHtml(c.label)}</th>`).join(""):'<th>Table Header</th>'}</tr></thead>
+        <tbody>${[1,2,3].map(n=>`<tr>${columns.length?columns.map(c=>`<td style="text-align:${c.cell_align||"left"}">Sample ${n}</td>`).join(""):'<td>Sample Row</td>'}</tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+async function renderVersions(){
+  if(!currentPage)return;
+  try{
+    const rows=await studio.listVersions(currentPage.page_key);
+    versionList.innerHTML=rows.length?rows.map(v=>`
+      <div class="version-row">
+        <strong>V${v.version_no}</strong>
+        <span>${new Date(v.created_at).toLocaleString()} • ${AppTools.escapeHtml(v.created_by||"")}</span>
+        <span class="status-pill ${v.is_published?"published":"draft"}">${v.is_published?"Published":"Draft"}</span>
+        <button class="btn btn-light" onclick="restoreVersion(${v.id})">${v.is_published?"Current":"Restore"}</button>
+      </div>`).join(""):'<div class="table-empty">No saved versions.</div>';
+  }catch(error){versionList.innerHTML=`<div class="table-empty">${AppTools.escapeHtml(error.message)}</div>`}
+}
+
+async function restoreVersion(id){
+  if(!confirm("Publish this previous version?"))return;
+  try{
+    await studio.restoreVersion(id,currentPage.page_key);
+    AppTools.toast("Previous version restored and published.","success");
+    await selectPage(currentPage.page_key);
+  }catch(error){AppTools.toast(error.message,"error")}
+}
+
+
+function populateThemeControls(){
+  globalTheme=ERPThemeManager.getLocal();
+  Object.entries(globalTheme).forEach(([key,value])=>{
+    const el=document.getElementById(`theme_${key}`);
+    if(!el)return;
+    el.value=value;
+  });
+}
+function captureThemeControls(){
+  const out={...ERPThemeManager.getLocal()};
+  const numeric=new Set(["cardRadius","buttonRadius","inputRadius","baseFontSize"]);
+  [
+    "pageBackground","workspaceBackground","cardBackground","primaryText","mutedText","borderColor",
+    "primaryColor","secondaryColor","successColor","warningColor","dangerColor","infoColor",
+    "sidebarBackground","sidebarText","activeBackground","activeText","hoverBackground",
+    "tableHeaderBackground","tableHeaderText","tableRowHover","cardRadius","buttonRadius",
+    "inputRadius","baseFontSize","fontFamily","shadowStrength","density"
+  ].forEach(key=>{
+    const el=document.getElementById(`theme_${key}`);
+    if(!el)return;
+    out[key]=numeric.has(key)?Number(el.value||0):el.value;
+  });
+  out.topBarBackground=out.sidebarBackground;
+  out.topBarText=out.sidebarText;
+  return out;
+}
+function updateThemePreview(){
+  if(!document.getElementById("themePreview"))return;
+  const theme=captureThemeControls();
+  ERPThemeManager.preview(theme,themePreview);
+}
+function applyThemePreset(name){
+  globalTheme={...ERPThemeManager.presets[name]};
+  ERPThemeManager.setLocal(globalTheme);
+  populateThemeControls();
+  updateThemePreview();
+  AppTools.toast(`${globalTheme.name} loaded. Save to apply across the ERP.`,"info");
+}
+async function saveGlobalTheme(){
+  try{
+    const theme=captureThemeControls();
+    const dbClient=window.db||window.supabaseClient||db;
+    globalTheme=await ERPThemeManager.save(dbClient,theme);
+    AppTools.toast("ERP theme saved and applied to all pages.","success");
+  }catch(error){
+    AppTools.toast(error.message,"error");
+  }
+}
+async function resetGlobalTheme(){
+  if(!confirm("Reset the ERP theme to Eye Comfort Navy?"))return;
+  globalTheme={...ERPThemeManager.presets.eyeComfortNavy};
+  ERPThemeManager.setLocal(globalTheme);
+  ERPThemeManager.apply(globalTheme);
+  populateThemeControls();
+  updateThemePreview();
+  AppTools.toast("Eye Comfort Navy theme restored.","success");
+}
+
+function shellBool(id){
+  return document.getElementById(id).value==="true";
+}
+function populateShellControls(){
+  shellSettings=ERPShellSettings.getLocal();
+  Object.entries(shellSettings).forEach(([key,value])=>{
+    const el=document.getElementById(`shell_${key}`);
+    if(!el)return;
+    el.value=typeof value==="boolean"?String(value):value;
+  });
+}
+function captureShellControls(){
+  const keys=[
+    "navigationPosition","startupPage","topBarHeight","compactTopBar","sidebarWidth",
+    "sidebarDefaultCollapsed","sidebarAutoHide","sidebarAutoHideDelay","sidebarExpandOnHover","sidebarCollapseOnLeave","sidebarShowTooltips","sidebarRememberState","sidebarAnimationMs","showDateTime","showNotifications","topBarBackground","activeColor",
+    "profileVisible","profilePosition","profileLayout","profileMode","profileName",
+    "profileDesignation","profileDepartment","profileEmployeeCode","profileStatusText",
+    "profileImage","profileImageSize","profileImageShape","profileCardWidth","profileCardHeight",
+    "profileCardBackground","profileTextColor","profileRadius","profileShowStatus",
+    "profileShowDepartment","profileHideMobile"
+  ];
+  const numeric=new Set(["topBarHeight","sidebarWidth","sidebarAutoHideDelay","sidebarAnimationMs","profileImageSize","profileCardWidth","profileCardHeight","profileRadius"]);
+  const boolean=new Set(["compactTopBar","sidebarDefaultCollapsed","sidebarAutoHide","sidebarAutoHideDelay","sidebarExpandOnHover","sidebarCollapseOnLeave","sidebarShowTooltips","sidebarRememberState","sidebarAnimationMs","showDateTime","showNotifications","profileVisible","profileShowStatus","profileShowDepartment","profileHideMobile"]);
+  const out={...ERPShellSettings.getLocal()};
+  keys.forEach(key=>{
+    const el=document.getElementById(`shell_${key}`);
+    if(!el)return;
+    out[key]=numeric.has(key)?Number(el.value||0):boolean.has(key)?el.value==="true":el.value;
+  });
+  if(out.profilePosition==="hidden")out.profileVisible=false;
+  return out;
+}
+function renderShellProfilePreview(){
+  if(!document.getElementById("shellProfilePreview"))return;
+  const settings=captureShellControls();
+  settings.profileVisible=true;
+  const location=String(settings.profilePosition).startsWith("left")?"left":"top";
+  shellProfilePreview.innerHTML=ERPShellSettings.profileMarkup(settings,location)||"<span style='font-size:8px;color:#64748b'>Profile card is hidden.</span>";
+}
+function updateShellPreview(){
+  renderShellProfilePreview();
+}
+async function saveShellSettings(){
+  try{
+    const settings=captureShellControls();
+    const dbClient=window.db||window.supabaseClient||db;
+    shellSettings=await ERPShellSettings.save(dbClient,settings);
+    AppTools.toast("ERP layout and profile settings saved for all pages.","success");
+  }catch(error){
+    AppTools.toast(error.message,"error");
+  }
+}
+async function resetShellSettings(){
+  if(!confirm("Reset ERP navigation and profile settings?"))return;
+  shellSettings={...ERPShellSettings.defaults};
+  ERPShellSettings.setLocal(shellSettings);
+  populateShellControls();
+  renderShellProfilePreview();
+  window.dispatchEvent(new CustomEvent("erp-shell-settings-changed",{detail:shellSettings}));
+  AppTools.toast("ERP shell settings reset.","success");
+}
+
+window.addEventListener("beforeunload",event=>{
+  if(!isDirty)return;
+  event.preventDefault();
+  event.returnValue="";
+});
+
+
+function showLeftTab(tab){
+  document.querySelectorAll(".left-tab").forEach(b=>b.classList.toggle("active",b.dataset.leftTab===tab));
+  pagesPanel.classList.toggle("active",tab==="pages");
+  toolboxPanel.classList.toggle("active",tab==="toolbox");
+  pageSearch.placeholder=tab==="pages"?"Search ERP pages...":"Search components...";
+  if(tab==="toolbox")renderVisualToolbox();
+}
+
+function showPropertyTab(tab){
+  document.querySelectorAll(".property-tab").forEach(b=>b.classList.toggle("active",b.dataset.propertyTab===tab));
+  propertiesPanel.classList.toggle("active",tab==="properties");
+  pagePanel.classList.toggle("active",tab==="page");
+  dataPanel.classList.toggle("active",tab==="data");
+  layoutPanel.classList.toggle("active",tab==="layout");
+  themePanel.classList.toggle("active",tab==="theme");
+  if(tab==="data"){renderBuilders();renderVersions()}
+  if(tab==="layout"){populateShellControls();renderShellProfilePreview()}
+  if(tab==="theme"){populateThemeControls();updateThemePreview()}
+}
+
+function addQuickComponent(type){
+  showLeftTab("toolbox");
+  addVisualComponent(type);
+}
+
+const originalRenderPageList=renderPageList;
+renderPageList=function(){
+  const q=pageSearch.value.trim().toLowerCase();
+  const rows=studio.pages.filter(p=>`${p.page_name} ${p.page_group} ${p.page_type}`.toLowerCase().includes(q));
+  const groups=[...new Set(rows.map(r=>r.page_group||"Other"))];
+  pageList.innerHTML=groups.map(group=>`
+    <div class="tree-group">
+      <button class="tree-header" onclick="toggleTreeGroup(this)">
+        <span>${AppTools.escapeHtml(group)}</span><span>▾</span>
+      </button>
+      <div class="tree-items">
+        ${rows.filter(r=>(r.page_group||"Other")===group).map(r=>`
+          <button class="tree-page ${currentPage?.page_key===r.page_key?"active":""}" onclick="selectPage('${r.page_key}')">
+            <span>${AppTools.escapeHtml(r.page_name)}</span><small>${AppTools.escapeHtml(r.page_type)}</small>
+          </button>`).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+function toggleTreeGroup(button){
+  const items=button.nextElementSibling;
+  items.classList.toggle("collapsed");
+  button.lastElementChild.textContent=items.classList.contains("collapsed")?"▸":"▾";
+}
+
+const originalRenderVisualToolbox=renderVisualToolbox;
+renderVisualToolbox=function(){
+  if(!window.ERPComponentLibrary)return;
+  const q=pageSearch.value.trim().toLowerCase();
+  visualToolbox.innerHTML=ERPComponentLibrary.list().filter(c=>`${c.title} ${c.category} ${c.description}`.toLowerCase().includes(q)).map(c=>`
+    <div class="toolbox-item" draggable="true" data-component-type="${c.key}">
+      <span>${c.icon}</span><b>${AppTools.escapeHtml(c.title)}</b><small>${AppTools.escapeHtml(c.description)}</small>
+    </div>`).join("");
+  initDragDrop();
+}
+
+const originalRenderVisualCanvas=renderVisualCanvas;
+renderVisualCanvas=function(){
+  if(!config)return;
+  config.components=config.components||{items:[]};
+  canvasPageTitle.textContent=config.general?.page_title||currentPage?.page_name||"Page";
+  canvasPageSubtitle.textContent=config.general?.page_subtitle||"";
+  const items=[...(config.components.items||[])].sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+  visualCanvas.innerHTML=items.length?items.map((component,index)=>{
+    const definition=ERPComponentLibrary.definitions[component.component_type]||{};
+    return `<div class="canvas-component ${selectedComponentIndex===index?"selected":""}" data-index="${index}" onclick="selectCanvasComponent(${index},event)">
+      <div class="component-toolbar">
+        <div class="component-title">${definition.icon||"▦"} ${AppTools.escapeHtml(component.title||definition.title||component.component_type)}</div>
+        <div class="component-actions">
+          <button class="component-mini drag" title="Drag">⋮⋮</button>
+          <button class="component-mini" onclick="moveComponent(${index},-1,event)" title="Move Up">↑</button>
+          <button class="component-mini" onclick="moveComponent(${index},1,event)" title="Move Down">↓</button>
+          <button class="component-mini" onclick="deleteCanvasComponent(${index},event)" title="Delete">×</button>
+        </div>
+      </div>
+      <div class="component-preview">${visualComponentSample(component)}</div>
+    </div>`;
+  }).join(""):`<div class="canvas-empty">Drag components from the left toolbox<br>or use the quick-add buttons above.</div>`;
+}
+
+function moveComponent(index,direction,event){
+  event.stopPropagation();
+  const next=index+direction;
+  if(next<0||next>=config.components.items.length)return;
+  snapshotStudio();
+  const items=config.components.items;
+  [items[index],items[next]]=[items[next],items[index]];
+  items.forEach((item,i)=>item.order=i+1);
+  selectedComponentIndex=next;
+  renderVisualCanvas();renderComponentRows();renderComponentProperties();initDragDrop();markDirty();
+}
+
+function deleteCanvasComponent(index,event){
+  event.stopPropagation();
+  snapshotStudio();
+  config.components.items.splice(index,1);
+  selectedComponentIndex=-1;
+  renderVisualCanvas();renderComponentRows();renderComponentProperties();initDragDrop();markDirty();
+}
+
+const originalRenderComponentProperties=renderComponentProperties;
+renderComponentProperties=function(){
+  config.components=config.components||{items:[]};
+  const component=config.components.items[selectedComponentIndex];
+  if(!component){
+    componentProperties.className="property-empty";
+    componentProperties.innerHTML="Select a component on the canvas to edit its properties.";
+    return;
+  }
+  const definition=ERPComponentLibrary.definitions[component.component_type]||{};
+  componentProperties.className="";
+  componentProperties.innerHTML=`
+    <div class="property-group">
+      <h3>${AppTools.escapeHtml(definition.title||component.component_type)}</h3>
+      <div class="property-grid">
+        <div class="property-field full"><label>Title</label><input value="${AppTools.escapeHtml(component.title||"")}" oninput="updateSelectedProperty('title',this.value)"></div>
+        <div class="property-field"><label>Order</label><input type="number" value="${component.order||1}" oninput="updateSelectedProperty('order',Number(this.value||1))"></div>
+        <div class="property-field"><label>Visible</label><select onchange="updateSelectedProperty('visible',this.value==='true')"><option value="true" ${component.visible!==false?"selected":""}>Yes</option><option value="false" ${component.visible===false?"selected":""}>No</option></select></div>
+        ${["summary_cards","quick_actions","entry_form"].includes(component.component_type)?`<div class="property-field"><label>Columns</label><input type="number" min="1" max="6" value="${component.columns||4}" oninput="updateSelectedProperty('columns',Number(this.value||1))"></div>`:""}
+        ${component.component_type==="chart_panel"?`<div class="property-field"><label>Chart Type</label><select onchange="updateSelectedProperty('chart_type',this.value)">${["bar","line","doughnut","area"].map(x=>`<option ${x===component.chart_type?"selected":""}>${x}</option>`).join("")}</select></div>`:""}
+        ${component.component_type==="detail_panel"?`<div class="property-field"><label>Display Mode</label><select onchange="updateSelectedProperty('display_mode',this.value)"><option value="modal" ${component.display_mode==="modal"?"selected":""}>Modal</option><option value="inline" ${component.display_mode==="inline"?"selected":""}>Inline</option></select></div>`:""}
+      </div>
+    </div>
+    <div class="property-group">
+      <h3>Actions</h3>
+      <button class="topbar-btn" style="width:100%" onclick="duplicateSelectedComponent()">Duplicate Component</button>
+      <button class="topbar-btn" style="width:100%;margin-top:7px;background:#fee2e2;color:#991b1b;border-color:#fecaca" onclick="deleteSelectedComponent()">Delete Component</button>
+    </div>`;
+}
+
+function duplicateSelectedComponent(){
+  if(selectedComponentIndex<0)return;
+  snapshotStudio();
+  const copy=JSON.parse(JSON.stringify(config.components.items[selectedComponentIndex]));
+  copy.key=`${copy.component_type}_${Date.now()}`;
+  copy.title=`${copy.title} Copy`;
+  copy.order=config.components.items.length+1;
+  config.components.items.push(copy);
+  selectedComponentIndex=config.components.items.length-1;
+  renderVisualCanvas();renderComponentRows();renderComponentProperties();initDragDrop();markDirty();
+}
+
+const originalSelectPage=selectPage;
+selectPage=async function(pageKey){
+  await originalSelectPage(pageKey);
+  topPageMeta.textContent=`${currentPage.page_group} / ${currentPage.page_name}`;
+  renderVisualCanvas();
+  renderComponentProperties();
+  initDragDrop();
+}
+
+const originalUpdateSaveStatus=updateSaveStatus;
+updateSaveStatus=function(){
+  saveStatus.classList.toggle("unsaved",isDirty);
+  saveStatus.querySelector("span:last-child").textContent=isDirty?"Unsaved Changes":"Saved";
+}
+
+pageSearch.addEventListener("input",()=>{
+  if(pagesPanel.classList.contains("active"))renderPageList();
+  if(toolboxPanel.classList.contains("active"))renderVisualToolbox();
+});
+
+const resizeStudioForShell=()=>{
+  const top=document.querySelector(".erp-top-navigation");
+  document.documentElement.style.setProperty("--studio-shell-offset",(top?.offsetHeight||0)+"px");
+};
+window.addEventListener("erp-shell-settings-changed",()=>setTimeout(resizeStudioForShell,20));
+window.addEventListener("load",()=>setTimeout(resizeStudioForShell,100));
+</script>
 </body>
 </html>
