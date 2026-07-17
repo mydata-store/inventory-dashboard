@@ -132,7 +132,7 @@
     if (settings.profileShowDesignation && settings.profileDesignation) info.push(settings.profileDesignation);
     if (settings.profileShowDepartment && settings.profileDepartment) info.push(settings.profileDepartment);
 
-    return `<div class="erp-universal-profile" data-universal-profile="true" data-profile-location="${esc(where)}" class="erp-universal-profile ${settings.profileLayout === "vertical" ? "vertical" : ""}"
+    return `<div class="erp-universal-profile" data-universal-profile="true" data-profile-location="${esc(where)}"
       style="--p-bg:${settings.profileCardBackground};--p-color:${settings.profileTextColor};
       --p-radius:${Number(settings.profileRadius || 12)}px;--p-width:${Number(settings.profileCardWidth || 150)}px;
       --p-height:${Number(settings.profileCardHeight || 70)}px;--p-img:${Number(settings.profileImageSize || 44)}px">
