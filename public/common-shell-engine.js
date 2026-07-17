@@ -26,6 +26,8 @@
     sidebarRememberState: true,
     sidebarAnimationMs: 200,
     profileVisible: true,
+    profileSingleOnly: true,
+    sidebarShowCollapseButton: false,
     profilePosition: "left-bottom",
     profileLayout: "vertical",
     profileMode: "compact",
@@ -123,14 +125,14 @@
 
   function profile(settings, where) {
     if (!settings.profileVisible) return "";
-    if (where === "top" && !String(settings.profilePosition).startsWith("top")) return "";
-    if (where === "left" && !String(settings.profilePosition).startsWith("left")) return "";
+    const pos=settings.profilePosition||"left-bottom";
+    if(pos!==where)return "";
 
     const info = [];
     if (settings.profileShowDesignation && settings.profileDesignation) info.push(settings.profileDesignation);
     if (settings.profileShowDepartment && settings.profileDepartment) info.push(settings.profileDepartment);
 
-    return `<div class="erp-universal-profile ${settings.profileLayout === "vertical" ? "vertical" : ""}"
+    return `<div class="erp-universal-profile" data-universal-profile="true" data-profile-location="${esc(where)}" class="erp-universal-profile ${settings.profileLayout === "vertical" ? "vertical" : ""}"
       style="--p-bg:${settings.profileCardBackground};--p-color:${settings.profileTextColor};
       --p-radius:${Number(settings.profileRadius || 12)}px;--p-width:${Number(settings.profileCardWidth || 150)}px;
       --p-height:${Number(settings.profileCardHeight || 70)}px;--p-img:${Number(settings.profileImageSize || 44)}px">
@@ -188,16 +190,11 @@
   let currentSettings = { ...DEFAULTS };
 
   function removeLegacyProfiles() {
-    const selectors = [
-      ".profile-card:not([data-universal-profile])",
-      ".sidebar-profile:not([data-universal-profile])",
-      ".user-profile:not([data-universal-profile])",
-      ".profile-box:not([data-universal-profile])",
-      ".sidebar-user:not([data-universal-profile])"
-    ];
-    document.querySelectorAll(selectors.join(",")).forEach(el => {
-      if (!el.closest(".erp-universal-profile")) el.remove();
-    });
+    const selectors=[".profile-card:not([data-universal-profile])",".sidebar-profile:not([data-universal-profile])",".user-profile:not([data-universal-profile])",".profile-box:not([data-universal-profile])",".sidebar-user:not([data-universal-profile])"];
+    document.querySelectorAll(selectors.join(",")).forEach(el=>el.remove());
+    const selected=currentSettings.profilePosition||"left-bottom";
+    document.querySelectorAll("[data-universal-profile='true']").forEach(el=>{if(el.dataset.profileLocation!==selected)el.remove()});
+    if(currentSettings.profileSingleOnly!==false){[...document.querySelectorAll("[data-universal-profile='true']")].slice(1).forEach(el=>el.remove())}
   }
 
   function setCollapsed(collapsed, persist = true) {
@@ -266,11 +263,11 @@
 
     if (["top", "hybrid"].includes(s.navigationPosition)) {
       top.innerHTML = `<header class="erp-universal-top ${s.compactTopBar ? "compact" : ""}">
-        <div class="erp-universal-top-left">${profile(s, "top")}${brand(s)}</div>
+        <div class="erp-universal-top-left">${profile(s, "top-left")}${brand(s)}</div>
         <nav>${topMenu()}</nav>
         <div class="erp-universal-top-right">
           ${s.showDateTime ? `<span><strong>${new Date().toLocaleDateString("en-PK", {day:"2-digit",month:"short",year:"2-digit"})}</strong><small>${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</small></span>` : ""}
-          ${s.showNotifications ? `<button title="Notifications">🔔</button>` : ""}
+          ${s.showNotifications ? `<button title="Notifications">🔔</button>` : ""}${profile(s, "top-right")}
         </div>
       </header>`;
     }
@@ -281,7 +278,7 @@
         ${brand(s)}
         <nav>${sideMenu()}</nav>
         ${profile(s, "left-bottom")}
-        <button class="erp-side-collapse" onclick="window.ERPUniversalShell.toggleCollapse()">⇔</button>
+        ${s.sidebarShowCollapseButton ? `<button class="erp-side-collapse" onclick="window.ERPUniversalShell.toggleCollapse()">⇔</button>` : ""}
       </aside>`;
     }
 
