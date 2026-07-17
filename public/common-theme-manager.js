@@ -20,7 +20,7 @@ window.ERPThemeManager = {
 
   presets: {
     eyeComfortNavy: {
-      name:"Eye Comfort Navy",pageLayout:"full",pageWidth:1440,pageMaxWidth:1900,pageMinHeight:700,pagePadding:16,sectionGap:12,
+      name:"Eye Comfort Navy",pageLayout:"full",pageWidth:1440,pageMaxWidth:1900,pageMinHeight:700,pagePadding:16,sectionGap:12,cardGap:12,desktopWidth:1440,laptopWidth:1180,tabletWidth:768,mobileWidth:390,
       pageBackground:"#f8fafc",workspaceBackground:"#eef3f8",cardBackground:"#ffffff",primaryText:"#0f172a",mutedText:"#64748b",
       borderColor:"#dbe3ee",cardBorderWidth:1,cardRadius:12,cardPadding:14,shadowStrength:"soft",
       primaryColor:"#2563eb",secondaryColor:"#f59e0b",successColor:"#16a34a",warningColor:"#f97316",dangerColor:"#dc2626",infoColor:"#2563eb",
@@ -31,7 +31,7 @@ window.ERPThemeManager = {
       tableHeaderBackground:"#f59e0b",tableHeaderText:"#111827",tableHeaderHeight:38,tableHeaderAlignment:"center",freezeTableHeader:true,frozenColumns:0,
       tableRowHeight:36,tableAlternateRow:"#fbfdff",tableRowHover:"#f8fafc",tableBorderColor:"#dbe3ee",tableBorderWidth:1,tableDensity:"comfortable",tableZebra:true,tableGridLines:true,
       inputBackground:"#ffffff",inputBorder:"#cbd5e1",inputRadius:8,
-      buttonHeight:34,buttonRadius:8,buttonBorderWidth:0,buttonIconPosition:"left",buttonHoverEffect:"lift",buttonShadow:"soft",
+      buttonStyle:"modern",buttonShape:"rounded",buttonWidthMode:"auto",buttonHeight:34,buttonRadius:8,buttonBorderWidth:0,buttonIconPosition:"left",buttonIconSize:14,buttonShowIcons:true,buttonPressAnimation:true,buttonHoverEffect:"lift",buttonShadow:"soft",
       graphType:"bar",graphHeight:300,graphBackground:"#ffffff",graphPrimaryColor:"#2563eb",graphSecondaryColor:"#f59e0b",graphGridColor:"#dbe3ee",
       graphLegendPosition:"top",graphAnimation:true,graphDataLabels:true,graphTooltips:true,graphGridLines:true,graphExport:"both",
       density:"comfortable",darkMode:false,fonts:null
@@ -135,7 +135,8 @@ window.ERPThemeManager = {
       "--topbar-bg":t.topBarBackground,"--topbar-text":t.topBarText,"--sidebar-bg":t.sidebarBackground,"--sidebar-text":t.sidebarText,
       "--active-bg":t.activeBackground,"--active-text":t.activeText,"--hover-bg":t.hoverBackground,"--hover-text":t.hoverText,
       "--page-width":`${Number(t.pageWidth)}px`,"--page-max-width":`${Number(t.pageMaxWidth)}px`,"--page-min-height":`${Number(t.pageMinHeight)}px`,
-      "--page-padding":`${Number(t.pagePadding)}px`,"--section-gap":`${Number(t.sectionGap)}px`,
+      "--page-padding":`${Number(t.pagePadding)}px`,"--section-gap":`${Number(t.sectionGap)}px`,"--card-gap":`${Number(t.cardGap||12)}px`,
+      "--desktop-width":`${Number(t.desktopWidth||1440)}px`,"--laptop-width":`${Number(t.laptopWidth||1180)}px`,"--tablet-width":`${Number(t.tabletWidth||768)}px`,"--mobile-width":`${Number(t.mobileWidth||390)}px`,
       "--card-radius":`${Number(t.cardRadius)}px`,"--card-padding":`${Number(t.cardPadding)}px`,"--card-border-width":`${Number(t.cardBorderWidth)}px`,"--theme-shadow":shadow,
       "--header-height":`${Number(t.headerHeight)}px`,
       "--table-header-bg":t.tableHeaderBackground,"--table-header-text":t.tableHeaderText,"--table-header-height":`${Number(t.tableHeaderHeight)}px`,
@@ -143,6 +144,7 @@ window.ERPThemeManager = {
       "--table-border":t.tableBorderColor,"--table-border-width":`${Number(t.tableBorderWidth)}px`,
       "--input-bg":t.inputBackground,"--input-border":t.inputBorder,"--input-radius":`${Number(t.inputRadius||8)}px`,
       "--button-height":`${Number(t.buttonHeight)}px`,"--button-radius":`${Number(t.buttonRadius)}px`,"--button-border-width":`${Number(t.buttonBorderWidth)}px`,"--button-shadow":buttonShadow,
+      "--button-icon-size":`${Number(t.buttonIconSize||14)}px`,
       "--graph-bg":t.graphBackground,"--graph-primary":t.graphPrimaryColor,"--graph-secondary":t.graphSecondaryColor,"--graph-grid":t.graphGridColor,
       ...this.cssFontVars(t.fonts)
     };
@@ -153,6 +155,11 @@ window.ERPThemeManager = {
     document.body.classList.toggle("erp-table-zebra",Boolean(t.tableZebra));
     document.body.classList.toggle("erp-table-grid",Boolean(t.tableGridLines));
     document.body.dataset.themeButtonHover=t.buttonHoverEffect||"lift";
+    document.body.dataset.themeButtonStyle=t.buttonStyle||"modern";
+    document.body.dataset.themeButtonShape=t.buttonShape||"rounded";
+    document.body.dataset.themeButtonWidth=t.buttonWidthMode||"auto";
+    document.body.dataset.themeButtonIcons=t.buttonShowIcons===false?"hidden":"shown";
+    document.body.dataset.themeButtonPress=t.buttonPressAnimation===false?"off":"on";
     document.body.dataset.pageLayout=t.pageLayout||"full";
   },
 
