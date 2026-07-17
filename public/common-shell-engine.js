@@ -23,7 +23,7 @@
     sidebarExpandOnHover: true,
     sidebarCollapseOnLeave: true,
     sidebarShowTooltips: true,
-    sidebarRememberState: true,
+    sidebarRememberState: false,
     sidebarAnimationMs: 200,
     profileVisible: true,
     profileSingleOnly: true,
@@ -189,6 +189,33 @@
   let autoHideTimer = null;
   let currentSettings = { ...DEFAULTS };
 
+
+  function removeSidebarArrowControls() {
+    const side = document.querySelector(".erp-universal-side");
+    if (!side) return;
+
+    const selectors = [
+      ".erp-side-collapse",
+      ".erp-sidebar-collapse",
+      ".sidebar-collapse",
+      ".sidebar-toggle",
+      ".collapse-sidebar",
+      "[data-action='collapse-sidebar']",
+      "[data-role='sidebar-collapse']",
+      ".sidebar-chevron-control"
+    ];
+
+    side.querySelectorAll(selectors.join(",")).forEach(el => el.remove());
+
+    side.querySelectorAll("button,div,span").forEach(el => {
+      if (el.closest(".erp-side-group>button")) return;
+      const value = (el.textContent || "").replace(/\s+/g, "");
+      if (["⇔","↔","◀▶","▶◀","‹›","«»","←→"].includes(value)) {
+        el.remove();
+      }
+    });
+  }
+
   function removeLegacyProfiles() {
     const selectors=[".profile-card:not([data-universal-profile])",".sidebar-profile:not([data-universal-profile])",".user-profile:not([data-universal-profile])",".profile-box:not([data-universal-profile])",".sidebar-user:not([data-universal-profile])"];
     document.querySelectorAll(selectors.join(",")).forEach(el=>el.remove());
@@ -223,41 +250,32 @@
   }
 
 
+
   function bindSidebarBehavior() {
     const side = document.querySelector(".erp-universal-side");
     if (!side) return;
 
-    side.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 200)}ms`);
+    side.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 180)}ms`);
 
-    side.addEventListener("mouseenter", () => {
+    const expand = () => {
       clearAutoHideTimer();
-      if (currentSettings.sidebarExpandOnHover !== false) {
-        setCollapsed(false, false);
-      }
-    });
+      setCollapsed(false, false);
+    };
 
-    side.addEventListener("mouseleave", () => {
+    const minimize = () => {
       clearAutoHideTimer();
-      if (currentSettings.sidebarCollapseOnLeave !== false) {
-        setCollapsed(true);
-      } else {
-        scheduleAutoHide();
-      }
+      setCollapsed(true, false);
+    };
+
+    side.onpointerenter = expand;
+    side.onpointerleave = minimize;
+    side.onmouseenter = expand;
+    side.onmouseleave = minimize;
+
+    // Start minimized unless the pointer is already inside the sidebar.
+    requestAnimationFrame(() => {
+      if (!side.matches(":hover")) minimize();
     });
-
-    side.addEventListener("click", () => {
-      clearAutoHideTimer();
-    });
-
-    if (currentSettings.sidebarRememberState) {
-      const saved = localStorage.getItem("erp_sidebar_collapsed_v1");
-      if (saved === "1") setCollapsed(true, false);
-      if (saved === "0") setCollapsed(false, false);
-    }
-
-    if (currentSettings.sidebarAutoHide) {
-      scheduleAutoHide();
-    }
   }
 
   function render(settings) {
@@ -304,7 +322,14 @@
       const topHeight = document.querySelector(".erp-universal-top")?.offsetHeight || 0;
       document.documentElement.style.setProperty("--erp-live-top-height", `${topHeight}px`);
       removeLegacyProfiles();
+      removeSidebarArrowControls();
       bindSidebarBehavior();
+
+      const side = document.querySelector(".erp-universal-side");
+      if (side && !side._arrowObserver) {
+        side._arrowObserver = new MutationObserver(removeSidebarArrowControls);
+        side._arrowObserver.observe(side, {childList:true, subtree:true});
+      }
     });
   }
 
