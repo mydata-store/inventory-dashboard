@@ -244,6 +244,62 @@
   .work{padding:10px!important}
 }
 
+
+/* V32 Theme Page Designer */
+.theme-toolbar-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:12px;
+}
+.theme-toolbar-title strong{display:block;font-size:11px}
+.theme-toolbar-title span{display:block;color:#64748b;font-size:8px;margin-top:3px}
+.theme-toolbar-actions{display:flex;gap:7px;flex-wrap:wrap}
+.selected-pages-box{
+  margin-top:10px;
+  padding:10px;
+  border:1px dashed #94a3b8;
+  border-radius:9px;
+  background:#f8fafc;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 14px;
+}
+.selected-pages-box[hidden]{display:none!important}
+.selected-pages-box label{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:8px;
+  font-weight:700;
+}
+.font-global-bar{
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) auto;
+  gap:10px;
+  align-items:end;
+  padding:10px;
+  margin-bottom:12px;
+  border:1px solid #dbe3ee;
+  background:#f8fafc;
+  border-radius:10px;
+}
+.font-sample{
+  margin-top:7px;
+  padding:7px 8px;
+  border:1px solid #dbe3ee;
+  border-radius:7px;
+  background:#fff;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+@media(max-width:760px){
+  .theme-toolbar-title{align-items:flex-start;flex-direction:column}
+  .font-global-bar{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body><div id="appSidebar"></div><main class="app-main"><div class="studio">
@@ -258,58 +314,82 @@
     <div class="panel-breadcrumb">ERP Design Studio &gt; Theme Controller</div>
     <div>
       <h2>Theme Controller</h2>
-      <p>Complete visual design package for pages, tables, buttons, graphs and section-level fonts.</p>
+      <p>Design the selected ERP page, button system and section fonts from one visual workspace.</p>
     </div>
   </div>
 
-  <div class="theme-toolbar card">
-    <div class="grid theme-toolbar-grid">
-      <div class="field">
-        <label>Theme Preset</label>
-        <select id="themePreset" onchange="loadPreset()">
-          <option value="eyeComfortNavy">Eye Comfort Navy</option>
-          <option value="professionalBlue">Professional Blue</option>
-          <option value="storeGreen">Store Green</option>
-          <option value="charcoal">Charcoal</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Apply Scope</label>
-        <select id="themeScope">
-          <option value="global">Entire ERP</option>
-          <option value="page">Current Page</option>
-          <option value="selected">Selected Pages</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Target Page</label>
-        <select id="themePageKey">
-          <option value="erp-design-studio">ERP Design Studio</option>
-          <option value="dashboard">Dashboard</option>
-          <option value="purchase-entry">Purchase Entry</option>
-          <option value="issue-entry">Issue Entry</option>
-          <option value="gate-pass">Gate Pass</option>
-          <option value="stock-ledger">Stock Ledger</option>
-          <option value="reports">Reports</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Live Preview</label>
-        <select id="themeLivePreview">
-          <option value="true">Enabled</option>
-          <option value="false">Disabled</option>
-        </select>
-      </div>
+  
+<div class="theme-toolbar card">
+  <div class="theme-toolbar-title">
+    <div>
+      <strong>Design Target</strong>
+      <span>Select where this design will be applied.</span>
+    </div>
+    <div class="theme-toolbar-actions">
+      <button class="btn gray" type="button" onclick="resetThemeOnly()">Reset</button>
+      <button class="btn blue" type="button" onclick="openFullPreview()">Full Screen Preview</button>
+      <button class="btn green" type="button" onclick="saveTheme()">Save & Apply</button>
     </div>
   </div>
+  <div class="grid theme-toolbar-grid">
+    <div class="field">
+      <label>Theme Preset</label>
+      <select id="themePreset" onchange="loadPreset()">
+        <option value="eyeComfortNavy">Eye Comfort Navy</option>
+        <option value="professionalBlue">Professional Blue</option>
+        <option value="storeGreen">Store Green</option>
+        <option value="charcoal">Charcoal</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Apply Scope</label>
+      <select id="themeScope" onchange="updateThemeScopeUI()">
+        <option value="page">Current Page</option>
+        <option value="global">Entire ERP</option>
+        <option value="selected">Selected Pages</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Page to Design</label>
+      <select id="themePageKey">
+        <option value="erp-design-studio">ERP Design Studio</option>
+        <option value="dashboard">Dashboard</option>
+        <option value="purchase-entry">Purchase Entry</option>
+        <option value="purchase-list">Purchase List</option>
+        <option value="issue-entry">Issue Entry</option>
+        <option value="gate-pass">Gate Pass</option>
+        <option value="stock-ledger">Stock Ledger</option>
+        <option value="reports">Reports</option>
+        <option value="masters">Masters</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Live Changes</label>
+      <select id="themeLivePreview">
+        <option value="true">Preview Automatically</option>
+        <option value="false">Preview Manually</option>
+      </select>
+    </div>
+  </div>
+  <div id="selectedPagesBox" class="selected-pages-box" hidden>
+    <label><input type="checkbox" value="dashboard"> Dashboard</label>
+    <label><input type="checkbox" value="purchase-entry"> Purchase Entry</label>
+    <label><input type="checkbox" value="purchase-list"> Purchase List</label>
+    <label><input type="checkbox" value="issue-entry"> Issue Entry</label>
+    <label><input type="checkbox" value="gate-pass"> Gate Pass</label>
+    <label><input type="checkbox" value="stock-ledger"> Stock Ledger</label>
+    <label><input type="checkbox" value="reports"> Reports</label>
+    <label><input type="checkbox" value="masters"> Masters</label>
+  </div>
+</div>
 
-  <div class="theme-tabs">
-    <button class="active" data-theme-tab="pageDesign" onclick="openThemeTab('pageDesign',this)">Page Design</button>
+<div class="theme-tabs">
+    <button class="active" data-theme-tab="pageDesign" onclick="openThemeTab('pageDesign',this)">1. Page Design</button>
+    <button data-theme-tab="buttons" onclick="openThemeTab('buttons',this)">2. Button Designer</button>
+    <button data-theme-tab="fonts" onclick="openThemeTab('fonts',this)">3. Font Manager</button>
     <button data-theme-tab="titles" onclick="openThemeTab('titles',this)">Titles & Headers</button>
     <button data-theme-tab="tables" onclick="openThemeTab('tables',this)">Tables</button>
-    <button data-theme-tab="buttons" onclick="openThemeTab('buttons',this)">Buttons</button>
     <button data-theme-tab="graphs" onclick="openThemeTab('graphs',this)">Graphs</button>
-    <button data-theme-tab="fonts" onclick="openThemeTab('fonts',this)">Font Manager</button>
   </div>
 
   <div id="pageDesign" class="theme-section active">
@@ -322,6 +402,11 @@
         <div class="field"><label>Minimum Page Height</label><input type="number" data-theme-key="pageMinHeight" min="400" max="3000"></div>
         <div class="field"><label>Page Padding</label><input type="number" data-theme-key="pagePadding" min="0" max="80"></div>
         <div class="field"><label>Section Gap</label><input type="number" data-theme-key="sectionGap" min="0" max="60"></div>
+        <div class="field"><label>Card Gap</label><input type="number" data-theme-key="cardGap" min="0" max="60"></div>
+        <div class="field"><label>Desktop Content Width</label><input type="number" data-theme-key="desktopWidth" min="1000" max="2200"></div>
+        <div class="field"><label>Laptop Content Width</label><input type="number" data-theme-key="laptopWidth" min="850" max="1600"></div>
+        <div class="field"><label>Tablet Content Width</label><input type="number" data-theme-key="tabletWidth" min="600" max="1100"></div>
+        <div class="field"><label>Mobile Content Width</label><input type="number" data-theme-key="mobileWidth" min="320" max="600"></div>
         <div class="field"><label>Page Background</label><input type="color" data-theme-key="pageBackground"></div>
         <div class="field"><label>Workspace Background</label><input type="color" data-theme-key="workspaceBackground"></div>
       </div>
@@ -394,13 +479,20 @@
   <div id="buttons" class="theme-section">
     <div class="card">
       <h3 class="section-title">Button Shape & Behaviour</h3>
+      <p class="section-note">Choose one standard button system for the selected page.</p>
       <div class="grid">
+        <div class="field"><label>Button Style</label><select data-theme-key="buttonStyle"><option value="modern">Modern</option><option value="flat">Flat</option><option value="outline">Outline</option><option value="gradient">Gradient</option><option value="glass">Glass</option></select></div>
+        <div class="field"><label>Button Shape</label><select data-theme-key="buttonShape"><option value="rounded">Rounded</option><option value="pill">Pill</option><option value="square">Square</option></select></div>
+        <div class="field"><label>Button Width</label><select data-theme-key="buttonWidthMode"><option value="auto">Auto</option><option value="compact">Compact</option><option value="wide">Wide</option><option value="full">Full Width</option></select></div>
         <div class="field"><label>Button Height</label><input type="number" data-theme-key="buttonHeight" min="24" max="80"></div>
         <div class="field"><label>Button Radius</label><input type="number" data-theme-key="buttonRadius" min="0" max="40"></div>
         <div class="field"><label>Border Width</label><input type="number" data-theme-key="buttonBorderWidth" min="0" max="6"></div>
         <div class="field"><label>Icon Position</label><select data-theme-key="buttonIconPosition"><option value="left">Left</option><option value="right">Right</option><option value="top">Top</option></select></div>
         <div class="field"><label>Hover Effect</label><select data-theme-key="buttonHoverEffect"><option value="lift">Lift</option><option value="darken">Darken</option><option value="glow">Glow</option><option value="none">None</option></select></div>
         <div class="field"><label>Button Shadow</label><select data-theme-key="buttonShadow"><option value="none">None</option><option value="soft">Soft</option><option value="strong">Strong</option></select></div>
+        <div class="field"><label>Show Icons</label><select data-theme-key="buttonShowIcons"><option value="true">Show</option><option value="false">Hide</option></select></div>
+        <div class="field"><label>Icon Size</label><input type="number" data-theme-key="buttonIconSize" min="8" max="32"></div>
+        <div class="field"><label>Press Animation</label><select data-theme-key="buttonPressAnimation"><option value="true">Enabled</option><option value="false">Disabled</option></select></div>
       </div>
     </div>
     <div class="card">
@@ -441,18 +533,17 @@
   <div id="fonts" class="theme-section">
     <div class="card">
       <h3 class="section-title">Font Manager — Choose Fonts for Every Section</h3>
-      <p class="section-note">Each section has independent family, size, weight, color, spacing and line height.</p>
+      <p class="section-note">Use the searchable font boxes. Fonts are shown using browser-safe Windows and professional web families.</p>
+      <datalist id="erpFontLibrary"></datalist>
+      <div class="font-global-bar">
+        <div class="field"><label>Global Default Font</label><input id="globalThemeFont" list="erpFontLibrary" placeholder="Type or select a font"></div>
+        <button class="btn blue" type="button" onclick="applyGlobalFontToSections()">Apply to All Sections</button>
+      </div>
       <div id="themeFontManager" class="font-manager-grid"></div>
     </div>
   </div>
 
-  <div class="card theme-savebar">
-    <button class="btn gray" onclick="resetThemeOnly()">Reset Theme</button>
-    <button class="btn blue" onclick="refreshThemePreview()">Preview Changes</button>
-    <button class="btn green" onclick="saveTheme()">Save & Apply Theme</button>
   </div>
-</div>
-
 <div id="profile" class="panel"><div class="head"><div><h2>Profile Card Controller</h2><p>Manage the single universal profile card.</p></div></div><div class="card"><div class="grid"><div class="field"><label>Show Profile</label><select id="pVisible"><option value="true">Yes</option><option value="false">No</option></select></div><div class="field"><label>One Profile Only</label><select id="pSingle"><option value="true">Yes</option><option value="false">No</option></select></div><div class="field"><label>Position</label><select id="pPosition"><option value="left-bottom">Sidebar Bottom</option><option value="left-top">Sidebar Top</option><option value="top-left">Top Left</option><option value="top-right">Top Right</option></select></div><div class="field full"><label>Name</label><input id="pName"></div><div class="field full"><label>Designation</label><input id="pDesignation"></div><div class="field full"><label>Image Path</label><input id="pImage"></div><div class="field"><label>Image Size</label><input id="pImageSize" type="number"></div><div class="field"><label>Status</label><input id="pStatus"></div><div class="field"><label>Background</label><input id="pBg" type="color"></div><div class="field"><label>Text Color</label><input id="pColor" type="color"></div></div><button class="btn green" style="margin-top:12px" onclick="saveShell()">Save Profile for Entire ERP</button></div></div>
 <div id="fonts" class="panel"><div class="head"><div><h2>Fonts Controller</h2><p>Change fonts globally without editing CSS.</p></div></div><div class="card"><div class="grid"><div class="field full"><label>Font Family</label><select id="fFamily" onchange="fontPreview()"><option value="Inter, Arial, sans-serif">Inter</option><option value="Arial, sans-serif">Arial</option><option value="'Segoe UI', Arial, sans-serif">Segoe UI</option><option value="Roboto, Arial, sans-serif">Roboto</option><option value="Verdana, sans-serif">Verdana</option></select></div><div class="field"><label>Base Font Size</label><input id="fBase" type="number" value="14" oninput="fontPreview()"></div><div class="field"><label>Heading Weight</label><select id="fWeight" onchange="fontPreview()"><option value="600">Semi Bold</option><option value="700">Bold</option><option value="800">Extra Bold</option></select></div><div class="field"><label>Table Font Size</label><input id="fTable" type="number" value="11"></div><div class="field"><label>Form Font Size</label><input id="fForm" type="number" value="12"></div><div class="field full"><div id="fontSample" class="sample">Inventory Store — Purchase Entry — MS Welding Rod 6013</div></div></div><button class="btn green" style="margin-top:12px" onclick="saveFonts()">Save Fonts for Entire ERP</button></div></div>
 <div id="autofill" class="panel"><div class="head"><div><h2>Autofill Controller</h2><p>Control automatic values from masters.</p></div></div><div class="card"><div id="rules"><div class="rule"><select><option>Item Master</option><option>Supplier Master</option><option>Department Master</option><option>Workshop Master</option></select><input placeholder="Source field"><input placeholder="Target field"><button class="btn gray" onclick="this.parentElement.remove()">Remove</button></div></div><button class="btn blue" onclick="addRule()">Add Rule</button><button class="btn green" onclick="saveAutofill()">Save Autofill Rules</button></div></div>
@@ -545,32 +636,56 @@ const THEME_FONT_SECTIONS = [
   ["graphTitle","Graph Titles","Chart heading"],
   ["graphLabel","Graph Labels","Axis, legend and values"]
 ];
-const FONT_FAMILIES = [
-  "Inter, Arial, sans-serif",
-  "Arial, Helvetica, sans-serif",
-  "Roboto, Arial, sans-serif",
-  "Poppins, Arial, sans-serif",
-  "Montserrat, Arial, sans-serif",
-  "Segoe UI, Arial, sans-serif",
-  "Tahoma, Arial, sans-serif",
-  "Verdana, Arial, sans-serif",
-  "Georgia, serif",
-  "Times New Roman, serif"
-];
+const FONT_FAMILIES = ['Arial','Arial Black','Bahnschrift','Calibri','Cambria','Candara','Century Gothic','Comic Sans MS','Consolas','Constantia','Corbel','Courier New','Franklin Gothic Medium','Garamond','Georgia','Gill Sans','Impact','Inter','Lato','Lucida Console','Lucida Sans Unicode','Microsoft Sans Serif','Montserrat','Noto Sans','Nunito','Open Sans','Palatino Linotype','Poppins','Roboto','Segoe UI','Segoe UI Variable','Tahoma','Times New Roman','Trebuchet MS','Verdana'];
 
 function buildThemeFontManager(){
+  erpFontLibrary.innerHTML=FONT_FAMILIES.map(font=>`<option value="${font}"></option>`).join("");
   themeFontManager.innerHTML=THEME_FONT_SECTIONS.map(([key,title,note])=>`
-    <div class="font-row">
-      <div><h4>${title}</h4><small>${note}</small></div>
-      <div class="field"><label>Font Family</label><select data-font-key="${key}" data-font-prop="family">${FONT_FAMILIES.map(f=>`<option value="${f}">${f.split(",")[0]}</option>`).join("")}</select></div>
+    <div class="font-row" data-font-row="${key}">
+      <div><h4>${title}</h4><small>${note}</small><div class="font-sample" data-font-sample="${key}">Inventory ERP Aa 123</div></div>
+      <div class="field"><label>Font Family</label><input list="erpFontLibrary" data-font-key="${key}" data-font-prop="family" placeholder="Search font"></div>
       <div class="field"><label>Size</label><input type="number" min="7" max="48" data-font-key="${key}" data-font-prop="size"></div>
       <div class="field"><label>Weight</label><select data-font-key="${key}" data-font-prop="weight"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semi Bold</option><option value="700">Bold</option><option value="800">Extra Bold</option><option value="900">Black</option></select></div>
       <div class="field"><label>Color</label><input type="color" data-font-key="${key}" data-font-prop="color"></div>
       <div class="field"><label>Letter Space</label><input type="number" step=".1" min="-2" max="10" data-font-key="${key}" data-font-prop="letterSpacing"></div>
       <div class="field"><label>Line Height</label><input type="number" step=".1" min=".8" max="3" data-font-key="${key}" data-font-prop="lineHeight"></div>
     </div>`).join("");
-  document.querySelectorAll("[data-font-key]").forEach(el=>el.addEventListener("input",themeInputChanged));
+  document.querySelectorAll("[data-font-key]").forEach(el=>el.addEventListener("input",()=>{
+    updateFontSamples();
+    themeInputChanged();
+  }));
 }
+
+function updateFontSamples(){
+  document.querySelectorAll("[data-font-sample]").forEach(sample=>{
+    const key=sample.dataset.fontSample;
+    const row=document.querySelector(`[data-font-row="${key}"]`);
+    if(!row) return;
+    const family=row.querySelector(`[data-font-key="${key}"][data-font-prop="family"]`)?.value||"Inter";
+    const size=row.querySelector(`[data-font-key="${key}"][data-font-prop="size"]`)?.value||10;
+    const weight=row.querySelector(`[data-font-key="${key}"][data-font-prop="weight"]`)?.value||400;
+    const color=row.querySelector(`[data-font-key="${key}"][data-font-prop="color"]`)?.value||"#0f172a";
+    sample.style.fontFamily=`"${family}", Arial, sans-serif`;
+    sample.style.fontSize=`${Math.max(10,Math.min(18,Number(size)))}px`;
+    sample.style.fontWeight=weight;
+    sample.style.color=color;
+  });
+}
+function applyGlobalFontToSections(){
+  const font=(globalThemeFont.value||"").trim();
+  if(!font){
+    AppTools.toast("Select or type a font first","warning");
+    return;
+  }
+  document.querySelectorAll('[data-font-prop="family"]').forEach(input=>input.value=font);
+  updateFontSamples();
+  themeInputChanged();
+  AppTools.toast(`${font} applied to all theme sections`,"success");
+}
+function updateThemeScopeUI(){
+  selectedPagesBox.hidden=themeScope.value!=="selected";
+}
+
 function openThemeTab(id,btn){
   document.querySelectorAll(".theme-section").forEach(x=>x.classList.toggle("active",x.id===id));
   document.querySelectorAll(".theme-tabs button").forEach(x=>x.classList.toggle("active",x===btn));
@@ -591,6 +706,7 @@ function collectTheme(){
   });
   t.scope=themeScope.value;
   t.pageKey=themePageKey.value;
+  t.selectedPages=[...document.querySelectorAll('#selectedPagesBox input:checked')].map(input=>input.value);
   return t;
 }
 function loadTheme(){
@@ -609,6 +725,8 @@ function loadTheme(){
   });
   themeScope.value=t.scope||"global";
   themePageKey.value=t.pageKey||"erp-design-studio";
+  updateFontSamples();
+  updateThemeScopeUI();
   refreshThemePreview();
 }
 function loadPreset(){
@@ -626,7 +744,8 @@ function refreshThemePreview(){
 async function saveTheme(){
   const t=collectTheme();
   await ERPThemeManager.save(db,t,{scope:t.scope,pageKey:t.pageKey});
-  AppTools.toast(`Theme saved for ${t.scope==="global"?"entire ERP":t.pageKey}`,"success");
+  const target=t.scope==="global"?"entire ERP":t.scope==="selected"?`${t.selectedPages.length} selected pages`:t.pageKey;
+  AppTools.toast(`Theme saved for ${target}`,"success");
   refreshThemePreview();
 }
 function resetThemeOnly(){
