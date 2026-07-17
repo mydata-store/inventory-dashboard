@@ -222,24 +222,42 @@
     }, Math.max(1000, Number(currentSettings.sidebarAutoHideDelay || 5000)));
   }
 
+
   function bindSidebarBehavior() {
     const side = document.querySelector(".erp-universal-side");
     if (!side) return;
+
     side.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 200)}ms`);
+
     side.addEventListener("mouseenter", () => {
       clearAutoHideTimer();
-      if (currentSettings.sidebarExpandOnHover) setCollapsed(false, false);
+      if (currentSettings.sidebarExpandOnHover !== false) {
+        setCollapsed(false, false);
+      }
     });
+
     side.addEventListener("mouseleave", () => {
-      if (currentSettings.sidebarCollapseOnLeave) scheduleAutoHide();
+      clearAutoHideTimer();
+      if (currentSettings.sidebarCollapseOnLeave !== false) {
+        setCollapsed(true);
+      } else {
+        scheduleAutoHide();
+      }
     });
-    side.addEventListener("click", scheduleAutoHide);
+
+    side.addEventListener("click", () => {
+      clearAutoHideTimer();
+    });
+
     if (currentSettings.sidebarRememberState) {
       const saved = localStorage.getItem("erp_sidebar_collapsed_v1");
       if (saved === "1") setCollapsed(true, false);
       if (saved === "0") setCollapsed(false, false);
     }
-    scheduleAutoHide();
+
+    if (currentSettings.sidebarAutoHide) {
+      scheduleAutoHide();
+    }
   }
 
   function render(settings) {
@@ -278,7 +296,7 @@
         ${brand(s)}
         <nav>${sideMenu()}</nav>
         ${profile(s, "left-bottom")}
-        ${s.sidebarShowCollapseButton ? `<button class="erp-side-collapse" onclick="window.ERPUniversalShell.toggleCollapse()">⇔</button>` : ""}
+        
       </aside>`;
     }
 
