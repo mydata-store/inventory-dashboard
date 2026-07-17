@@ -157,7 +157,7 @@
         return `<a class="erp-side-item ${matches(item) ? "active" : ""}" href="${item.href}" data-label="${esc(item.label)}" title="${esc(item.label)}">
           <b>${item.icon}</b><span>${esc(item.label)}</span></a>`;
       }
-      const open = item.children.some(matches);
+      const open = false;
       const id = `erpSideGroup_${item.id || index}`;
       return `<div class="erp-side-group ${open ? "open" : ""}" id="${id}">
         <button type="button" data-label="${esc(item.label)}" title="${esc(item.label)}" onclick="window.ERPUniversalShell.toggleSide('${id}')">
@@ -264,6 +264,7 @@
 
     const minimize = () => {
       clearAutoHideTimer();
+      side.querySelectorAll(".erp-side-group.open").forEach(group => group.classList.remove("open"));
       setCollapsed(true, false);
     };
 
