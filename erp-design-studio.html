@@ -722,6 +722,42 @@
   .table-general-bar{grid-template-columns:1fr 1fr}
 }
 
+
+/* V36 — Reliable Font Library */
+.font-global-bar{
+  grid-template-columns:minmax(240px,.8fr) minmax(280px,1.2fr) auto!important;
+}
+.font-global-preview{
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  padding:8px 12px;
+  border:1px solid #dbe3ee;
+  border-radius:8px;
+  background:#fff;
+  font-size:12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.font-row select[data-font-prop="family"],
+#globalThemeFont{
+  cursor:pointer;
+  font-size:9px;
+}
+.font-row-intro{min-width:0}
+.font-sample{
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  font-size:13px!important;
+}
+@media(max-width:900px){
+  .font-global-bar{
+    grid-template-columns:1fr!important;
+  }
+}
+
 </style>
 </head>
 <body><div id="appSidebar"></div><main class="app-main"><div class="studio">
@@ -1368,9 +1404,12 @@
     <div class="card">
       <h3 class="section-title">Font Manager — Choose Fonts for Every Section</h3>
       <p class="section-note">Use the searchable font boxes. Fonts are shown using browser-safe Windows and professional web families.</p>
-      <datalist id="erpFontLibrary"></datalist>
       <div class="font-global-bar">
-        <div class="field"><label>Global Default Font</label><input id="globalThemeFont" list="erpFontLibrary" placeholder="Type or select a font"></div>
+        <div class="field">
+          <label>Global Default Font</label>
+          <select id="globalThemeFont"></select>
+        </div>
+        <div class="font-global-preview" id="globalFontPreview">Inventory ERP — Purchase, Store & Gate Pass</div>
         <button class="btn blue" type="button" onclick="applyGlobalFontToSections()">Apply to All Sections</button>
       </div>
       <div id="themeFontManager" class="font-manager-grid"></div>
@@ -2089,24 +2128,48 @@ const THEME_FONT_SECTIONS = [
   ["graphTitle","Graph Titles","Chart heading"],
   ["graphLabel","Graph Labels","Axis, legend and values"]
 ];
-const FONT_FAMILIES = ['Arial','Arial Black','Bahnschrift','Calibri','Cambria','Candara','Century Gothic','Comic Sans MS','Consolas','Constantia','Corbel','Courier New','Franklin Gothic Medium','Garamond','Georgia','Gill Sans','Impact','Inter','Lato','Lucida Console','Lucida Sans Unicode','Microsoft Sans Serif','Montserrat','Noto Sans','Nunito','Open Sans','Palatino Linotype','Poppins','Roboto','Segoe UI','Segoe UI Variable','Tahoma','Times New Roman','Trebuchet MS','Verdana'];
+const FONT_FAMILIES = ['Segoe UI','Segoe UI Variable','Aptos','Aptos Display','Calibri','Arial','Arial Narrow','Arial Black','Bahnschrift','Cambria','Candara','Century Gothic','Consolas','Constantia','Corbel','Courier New','Franklin Gothic Medium','Garamond','Georgia','Gill Sans','Impact','Lucida Console','Lucida Sans Unicode','Microsoft Sans Serif','Palatino Linotype','Tahoma','Times New Roman','Trebuchet MS','Verdana','Inter','Roboto','Open Sans','Lato','Montserrat','Poppins','Nunito','Noto Sans','Source Sans 3','Ubuntu','Raleway','Merriweather','Oswald','PT Sans','Fira Sans','Work Sans','DM Sans','Manrope','Rubik','Mulish','IBM Plex Sans','Playfair Display'];
 
+function fontOptions(selected=""){
+  return FONT_FAMILIES.map(font=>`<option value="${font}" ${font===selected?"selected":""} style="font-family:'${font}',Arial,sans-serif">${font}</option>`).join("");
+}
 function buildThemeFontManager(){
-  erpFontLibrary.innerHTML=FONT_FAMILIES.map(font=>`<option value="${font}"></option>`).join("");
+  globalThemeFont.innerHTML=fontOptions("Segoe UI");
+  globalThemeFont.style.fontFamily='"Segoe UI",Arial,sans-serif';
+  globalThemeFont.addEventListener("change",()=>{
+    globalThemeFont.style.fontFamily=`"${globalThemeFont.value}",Arial,sans-serif`;
+    globalFontPreview.style.fontFamily=`"${globalThemeFont.value}",Arial,sans-serif`;
+  });
+
   themeFontManager.innerHTML=THEME_FONT_SECTIONS.map(([key,title,note])=>`
     <div class="font-row" data-font-row="${key}">
-      <div><h4>${title}</h4><small>${note}</small><div class="font-sample" data-font-sample="${key}">Inventory ERP Aa 123</div></div>
-      <div class="field"><label>Font Family</label><input list="erpFontLibrary" data-font-key="${key}" data-font-prop="family" placeholder="Search font"></div>
+      <div class="font-row-intro">
+        <h4>${title}</h4>
+        <small>${note}</small>
+        <div class="font-sample" data-font-sample="${key}">Inventory ERP Aa 123</div>
+      </div>
+      <div class="field">
+        <label>Font Family</label>
+        <select data-font-key="${key}" data-font-prop="family">${fontOptions("Segoe UI")}</select>
+      </div>
       <div class="field"><label>Size</label><input type="number" min="7" max="48" data-font-key="${key}" data-font-prop="size"></div>
       <div class="field"><label>Weight</label><select data-font-key="${key}" data-font-prop="weight"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semi Bold</option><option value="700">Bold</option><option value="800">Extra Bold</option><option value="900">Black</option></select></div>
       <div class="field"><label>Color</label><input type="color" data-font-key="${key}" data-font-prop="color"></div>
       <div class="field"><label>Letter Space</label><input type="number" step=".1" min="-2" max="10" data-font-key="${key}" data-font-prop="letterSpacing"></div>
       <div class="field"><label>Line Height</label><input type="number" step=".1" min=".8" max="3" data-font-key="${key}" data-font-prop="lineHeight"></div>
     </div>`).join("");
-  document.querySelectorAll("[data-font-key]").forEach(el=>el.addEventListener("input",()=>{
-    updateFontSamples();
-    themeInputChanged();
-  }));
+
+  document.querySelectorAll("[data-font-key]").forEach(el=>{
+    const handler=()=>{
+      if(el.dataset.fontProp==="family"){
+        el.style.fontFamily=`"${el.value}",Arial,sans-serif`;
+      }
+      updateFontSamples();
+      themeInputChanged();
+    };
+    el.addEventListener("input",handler);
+    el.addEventListener("change",handler);
+  });
 }
 
 function updateFontSamples(){
@@ -2125,12 +2188,15 @@ function updateFontSamples(){
   });
 }
 function applyGlobalFontToSections(){
-  const font=(globalThemeFont.value||"").trim();
+  const font=globalThemeFont.value;
   if(!font){
     AppTools.toast("Select or type a font first","warning");
     return;
   }
-  document.querySelectorAll('[data-font-prop="family"]').forEach(input=>input.value=font);
+  document.querySelectorAll('[data-font-prop="family"]').forEach(select=>{
+    select.value=font;
+    select.style.fontFamily=`"${font}",Arial,sans-serif`;
+  });
   updateFontSamples();
   themeInputChanged();
   AppTools.toast(`${font} applied to all theme sections`,"success");
