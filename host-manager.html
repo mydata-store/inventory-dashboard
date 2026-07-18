@@ -1,0 +1,36 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ERP Host & Backup Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="public/common-theme-manager.js"></script><script src="public/common-shell-settings.js"></script><script src="public/common-shell-engine.js"></script>
+<style>body{margin:0;background:#eef3f8;font-family:Arial;color:#172033}.wrap{max-width:1180px;margin:25px auto;padding:20px}.title{background:#10233f;color:white;padding:20px;border-radius:15px;margin-bottom:16px}.title h1{margin:0 0 5px}.section{margin-top:16px}.metric{font-size:24px;font-weight:800}.muted{color:#64748b;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.log{background:#0f172a;color:#dbeafe;border-radius:10px;padding:12px;min-height:90px;white-space:pre-wrap;font:12px Consolas}</style>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="public/core/styles/erp-runtime.css">
+<script src="public/core/erp-runtime.js"></script>
+<script src="public/core/erp-diagnostics.js"></script>
+<script src="public/core/erp-settings.js"></script>
+<script src="public/core/erp-offline.js"></script>
+<script src="public/core/erp-backup.js"></script>
+<script src="public/core/erp-host.js"></script>
+<script src="public/core/erp-theme-runtime.js"></script>
+<script src="public/core/erp-profile-runtime.js"></script>
+<script src="public/core/erp-shell-runtime.js"></script>
+</head>
+<body data-erp-page="host-manager"><div id="appSidebar"></div><main class="wrap app-main"><div class="title"><h1>Host Computer & Offline Backup Manager</h1><div>Single-PC mode now; Office Host mode is ready for future client computers.</div></div>
+<div class="erp-grid">
+<div class="erp-runtime-card"><div class="muted">Host Computer</div><div id="hostName" class="metric">Store Office Host</div><div id="hostMode" class="erp-status erp-ok">Single-PC Host</div></div>
+<div class="erp-runtime-card"><div class="muted">Internet</div><div id="net" class="metric">Checking...</div><div>Local-first storage remains active.</div></div>
+<div class="erp-runtime-card"><div class="muted">Backup Folder</div><div id="folder" class="metric" style="font-size:18px">Not connected</div><div id="folderState" class="erp-status erp-warn">Permission required</div></div>
+<div class="erp-runtime-card"><div class="muted">Pending Local Records</div><div id="pending" class="metric">0</div><div>These records will sync when connectivity is available.</div></div>
+</div>
+<div class="erp-runtime-card section"><h2>Host Settings</h2><div class="erp-grid"><label class="erp-field">Computer name<input id="name" value="Store Office Host"></label><label class="erp-field">System mode<select id="mode"><option value="single">Single-PC Mode</option><option value="office">Office Host Mode</option></select></label><label class="erp-field">This computer<select id="isHost"><option value="true">Host Computer</option><option value="false">Client Computer</option></select></label></div><div class="actions"><button class="erp-btn" onclick="saveHost()">Save Host Settings</button><button class="erp-btn secondary" onclick="publishHost()">Publish to Whole ERP</button></div></div>
+<div class="erp-runtime-card section"><h2>Excel & Recovery Backup</h2><p>Select a computer folder once per browser session. The system will keep Excel-compatible <b>.xls</b> registers plus a complete daily JSON recovery file.</p><div class="actions"><button class="erp-btn" onclick="chooseFolder()">Choose Backup Folder</button><button class="erp-btn" onclick="backupNow()">Backup Everything Now</button><button class="erp-btn warn" onclick="ERPBackup.downloadEmergency()">Download Emergency Backup</button></div></div>
+<div class="erp-runtime-card section"><h2>Offline Test</h2><div class="actions"><button class="erp-btn secondary" onclick="testRecord()">Create Test Local Record</button><button class="erp-btn secondary" onclick="refresh()">Refresh Status</button></div><div id="log" class="log">System ready.</div></div>
+</main>
+<script>
+async function refresh(){const h=ERP.state.host||{};hostName.textContent=h.name||'Store Office Host';hostMode.textContent=(h.mode==='office'?'Office Host Mode':'Single-PC Host');net.textContent=navigator.onLine?'Online':'Offline';folder.textContent=ERPBackup.folderName();folderState.textContent=ERPBackup.folderName()==='Not connected'?'Permission required':'Folder selected';pending.textContent=(await ERPOffline.pending()).length;name.value=h.name||'';mode.value=h.mode||'single';isHost.value=String(h.isHost!==false)}
+function msg(t){log.textContent=new Date().toLocaleTimeString()+'  '+t+'\n'+log.textContent}
+function saveHost(){ERPHost.setHost({name:name.value.trim()||'Store Office Host',mode:mode.value,isHost:isHost.value==='true'});msg('Host settings saved as draft.')}
+function publishHost(){saveHost();ERPSettings.publish(ERPSettings.getDraft());ERPHost.init(ERP);refresh();msg('Host settings published to the whole ERP.')}
+async function chooseFolder(){try{await ERPBackup.chooseFolder();refresh();msg('Backup folder connected.')}catch(e){msg('Folder error: '+e.message)}}
+async function backupNow(){try{const n=await ERPBackup.backupAll();msg('Backup completed for '+n+' data source(s).')}catch(e){msg('Backup error: '+e.message)}}
+async function testRecord(){const r=await ERPOffline.save('system-test',{description:'Offline backup test',computer:ERP.state.host?.name});ERPBackup.registerSource({id:'system-test',folder:'System',file:'System Test.xls',sheet:'System Test'});msg('Test record saved locally: '+r.localId);refresh()}
+ERP.on('ready',refresh);
+</script></body></html>

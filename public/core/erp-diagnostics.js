@@ -1,0 +1,1 @@
+(function(){const logs=[];window.ERP.Diagnostics={log(level,area,message){logs.unshift({time:new Date().toISOString(),level,area,message});if(logs.length>200)logs.pop();localStorage.setItem('erp_runtime_logs_v1',JSON.stringify(logs))},all(){try{return JSON.parse(localStorage.getItem('erp_runtime_logs_v1')||'[]')}catch{return[]}}}})();

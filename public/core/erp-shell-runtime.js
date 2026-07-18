@@ -1,0 +1,1 @@
+(function(){const api={id:'shell',async init(){if(window.ERPUniversalShell?.init)await window.ERPUniversalShell.init();setTimeout(()=>window.ERP?.modules.get('profile')?.apply(),100)}};window.ERP.registerModule(api)})();

@@ -1,0 +1,1 @@
+(function(){const api={id:'theme',init(ERP){this.apply();ERP.on('settings:changed',()=>this.apply())},apply(){try{if(window.ERPThemeManager)ERPThemeManager.apply(ERPThemeManager.getLocal())}catch(e){console.warn(e)}}};window.ERP.registerModule(api)})();

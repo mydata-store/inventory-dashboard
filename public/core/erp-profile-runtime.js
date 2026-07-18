@@ -1,0 +1,5 @@
+(function(){
+function active(){try{const s=JSON.parse(localStorage.getItem('erp_profile_controller_v1')||'{}'),p=(s.profiles||[]).find(x=>x.id===s.activeProfileId)||(s.profiles||[])[0];if(!p)return null;return{name:p.general?.fullName,designation:p.general?.designation,department:p.general?.department,image:p.picture?.dataUrl||p.picture?.url,visible:p.display?.showName!==false,showDesignation:p.display?.showDesignation!==false,showDepartment:p.display?.showDepartment===true}}catch{return null}}
+const api={id:'profile',init(ERP){this.ERP=ERP;this.apply();ERP.on('settings:changed',()=>this.apply());window.addEventListener('storage',e=>{if(e.key==='erp_profile_controller_v1')this.apply()})},apply(){const p=active();if(!p)return;document.querySelectorAll('.erp-profile-card').forEach(card=>{const img=card.querySelector('img');if(img&&p.image)img.src=p.image;const strong=card.querySelector('strong');if(strong)strong.textContent=p.name||'';const small=card.querySelector('small');if(small)small.textContent=[p.showDesignation&&p.designation,p.showDepartment&&p.department].filter(Boolean).join(' • ')})}};
+window.ERP.registerModule(api);
+})();
