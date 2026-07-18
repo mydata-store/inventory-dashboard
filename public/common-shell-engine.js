@@ -81,6 +81,8 @@
       { label: "Theme Settings", href: "theme-settings.html" },
       { label: "PDF & Logo Settings", href: "pdf-settings.html" },
       { label: "ERP Core Settings", href: "erp-core-settings.html" },
+      { label: "Host & Backup Manager", href: "host-manager.html" },
+      { label: "ERP Setup Wizard", href: "erp-installer.html" },
       { label: "Relationship Center", href: "erp-relationship-center.html" },
       { label: "Data Health Center", href: "erp-health-center.html" },
       { label: "Health Control Tower", href: "erp-health-control-tower.html" }
@@ -256,27 +258,37 @@
     if (!side) return;
 
     side.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 180)}ms`);
+    side.onpointerenter = side.onpointerleave = side.onmouseenter = side.onmouseleave = null;
 
     const expand = () => {
       clearAutoHideTimer();
-      setCollapsed(false, false);
+      if (currentSettings.sidebarExpandOnHover !== false) setCollapsed(false, false);
     };
 
-    const minimize = () => {
+    const leave = () => {
       clearAutoHideTimer();
       side.querySelectorAll(".erp-side-group.open").forEach(group => group.classList.remove("open"));
-      setCollapsed(true, false);
+      if (currentSettings.sidebarCollapseOnLeave === true) {
+        setCollapsed(true, false);
+      } else if (currentSettings.sidebarAutoHide === true) {
+        scheduleAutoHide();
+      }
     };
 
-    side.onpointerenter = expand;
-    side.onpointerleave = minimize;
-    side.onmouseenter = expand;
-    side.onmouseleave = minimize;
+    if (currentSettings.sidebarExpandOnHover !== false) {
+      side.onpointerenter = expand;
+      side.onmouseenter = expand;
+    }
+    side.onpointerleave = leave;
+    side.onmouseleave = leave;
 
-    // Start minimized unless the pointer is already inside the sidebar.
-    requestAnimationFrame(() => {
-      if (!side.matches(":hover")) minimize();
-    });
+    let initial = currentSettings.sidebarDefaultCollapsed === true;
+    if (currentSettings.sidebarRememberState) {
+      const remembered = localStorage.getItem("erp_sidebar_collapsed_v1");
+      if (remembered !== null) initial = remembered === "1";
+    }
+    setCollapsed(initial, false);
+    if (!initial && currentSettings.sidebarAutoHide === true) scheduleAutoHide();
   }
 
   function render(settings) {
