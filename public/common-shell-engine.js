@@ -56,7 +56,7 @@
   };
 
   const MENU = [
-    { label: "Dashboard", icon: "⌂", href: "index.html" },
+    { id:"dashboard", label: "Dashboard", icon: "⌂", href: "index.html" },
     { id: "masters", label: "Masters", icon: "▦", children: [
       { label: "Item Master", href: "items.html" },
       { label: "Supplier Master", href: "suppliers.html" },
@@ -70,12 +70,12 @@
       { label: "Board Purchase", href: "board-purchase.html" },
       { label: "Purchase List", href: "purchase-list.html" }
     ]},
-    { label: "Issue Entry", icon: "↩", href: "issue.html" },
-    { label: "Gate Pass", icon: "▣", href: "gate-pass.html" },
-    { label: "Stock Ledger", icon: "▤", href: "stock-ledger.html" },
-    { label: "Rack Management", icon: "▥", href: "rack-management.html" },
-    { label: "Inventory Intelligence", icon: "◆", href: "inventory-intelligence.html" },
-    { label: "Reports", icon: "▧", href: "reports.html" },
+    { id:"issue", label: "Issue Entry", icon: "↩", href: "issue.html" },
+    { id:"gatepass", label: "Gate Pass", icon: "▣", href: "gate-pass.html" },
+    { id:"stockledger", label: "Stock Ledger", icon: "▤", href: "stock-ledger.html" },
+    { id:"rack", label: "Rack Management", icon: "▥", href: "rack-management.html" },
+    { id:"intelligence", label: "Inventory Intelligence", icon: "◆", href: "inventory-intelligence.html" },
+    { id:"reports", label: "Reports", icon: "▧", href: "reports.html" },
     { id: "settings", label: "Settings", icon: "⚙", children: [
       { label: "ERP Design Studio", href: "erp-design-studio.html" },
       { label: "Theme Settings", href: "theme-settings.html" },
@@ -137,9 +137,12 @@
     return `<div class="erp-universal-profile" data-universal-profile="true" data-profile-location="${esc(where)}"
       style="--p-bg:${settings.profileCardBackground};--p-color:${settings.profileTextColor};
       --p-radius:${Number(settings.profileRadius || 12)}px;--p-width:${Number(settings.profileCardWidth || 150)}px;
-      --p-height:${Number(settings.profileCardHeight || 70)}px;--p-img:${Number(settings.profileImageSize || 44)}px">
+      --p-height:${Number(settings.profileCardHeight || 70)}px;--p-img:${Number(settings.profileImageSize || 44)}px;
+      --p-border-style:${esc(settings.profileBorderStyle||"solid")};--p-border-width:${Number(settings.profileBorderWidth||1)}px;
+      --p-border-color:${esc(settings.profileBorderColor||"#334155")};--p-align:${esc(settings.profileTextAlign||"left")};
+      --p-shadow:${esc(settings.profileShadow||"soft")}">
       <img src="${esc(settings.profileImage)}" onerror="this.src='public/profile.png'">
-      <span><strong>${esc(settings.profileName)}</strong>
+      <span>${settings.profileShowName!==false?`<strong>${esc(settings.profileName)}</strong>`:""}
       ${info.length ? `<small>${esc(info.join(" • "))}</small>` : ""}
       ${settings.profileShowStatus ? `<em><i style="background:${esc(settings.profileStatusColor)}"></i>${esc(settings.profileStatusText)}</em>` : ""}
       </span>
@@ -258,6 +261,10 @@
     if (!side) return;
 
     side.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 180)}ms`);
+    side.style.setProperty("--erp-side-font-family", currentSettings.sidebarFontFamily || "Segoe UI, Arial, sans-serif");
+    side.style.setProperty("--erp-side-font-size", `${Number(currentSettings.sidebarFontSize || 12)}px`);
+    side.style.setProperty("--erp-side-font-weight", String(Number(currentSettings.sidebarFontWeight || 600)));
+    side.style.setProperty("--erp-side-icon-size", `${Number(currentSettings.sidebarIconSize || 15)}px`);
     side.onpointerenter = side.onpointerleave = side.onmouseenter = side.onmouseleave = null;
 
     const expand = () => {

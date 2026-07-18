@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 
-const VERSION="41.6.0";
+const VERSION="41.7.0";
 const BUILD="2026.07.18";
 const KEYS={
   published:"erp_control_published_v1",
