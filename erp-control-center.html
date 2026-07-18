@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Control Center</title>
+<link rel="stylesheet" href="public/common.css">
+<link rel="stylesheet" href="public/core/styles/erp-runtime.css">
+<link rel="stylesheet" href="public/core/styles/erp-platform-runtime.css">
+<script src="public/common-shell-settings.js"></script>
+<script src="public/common-shell-engine.js"></script>
+<script src="public/core/erp-module-registry.js"></script>
+<script src="public/core/erp-platform-runtime.js" defer></script>
+<script src="public/core/erp-live-status.js" defer></script>
+<style>
+.cc-wrap{max-width:1220px;margin:24px auto;padding:20px}
+.cc-hero{background:#112b4d;color:#fff;padding:25px;border-radius:18px;box-shadow:var(--erp-shadow)}
+.cc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}
+.cc-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 7px 24px rgba(15,27,49,.08)}
+.cc-card span{display:block;color:#64748b;font-size:12px;text-transform:uppercase;font-weight:700}
+.cc-card strong{display:block;font-size:24px;margin-top:6px;color:#112b4d}
+.cc-panels{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:16px}
+.cc-panel{background:#fff;border-radius:16px;padding:18px;box-shadow:0 7px 24px rgba(15,27,49,.08)}
+.quick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.quick a,.quick button{display:block;text-decoration:none;text-align:center;padding:13px;border:0;border-radius:11px;background:#edf3fb;color:#173963;font-weight:700;cursor:pointer}
+.activity-mini article{padding:10px 0;border-bottom:1px solid #e8edf4}
+@media(max-width:850px){.cc-grid{grid-template-columns:repeat(2,1fr)}.cc-panels{grid-template-columns:1fr}}
+</style>
+</head>
+<body data-erp-page="erp-control-center" data-erp-module="framework">
+<div id="appSidebar"></div>
+<main class="cc-wrap">
+<section class="cc-hero">
+  <h1 style="margin:0 0 7px">ERP Control Center</h1>
+  <p style="margin:0">Runtime health, framework status, notifications, activity and quick administration.</p>
+</section>
+<section class="cc-grid">
+  <div class="cc-card"><span>Runtime Version</span><strong id="runtimeVersion">41.5.0</strong></div>
+  <div class="cc-card"><span>Registered Pages</span><strong id="registeredPages">0</strong></div>
+  <div class="cc-card"><span>Connected Pages</span><strong id="connectedPages">0</strong></div>
+  <div class="cc-card"><span>Enabled Plugins</span><strong id="enabledPlugins">0</strong></div>
+  <div class="cc-card"><span>Internet</span><strong id="internetStatus">Checking</strong></div>
+  <div class="cc-card"><span>Local Storage</span><strong id="localStorageStatus">Checking</strong></div>
+  <div class="cc-card"><span>IndexedDB</span><strong id="indexedDbStatus">Checking</strong></div>
+  <div class="cc-card"><span>Load Time</span><strong id="runtimeLoadTime">0 ms</strong></div>
+</section>
+<section class="cc-panels">
+  <div class="cc-panel">
+    <h2>Recent Activity</h2>
+    <div id="recentActivity" class="activity-mini"></div>
+  </div>
+  <div class="cc-panel">
+    <h2>Quick Actions</h2>
+    <div class="quick">
+      <a href="erp-design-studio.html">Design Studio</a>
+      <a href="host-manager.html">Host Manager</a>
+      <a href="erp-diagnostics.html">Diagnostics</a>
+      <a href="framework-status.html">Framework Status</a>
+      <a href="erp-plugin-manager.html">Plugin Manager</a>
+      <a href="erp-activity-log.html">Activity Log</a>
+      <button type="button" onclick="ERPPlatform.openGlobalSearch()">Global Search</button>
+      <button type="button" onclick="ERPPlatform.notify('Test notification','Notification Center is working.','success')">Test Notification</button>
+    </div>
+  </div>
+</section>
+</main>
+<script>
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function loadActivity(){
+ const rows=window.ERPActivity?.getAll?.().slice(0,8)||[];
+ recentActivity.innerHTML=rows.length?rows.map(r=>`<article><strong>${esc(r.action)}</strong><div>${esc(r.user)} · ${new Date(r.createdAt).toLocaleString()}</div></article>`).join(""):"<p>No activity recorded yet.</p>";
+}
+window.addEventListener("erp:runtime-ready",loadActivity);
+window.addEventListener("erp:activity",loadActivity);
+setTimeout(loadActivity,700);
+</script>
+</body>
+</html>

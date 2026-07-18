@@ -16,7 +16,9 @@ const list=[
 {id:"host-manager",title:"Host Manager",module:"framework",url:"host-manager.html",status:"connected"},
 {id:"framework-status",title:"Framework Status",module:"framework",url:"framework-status.html",status:"connected"},
 {id:"diagnostics",title:"Diagnostics Center",module:"framework",url:"erp-diagnostics.html",status:"connected"},
-{id:"plugin-manager",title:"Plugin Manager",module:"framework",url:"erp-plugin-manager.html",status:"connected"}];
+{id:"plugin-manager",title:"Plugin Manager",module:"framework",url:"erp-plugin-manager.html",status:"connected"},
+{id:"erp-control-center",title:"ERP Control Center",module:"framework",url:"erp-control-center.html",status:"connected"},
+{id:"activity-log",title:"ERP Activity Log",module:"framework",url:"erp-activity-log.html",status:"connected"}];
 const k="erp_module_registry";let e={};try{e=JSON.parse(localStorage.getItem(k)||"{}")}catch(_){}
-list.forEach(m=>e[m.id]={...(e[m.id]||{}),...m,version:"41.4.0"});localStorage.setItem(k,JSON.stringify(e));window.ERPModuleRegistry=list;
+list.forEach(m=>e[m.id]={...(e[m.id]||{}),...m,version:"41.5.0"});localStorage.setItem(k,JSON.stringify(e));window.ERPModuleRegistry=list;
 })();
