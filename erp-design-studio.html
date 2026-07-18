@@ -1798,6 +1798,232 @@
     </div></div></section></div></main>
 <script>
 const db=supabase.createClient('https://lzsxtvkluqvcaetnnydu.supabase.co','sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma');let active='home',pages=[];
+
+const PROFILE_STORAGE_KEY="erp_profile_controller_v1";
+let profileStore={profiles:[],activeProfileId:null};
+let currentProfileId=null;
+
+const PROFILE_PERMISSION_SCHEMA={
+  Inventory:["View","Add","Edit","Delete","Approve"],
+  Purchase:["View","Add","Edit","Delete","Print"],
+  "Gate Pass":["RGP","OGP","CGP","Approve"],
+  Masters:["Items","Suppliers","Departments","Workshops","Delete"],
+  "ERP Design Studio":["Page Builder","Theme Controller","Profile Controller","Universal Shell"]
+};
+
+const PROFILE_TEMPLATES={
+  storekeeper:{designation:"Store Keeper",department:"Store",dashboard:"inventory",permissions:{Inventory:["View","Add","Edit"],Purchase:["View"],"Gate Pass":["RGP","OGP"],Masters:["Items","Suppliers"],"ERP Design Studio":[]}},
+  purchase:{designation:"Purchase Officer",department:"Purchase",dashboard:"purchase",permissions:{Inventory:["View"],Purchase:["View","Add","Edit","Print"],"Gate Pass":["OGP"],Masters:["Items","Suppliers"],"ERP Design Studio":[]}},
+  manager:{designation:"Store Manager",department:"Store",dashboard:"executive",permissions:{Inventory:["View","Add","Edit","Delete","Approve"],Purchase:["View","Add","Edit","Print"],"Gate Pass":["RGP","OGP","CGP","Approve"],Masters:["Items","Suppliers","Departments","Workshops"],"ERP Design Studio":["Page Builder","Theme Controller","Profile Controller"]}},
+  workshop:{designation:"Workshop Manager",department:"Workshop",dashboard:"workshop",permissions:{Inventory:["View"],Purchase:["View"],"Gate Pass":["RGP","OGP"],Masters:["Workshops"],"ERP Design Studio":[]}},
+  accounts:{designation:"Accounts Officer",department:"Accounts",dashboard:"accounts",permissions:{Inventory:["View"],Purchase:["View","Print"],"Gate Pass":[],"ERP Design Studio":[]}},
+  admin:{designation:"Administrator",department:"Administration",dashboard:"control",permissions:Object.fromEntries(Object.entries(PROFILE_PERMISSION_SCHEMA).map(([g,i])=>[g,[...i]]))},
+  readonly:{designation:"Viewer",department:"",dashboard:"inventory",permissions:{Inventory:["View"],Purchase:["View"],"Gate Pass":[],"ERP Design Studio":[]}}
+};
+
+function profileDefault(){
+  return {
+    id:`profile_${Date.now()}`,status:"active",scope:"sidebar",template:"",
+    general:{fullName:"Muhammad Waqas",employeeCode:"EMP-0001",designation:"Store Officer",department:"Store",company:"",branch:"",joiningDate:"",mobile:"",email:"",username:"mwaqas",welcomeMessage:"Welcome back, Muhammad Waqas"},
+    card:{style:"modern",width:260,height:104,radius:16,borderStyle:"solid",borderWidth:1,borderColor:"#334155",backgroundColor:"#0f172a",textColor:"#ffffff",shadow:"soft",textAlign:"left",picturePosition:"left",pictureShape:"circle",pictureSize:58,onlineStatus:true},
+    picture:{dataUrl:"",url:"public/waqas.jpg.png",zoom:100,rotate:0,frame:"none",quality:"high"},
+    display:{name:true,designation:true,department:false,employeeCode:false,company:false,branch:false,mobile:false,email:false,welcome:false,lastLogin:false,signature:false,qr:false},
+    dashboard:{dashboard:"inventory",landingPage:"dashboard.html",layout:"standard",greetingStyle:"welcome",quickActions:"Purchase Entry, Issue Entry, RGP Entry"},
+    permissions:{Inventory:["View","Add","Edit"],Purchase:["View"],"Gate Pass":["RGP","OGP"],Masters:["Items"],"ERP Design Studio":[]},
+    notifications:{lowStock:true,rgp:true,ogp:false,purchase:false,supplier:false,login:true,backup:true,system:true,sound:false,desktop:false},
+    security:{username:"mwaqas",pinLogin:false,rememberMe:true,sessionTimeout:60,passwordExpiry:90,twoFactor:false,autoLogin:false},
+    signature:{signatureData:"",stampData:"",autoSignPdf:false,position:"right",width:140,showStamp:true},
+    theme:{assignedTheme:"eyeComfortNavy",accentColor:"#2563eb",font:"Segoe UI",buttonStyle:"modern",sidebarStyle:"default"},
+    activity:[{time:new Date().toISOString(),text:"Profile controller initialized"}],updatedAt:null
+  };
+}
+
+function byId(id){return document.getElementById(id)}
+function getValue(id,fallback=""){const el=byId(id);return el?el.value:fallback}
+function getChecked(id,fallback=false){const el=byId(id);return el?el.checked:fallback}
+function setValue(id,value){const el=byId(id);if(el)el.value=String(value??"")}
+function setChecked(id,value){const el=byId(id);if(el)el.checked=!!value}
+
+function loadProfileStore(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY)||"null");
+    if(saved?.profiles?.length) profileStore=saved;
+    else{const p=profileDefault();profileStore={profiles:[p],activeProfileId:p.id}}
+  }catch{const p=profileDefault();profileStore={profiles:[p],activeProfileId:p.id}}
+  currentProfileId=profileStore.activeProfileId||profileStore.profiles[0]?.id;
+  buildProfileFontOptions();
+  renderProfilePermissionGroups();
+  refreshProfileSelector();
+  loadSelectedProfile();
+  bindProfileLiveInputs();
+}
+function saveProfileStore(){localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(profileStore))}
+function getCurrentProfile(){return profileStore.profiles.find(p=>p.id===currentProfileId)||profileStore.profiles[0]}
+function refreshProfileSelector(){
+  const selector=byId("profileSelector"); if(!selector)return;
+  selector.innerHTML=profileStore.profiles.map(p=>`<option value="${p.id}">${escapeHtml(p.general.fullName||"Unnamed Profile")}${p.id===profileStore.activeProfileId?" ★":""}</option>`).join("");
+  selector.value=currentProfileId;
+}
+function openProfileTab(id,button){
+  const targetId=`profile${id[0].toUpperCase()+id.slice(1)}`;
+  document.querySelectorAll("#profile .profile-section").forEach(x=>x.classList.toggle("active",x.id===targetId));
+  document.querySelectorAll(".profile-controller-tabs button").forEach(x=>x.classList.toggle("active",x===button));
+}
+function buildProfileFontOptions(){
+  const el=byId("prAssignedFont"); if(!el)return;
+  el.innerHTML=FONT_FAMILIES.map(font=>`<option value="${font}">${font}</option>`).join("");
+}
+function renderProfilePermissionGroups(){
+  const host=byId("profilePermissionGroups"); if(!host)return;
+  host.innerHTML=Object.entries(PROFILE_PERMISSION_SCHEMA).map(([group,items])=>`
+    <section class="permission-group-card">
+      <div class="permission-group-head"><strong>${group}</strong><label><input type="checkbox" data-permission-select-all="${group}"> Select All</label></div>
+      <div class="permission-items">${items.map(item=>`<label><input type="checkbox" data-permission-group="${group}" value="${item}"> ${item}</label>`).join("")}</div>
+    </section>`).join("");
+  host.querySelectorAll("[data-permission-select-all]").forEach(box=>box.addEventListener("change",()=>{
+    host.querySelectorAll(`[data-permission-group="${box.dataset.permissionSelectAll}"]`).forEach(item=>item.checked=box.checked);
+    updateProfilePreviewCard();
+  }));
+}
+function loadSelectedProfile(){
+  const selector=byId("profileSelector");
+  currentProfileId=selector?.value||currentProfileId;
+  const p=getCurrentProfile(); if(!p)return;
+  const values={
+    profileTemplate:p.template||"",profileStatus:p.status||"active",profileScope:p.scope||"sidebar",
+    prFullName:p.general.fullName,prEmployeeCode:p.general.employeeCode,prDesignation:p.general.designation,prDepartment:p.general.department,prCompany:p.general.company,prBranch:p.general.branch,prJoiningDate:p.general.joiningDate,prMobile:p.general.mobile,prEmail:p.general.email,prUsername:p.general.username,prWelcomeMessage:p.general.welcomeMessage,
+    prCardStyle:p.card.style,prCardWidth:p.card.width,prCardHeight:p.card.height,prCardRadius:p.card.radius,prBorderStyle:p.card.borderStyle,prBorderWidth:p.card.borderWidth,prBorderColor:p.card.borderColor,prBackgroundColor:p.card.backgroundColor,prTextColor:p.card.textColor,prCardShadow:p.card.shadow,prTextAlign:p.card.textAlign,prPicturePosition:p.card.picturePosition,prPictureShape:p.card.pictureShape,prPictureSize:p.card.pictureSize,prOnlineStatus:p.card.onlineStatus,
+    prPictureUrl:p.picture.url||"",prPictureZoom:p.picture.zoom||100,prPictureRotate:p.picture.rotate||0,prPictureFrame:p.picture.frame||"none",prPictureQuality:p.picture.quality||"high",
+    prDashboard:p.dashboard.dashboard,prLandingPage:p.dashboard.landingPage,prDashboardLayout:p.dashboard.layout,prGreetingStyle:p.dashboard.greetingStyle,prQuickActions:p.dashboard.quickActions,
+    prSecurityUsername:p.security.username,prPinLogin:p.security.pinLogin,prRememberMe:p.security.rememberMe,prSessionTimeout:p.security.sessionTimeout,prPasswordExpiry:p.security.passwordExpiry,prTwoFactor:p.security.twoFactor,prAutoLogin:p.security.autoLogin,
+    prAutoSignPdf:p.signature.autoSignPdf,prSignaturePosition:p.signature.position,prSignatureWidth:p.signature.width,prShowStamp:p.signature.showStamp,
+    prAssignedTheme:p.theme.assignedTheme,prAccentColor:p.theme.accentColor,prAssignedFont:p.theme.font,prButtonStyle:p.theme.buttonStyle,prSidebarStyle:p.theme.sidebarStyle
+  };
+  Object.entries(values).forEach(([id,value])=>setValue(id,value));
+  const checks={
+    prShowName:p.display.name,prShowDesignation:p.display.designation,prShowDepartment:p.display.department,prShowEmployeeCode:p.display.employeeCode,prShowCompany:p.display.company,prShowBranch:p.display.branch,prShowMobile:p.display.mobile,prShowEmail:p.display.email,prShowWelcome:p.display.welcome,prShowLastLogin:p.display.lastLogin,prShowSignature:p.display.signature,prShowQr:p.display.qr,
+    prNotifyLowStock:p.notifications.lowStock,prNotifyRgp:p.notifications.rgp,prNotifyOgp:p.notifications.ogp,prNotifyPurchase:p.notifications.purchase,prNotifySupplier:p.notifications.supplier,prNotifyLogin:p.notifications.login,prNotifyBackup:p.notifications.backup,prNotifySystem:p.notifications.system,prNotifySound:p.notifications.sound,prNotifyDesktop:p.notifications.desktop
+  };
+  Object.entries(checks).forEach(([id,value])=>setChecked(id,value));
+  document.querySelectorAll("[data-permission-group]").forEach(box=>box.checked=(p.permissions[box.dataset.permissionGroup]||[]).includes(box.value));
+  document.querySelectorAll("[data-permission-select-all]").forEach(box=>{
+    const all=[...document.querySelectorAll(`[data-permission-group="${box.dataset.permissionSelectAll}"]`)];
+    box.checked=all.length&&all.every(item=>item.checked);
+  });
+  const picture=byId("profilePicturePreview"); if(picture){picture.src=p.picture.dataUrl||p.picture.url||""}
+  const sig=byId("prSignaturePreview"); if(sig)sig.src=p.signature.signatureData||"";
+  const stamp=byId("prStampPreview"); if(stamp)stamp.src=p.signature.stampData||"";
+  updateProfilePictureTransform(false);
+  updateProfilePreviewCard();
+  renderProfileActivity();
+}
+function collectCurrentProfile(){
+  const p=getCurrentProfile(); if(!p)return null;
+  p.template=getValue("profileTemplate");
+  p.status=getValue("profileStatus","active");
+  p.scope=getValue("profileScope","sidebar");
+  p.general={fullName:getValue("prFullName").trim(),employeeCode:getValue("prEmployeeCode").trim(),designation:getValue("prDesignation").trim(),department:getValue("prDepartment").trim(),company:getValue("prCompany").trim(),branch:getValue("prBranch").trim(),joiningDate:getValue("prJoiningDate").trim(),mobile:getValue("prMobile").trim(),email:getValue("prEmail").trim(),username:getValue("prUsername").trim(),welcomeMessage:getValue("prWelcomeMessage").trim()};
+  p.card={style:getValue("prCardStyle","modern"),width:Number(getValue("prCardWidth",260)),height:Number(getValue("prCardHeight",104)),radius:Number(getValue("prCardRadius",16)),borderStyle:getValue("prBorderStyle","solid"),borderWidth:Number(getValue("prBorderWidth",1)),borderColor:getValue("prBorderColor","#334155"),backgroundColor:getValue("prBackgroundColor","#0f172a"),textColor:getValue("prTextColor","#ffffff"),shadow:getValue("prCardShadow","soft"),textAlign:getValue("prTextAlign","left"),picturePosition:getValue("prPicturePosition","left"),pictureShape:getValue("prPictureShape","circle"),pictureSize:Number(getValue("prPictureSize",58)),onlineStatus:getValue("prOnlineStatus","true")==="true"};
+  p.picture={...p.picture,url:getValue("prPictureUrl").trim(),zoom:Number(getValue("prPictureZoom",100)),rotate:Number(getValue("prPictureRotate",0)),frame:getValue("prPictureFrame","none"),quality:getValue("prPictureQuality","high")};
+  p.display={name:getChecked("prShowName"),designation:getChecked("prShowDesignation"),department:getChecked("prShowDepartment"),employeeCode:getChecked("prShowEmployeeCode"),company:getChecked("prShowCompany"),branch:getChecked("prShowBranch"),mobile:getChecked("prShowMobile"),email:getChecked("prShowEmail"),welcome:getChecked("prShowWelcome"),lastLogin:getChecked("prShowLastLogin"),signature:getChecked("prShowSignature"),qr:getChecked("prShowQr")};
+  p.dashboard={dashboard:getValue("prDashboard","inventory"),landingPage:getValue("prLandingPage","dashboard.html").trim(),layout:getValue("prDashboardLayout","standard"),greetingStyle:getValue("prGreetingStyle","welcome"),quickActions:getValue("prQuickActions").trim()};
+  p.permissions={};
+  document.querySelectorAll("[data-permission-group]:checked").forEach(box=>(p.permissions[box.dataset.permissionGroup]??=[]).push(box.value));
+  p.notifications={lowStock:getChecked("prNotifyLowStock"),rgp:getChecked("prNotifyRgp"),ogp:getChecked("prNotifyOgp"),purchase:getChecked("prNotifyPurchase"),supplier:getChecked("prNotifySupplier"),login:getChecked("prNotifyLogin"),backup:getChecked("prNotifyBackup"),system:getChecked("prNotifySystem"),sound:getChecked("prNotifySound"),desktop:getChecked("prNotifyDesktop")};
+  p.security={username:getValue("prSecurityUsername").trim(),pinLogin:getValue("prPinLogin","false")==="true",rememberMe:getValue("prRememberMe","true")==="true",sessionTimeout:Number(getValue("prSessionTimeout",60)),passwordExpiry:Number(getValue("prPasswordExpiry",90)),twoFactor:getValue("prTwoFactor","false")==="true",autoLogin:getValue("prAutoLogin","false")==="true"};
+  p.signature={...p.signature,autoSignPdf:getValue("prAutoSignPdf","false")==="true",position:getValue("prSignaturePosition","right"),width:Number(getValue("prSignatureWidth",140)),showStamp:getValue("prShowStamp","true")==="true"};
+  p.theme={assignedTheme:getValue("prAssignedTheme","eyeComfortNavy"),accentColor:getValue("prAccentColor","#2563eb"),font:getValue("prAssignedFont","Segoe UI"),buttonStyle:getValue("prButtonStyle","modern"),sidebarStyle:getValue("prSidebarStyle","default")};
+  return p;
+}
+function bindProfileLiveInputs(){
+  document.querySelectorAll("#profile input,#profile select,#profile textarea").forEach(el=>{
+    if(el.id==="profileSelector"||el.type==="file"||el.dataset.profileBound==="1")return;
+    el.dataset.profileBound="1";
+    el.addEventListener("input",updateProfilePreviewCard);
+    el.addEventListener("change",updateProfilePreviewCard);
+  });
+}
+function profileShadowValue(name){return {none:"none",soft:"0 8px 22px rgba(15,23,42,.14)",medium:"0 12px 32px rgba(15,23,42,.22)",strong:"0 16px 40px rgba(15,23,42,.32)"}[name]||"none"}
+function updateProfilePreviewCard(){
+  const host=byId("profileCardPreview"); if(!host)return;
+  const p=collectCurrentProfile()||getCurrentProfile(); if(!p)return;
+  const img=p.picture.dataUrl||p.picture.url;
+  const initials=(p.general.fullName||"MW").split(/\s+/).map(x=>x[0]).slice(0,2).join("");
+  const pic=img?`<div class="preview-profile-picture ${p.picture.frame} ${p.card.pictureShape}" style="width:${p.card.pictureSize}px;height:${p.card.pictureSize}px"><img src="${img}" style="transform:scale(${(p.picture.zoom||100)/100}) rotate(${p.picture.rotate||0}deg)"></div>`:`<div class="preview-profile-picture placeholder ${p.card.pictureShape}" style="width:${p.card.pictureSize}px;height:${p.card.pictureSize}px">${escapeHtml(initials)}</div>`;
+  const lines=[];
+  if(p.display.name)lines.push(`<strong>${escapeHtml(p.general.fullName||"Unnamed Profile")}</strong>`);
+  if(p.display.designation)lines.push(`<span>${escapeHtml(p.general.designation||"")}</span>`);
+  if(p.display.department)lines.push(`<small>${escapeHtml(p.general.department||"")}</small>`);
+  if(p.display.employeeCode)lines.push(`<small>${escapeHtml(p.general.employeeCode||"")}</small>`);
+  if(p.display.company)lines.push(`<small>${escapeHtml(p.general.company||"")}</small>`);
+  if(p.display.branch)lines.push(`<small>${escapeHtml(p.general.branch||"")}</small>`);
+  if(p.display.mobile)lines.push(`<small>${escapeHtml(p.general.mobile||"")}</small>`);
+  if(p.display.email)lines.push(`<small>${escapeHtml(p.general.email||"")}</small>`);
+  if(p.display.welcome)lines.push(`<em>${escapeHtml(p.general.welcomeMessage||"")}</em>`);
+  host.innerHTML=`<div class="preview-profile-card ${p.card.style} picture-${p.card.picturePosition}" style="width:${p.card.width}px;min-height:${p.card.height}px;border-radius:${p.card.radius}px;border:${p.card.borderWidth}px ${p.card.borderStyle} ${p.card.borderColor};background:${p.card.backgroundColor};color:${p.card.textColor};box-shadow:${profileShadowValue(p.card.shadow)};text-align:${p.card.textAlign};font-family:'${p.theme.font}',Arial,sans-serif">${pic}<div class="preview-profile-text">${lines.join("")}</div>${p.card.onlineStatus?'<i class="online-dot"></i>':""}</div>`;
+}
+function saveCurrentProfile(){
+  const p=collectCurrentProfile(); if(!p)return;
+  p.updatedAt=new Date().toISOString();
+  p.activity.unshift({time:p.updatedAt,text:"Profile settings saved"});
+  saveProfileStore();refreshProfileSelector();renderProfileActivity();
+  AppTools.toast("Profile saved successfully","success");
+}
+function resetCurrentProfile(){
+  const i=profileStore.profiles.findIndex(p=>p.id===currentProfileId);if(i<0)return;
+  const replacement=profileDefault();replacement.id=currentProfileId;profileStore.profiles[i]=replacement;
+  saveProfileStore();loadSelectedProfile();AppTools.toast("Current profile reset","warning");
+}
+function createNewProfile(){
+  const p=profileDefault();p.id=`profile_${Date.now()}`;p.general.fullName=`New Profile ${profileStore.profiles.length+1}`;p.general.employeeCode=`EMP-${String(profileStore.profiles.length+1).padStart(4,"0")}`;
+  profileStore.profiles.push(p);currentProfileId=p.id;saveProfileStore();refreshProfileSelector();loadSelectedProfile();AppTools.toast("New profile created","success");
+}
+function duplicateProfile(){
+  const p=collectCurrentProfile();if(!p)return;const copy=JSON.parse(JSON.stringify(p));copy.id=`profile_${Date.now()}`;copy.general.fullName=`${p.general.fullName} Copy`;copy.activity=[{time:new Date().toISOString(),text:"Profile duplicated"}];
+  profileStore.profiles.push(copy);currentProfileId=copy.id;saveProfileStore();refreshProfileSelector();loadSelectedProfile();AppTools.toast("Profile duplicated","success");
+}
+function deleteProfile(){
+  if(profileStore.profiles.length<=1){AppTools.toast("At least one profile is required","warning");return}
+  profileStore.profiles=profileStore.profiles.filter(p=>p.id!==currentProfileId);
+  if(profileStore.activeProfileId===currentProfileId)profileStore.activeProfileId=profileStore.profiles[0].id;
+  currentProfileId=profileStore.profiles[0].id;saveProfileStore();refreshProfileSelector();loadSelectedProfile();AppTools.toast("Profile deleted","success");
+}
+function setActiveProfile(){
+  const p=collectCurrentProfile();if(!p)return;profileStore.activeProfileId=p.id;p.activity.unshift({time:new Date().toISOString(),text:"Profile set as active"});saveProfileStore();refreshProfileSelector();AppTools.toast("Active profile updated","success");
+}
+function applyProfileTemplate(){
+  const p=getCurrentProfile(),template=PROFILE_TEMPLATES[getValue("profileTemplate")];if(!p||!template)return;
+  p.template=getValue("profileTemplate");p.general.designation=template.designation;p.general.department=template.department;p.dashboard.dashboard=template.dashboard;p.permissions=JSON.parse(JSON.stringify(template.permissions));
+  loadSelectedProfile();AppTools.toast("Profile template applied","success");
+}
+function handleProfilePictureUpload(event){
+  const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();
+  reader.onload=()=>{const p=getCurrentProfile();p.picture.dataUrl=reader.result;p.picture.url="";setValue("prPictureUrl","");const img=byId("profilePicturePreview");if(img)img.src=reader.result;updateProfilePreviewCard()};
+  reader.readAsDataURL(file);
+}
+function applyProfilePictureUrl(){
+  const p=getCurrentProfile();p.picture.url=getValue("prPictureUrl").trim();if(p.picture.url){p.picture.dataUrl="";const img=byId("profilePicturePreview");if(img)img.src=p.picture.url}updateProfilePreviewCard();
+}
+function updateProfilePictureTransform(updatePreview=true){
+  const img=byId("profilePicturePreview");if(img)img.style.transform=`scale(${Number(getValue("prPictureZoom",100))/100}) rotate(${Number(getValue("prPictureRotate",0))}deg)`;
+  const canvas=byId("profilePictureCanvas");if(canvas)canvas.dataset.frame=getValue("prPictureFrame","none");
+  if(updatePreview)updateProfilePreviewCard();
+}
+function resetProfilePictureTransform(){setValue("prPictureZoom",100);setValue("prPictureRotate",0);updateProfilePictureTransform()}
+function removeProfilePicture(){const p=getCurrentProfile();p.picture.dataUrl="";p.picture.url="";setValue("prPictureUrl","");const img=byId("profilePicturePreview");if(img)img.removeAttribute("src");updateProfilePreviewCard()}
+function handleSignatureUpload(event){readImageFile(event.target.files?.[0],data=>{getCurrentProfile().signature.signatureData=data;const img=byId("prSignaturePreview");if(img)img.src=data})}
+function handleStampUpload(event){readImageFile(event.target.files?.[0],data=>{getCurrentProfile().signature.stampData=data;const img=byId("prStampPreview");if(img)img.src=data})}
+function readImageFile(file,callback){if(!file)return;const reader=new FileReader();reader.onload=()=>callback(reader.result);reader.readAsDataURL(file)}
+function renderProfileActivity(){
+  const host=byId("profileActivityList"),p=getCurrentProfile();if(!host||!p)return;
+  host.innerHTML=(p.activity||[]).slice(0,20).map(item=>`<div class="activity-item"><span>${new Date(item.time).toLocaleString()}</span><strong>${escapeHtml(item.text)}</strong></div>`).join("")||'<div class="empty-builder-state">No activity recorded.</div>';
+}
+function previewCurrentProfile(){
+  collectCurrentProfile();const source=byId("profileCardPreview"),canvas=byId("profilePreviewCanvas"),modal=byId("profilePreviewModal");
+  if(!source||!canvas||!modal)return;canvas.innerHTML=source.innerHTML;modal.classList.add("open");modal.setAttribute("aria-hidden","false");
+}
+function closeProfilePreview(){const modal=byId("profilePreviewModal");if(modal){modal.classList.remove("open");modal.setAttribute("aria-hidden","true")}}
+
 function openPanel(id,btn){
   const target=document.getElementById(id);
   if(!target) return;
@@ -2625,13 +2851,32 @@ function resetThemeOnly(){
   AppTools.toast("Theme reset to Eye Comfort Navy","success");
 }
 
-function loadShell(){const s=JSON.parse(localStorage.getItem('erp_shell_settings_v1')||'{}');pVisible.value=String(s.profileVisible!==false);pSingle.value=String(s.profileSingleOnly!==false);pPosition.value=s.profilePosition||'left-bottom';pName.value=s.profileName||'Muhammad Waqas';pDesignation.value=s.profileDesignation||'Store Officer';pImage.value=s.profileImage||'public/waqas.jpg.png';pImageSize.value=s.profileImageSize||50;pStatus.value=s.profileStatusText||'Online';pBg.value=s.profileCardBackground||'#5b2b18';pColor.value=s.profileTextColor||'#ffffff';sPosition.value=s.navigationPosition||'left';sStart.value=s.startupPage||'index.html';sWidth.value=s.sidebarWidth||170;sAuto.value=String(s.sidebarAutoHide!==false);sDelay.value=s.sidebarAutoHideDelay||5000;sHover.value=String(s.sidebarExpandOnHover!==false);sLeave.value=String(s.sidebarCollapseOnLeave!==false);sTips.value=String(s.sidebarShowTooltips!==false);sRemember.value=String(s.sidebarRememberState===true);sAnimation.value=s.sidebarAnimationMs||200}
-async function saveShell(){const old=JSON.parse(localStorage.getItem('erp_shell_settings_v1')||'{}');const s={...old,profileVisible:pVisible.value==='true',profileSingleOnly:pSingle.value==='true',profilePosition:pPosition.value,profileName:pName.value,profileDesignation:pDesignation.value,profileImage:pImage.value,profileImageSize:+pImageSize.value,profileStatusText:pStatus.value,profileCardBackground:pBg.value,profileTextColor:pColor.value,navigationPosition:sPosition.value,startupPage:sStart.value,sidebarWidth:+sWidth.value,sidebarAutoHide:sAuto.value==='true',sidebarAutoHideDelay:+sDelay.value,sidebarExpandOnHover:sHover.value==='true',sidebarCollapseOnLeave:sLeave.value==='true',sidebarShowTooltips:sTips.value==='true',sidebarShowCollapseButton:false,sidebarRememberState:sRemember.value==='true',sidebarAnimationMs:+sAnimation.value};localStorage.setItem('erp_shell_settings_v1',JSON.stringify(s));await db.from('erp_shell_settings').upsert({setting_key:'global',settings_json:s,updated_by:'Muhammad Waqas',updated_at:new Date().toISOString()},{onConflict:'setting_key'});window.dispatchEvent(new CustomEvent('erp-shell-settings-changed',{detail:s}));AppTools.toast('Shell settings saved for entire ERP','success')}
+function loadShell(){
+  const s=JSON.parse(localStorage.getItem('erp_shell_settings_v1')||'{}');
+  if(byId('sPosition'))sPosition.value=s.navigationPosition||'left';
+  if(byId('sStart'))sStart.value=s.startupPage||'index.html';
+  if(byId('sWidth'))sWidth.value=s.sidebarWidth||170;
+  if(byId('sAuto'))sAuto.value=String(s.sidebarAutoHide!==false);
+  if(byId('sDelay'))sDelay.value=s.sidebarAutoHideDelay||5000;
+  if(byId('sHover'))sHover.value=String(s.sidebarExpandOnHover!==false);
+  if(byId('sLeave'))sLeave.value=String(s.sidebarCollapseOnLeave!==false);
+  if(byId('sTips'))sTips.value=String(s.sidebarShowTooltips!==false);
+  if(byId('sRemember'))sRemember.value=String(s.sidebarRememberState===true);
+  if(byId('sAnimation'))sAnimation.value=s.sidebarAnimationMs||200;
+}
+async function saveShell(){
+  const old=JSON.parse(localStorage.getItem('erp_shell_settings_v1')||'{}');
+  const s={...old,navigationPosition:getValue('sPosition','left'),startupPage:getValue('sStart','index.html'),sidebarWidth:+getValue('sWidth',170),sidebarAutoHide:getValue('sAuto','true')==='true',sidebarAutoHideDelay:+getValue('sDelay',5000),sidebarExpandOnHover:getValue('sHover','true')==='true',sidebarCollapseOnLeave:getValue('sLeave','true')==='true',sidebarShowTooltips:getValue('sTips','true')==='true',sidebarShowCollapseButton:false,sidebarRememberState:getValue('sRemember','false')==='true',sidebarAnimationMs:+getValue('sAnimation',200)};
+  localStorage.setItem('erp_shell_settings_v1',JSON.stringify(s));
+  try{await db.from('erp_shell_settings').upsert({setting_key:'global',settings_json:s,updated_by:'Muhammad Waqas',updated_at:new Date().toISOString()},{onConflict:'setting_key'})}catch(error){console.warn('Shell cloud save skipped',error)}
+  window.dispatchEvent(new CustomEvent('erp-shell-settings-changed',{detail:s}));
+  AppTools.toast('Shell settings saved for entire ERP','success');
+}
 function fontPreview(){fontSample.style.fontFamily=fFamily.value;fontSample.style.fontSize=fBase.value+'px';fontSample.style.fontWeight=fWeight.value}
 function saveFonts(){const f={family:fFamily.value,baseSize:+fBase.value,headingWeight:+fWeight.value,tableSize:+fTable.value,formSize:+fForm.value};localStorage.setItem('erp_font_settings_v1',JSON.stringify(f));AppTools.toast('Fonts saved for entire ERP','success')}
 function addRule(){rules.insertAdjacentHTML('beforeend','<div class="rule"><select><option>Item Master</option><option>Supplier Master</option><option>Department Master</option><option>Workshop Master</option></select><input placeholder="Source field"><input placeholder="Target field"><button class="btn gray" onclick="this.parentElement.remove()">Remove</button></div>')}
 function saveAutofill(){const data=[...rules.querySelectorAll('.rule')].map(r=>({master:r.children[0].value,source:r.children[1].value,target:r.children[2].value}));localStorage.setItem('erp_autofill_settings_v1',JSON.stringify(data));AppTools.toast('Autofill rules saved','success')}
-function refreshPreview(){if(active==="theme")refreshThemePreview();else{const t=ERPThemeManager.getLocal();ERPThemeManager.previewAdvanced(t,themePreviewShell)}}function resetPanel(){localStorage.removeItem(active==='theme'?'erp_theme_manager_v1':active==='fonts'?'erp_font_settings_v1':active==='autofill'?'erp_autofill_settings_v1':'erp_shell_settings_v1');location.reload()}function saveCurrent(){if(active==='theme')saveTheme();else if(active==='profile'||active==='sidebar')saveShell();else if(active==='fonts')saveFonts();else if(active==='autofill')saveAutofill();else AppTools.toast('Page settings ready to publish','success')}function publishCurrent(){saveCurrent();AppTools.toast('Controller settings published','success')}
+function refreshPreview(){if(active==="theme")refreshThemePreview();else{const t=ERPThemeManager.getLocal();ERPThemeManager.previewAdvanced(t,themePreviewShell)}}function resetPanel(){localStorage.removeItem(active==='theme'?'erp_theme_manager_v1':active==='fonts'?'erp_font_settings_v1':active==='autofill'?'erp_autofill_settings_v1':'erp_shell_settings_v1');location.reload()}function saveCurrent(){if(active==='theme')saveTheme();else if(active==='profile')saveCurrentProfile();else if(active==='sidebar')saveShell();else if(active==='fonts')saveFonts();else if(active==='autofill')saveAutofill();else AppTools.toast('Page settings ready to publish','success')}function publishCurrent(){saveCurrent();AppTools.toast('Controller settings published','success')}
 
 function openFullPreview(){
   refreshFullPreview();
@@ -2681,7 +2926,9 @@ function bindControllerLaunchCards(){
 document.addEventListener('DOMContentLoaded',()=>{
   buildThemeFontManager();
   document.querySelectorAll('#theme [data-theme-key]').forEach(el=>el.addEventListener('input',themeInputChanged));
-  loadTheme();loadShell();refreshPreview();fontPreview();
+  loadTheme();loadShell();loadProfileStore();refreshPreview();fontPreview();
+  const profileModal=byId('profilePreviewModal');
+  if(profileModal)profileModal.addEventListener('click',event=>{if(event.target===profileModal)closeProfilePreview()});
 });
 </script>
 <div id="fullPreviewModal" class="full-preview-modal" aria-hidden="true">
