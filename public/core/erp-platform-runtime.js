@@ -1,11 +1,11 @@
 (function(){
 "use strict";
 
-const VERSION="41.5.0";
+const VERSION="41.6.0";
 const BUILD="2026.07.18";
 const KEYS={
-  published:"erp_design_published",
-  draft:"erp_design_draft",
+  published:"erp_control_published_v1",
+  draft:"erp_control_draft_v1",
   plugins:"erp_plugins",
   modules:"erp_module_registry",
   notifications:"erp_notifications",
