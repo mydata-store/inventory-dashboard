@@ -5,6 +5,8 @@
   const REGISTRY_KEY = "erp_module_registry";
   let currentSettings = {};
   let hideTimer = null;
+  let expandTimer = null;
+  let shellState = "collapsed";
 
   const DEFAULTS = {
     navigationPosition: "left",
@@ -13,6 +15,8 @@
     sidebarCollapsedWidth: 58,
     sidebarAutoHide: true,
     sidebarAutoHideDelay: 1000,
+    sidebarExpandDelay: 40,
+    sidebarCollapseDelay: 160,
     sidebarExpandOnHover: true,
     sidebarCollapseOnLeave: true,
     sidebarShowTooltips: true,
@@ -20,6 +24,11 @@
     sidebarAnimationMs: 180,
     sidebarFontFamily: "Segoe UI, Arial, sans-serif",
     sidebarFontSize: 12,
+    sidebarSubmenuFontSize: 11,
+    sidebarLineHeight: 1.25,
+    sidebarLetterSpacing: 0,
+    sidebarTextTransform: "none",
+    sidebarIconGap: 8,
     sidebarFontWeight: 600,
     sidebarIconSize: 15,
     menuIcons: {},
@@ -50,6 +59,21 @@
     profileShowDesignation: false,
     profileShowDepartment: false,
     profileShowStatus: true,
+    sidebarBackgroundType: "solid",
+    sidebarBackground: "#0f172a",
+    sidebarBackground2: "#173f5f",
+    sidebarText: "#ffffff",
+    sidebarIconColor: "#ffffff",
+    hoverBackground: "#173f5f",
+    hoverText: "#ffffff",
+    activeBackground: "#f59e0b",
+    activeText: "#111827",
+    submenuActiveColor: "#f59e0b",
+    borderColor: "#334155",
+    tooltipBackground: "#0b1220",
+    tooltipText: "#ffffff",
+    sidebarOpacity: 1,
+    sidebarBlur: 0,
     activeColor: "#f59e0b"
   };
 
@@ -247,13 +271,17 @@
   function setCollapsed(collapsed) {
     const side = document.querySelector(".erp-universal-side");
     if (!side) return;
+    shellState = collapsed ? "collapsed" : "expanded";
+    side.dataset.shellState = shellState;
     side.classList.toggle("collapsed", !!collapsed);
     document.body.classList.toggle("erp-shell-collapsed", !!collapsed);
   }
 
   function clearHideTimer() {
     if (hideTimer) clearTimeout(hideTimer);
+    if (expandTimer) clearTimeout(expandTimer);
     hideTimer = null;
+    expandTimer = null;
   }
 
   function scheduleHide() {
@@ -294,7 +322,9 @@
 
     side.addEventListener("mouseenter", () => {
       clearHideTimer();
-      if (currentSettings.sidebarExpandOnHover !== false) setCollapsed(false);
+      if (currentSettings.sidebarExpandOnHover === false || shellState === "expanded") return;
+      shellState = "expanding";
+      expandTimer = setTimeout(() => setCollapsed(false), Math.max(0, Number(currentSettings.sidebarExpandDelay || 0)));
     });
 
     side.addEventListener("mouseleave", () => {
@@ -302,12 +332,9 @@
       side.querySelectorAll(".erp-side-group.open").forEach(group => {
         if (!group.querySelector("a.active")) group.classList.remove("open");
       });
-
-      if (currentSettings.sidebarCollapseOnLeave !== false) {
-        setCollapsed(true);
-      } else {
-        scheduleHide();
-      }
+      if (currentSettings.sidebarCollapseOnLeave === false) return scheduleHide();
+      shellState = "collapsing";
+      hideTimer = setTimeout(() => setCollapsed(true), Math.max(0, Number(currentSettings.sidebarCollapseDelay || 0)));
     });
 
     const initiallyCollapsed =
@@ -319,14 +346,37 @@
 
   function applyVariables() {
     const root = document.documentElement;
+    const bgType=String(currentSettings.sidebarBackgroundType||"solid");
+    const bg1=currentSettings.sidebarBackground||"#0f172a";
+    const bg2=currentSettings.sidebarBackground2||bg1;
+    const background=bgType==="gradient"?`linear-gradient(180deg,${bg1},${bg2})`:bg1;
     root.style.setProperty("--erp-side-width", `${Number(currentSettings.sidebarWidth || 182)}px`);
     root.style.setProperty("--erp-side-collapsed", `${Number(currentSettings.sidebarCollapsedWidth || 58)}px`);
     root.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 180)}ms`);
     root.style.setProperty("--erp-side-font-family", currentSettings.sidebarFontFamily || "Segoe UI, Arial, sans-serif");
     root.style.setProperty("--erp-side-font-size", `${Number(currentSettings.sidebarFontSize || 12)}px`);
+    root.style.setProperty("--erp-side-submenu-font-size", `${Number(currentSettings.sidebarSubmenuFontSize || 11)}px`);
     root.style.setProperty("--erp-side-font-weight", String(Number(currentSettings.sidebarFontWeight || 600)));
+    root.style.setProperty("--erp-side-line-height", String(Number(currentSettings.sidebarLineHeight || 1.25)));
+    root.style.setProperty("--erp-side-letter-spacing", `${Number(currentSettings.sidebarLetterSpacing || 0)}px`);
+    root.style.setProperty("--erp-side-text-transform", currentSettings.sidebarTextTransform || "none");
     root.style.setProperty("--erp-side-icon-size", `${Number(currentSettings.sidebarIconSize || 15)}px`);
-    root.style.setProperty("--erp-shell-active", currentSettings.activeColor || "#f59e0b");
+    root.style.setProperty("--erp-side-icon-gap", `${Number(currentSettings.sidebarIconGap || 8)}px`);
+    root.style.setProperty("--sidebar-bg", background);
+    root.style.setProperty("--sidebar-text", currentSettings.sidebarText || "#ffffff");
+    root.style.setProperty("--sidebar-icon", currentSettings.sidebarIconColor || currentSettings.sidebarText || "#ffffff");
+    root.style.setProperty("--sidebar-hover-bg", currentSettings.hoverBackground || "rgba(255,255,255,.1)");
+    root.style.setProperty("--sidebar-hover-text", currentSettings.hoverText || "#ffffff");
+    root.style.setProperty("--erp-shell-active", currentSettings.activeBackground || currentSettings.activeColor || "#f59e0b");
+    root.style.setProperty("--erp-shell-active-text", currentSettings.activeText || "#111827");
+    root.style.setProperty("--erp-submenu-active", currentSettings.submenuActiveColor || "#f59e0b");
+    root.style.setProperty("--erp-side-border", currentSettings.borderColor || "#334155");
+    root.style.setProperty("--erp-tooltip-bg", currentSettings.tooltipBackground || "#0b1220");
+    root.style.setProperty("--erp-tooltip-text", currentSettings.tooltipText || "#ffffff");
+    root.style.setProperty("--erp-side-opacity", String(Number(currentSettings.sidebarOpacity ?? 1)));
+    root.style.setProperty("--erp-side-blur", `${Number(currentSettings.sidebarBlur || 0)}px`);
+    document.body.classList.toggle("erp-sidebar-tooltips-off",currentSettings.sidebarShowTooltips===false);
+    document.body.classList.toggle("erp-sidebar-glass",bgType==="glass");
   }
 
   function render(settings = {}) {
