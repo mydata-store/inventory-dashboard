@@ -118,7 +118,132 @@ function preview(){const s=values(),p=$('previewSide');let bg=s.sidebarBackgroun
 function snapshot(label,settings){let h=[];try{h=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{};h.unshift({id:Date.now(),date:new Date().toISOString(),label,settings:{...settings}});h=h.slice(0,25);localStorage.setItem(HISTORY_KEY,JSON.stringify(h));renderHistory()}
 function apply(){const old=getStored(),v=values();snapshot('Before V42.2 apply',old);v.menuIcons={dashboard:v.iconDashboard,masters:v.iconMasters,purchase:v.iconPurchase,issue:v.iconIssue,gatepass:v.iconGatepass,stockledger:v.iconStockledger,rack:v.iconRack,reports:v.iconReports,control:v.iconControl};const s={...old,...v,sidebarStudioVersion:'42.2.0'};localStorage.setItem(KEY,JSON.stringify(s));snapshot('Applied sidebar design',s);window.dispatchEvent(new CustomEvent('erp-shell-settings-changed',{detail:s}));$('saveStatus').textContent='Saved and applied to the universal sidebar.';setTimeout(()=>location.reload(),350)}
 function renderHistory(){let h=[];try{h=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{};const box=$('historyList');if(!box)return;if(!h.length){box.innerHTML='<div class="empty">No history snapshots yet. Apply a design or create a snapshot.</div>';return}box.innerHTML=h.map(x=>`<div class="history-item"><div><b>${x.label}</b><small>${new Date(x.date).toLocaleString()}</small></div><button data-restore="${x.id}">Restore</button></div>`).join('');box.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>restoreSnapshot(Number(b.dataset.restore)))}
-function restoreSnapshot(id){let h=[];try{h=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{};const x=h.find(v=>v.id===id);if(!x)return;if(!confirm('Restore this sidebar design snapshot?'))return;snapshot('Before history restore',getStored());localStorage.setItem(KEY,JSON.stringify(x.settings));load();$('saveStatus').textContent='History snapshot restored. Reloading universal sidebar.';setTimeout(()=>location.reload(),350)}
+function restoreSnapshot(id){let h=[];try{h=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{};const x=h.find(v=>v.id===id);if(!x)return;if(!confirm('Restore this sidebar design snapshot?'))return;snapshot('Before history restore',getStored());localStorage.setItem(KEY,JSON.stringify(x.settings));let uploadedProfileImage = '';
+
+function profileInitials(name){
+  const parts = String(name || 'Muhammad Waqas')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return (parts[0]?.[0] || 'M') +
+         (parts.length > 1 ? parts[parts.length - 1][0] : 'W');
+}
+
+function getSelectedProfileImage(){
+  const source = $('profileImageSource')?.value || 'project';
+
+  if(source === 'computer'){
+    return uploadedProfileImage;
+  }
+
+  if(source === 'online'){
+    return ($('profileImageUrl')?.value || '').trim();
+  }
+
+  return ($('profileImage')?.value || '').trim();
+}
+
+function renderProfileManagerImage(){
+  const box = $('profileManagerAvatar');
+  if(!box) return;
+
+  const image = getSelectedProfileImage();
+  const initials = profileInitials($('profileName')?.value);
+
+  box.innerHTML = '';
+
+  if(!image){
+    const fallback = document.createElement('span');
+    fallback.textContent = initials;
+    box.appendChild(fallback);
+    return;
+  }
+
+  const img = document.createElement('img');
+  img.src = image;
+  img.alt = 'Profile picture';
+
+  img.onerror = () => {
+    box.innerHTML = '';
+    const fallback = document.createElement('span');
+    fallback.textContent = initials;
+    box.appendChild(fallback);
+  };
+
+  box.appendChild(img);
+}
+
+function updateProfileSourceFields(){
+  const source = $('profileImageSource')?.value || 'project';
+
+  $('profileProjectSource').style.display =
+    source === 'project' ? 'grid' : 'none';
+
+  $('profileComputerSource').style.display =
+    source === 'computer' ? 'grid' : 'none';
+
+  $('profileOnlineSource').style.display =
+    source === 'online' ? 'grid' : 'none';
+
+  renderProfileManagerImage();
+  preview();
+}
+
+$('profileImageSource').addEventListener('change', updateProfileSourceFields);
+
+$('profileImageUpload').addEventListener('change', event => {
+  const file = event.target.files?.[0];
+
+  if(!file){
+    uploadedProfileImage = '';
+    renderProfileManagerImage();
+    preview();
+    return;
+  }
+
+  if(!file.type.startsWith('image/')){
+    alert('Please select a valid image file.');
+    event.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    uploadedProfileImage = String(reader.result || '');
+    renderProfileManagerImage();
+    preview();
+  };
+
+  reader.onerror = () => {
+    uploadedProfileImage = '';
+    alert('The selected picture could not be read.');
+  };
+
+  reader.readAsDataURL(file);
+});
+
+$('profileImage').addEventListener('input', () => {
+  renderProfileManagerImage();
+  preview();
+});
+
+$('profileImageUrl').addEventListener('input', () => {
+  renderProfileManagerImage();
+  preview();
+});
+
+$('profileName').addEventListener('input', renderProfileManagerImage);
+
+$('clearProfileImageBtn').addEventListener('click', () => {
+  uploadedProfileImage = '';
+  $('profileImage').value = '';
+  $('profileImageUrl').value = '';
+  $('profileImageUpload').value = '';
+  renderProfileManagerImage();
+  preview();
+});load();$('saveStatus').textContent='History snapshot restored. Reloading universal sidebar.';setTimeout(()=>location.reload(),350)}
 function syncPair(text,picker){if($(text)&&$(picker))$(picker).value=/^#[0-9a-f]{6}$/i.test($(text).value)?$(text).value:'#000000'}
 const colorPairs=[['sidebarBackground','sidebarBackgroundColor'],['sidebarGradientEnd','sidebarGradientEndColor'],['sidebarTextColor','sidebarTextColorPicker'],['activeColor','activeColorPicker'],['sidebarActiveTextColor','sidebarActiveTextPicker'],['sidebarHoverColor','sidebarHoverPicker'],['profileCardBackground','profileCardBackgroundPicker'],['profileTextColor','profileTextColorPicker'],
 ['profileBorderColor','profileBorderColorPicker']];function syncPickers(){colorPairs.forEach(x=>syncPair(...x))}
