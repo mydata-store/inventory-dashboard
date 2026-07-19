@@ -49,8 +49,17 @@
     profileStatusText: "Online",
     profileStatusColor: "#22c55e",
     profileImage: "public/waqas.jpg.png",
+    profileImageSource: "project",
+    profileImageUrl: "",
+    profileImageUploadData: "",
     profileImageSize: 48,
     profileImageShape: "circle",
+    profileAvatarBorderColor: "#ffffff",
+    profileAvatarBorderWidth: 2,
+    profileAvatarBackground: "#f5a000",
+    profileAvatarShadow: "soft",
+    profileAvatarPadding: 0,
+    profileAvatarOpacity: 100,
     profileCardWidth: 160,
     profileCardHeight: 72,
     profileCardBackground: "#0f172a",
@@ -215,6 +224,13 @@
     const imageRadius = shape.includes("square") ? "10px" : "50%";
 
     const shadow=String(currentSettings.profileShadow||"soft").toLowerCase();
+    const avatarShadow=String(currentSettings.profileAvatarShadow||"soft").toLowerCase();
+    const source=String(currentSettings.profileImageSource||"project").toLowerCase();
+    const profileImage = source === "computer"
+      ? (currentSettings.profileImageUploadData || currentSettings.profileImage || "")
+      : source === "online"
+        ? (currentSettings.profileImageUrl || currentSettings.profileImage || "")
+        : (currentSettings.profileImage || "");
     return `<div class="erp-universal-profile profile-shadow-${esc(shadow)}" data-universal-profile="true"
       style="
         --profile-bg:${esc(currentSettings.profileCardBackground)};
@@ -223,11 +239,17 @@
         --profile-card-height:${Number(currentSettings.profileCardHeight || 72)}px;
         --profile-image-size:${Number(currentSettings.profileImageSize || 48)}px;
         --profile-image-radius:${imageRadius};
+        --profile-avatar-border-color:${esc(currentSettings.profileAvatarBorderColor || "#ffffff")};
+        --profile-avatar-border-width:${Number(currentSettings.profileAvatarBorderWidth ?? 2)}px;
+        --profile-avatar-bg:${esc(currentSettings.profileAvatarBackground || "#f5a000")};
+        --profile-avatar-padding:${Number(currentSettings.profileAvatarPadding || 0)}px;
+        --profile-avatar-opacity:${Math.max(20,Math.min(100,Number(currentSettings.profileAvatarOpacity || 100)))/100};
+        --profile-avatar-shadow:${avatarShadow === "strong" ? "0 10px 24px rgba(0,0,0,.55)" : avatarShadow === "medium" ? "0 7px 17px rgba(0,0,0,.42)" : avatarShadow === "soft" ? "0 4px 11px rgba(0,0,0,.32)" : "none"};
         --profile-border-style:${esc(currentSettings.profileBorderStyle || "solid")};
         --profile-border-width:${Number(currentSettings.profileBorderWidth || 1)}px;
         --profile-border-color:${esc(currentSettings.profileBorderColor || "rgba(255,255,255,.08)")};
       ">
-      <img src="${esc(currentSettings.profileImage)}" onerror="this.src='public/profile.png'">
+      <img src="${esc(profileImage)}" onerror="this.onerror=null;this.src='public/profile.png'">
       <span>
         ${currentSettings.profileShowName !== false ? `<strong>${esc(currentSettings.profileName)}</strong>` : ""}
         ${info.length ? `<small>${esc(info.join(" • "))}</small>` : ""}
