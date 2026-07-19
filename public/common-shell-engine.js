@@ -199,11 +199,13 @@
     const shape = String(currentSettings.profileImageShape || "circle").toLowerCase();
     const imageRadius = shape.includes("square") ? "10px" : "50%";
 
-    return `<div class="erp-universal-profile" data-universal-profile="true"
+    const shadow=String(currentSettings.profileShadow||"soft").toLowerCase();
+    return `<div class="erp-universal-profile profile-shadow-${esc(shadow)}" data-universal-profile="true"
       style="
         --profile-bg:${esc(currentSettings.profileCardBackground)};
         --profile-text:${esc(currentSettings.profileTextColor)};
         --profile-radius:${Number(currentSettings.profileRadius || 12)}px;
+        --profile-card-height:${Number(currentSettings.profileCardHeight || 72)}px;
         --profile-image-size:${Number(currentSettings.profileImageSize || 48)}px;
         --profile-image-radius:${imageRadius};
         --profile-border-style:${esc(currentSettings.profileBorderStyle || "solid")};

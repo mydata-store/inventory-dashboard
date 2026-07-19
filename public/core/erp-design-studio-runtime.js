@@ -10,14 +10,42 @@ function activeProfile(){
 }
 function profileToShell(p){
   if(!p)return {};
-  const g=p.general||{},c=p.card||{},d=p.display||{},pic=p.picture||{};
+  const g=p.general||{};
+  const c=p.card||{};
+  const d=p.display||{};
+  const pic=p.picture||{};
+
+  const normalizeShape=value=>{
+    const v=String(value||"circle").toLowerCase();
+    if(v.includes("square"))return "rounded-square";
+    return "circle";
+  };
+
   return {
-    profileName:g.fullName||"Muhammad Waqas",profileDesignation:g.designation||"",profileDepartment:g.department||"",
-    profileImage:pic.dataUrl||pic.url||"public/waqas.jpg.png",profileCardBackground:c.backgroundColor||"#0f172a",
-    profileTextColor:c.textColor||"#ffffff",profileRadius:Number(c.radius||12),profileCardWidth:Number(c.width||150),
-    profileCardHeight:Number(c.height||70),profileImageSize:Number(c.pictureSize||44),profileShowName:d.name!==false,
-    profileShowDesignation:d.designation!==false,profileShowDepartment:d.department===true,profileShowStatus:c.onlineStatus!==false,
-    profileStatusText:"Online",profileStatusColor:"#16a34a",profilePosition:"left-bottom",profileSingleOnly:true
+    profileVisible:p.status!=="inactive",
+    profileSingleOnly:true,
+    profilePosition:"left-bottom",
+    profileName:g.fullName||"Muhammad Waqas",
+    profileDesignation:g.designation||"",
+    profileDepartment:g.department||"",
+    profileImage:pic.dataUrl||pic.url||"public/waqas.jpg.png",
+    profileImageSize:Number(c.pictureSize||48),
+    profileImageShape:normalizeShape(c.pictureShape),
+    profileCardWidth:Number(c.width||160),
+    profileCardHeight:Number(c.height||72),
+    profileCardBackground:c.backgroundColor||"#0f172a",
+    profileTextColor:c.textColor||"#ffffff",
+    profileRadius:Number(c.radius||12),
+    profileBorderStyle:String(c.borderStyle||"solid").toLowerCase(),
+    profileBorderWidth:Number(c.borderWidth||1),
+    profileBorderColor:c.borderColor||"rgba(255,255,255,.08)",
+    profileShadow:String(c.shadow||"soft").toLowerCase(),
+    profileShowName:d.name!==false,
+    profileShowDesignation:d.designation===true,
+    profileShowDepartment:d.department===true,
+    profileShowStatus:c.onlineStatus!==false,
+    profileStatusText:"Online",
+    profileStatusColor:"#22c55e"
   };
 }
 function fontToTheme(fonts,theme){
@@ -39,8 +67,13 @@ function themeFromProfile(profile,current){
 }
 
 const Runtime={
-  version:"41.9.0",
+  version:"41.10.0",
   collect(){
+    const store=parse(K.profiles,{profiles:[]});
+    if(window.currentProfileId&&store.profiles?.some(p=>p.id===window.currentProfileId)){
+      store.activeProfileId=window.currentProfileId;
+      save(K.profiles,store);
+    }
     const profile=activeProfile(),fonts=parse(K.fonts,{}),shell=parse(K.shell,{});
     let theme=parse(K.theme,{});
     theme=themeFromProfile(profile,theme);

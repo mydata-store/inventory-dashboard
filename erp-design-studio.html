@@ -1721,6 +1721,10 @@
   </div>
 
 <div id="profile" class="panel">
+<div class="card" style="margin-bottom:12px;border-left:4px solid #16a34a">
+  <strong>Profile Controller Lock</strong>
+  <p class="muted" style="margin:5px 0 0">Only the profile card is changed. Sidebar menus, fonts, hover, collapse and links remain locked.</p>
+</div>
   <div class="head">
     <div>
       <h2>Profile Controller</h2>
@@ -2193,11 +2197,15 @@ function updateProfilePreviewCard(){
 function saveCurrentProfile(){
   const p=collectCurrentProfile(); if(!p)return;
   p.updatedAt=new Date().toISOString();
-  p.activity.unshift({time:p.updatedAt,text:"Profile settings saved"});
+  p.activity.unshift({time:p.updatedAt,text:"Profile settings saved and activated"});
+  profileStore.activeProfileId=p.id;
+  currentProfileId=p.id;
   saveProfileStore();refreshProfileSelector();renderProfileActivity();
+  localStorage.setItem("erp_profile_controller_v1",JSON.stringify(profileStore));
   window.dispatchEvent(new CustomEvent("erp-profile-changed",{detail:p}));
-  window.ERPDesignStudioRuntime?.apply();
-  AppTools.toast("Profile saved and applied to the ERP","success");
+  const settings=window.ERPDesignStudioRuntime?.collect?.();
+  if(settings?.shell)window.ERPUniversalShell?.render(settings.shell);
+  AppTools.toast("Profile saved, activated and applied to the sidebar","success");
 }
 function resetCurrentProfile(){
   const i=profileStore.profiles.findIndex(p=>p.id===currentProfileId);if(i<0)return;
