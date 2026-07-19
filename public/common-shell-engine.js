@@ -22,6 +22,14 @@
     sidebarFontSize: 12,
     sidebarFontWeight: 600,
     sidebarIconSize: 15,
+    sidebarSubmenuIconSize: 11,
+    sidebarIconBoxWidth: 20,
+    sidebarIconPadding: 0,
+    sidebarIconRadius: 6,
+    sidebarIconColor: "#ffffff",
+    sidebarIconHoverColor: "#ffffff",
+    sidebarIconActiveColor: "#111827",
+    sidebarIconBackground: "transparent",
     sidebarSubmenuFontSize: 10,
     sidebarLineHeight: 1.2,
     sidebarLetterSpacing: 0,
@@ -363,6 +371,14 @@
     root.style.setProperty("--erp-side-font-size", `${Number(currentSettings.sidebarFontSize || 12)}px`);
     root.style.setProperty("--erp-side-font-weight", String(Number(currentSettings.sidebarFontWeight || 600)));
     root.style.setProperty("--erp-side-icon-size", `${Number(currentSettings.sidebarIconSize || 15)}px`);
+    root.style.setProperty("--erp-side-submenu-icon-size", `${Number(currentSettings.sidebarSubmenuIconSize || 11)}px`);
+    root.style.setProperty("--erp-side-icon-box", `${Number(currentSettings.sidebarIconBoxWidth || 20)}px`);
+    root.style.setProperty("--erp-side-icon-padding", `${Number(currentSettings.sidebarIconPadding || 0)}px`);
+    root.style.setProperty("--erp-side-icon-radius", `${Number(currentSettings.sidebarIconRadius || 6)}px`);
+    root.style.setProperty("--erp-side-icon-color", currentSettings.sidebarIconColor || "#ffffff");
+    root.style.setProperty("--erp-side-icon-hover", currentSettings.sidebarIconHoverColor || "#ffffff");
+    root.style.setProperty("--erp-side-icon-active", currentSettings.sidebarIconActiveColor || "#111827");
+    root.style.setProperty("--erp-side-icon-bg", currentSettings.sidebarIconBackground || "transparent");
     root.style.setProperty("--erp-shell-active", currentSettings.activeColor || "#f59e0b");
     root.style.setProperty("--erp-shell-bg", currentSettings.sidebarBackground || "#0f172a");
     root.style.setProperty("--erp-shell-text", currentSettings.sidebarTextColor || "#ffffff");
