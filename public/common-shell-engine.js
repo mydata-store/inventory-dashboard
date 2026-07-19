@@ -1,108 +1,166 @@
 (() => {
   "use strict";
 
-  const SUPABASE_URL = "https://lzsxtvkluqvcaetnnydu.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma";
+  const SETTINGS_KEY = "erp_shell_settings_v1";
+  const REGISTRY_KEY = "erp_module_registry";
+  let currentSettings = {};
+  let hideTimer = null;
 
   const DEFAULTS = {
     navigationPosition: "left",
     startupPage: "index.html",
-    stickyNavigation: true,
-    compactTopBar: false,
-    showBrand: true,
-    brandTitle: "Inventory Store",
-    brandSubtitle: "Management System",
-    showSearch: false,
-    showDateTime: true,
-    showNotifications: true,
-    sidebarWidth: 170,
+    sidebarWidth: 182,
     sidebarCollapsedWidth: 58,
-    sidebarDefaultCollapsed: false,
     sidebarAutoHide: true,
-    sidebarAutoHideDelay: 5000,
+    sidebarAutoHideDelay: 1000,
     sidebarExpandOnHover: true,
     sidebarCollapseOnLeave: true,
     sidebarShowTooltips: true,
     sidebarRememberState: false,
-    sidebarAnimationMs: 200,
+    sidebarAnimationMs: 180,
+    sidebarFontFamily: "Segoe UI, Arial, sans-serif",
+    sidebarFontSize: 12,
+    sidebarFontWeight: 600,
+    sidebarIconSize: 15,
+    menuIcons: {},
+    showBrand: true,
+    brandTitle: "Inventory Store",
+    brandSubtitle: "Management System",
     profileVisible: true,
     profileSingleOnly: true,
-    sidebarShowCollapseButton: false,
     profilePosition: "left-bottom",
-    profileLayout: "vertical",
-    profileMode: "compact",
     profileName: "Muhammad Waqas",
     profileDesignation: "Store Officer",
-    profileDepartment: "Store Department",
+    profileDepartment: "",
     profileStatusText: "Online",
     profileStatusColor: "#22c55e",
     profileImage: "public/waqas.jpg.png",
-    profileImageSize: 50,
+    profileImageSize: 48,
     profileImageShape: "circle",
-    profileCardWidth: 150,
-    profileCardHeight: 92,
-    profileCardBackground: "#5b2b18",
+    profileCardWidth: 160,
+    profileCardHeight: 72,
+    profileCardBackground: "#0f172a",
     profileTextColor: "#ffffff",
     profileRadius: 12,
-    profileShadow: true,
+    profileBorderStyle: "solid",
+    profileBorderWidth: 1,
+    profileBorderColor: "rgba(255,255,255,.08)",
+    profileShadow: "soft",
+    profileShowName: true,
     profileShowDesignation: false,
     profileShowDepartment: false,
     profileShowStatus: true,
-    profileHideMobile: false,
-    topBarHeight: 64,
-    topBarBackground: "#0f172a",
-    topBarTextColor: "#ffffff",
     activeColor: "#f59e0b"
   };
 
-  const MENU = [
-    { id:"dashboard", label: "Dashboard", icon: "⌂", href: "index.html" },
-    { id: "masters", label: "Masters", icon: "▦", children: [
-      { label: "Item Master", href: "items.html" },
-      { label: "Supplier Master", href: "suppliers.html" },
-      { label: "Workshop / Party", href: "workshops.html" },
-      { label: "Department Master", href: "departments.html" },
-      { label: "Other Masters Center", href: "master-center.html" }
+  const BASE_MENU = [
+    { id:"dashboard", label:"Dashboard", icon:"⌂", href:"index.html" },
+    { id:"masters", label:"Masters", icon:"▦", children:[
+      { label:"Item Master", href:"items.html" },
+      { label:"Supplier Master", href:"suppliers.html" },
+      { label:"Workshop / Party", href:"workshops.html" },
+      { label:"Department Master", href:"departments.html" },
+      { label:"All Masters", href:"masters.html" },
+      { label:"Master Center", href:"master-center.html" }
     ]},
-    { id: "purchase", label: "Purchase Entry", icon: "🛒", children: [
-      { label: "Local Purchase", href: "local-purchase.html" },
-      { label: "Zafar Purchase", href: "zafar-purchase.html" },
-      { label: "Board Purchase", href: "board-purchase.html" },
-      { label: "Purchase List", href: "purchase-list.html" }
+    { id:"purchase", label:"Purchase Entry", icon:"🛒", children:[
+      { label:"Local Purchase", href:"local-purchase.html" },
+      { label:"Zafar Purchase", href:"zafar-purchase.html" },
+      { label:"Board Purchase", href:"board-purchase.html" },
+      { label:"Purchase List", href:"purchase-list.html" }
     ]},
-    { id:"issue", label: "Issue Entry", icon: "↩", href: "issue.html" },
-    { id:"gatepass", label: "Gate Pass", icon: "▣", href: "gate-pass.html" },
-    { id:"stockledger", label: "Stock Ledger", icon: "▤", href: "stock-ledger.html" },
-    { id:"rack", label: "Rack Management", icon: "▥", href: "rack-management.html" },
-    { id:"intelligence", label: "Inventory Intelligence", icon: "◆", href: "inventory-intelligence.html" },
-    { id:"reports", label: "Reports", icon: "▧", href: "reports.html" },
-    { id: "settings", label: "Settings", icon: "⚙", children: [
-      { label: "ERP Design Studio", href: "erp-design-studio.html" },
-      { label: "Theme Settings", href: "theme-settings.html" },
-      { label: "PDF & Logo Settings", href: "pdf-settings.html" },
-      { label: "ERP Core Settings", href: "erp-core-settings.html" },
-      { label: "Host & Backup Manager", href: "host-manager.html" },
-      { label: "ERP Setup Wizard", href: "erp-installer.html" },
-      { label: "Relationship Center", href: "erp-relationship-center.html" },
-      { label: "Data Health Center", href: "erp-health-center.html" },
-      { label: "Health Control Tower", href: "erp-health-control-tower.html" }
+    { id:"issue", label:"Issue Entry", icon:"↩", href:"issue.html" },
+    { id:"gatepass", label:"Gate Pass", icon:"▣", href:"gate-pass.html" },
+    { id:"stockledger", label:"Stock Ledger", icon:"▤", href:"stock-ledger.html" },
+    { id:"rack", label:"Rack Management", icon:"▥", href:"rack-management.html" },
+    { id:"intelligence", label:"Inventory Intelligence", icon:"◆", href:"inventory-intelligence.html" },
+    { id:"reports", label:"Reports", icon:"▧", href:"reports.html" },
+    { id:"control", label:"ERP Control Center", icon:"⚙", children:[
+      { label:"Control Center Dashboard", href:"erp-control-center.html" },
+      { label:"ERP Design Studio", href:"erp-design-studio.html" },
+      { label:"Host Manager", href:"host-manager.html" },
+      { label:"Diagnostics", href:"erp-diagnostics.html" },
+      { label:"Framework Status", href:"framework-status.html" },
+      { label:"Plugin Manager", href:"erp-plugin-manager.html" },
+      { label:"Activity Log", href:"erp-activity-log.html" },
+      { label:"ERP Setup Wizard", href:"erp-installer.html" },
+      { label:"ERP Core Settings", href:"erp-core-settings.html" },
+      { label:"Theme Settings", href:"theme-settings.html" },
+      { label:"PDF & Logo Settings", href:"pdf-settings.html" },
+      { label:"Relationship Center", href:"erp-relationship-center.html" },
+      { label:"Data Health Center", href:"erp-health-center.html" },
+      { label:"Health Control Tower", href:"erp-health-control-tower.html" },
+      { label:"ERP Launcher", href:"erp-launcher.html" }
     ]}
   ];
 
   const esc = value => String(value ?? "")
-    .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll("&","&amp;").replaceAll("<","&lt;")
+    .replaceAll(">","&gt;").replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 
-  function currentKey() {
-    return (location.pathname.split("/").pop() || "index.html") + location.search;
+  const currentFile = () => location.pathname.split("/").pop() || "index.html";
+
+  function isActive(item) {
+    const file = currentFile();
+    if (!item.href) return false;
+    const base = item.href.split("?")[0];
+    return file === base || location.href.includes(item.href);
   }
 
-  function matches(item) {
-    const key = currentKey();
-    const href = item.href || "";
-    return key === href || key.startsWith(href + "?") ||
-      (href.includes("?") && key.startsWith(href.split("?")[0]));
+  function readJSON(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "");
+      return value || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function getSettings() {
+    return { ...DEFAULTS, ...readJSON(SETTINGS_KEY, {}) };
+  }
+
+  function getControlCenterChildren() {
+    const fixed = BASE_MENU.find(item => item.id === "control").children.map(item => ({...item}));
+    const seen = new Set(fixed.map(item => item.href));
+
+    const registry = readJSON(REGISTRY_KEY, {});
+    const records = Array.isArray(registry) ? registry : Object.values(registry || {});
+
+    records.forEach(record => {
+      if (!record || !record.url || seen.has(record.url)) return;
+      const moduleName = String(record.module || "").toLowerCase();
+      const pageId = String(record.id || "").toLowerCase();
+      const isControlPage =
+        moduleName === "framework" ||
+        moduleName === "settings" ||
+        pageId.includes("control") ||
+        pageId.includes("diagnostic") ||
+        pageId.includes("framework") ||
+        pageId.includes("plugin") ||
+        pageId.includes("activity") ||
+        pageId.includes("installer") ||
+        pageId.includes("health") ||
+        pageId.includes("host");
+
+      if (isControlPage) {
+        fixed.push({
+          label: record.title || record.id || record.url,
+          href: record.url
+        });
+        seen.add(record.url);
+      }
+    });
+
+    return fixed;
+  }
+
+  function getMenu() {
+    return BASE_MENU.map(item => {
+      if (item.id === "control") return {...item, children:getControlCenterChildren()};
+      return {...item, children:item.children ? item.children.map(child => ({...child})) : undefined};
+    });
   }
 
   function ensureHosts() {
@@ -112,319 +170,209 @@
       sidebar.id = "appSidebar";
       document.body.insertBefore(sidebar, document.body.firstChild);
     }
-
-    let top = document.getElementById("appTopNavigation");
-    if (!top) {
-      top = document.createElement("div");
-      top.id = "appTopNavigation";
-      document.body.insertBefore(top, document.body.firstChild);
-    }
-
-    const main = document.querySelector(".app-main, main");
-    if (main && !main.classList.contains("app-main")) main.classList.add("app-main");
-    return { sidebar, top };
+    return sidebar;
   }
 
-  function profile(settings, where) {
-    if (!settings.profileVisible) return "";
-    const pos=settings.profilePosition||"left-bottom";
-    if(pos!==where)return "";
+  function selectedIcon(item) {
+    return (currentSettings.menuIcons || {})[item.id] || item.icon;
+  }
+
+  function brand() {
+    if (currentSettings.showBrand === false) return "";
+    return `<a class="erp-universal-brand" href="${esc(currentSettings.startupPage || "index.html")}">
+      <b>ERP</b>
+      <span><strong>${esc(currentSettings.brandTitle)}</strong><small>${esc(currentSettings.brandSubtitle)}</small></span>
+    </a>`;
+  }
+
+  function profile() {
+    if (currentSettings.profileVisible === false) return "";
 
     const info = [];
-    if (settings.profileShowDesignation && settings.profileDesignation) info.push(settings.profileDesignation);
-    if (settings.profileShowDepartment && settings.profileDepartment) info.push(settings.profileDepartment);
+    if (currentSettings.profileShowDesignation && currentSettings.profileDesignation) {
+      info.push(currentSettings.profileDesignation);
+    }
+    if (currentSettings.profileShowDepartment && currentSettings.profileDepartment) {
+      info.push(currentSettings.profileDepartment);
+    }
 
-    return `<div class="erp-universal-profile" data-universal-profile="true" data-profile-location="${esc(where)}"
-      style="--p-bg:${settings.profileCardBackground};--p-color:${settings.profileTextColor};
-      --p-radius:${Number(settings.profileRadius || 12)}px;--p-width:${Number(settings.profileCardWidth || 150)}px;
-      --p-height:${Number(settings.profileCardHeight || 70)}px;--p-img:${Number(settings.profileImageSize || 44)}px;
-      --p-border-style:${esc(settings.profileBorderStyle||"solid")};--p-border-width:${Number(settings.profileBorderWidth||1)}px;
-      --p-border-color:${esc(settings.profileBorderColor||"#334155")};--p-align:${esc(settings.profileTextAlign||"left")};
-      --p-shadow:${esc(settings.profileShadow||"soft")}">
-      <img src="${esc(settings.profileImage)}" onerror="this.src='public/profile.png'">
-      <span>${settings.profileShowName!==false?`<strong>${esc(settings.profileName)}</strong>`:""}
-      ${info.length ? `<small>${esc(info.join(" • "))}</small>` : ""}
-      ${settings.profileShowStatus ? `<em><i style="background:${esc(settings.profileStatusColor)}"></i>${esc(settings.profileStatusText)}</em>` : ""}
+    const shape = String(currentSettings.profileImageShape || "circle").toLowerCase();
+    const imageRadius = shape.includes("square") ? "10px" : "50%";
+
+    return `<div class="erp-universal-profile" data-universal-profile="true"
+      style="
+        --profile-bg:${esc(currentSettings.profileCardBackground)};
+        --profile-text:${esc(currentSettings.profileTextColor)};
+        --profile-radius:${Number(currentSettings.profileRadius || 12)}px;
+        --profile-image-size:${Number(currentSettings.profileImageSize || 48)}px;
+        --profile-image-radius:${imageRadius};
+        --profile-border-style:${esc(currentSettings.profileBorderStyle || "solid")};
+        --profile-border-width:${Number(currentSettings.profileBorderWidth || 1)}px;
+        --profile-border-color:${esc(currentSettings.profileBorderColor || "rgba(255,255,255,.08)")};
+      ">
+      <img src="${esc(currentSettings.profileImage)}" onerror="this.src='public/profile.png'">
+      <span>
+        ${currentSettings.profileShowName !== false ? `<strong>${esc(currentSettings.profileName)}</strong>` : ""}
+        ${info.length ? `<small>${esc(info.join(" • "))}</small>` : ""}
+        ${currentSettings.profileShowStatus !== false ? `<em><i style="background:${esc(currentSettings.profileStatusColor)}"></i>${esc(currentSettings.profileStatusText)}</em>` : ""}
       </span>
     </div>`;
   }
 
-  function brand(settings) {
-    if (!settings.showBrand) return "";
-    return `<a class="erp-universal-brand" href="${esc(settings.startupPage || "index.html")}">
-      <b>ERP</b><span><strong>${esc(settings.brandTitle)}</strong><small>${esc(settings.brandSubtitle)}</small></span>
-    </a>`;
-  }
-
-  function sideMenu() {
-    return MENU.map((item, index) => {
+  function renderMenu() {
+    return getMenu().map((item, index) => {
+      const icon = selectedIcon(item);
       if (!item.children) {
-        return `<a class="erp-side-item ${matches(item) ? "active" : ""}" href="${item.href}" data-label="${esc(item.label)}" title="${esc(item.label)}">
-          <b>${item.icon}</b><span>${esc(item.label)}</span></a>`;
+        return `<a class="erp-side-item ${isActive(item) ? "active" : ""}"
+          href="${esc(item.href)}" data-label="${esc(item.label)}">
+          <b>${esc(icon)}</b><span>${esc(item.label)}</span>
+        </a>`;
       }
-      const open = false;
-      const id = `erpSideGroup_${item.id || index}`;
-      return `<div class="erp-side-group ${open ? "open" : ""}" id="${id}">
-        <button type="button" data-label="${esc(item.label)}" title="${esc(item.label)}" onclick="window.ERPUniversalShell.toggleSide('${id}')">
-          <span><b>${item.icon}</b><i>${esc(item.label)}</i></span><em>⌃</em>
+
+      const childActive = item.children.some(isActive);
+      const groupId = `erpSideGroup_${item.id || index}`;
+      return `<div class="erp-side-group ${childActive ? "open" : ""}" id="${groupId}">
+        <button type="button" data-group-id="${groupId}" data-label="${esc(item.label)}">
+          <span><b>${esc(icon)}</b><i>${esc(item.label)}</i></span><em>⌃</em>
         </button>
-        <div>${item.children.map(child => `<a class="${matches(child) ? "active" : ""}" href="${child.href}">${esc(child.label)}</a>`).join("")}</div>
-      </div>`;
-    }).join("");
-  }
-
-  function topMenu() {
-    return MENU.map((item, index) => {
-      if (!item.children) {
-        return `<a class="erp-top-item ${matches(item) ? "active" : ""}" href="${item.href}">
-          <b>${item.icon}</b><span>${esc(item.label)}</span></a>`;
-      }
-      const current = item.children.some(matches);
-      const id = `erpTopGroup_${item.id || index}`;
-      return `<div class="erp-top-group ${current ? "current" : ""}" id="${id}">
-        <button type="button" onclick="window.ERPUniversalShell.toggleTop('${id}',event)">
-          <b>${item.icon}</b><span>${esc(item.label)}</span><i>⌄</i>
-        </button>
-        <div>${item.children.map(child => `<a class="${matches(child) ? "active" : ""}" href="${child.href}">${esc(child.label)}</a>`).join("")}</div>
-      </div>`;
-    }).join("");
-  }
-
-
-  let autoHideTimer = null;
-  let currentSettings = { ...DEFAULTS };
-
-
-  function removeSidebarArrowControls() {
-    const side = document.querySelector(".erp-universal-side");
-    if (!side) return;
-
-    const selectors = [
-      ".erp-side-collapse",
-      ".erp-sidebar-collapse",
-      ".sidebar-collapse",
-      ".sidebar-toggle",
-      ".collapse-sidebar",
-      "[data-action='collapse-sidebar']",
-      "[data-role='sidebar-collapse']",
-      ".sidebar-chevron-control"
-    ];
-
-    side.querySelectorAll(selectors.join(",")).forEach(el => el.remove());
-
-    side.querySelectorAll("button,div,span").forEach(el => {
-      if (el.closest(".erp-side-group>button")) return;
-      const value = (el.textContent || "").replace(/\s+/g, "");
-      if (["⇔","↔","◀▶","▶◀","‹›","«»","←→"].includes(value)) {
-        el.remove();
-      }
-    });
-  }
-
-  function removeLegacyProfiles() {
-    const selectors=[".profile-card:not([data-universal-profile])",".sidebar-profile:not([data-universal-profile])",".user-profile:not([data-universal-profile])",".profile-box:not([data-universal-profile])",".sidebar-user:not([data-universal-profile])"];
-    document.querySelectorAll(selectors.join(",")).forEach(el=>el.remove());
-    const selected=currentSettings.profilePosition||"left-bottom";
-    document.querySelectorAll("[data-universal-profile='true']").forEach(el=>{if(el.dataset.profileLocation!==selected)el.remove()});
-    if(currentSettings.profileSingleOnly!==false){[...document.querySelectorAll("[data-universal-profile='true']")].slice(1).forEach(el=>el.remove())}
-  }
-
-  function setCollapsed(collapsed, persist = true) {
-    const side = document.querySelector(".erp-universal-side");
-    if (!side) return;
-    side.classList.toggle("collapsed", collapsed);
-    document.body.classList.toggle("erp-shell-collapsed", collapsed);
-    if (persist && currentSettings.sidebarRememberState) {
-      localStorage.setItem("erp_sidebar_collapsed_v1", collapsed ? "1" : "0");
-    }
-  }
-
-  function clearAutoHideTimer() {
-    clearTimeout(autoHideTimer);
-    autoHideTimer = null;
-  }
-
-  function scheduleAutoHide() {
-    clearAutoHideTimer();
-    if (!currentSettings.sidebarAutoHide) return;
-    autoHideTimer = setTimeout(() => {
-      const side = document.querySelector(".erp-universal-side");
-      if (!side || side.matches(":hover") || side.querySelector(".erp-side-group.open")) return scheduleAutoHide();
-      setCollapsed(true);
-    }, Math.max(1000, Number(currentSettings.sidebarAutoHideDelay || 5000)));
-  }
-
-
-
-  function bindSidebarBehavior() {
-    const side = document.querySelector(".erp-universal-side");
-    if (!side) return;
-
-    side.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 180)}ms`);
-    side.style.setProperty("--erp-side-font-family", currentSettings.sidebarFontFamily || "Segoe UI, Arial, sans-serif");
-    side.style.setProperty("--erp-side-font-size", `${Number(currentSettings.sidebarFontSize || 12)}px`);
-    side.style.setProperty("--erp-side-font-weight", String(Number(currentSettings.sidebarFontWeight || 600)));
-    side.style.setProperty("--erp-side-icon-size", `${Number(currentSettings.sidebarIconSize || 15)}px`);
-    side.onpointerenter = side.onpointerleave = side.onmouseenter = side.onmouseleave = null;
-
-    const expand = () => {
-      clearAutoHideTimer();
-      if (currentSettings.sidebarExpandOnHover !== false) setCollapsed(false, false);
-    };
-
-    const leave = () => {
-      clearAutoHideTimer();
-      side.querySelectorAll(".erp-side-group.open").forEach(group => group.classList.remove("open"));
-      if (currentSettings.sidebarCollapseOnLeave === true) {
-        setCollapsed(true, false);
-      } else if (currentSettings.sidebarAutoHide === true) {
-        scheduleAutoHide();
-      }
-    };
-
-    if (currentSettings.sidebarExpandOnHover !== false) {
-      side.onpointerenter = expand;
-      side.onmouseenter = expand;
-    }
-    side.onpointerleave = leave;
-    side.onmouseleave = leave;
-
-    let initial = currentSettings.sidebarDefaultCollapsed === true;
-    if (currentSettings.sidebarRememberState) {
-      const remembered = localStorage.getItem("erp_sidebar_collapsed_v1");
-      if (remembered !== null) initial = remembered === "1";
-    }
-    setCollapsed(initial, false);
-    if (!initial && currentSettings.sidebarAutoHide === true) scheduleAutoHide();
-  }
-
-  function render(settings) {
-    const s = { ...DEFAULTS, ...settings };
-    currentSettings = s;
-    clearAutoHideTimer();
-    const { sidebar, top } = ensureHosts();
-
-    document.body.classList.remove("erp-shell-top", "erp-shell-left", "erp-shell-hybrid", "erp-shell-collapsed");
-    document.body.classList.add(`erp-shell-${s.navigationPosition || "left"}`);
-
-    document.documentElement.style.setProperty("--erp-side-width", `${Number(s.sidebarWidth || 170)}px`);
-    document.documentElement.style.setProperty("--erp-side-collapsed", `${Number(s.sidebarCollapsedWidth || 58)}px`);
-    document.documentElement.style.setProperty("--erp-top-height", `${Number(s.topBarHeight || 64)}px`);
-    document.documentElement.style.setProperty("--erp-shell-bg", s.topBarBackground || "#0f172a");
-    document.documentElement.style.setProperty("--erp-shell-text", s.topBarTextColor || "#ffffff");
-    document.documentElement.style.setProperty("--erp-shell-active", s.activeColor || "#f59e0b");
-
-    top.innerHTML = "";
-    sidebar.innerHTML = "";
-
-    if (["top", "hybrid"].includes(s.navigationPosition)) {
-      top.innerHTML = `<header class="erp-universal-top ${s.compactTopBar ? "compact" : ""}">
-        <div class="erp-universal-top-left">${profile(s, "top-left")}${brand(s)}</div>
-        <nav>${topMenu()}</nav>
-        <div class="erp-universal-top-right">
-          ${s.showDateTime ? `<span><strong>${new Date().toLocaleDateString("en-PK", {day:"2-digit",month:"short",year:"2-digit"})}</strong><small>${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</small></span>` : ""}
-          ${s.showNotifications ? `<button title="Notifications">🔔</button>` : ""}${profile(s, "top-right")}
+        <div>
+          ${item.children.map(child => `<a class="${isActive(child) ? "active" : ""}" href="${esc(child.href)}">${esc(child.label)}</a>`).join("")}
         </div>
-      </header>`;
-    }
+      </div>`;
+    }).join("");
+  }
 
-    if (["left", "hybrid"].includes(s.navigationPosition)) {
-      sidebar.innerHTML = `<aside class="erp-universal-side ${s.sidebarDefaultCollapsed ? "collapsed" : ""}">
-        ${profile(s, "left-top")}
-        ${brand(s)}
-        <nav>${sideMenu()}</nav>
-        ${profile(s, "left-bottom")}
-        
-      </aside>`;
-    }
+  function setCollapsed(collapsed) {
+    const side = document.querySelector(".erp-universal-side");
+    if (!side) return;
+    side.classList.toggle("collapsed", !!collapsed);
+    document.body.classList.toggle("erp-shell-collapsed", !!collapsed);
+  }
 
-    requestAnimationFrame(() => {
-      const topHeight = document.querySelector(".erp-universal-top")?.offsetHeight || 0;
-      document.documentElement.style.setProperty("--erp-live-top-height", `${topHeight}px`);
-      removeLegacyProfiles();
-      removeSidebarArrowControls();
-      bindSidebarBehavior();
+  function clearHideTimer() {
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = null;
+  }
 
+  function scheduleHide() {
+    clearHideTimer();
+    if (!currentSettings.sidebarAutoHide) return;
+    hideTimer = setTimeout(() => {
       const side = document.querySelector(".erp-universal-side");
-      if (side && !side._arrowObserver) {
-        side._arrowObserver = new MutationObserver(removeSidebarArrowControls);
-        side._arrowObserver.observe(side, {childList:true, subtree:true});
-      }
+      if (!side || side.matches(":hover")) return;
+      setCollapsed(true);
+    }, Math.max(200, Number(currentSettings.sidebarAutoHideDelay || 1000)));
+  }
+
+  function closeOtherGroups(target) {
+    document.querySelectorAll(".erp-side-group.open").forEach(group => {
+      if (group !== target) group.classList.remove("open");
     });
   }
 
-  function getLocal() {
-    let shell = {};
-    try { shell = JSON.parse(localStorage.getItem("erp_shell_settings_v1") || "{}"); } catch {}
-    return { ...DEFAULTS, ...shell };
+  function bindEvents() {
+    const side = document.querySelector(".erp-universal-side");
+    if (!side) return;
+
+    side.addEventListener("click", event => {
+      const button = event.target.closest(".erp-side-group > button");
+      if (!button) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const target = document.getElementById(button.dataset.groupId);
+      if (!target) return;
+
+      if (side.classList.contains("collapsed")) setCollapsed(false);
+      const opening = !target.classList.contains("open");
+      closeOtherGroups(target);
+      target.classList.toggle("open", opening);
+    });
+
+    side.addEventListener("mouseenter", () => {
+      clearHideTimer();
+      if (currentSettings.sidebarExpandOnHover !== false) setCollapsed(false);
+    });
+
+    side.addEventListener("mouseleave", () => {
+      clearHideTimer();
+      side.querySelectorAll(".erp-side-group.open").forEach(group => {
+        if (!group.querySelector("a.active")) group.classList.remove("open");
+      });
+
+      if (currentSettings.sidebarCollapseOnLeave !== false) {
+        setCollapsed(true);
+      } else {
+        scheduleHide();
+      }
+    });
+
+    const initiallyCollapsed =
+      currentSettings.sidebarAutoHide === true ||
+      currentSettings.sidebarDefaultCollapsed === true;
+
+    setCollapsed(initiallyCollapsed);
   }
 
-  async function getRemote() {
-    if (!window.supabase) return null;
-    try {
-      const db = window.db || window.supabaseClient ||
-        supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      const { data, error } = await db.from("erp_shell_settings")
-        .select("settings_json").eq("setting_key", "global").maybeSingle();
-      if (error) throw error;
-      return data?.settings_json || null;
-    } catch (error) {
-      console.warn("Universal ERP shell:", error.message);
-      return null;
-    }
+  function applyVariables() {
+    const root = document.documentElement;
+    root.style.setProperty("--erp-side-width", `${Number(currentSettings.sidebarWidth || 182)}px`);
+    root.style.setProperty("--erp-side-collapsed", `${Number(currentSettings.sidebarCollapsedWidth || 58)}px`);
+    root.style.setProperty("--erp-side-animation", `${Number(currentSettings.sidebarAnimationMs || 180)}ms`);
+    root.style.setProperty("--erp-side-font-family", currentSettings.sidebarFontFamily || "Segoe UI, Arial, sans-serif");
+    root.style.setProperty("--erp-side-font-size", `${Number(currentSettings.sidebarFontSize || 12)}px`);
+    root.style.setProperty("--erp-side-font-weight", String(Number(currentSettings.sidebarFontWeight || 600)));
+    root.style.setProperty("--erp-side-icon-size", `${Number(currentSettings.sidebarIconSize || 15)}px`);
+    root.style.setProperty("--erp-shell-active", currentSettings.activeColor || "#f59e0b");
   }
 
-  async function init() {
-    render(getLocal());
-    const remote = await getRemote();
-    if (remote) {
-      const merged = { ...getLocal(), ...remote };
-      localStorage.setItem("erp_shell_settings_v1", JSON.stringify(merged));
-      render(merged);
-    }
+  function render(settings = {}) {
+    currentSettings = { ...DEFAULTS, ...settings };
+    clearHideTimer();
+    applyVariables();
+
+    document.body.classList.remove("erp-shell-top", "erp-shell-hybrid");
+    document.body.classList.add("erp-shell-left");
+
+    const host = ensureHosts();
+    host.innerHTML = `<aside class="erp-universal-side">
+      ${brand()}
+      <nav>${renderMenu()}</nav>
+      ${profile()}
+    </aside>`;
+
+    bindEvents();
+  }
+
+  function init() {
+    render(getSettings());
   }
 
   window.ERPUniversalShell = {
     init,
     render,
-    toggleSide(id) {
-      const target = document.getElementById(id);
-      if (!target) return;
-      const opening = !target.classList.contains("open");
-      document.querySelectorAll(".erp-side-group.open").forEach(el => {
-        if (el !== target) el.classList.remove("open");
-      });
-      target.classList.toggle("open", opening);
+    getSettings,
+    refreshMenu() {
+      render(getSettings());
     },
-    toggleTop(id, event) {
-      event?.stopPropagation();
-      const target = document.getElementById(id);
-      if (!target) return;
-      const opening = !target.classList.contains("open");
-      document.querySelectorAll(".erp-top-group.open").forEach(el => {
-        if (el !== target) el.classList.remove("open");
-      });
-      target.classList.toggle("open", opening);
-    },
-    toggleCollapse() {
-      const side = document.querySelector(".erp-universal-side");
-      if (!side) return;
-      setCollapsed(!side.classList.contains("collapsed"));
-      scheduleAutoHide();
-    }
+    collapse() { setCollapsed(true); },
+    expand() { setCollapsed(false); }
   };
 
-  document.addEventListener("click", event => {
-    if (!event.target.closest(".erp-top-group")) {
-      document.querySelectorAll(".erp-top-group.open").forEach(el => el.classList.remove("open"));
+  window.addEventListener("erp-shell-settings-changed", event => {
+    render(event.detail || getSettings());
+  });
+
+  window.addEventListener("storage", event => {
+    if (event.key === SETTINGS_KEY || event.key === REGISTRY_KEY) {
+      render(getSettings());
     }
   });
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
+    document.addEventListener("DOMContentLoaded", init, {once:true});
   } else {
     init();
   }
-
-  window.addEventListener("erp-shell-settings-changed", event => render(event.detail || getLocal()));
 })();

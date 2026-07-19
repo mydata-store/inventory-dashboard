@@ -11,40 +11,13 @@ function activeProfile(){
 function profileToShell(p){
   if(!p)return {};
   const g=p.general||{},c=p.card||{},d=p.display||{},pic=p.picture||{};
-  const image=pic.dataUrl||pic.url||"public/waqas.jpg.png";
   return {
-    profileVisible:p.status!=="inactive",
-    profileName:g.fullName||"Muhammad Waqas",
-    profileDesignation:g.designation||"",
-    profileDepartment:g.department||"",
-    profileImage:image,
-    profileCardBackground:c.backgroundColor||"#0f172a",
-    profileTextColor:c.textColor||"#ffffff",
-    profileRadius:Number(c.radius||12),
-    profileCardWidth:Number(c.width||260),
-    profileCardHeight:Number(c.height||104),
-    profileImageSize:Number(c.pictureSize||58),
-    profileImageShape:c.pictureShape||"circle",
-    profileTextAlign:c.textAlign||"left",
-    profilePicturePosition:c.picturePosition||"left",
-    profileBorderStyle:c.borderStyle||"solid",
-    profileBorderWidth:Number(c.borderWidth||1),
-    profileBorderColor:c.borderColor||"#334155",
-    profileShadow:c.shadow||"soft",
-    profileShowName:d.name!==false,
-    profileShowDesignation:d.designation===true,
-    profileShowDepartment:d.department===true,
-    profileShowEmployeeCode:d.employeeCode===true,
-    profileShowCompany:d.company===true,
-    profileShowBranch:d.branch===true,
-    profileShowMobile:d.mobile===true,
-    profileShowEmail:d.email===true,
-    profileShowWelcome:d.welcome===true,
-    profileShowStatus:c.onlineStatus!==false,
-    profileStatusText:"Online",
-    profileStatusColor:"#16a34a",
-    profilePosition:"left-bottom",
-    profileSingleOnly:true
+    profileName:g.fullName||"Muhammad Waqas",profileDesignation:g.designation||"",profileDepartment:g.department||"",
+    profileImage:pic.dataUrl||pic.url||"public/waqas.jpg.png",profileCardBackground:c.backgroundColor||"#0f172a",
+    profileTextColor:c.textColor||"#ffffff",profileRadius:Number(c.radius||12),profileCardWidth:Number(c.width||150),
+    profileCardHeight:Number(c.height||70),profileImageSize:Number(c.pictureSize||44),profileShowName:d.name!==false,
+    profileShowDesignation:d.designation!==false,profileShowDepartment:d.department===true,profileShowStatus:c.onlineStatus!==false,
+    profileStatusText:"Online",profileStatusColor:"#16a34a",profilePosition:"left-bottom",profileSingleOnly:true
   };
 }
 function fontToTheme(fonts,theme){
@@ -66,7 +39,7 @@ function themeFromProfile(profile,current){
 }
 
 const Runtime={
-  version:"41.7.0",
+  version:"41.9.0",
   collect(){
     const profile=activeProfile(),fonts=parse(K.fonts,{}),shell=parse(K.shell,{});
     let theme=parse(K.theme,{});
@@ -107,12 +80,6 @@ const Runtime={
     document.querySelectorAll("[data-erp-profile-department],.profile-department").forEach(el=>el.textContent=g.department||"");
   },
   publish(meta={}){
-    const store=parse(K.profiles,{profiles:[]});
-    if(store.profiles?.length){
-      const currentId=window.currentProfileId||store.activeProfileId||store.profiles[0].id;
-      store.activeProfileId=currentId;
-      save(K.profiles,store);
-    }
     const settings=this.collect(),old=parse(K.published,{version:0});
     const next={...settings,version:Number(old.version||0)+1,runtimeVersion:this.version,publishedAt:new Date().toISOString(),publishedBy:"Muhammad Waqas",...meta};
     save(K.published,next);save(K.draft,next);this.apply();
