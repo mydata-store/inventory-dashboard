@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Costing V3 - Production Cost Control</title>
+<link rel="stylesheet" href="public/common.css">
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-theme-manager.js"></script>
+<script src="public/common-shell-engine.js"></script>
+<script src="public/page-renderer.js"></script>
+<script src="public/design-studio-bootstrap.js"></script>
+<script src="public/common-font-controller.js"></script>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="public/core/styles/erp-runtime.css">
+<link rel="stylesheet" href="public/core/styles/erp-platform-runtime.css">
+<script src="public/core/erp-runtime.js"></script>
+<script src="public/core/erp-registry.js"></script>
+<script src="public/core/erp-module-registry.js"></script>
+<script src="public/core/erp-platform-runtime.js" defer></script>
+<style>
+:root{--cost:#f59e0b;--ok:#16a34a;--danger:#dc2626;--muted2:#64748b}
+*{box-sizing:border-box}
+body{overflow-x:hidden}
+/* Keep all costing content clear of the universal sidebar in every shell state. */
+body.erp-shell-left .production-main,body.erp-shell-hybrid .production-main{margin-left:var(--erp-side-width,170px)!important;width:calc(100% - var(--erp-side-width,170px))!important}
+body.erp-shell-collapsed .production-main{margin-left:var(--erp-side-collapsed,58px)!important;width:calc(100% - var(--erp-side-collapsed,58px))!important}
+.production-main{padding:20px 18px 40px;min-height:100vh;overflow-x:hidden}
+/* Runtime drawers must always open from the right and never hide behind the sidebar. */
+.erp-side-panel{left:auto!important;right:-430px!important}.erp-side-panel.open{right:0!important;left:auto!important}
+.page-head{gap:18px}.page-head h1{font-size:26px}.page-subtitle{max-width:760px}
+.top-actions,.toolbar,.tabs,.period-tabs,.report-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.control-card{position:sticky;top:0;z-index:20}
+.field{min-width:145px}.field label{display:block;font-size:11px;font-weight:800;color:var(--muted2);margin-bottom:5px}.field input,.field select{width:100%;height:38px;border:1px solid #d8dee8;border-radius:9px;padding:0 10px;background:#fff}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:10px;margin:14px 0}.kpi{background:#fff;border:1px solid #e4e9f0;border-radius:14px;padding:13px;box-shadow:0 7px 18px #0f172a0b;position:relative;overflow:hidden}.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cost)}.kpi small{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase}.kpi strong{display:block;font-size:19px;margin-top:5px}.kpi span{font-size:10px;color:var(--muted2)}
+.tabs{margin:12px 0}.tab.active,.period-tab.active,.report-tab.active{background:var(--accent,#f5a316)!important;color:#111827!important;border-color:var(--accent,#f5a316)!important}
+.panel,.period-panel,.report-panel{display:none}.panel.active,.period-panel.active,.report-panel.active{display:block}
+.section-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.full{grid-column:1/-1}.card-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.card-title h2{font-size:16px;margin:0}.badge{padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}.badge.on{background:#dcfce7;color:#166534}.badge.off{background:#fee2e2;color:#991b1b}.badge.draft{background:#ffedd5;color:#9a3412}.badge.info{background:#dbeafe;color:#1e40af}
+.input-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.input-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.input-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:11px}.data-table{width:100%;border-collapse:collapse;min-width:780px}.data-table th,.data-table td{padding:8px 9px;border-bottom:1px solid #e5e7eb;font-size:11px;white-space:nowrap}.data-table th{position:sticky;top:0;z-index:2;background:#fff8e7!important;color:#1f2937!important;text-align:left}.data-table input,.data-table select{height:31px;width:100%;min-width:85px;border:1px solid #d8dee8;border-radius:7px;padding:0 7px}.num{text-align:right!important;font-variant-numeric:tabular-nums}
+.unit-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.unit-card{border:1px solid #e2e8f0;border-radius:13px;padding:12px;background:#fbfdff}.unit-card.offline{opacity:.66;background:#f8fafc}.unit-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.switch{position:relative;width:42px;height:23px}.switch input{display:none}.slider{position:absolute;inset:0;background:#cbd5e1;border-radius:99px;cursor:pointer}.slider:before{content:"";position:absolute;width:17px;height:17px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}.switch input:checked+.slider{background:#16a34a}.switch input:checked+.slider:before{transform:translateX(19px)}
+.unit-table-grid{display:grid;grid-template-columns:1fr;gap:14px}.unit-report-card{border:1px solid #e2e8f0;border-radius:13px;overflow:hidden}.unit-report-head{padding:10px 12px;background:#f8fafc;display:flex;justify-content:space-between;align-items:center}.unit-report-head h3{margin:0;font-size:14px}.empty{padding:28px;text-align:center;color:var(--muted2)}
+.formula-box{width:100%;min-height:84px;border:1px solid #d8dee8;border-radius:9px;padding:9px;font:12px/1.5 Consolas,monospace}.note{font-size:11px;color:var(--muted2);margin-top:7px}.alert{padding:11px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:10px;font-size:12px;margin-bottom:12px}
+@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.unit-cards{grid-template-columns:1fr 1fr}.section-grid{grid-template-columns:1fr}}
+@media(max-width:800px){body.erp-shell-left .production-main,body.erp-shell-hybrid .production-main,body.erp-shell-collapsed .production-main{margin-left:var(--erp-side-collapsed,58px)!important;width:calc(100% - var(--erp-side-collapsed,58px))!important}.kpis,.unit-cards,.input-grid,.input-grid.two,.input-grid.four{grid-template-columns:1fr}.production-main{padding:14px 10px 30px}}
+</style>
+</head>
+<body data-erp-page="costing">
+<div id="appSidebar"></div>
+<main class="app-main production-main">
+ <div class="page-head">
+  <div><h1>Costing V3 — Production Cost Control</h1><div class="page-subtitle">Calculate machine-wise, grade-wise and combined paper production cost using raw material, chemicals, steam, electricity, labour, maintenance and overhead allocations.</div></div>
+  <div class="top-actions"><button class="btn btn-light" onclick="exportData()">Export Data</button><button class="btn btn-primary" onclick="saveAll()">Save Changes</button></div>
+ </div>
+
+ <section class="card control-card">
+  <div class="toolbar">
+   <div class="field"><label>Report Date</label><input id="reportDate" type="date"></div>
+   <div class="field"><label>Unit</label><select id="unitFilter"></select></div>
+   <div class="field"><label>Report Period</label><select id="periodFilter"><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div>
+   <div class="field"><label>Costing Version</label><select><option selected>Costing V3</option></select></div>
+   <button class="btn btn-light" onclick="showPanel('units')">Manage Units</button>
+   <button class="btn btn-primary" onclick="showPanel('reports')">Open Reports</button>
+  </div>
+ </section>
+
+ <section class="kpis">
+  <div class="kpi"><small>Enabled Units</small><strong id="kpiUnits">0 / 3</strong><span>Included in calculations</span></div>
+  <div class="kpi"><small>Total Production</small><strong id="kpiProduction">0.000 TON</strong><span>All enabled units</span></div>
+  <div class="kpi"><small>Average Ash</small><strong id="kpiAsh">0.00%</strong><span>Weighted draft formula</span></div>
+  <div class="kpi"><small>Total Steam</small><strong id="kpiSteam">0.000 TON</strong><span>Generated</span></div>
+  <div class="kpi"><small>Total Electricity</small><strong id="kpiElectricity">0 kWh</strong><span>WAPDA + Solar</span></div>
+  <div class="kpi"><small>Actual Cost / Ton</small><strong id="kpiCost">PKR 0</strong><span>Costing V3 engine</span></div>
+ </section>
+
+ <div class="tabs">
+  <button class="btn btn-light tab active" data-panel="overview">Overview</button>
+  <button class="btn btn-light tab" data-panel="units">Unit Management</button>
+  <button class="btn btn-light tab" data-panel="reports">Reports Center</button>
+  <button class="btn btn-light tab" data-panel="costing">Costing Formulas</button>
+ </div>
+
+ <section class="panel active" id="overview">
+  <div class="alert"><strong>Costing V3:</strong> Enter production and cost inputs for each period. Enabled units are included in machine-wise and combined cost-per-ton calculations.</div>
+  <div class="section-grid">
+   <div class="card"><div class="card-title"><h2>Today's Unit Summary</h2><span class="badge info">LIVE DRAFT</span></div><div id="overviewTable" class="table-wrap"></div></div>
+   <div class="card"><div class="card-title"><h2>Calculation Status</h2><span class="badge draft">FORMULAS IN PROGRESS</span></div>
+    <div class="unit-report-card"><div class="unit-report-head"><h3>Production</h3><span class="badge on">READY</span></div><div class="note" style="padding:10px">Combined Production = total of enabled units.</div></div>
+    <div class="unit-report-card" style="margin-top:8px"><div class="unit-report-head"><h3>Ash, Yield & Steam</h3><span class="badge draft">DRAFT</span></div><div class="note" style="padding:10px">Input sections are ready. Exact Excel formulas will be locked one by one.</div></div>
+    <div class="unit-report-card" style="margin-top:8px"><div class="unit-report-head"><h3>Electricity</h3><span class="badge on">READY</span></div><div class="note" style="padding:10px">WAPDA and Solar are stored separately and combined for costing.</div></div>
+   </div>
+  </div>
+ </section>
+
+ <section class="panel" id="units">
+  <div class="card"><div class="card-title"><h2>Unit Management</h2><span class="badge info">CENTRAL CONTROL</span></div>
+   <div class="unit-cards" id="unitCards"></div>
+   <div class="note">Rename any unit, enable or disable it, select its production type and change its display order. Historical records are not deleted when a unit is disabled.</div>
+  </div>
+ </section>
+
+ <section class="panel" id="reports">
+  <div class="card">
+   <div class="card-title"><h2>Production Reports Center</h2><span class="badge info">VIEW & EDIT</span></div>
+   <div class="period-tabs">
+    <button class="btn btn-light period-tab active" data-period="daily">Daily</button><button class="btn btn-light period-tab" data-period="monthly">Monthly</button><button class="btn btn-light period-tab" data-period="yearly">Yearly</button>
+   </div>
+   <div class="report-tabs" style="margin:10px 0 14px">
+    <button class="btn btn-light report-tab active" data-report="production">Production</button><button class="btn btn-light report-tab" data-report="consumption">Consumption</button><button class="btn btn-light report-tab" data-report="ash">Ash</button><button class="btn btn-light report-tab" data-report="rates">Rates</button><button class="btn btn-light report-tab" data-report="steam">Steam</button><button class="btn btn-light report-tab" data-report="electricity">Electricity</button><button class="btn btn-light report-tab" data-report="cost">Cost Summary</button><button class="btn btn-light report-tab" data-report="breakdown">Cost Breakdown</button>
+   </div>
+   <div id="reportContent"></div>
+  </div>
+ </section>
+
+ <section class="panel" id="costing">
+  <div class="section-grid">
+   <div class="card"><div class="card-title"><h2>Formula Register</h2><span class="badge draft">EDITABLE DRAFTS</span></div>
+    <table class="data-table"><thead><tr><th>Calculation</th><th>Current Rule</th><th>Status</th></tr></thead><tbody>
+     <tr><td>Combined Production</td><td>Sum of enabled unit production</td><td><span class="badge on">READY</span></td></tr>
+     <tr><td>Paper Ash Average</td><td>Weighted average placeholder</td><td><span class="badge draft">DRAFT</span></td></tr>
+     <tr><td>Pulp Yield</td><td>Pulp Produced ÷ Raw Material × 100</td><td><span class="badge draft">DRAFT</span></td></tr>
+     <tr><td>Steam / Ton Paper</td><td>Steam to machine ÷ production</td><td><span class="badge draft">DRAFT</span></td></tr>
+     <tr><td>Total Electricity</td><td>WAPDA Units + Solar Units</td><td><span class="badge on">READY</span></td></tr>
+     <tr><td>Cost / Ton</td><td>Total cost ÷ combined production</td><td><span class="badge draft">DRAFT</span></td></tr>
+    </tbody></table>
+   </div>
+   <div class="card"><div class="card-title"><h2>Exact Formula Notes</h2><span class="badge info">ONE BY ONE</span></div>
+    <label class="field"><label>Ash Formula</label><textarea class="formula-box" data-formula="ash">Draft: weighted ash using each unit's production and ash percentage.</textarea></label>
+    <label class="field" style="display:block;margin-top:9px"><label>Steam Formula</label><textarea class="formula-box" data-formula="steam">Draft: steam generated and allocation formula pending.</textarea></label>
+    <label class="field" style="display:block;margin-top:9px"><label>Yield Formula</label><textarea class="formula-box" data-formula="yield">Draft: pulp produced divided by raw material consumed.</textarea></label>
+   </div>
+  </div>
+ </section>
+</main>
+<script>
+const KEY='erp_costing_v3';
+const today=new Date().toISOString().slice(0,10);
+const defaults={units:[
+ {id:'u1',code:'Unit 1',name:'PM-01',enabled:true,type:'Paper Machine',order:1},
+ {id:'u2',code:'Unit 2',name:'PM-03',enabled:true,type:'Paper Machine',order:2},
+ {id:'u3',code:'Unit 3',name:'Future Unit',enabled:false,type:'Paper Machine',order:3}
+],records:{},formulas:{}};
+let state=load();let currentPeriod='daily',currentReport='production';
+function load(){try{return Object.assign(structuredClone(defaults),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return structuredClone(defaults)}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
+function activeUnits(){return state.units.filter(u=>u.enabled).sort((a,b)=>a.order-b.order)}
+function allUnits(){return [...state.units].sort((a,b)=>a.order-b.order)}
+function recordKey(period=currentPeriod){const d=document.getElementById('reportDate').value||today;if(period==='daily')return d;if(period==='monthly')return d.slice(0,7);return d.slice(0,4)}
+function getRecord(period=currentPeriod){const k=period+'|'+recordKey(period);if(!state.records[k])state.records[k]={units:{},consumption:0,steam:0,wapda:0,solar:0,rate:0,cost:0,rawMaterial:0,chemicals:0,fuel:0,powerCost:0,labour:0,maintenance:0,overheads:0,packing:0,otherCost:0};return state.records[k]}
+function unitData(u,period=currentPeriod){const r=getRecord(period);if(!r.units[u.id])r.units[u.id]={production:0,hours:24,downtime:0,ash:0,consumption:0,steam:0};return r.units[u.id]}
+function fmt(v,d=3){return Number(v||0).toLocaleString('en-PK',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function money(v){return 'PKR '+Number(v||0).toLocaleString('en-PK',{maximumFractionDigits:2})}
+function saveAll(){document.querySelectorAll('[data-formula]').forEach(x=>state.formulas[x.dataset.formula]=x.value);persist();alert('Production Control changes saved.')}
+function showPanel(id){document.querySelectorAll('.panel,.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelector(`.tab[data-panel="${id}"]`).classList.add('active');if(id==='reports')renderReports()}
+function renderUnits(){const box=document.getElementById('unitCards');box.innerHTML=allUnits().map(u=>`<div class="unit-card ${u.enabled?'':'offline'}"><div class="unit-head"><strong>${u.code}</strong><label class="switch"><input type="checkbox" ${u.enabled?'checked':''} onchange="updateUnit('${u.id}','enabled',this.checked)"><span class="slider"></span></label></div><div class="input-grid two"><div class="field"><label>Display Name</label><input value="${esc(u.name)}" onchange="updateUnit('${u.id}','name',this.value)"></div><div class="field"><label>Status</label><input readonly value="${u.enabled?'Running / Active':'Stopped / Disabled'}"></div><div class="field"><label>Production Type</label><select onchange="updateUnit('${u.id}','type',this.value)"><option ${u.type==='Paper Machine'?'selected':''}>Paper Machine</option><option ${u.type==='Pulp Mill'?'selected':''}>Pulp Mill</option><option ${u.type==='Board Machine'?'selected':''}>Board Machine</option><option ${u.type==='Other'?'selected':''}>Other</option></select></div><div class="field"><label>Display Order</label><input type="number" min="1" value="${u.order}" onchange="updateUnit('${u.id}','order',Number(this.value))"></div></div><div class="note">Report label: <strong>${u.code} — ${esc(u.name)}</strong></div></div>`).join('');renderUnitFilter();renderKPIs();}
+function updateUnit(id,key,val){const u=state.units.find(x=>x.id===id);u[key]=val;persist();renderUnits();renderOverview();if(document.getElementById('reports').classList.contains('active'))renderReports()}
+function renderUnitFilter(){const f=document.getElementById('unitFilter'),old=f.value;f.innerHTML='<option value="combined">Combined</option>'+allUnits().map(u=>`<option value="${u.id}" ${u.enabled?'':'disabled'}>${u.code} - ${esc(u.name)}</option>`).join('');if([...f.options].some(o=>o.value===old))f.value=old}
+function renderOverview(){const r=getRecord('daily');let rows=allUnits().map(u=>{const d=unitData(u,'daily');return `<tr><td>${u.code}</td><td>${esc(u.name)}</td><td>${u.enabled?'<span class="badge on">Enabled</span>':'<span class="badge off">Disabled</span>'}</td><td class="num">${fmt(d.production)}</td><td class="num">${fmt(d.ash,2)}%</td><td class="num">${fmt(d.steam)}</td></tr>`}).join('');const totals=calcTotals('daily');rows+=`<tr><th colspan="3">Combined Enabled Units</th><th class="num">${fmt(totals.production)}</th><th class="num">${fmt(totals.ash,2)}%</th><th class="num">${fmt(totals.steam)}</th></tr>`;document.getElementById('overviewTable').innerHTML=`<table class="data-table"><thead><tr><th>Unit</th><th>Name</th><th>Status</th><th class="num">Production (Ton)</th><th class="num">Ash %</th><th class="num">Steam (Ton)</th></tr></thead><tbody>${rows}</tbody></table>`;renderKPIs()}
+function calcTotals(period=currentPeriod){let production=0,ashAmount=0,steam=0,consumption=0;activeUnits().forEach(u=>{const d=unitData(u,period);production+=+d.production||0;ashAmount+=(+d.production||0)*(+d.ash||0);steam+=+d.steam||0;consumption+=+d.consumption||0});const r=getRecord(period);return{production,ash:production?ashAmount/production:0,steam,consumption,elec:(+r.wapda||0)+(+r.solar||0),cost:+r.cost||0}}
+function renderKPIs(){const t=calcTotals('daily');document.getElementById('kpiUnits').textContent=`${activeUnits().length} / ${state.units.length}`;document.getElementById('kpiProduction').textContent=fmt(t.production)+' TON';document.getElementById('kpiAsh').textContent=fmt(t.ash,2)+'%';document.getElementById('kpiSteam').textContent=fmt(t.steam)+' TON';document.getElementById('kpiElectricity').textContent=fmt(t.elec,0)+' kWh';document.getElementById('kpiCost').textContent=t.production?money(totalManufacturingCost(getRecord('daily'))/t.production):money(0)}
+function renderReports(){const box=document.getElementById('reportContent');if(currentReport==='production'){box.innerHTML=renderProductionTables();return}if(currentReport==='consumption'){box.innerHTML=renderMetricTable('consumption','Consumption (Ton)');return}if(currentReport==='ash'){box.innerHTML=renderMetricTable('ash','Ash %');return}if(currentReport==='steam'){box.innerHTML=renderMetricTable('steam','Steam (Ton)');return}if(currentReport==='rates'){box.innerHTML=renderGeneral('rate','Material / Utility Rate','PKR');return}if(currentReport==='electricity'){box.innerHTML=renderElectricity();return}if(currentReport==='cost'){box.innerHTML=renderCostSummary();return}if(currentReport==='breakdown'){box.innerHTML=renderCostBreakdown();return}}
+function periodLabel(){const k=recordKey();return currentPeriod==='daily'?k:currentPeriod==='monthly'?k+' Monthly Report':k+' Yearly Report'}
+function renderProductionTables(){const cards=allUnits().map(u=>{const d=unitData(u);return `<div class="unit-report-card ${u.enabled?'':'offline'}"><div class="unit-report-head"><h3>${u.code} — ${esc(u.name)}</h3>${u.enabled?'<span class="badge on">Included</span>':'<span class="badge off">Disabled</span>'}</div><div class="table-wrap"><table class="data-table"><thead><tr><th>${currentPeriod==='daily'?'Date':currentPeriod==='monthly'?'Month':'Year'}</th><th>Unit</th><th class="num">Production (Ton)</th><th class="num">Operating Hours</th><th class="num">Downtime Hours</th><th>Remarks</th></tr></thead><tbody><tr><td>${periodLabel()}</td><td>${esc(u.name)}</td><td><input type="number" step="0.001" value="${d.production}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','production',this.value)"></td><td><input type="number" step="0.01" value="${d.hours}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','hours',this.value)"></td><td><input type="number" step="0.01" value="${d.downtime}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','downtime',this.value)"></td><td><input placeholder="Remarks"></td></tr></tbody></table></div></div>`}).join('');const t=calcTotals();return `<div class="unit-table-grid">${cards}<div class="unit-report-card"><div class="unit-report-head"><h3>Combined Total Production</h3><span class="badge info">ENABLED UNITS ONLY</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Enabled Units</th><th class="num">Total Production (Ton)</th><th class="num">Total Operating Hours</th><th class="num">Total Downtime</th></tr></thead><tbody><tr><td>${periodLabel()}</td><td>${activeUnits().map(u=>esc(u.name)).join(', ')||'None'}</td><td class="num"><strong>${fmt(t.production)}</strong></td><td class="num">${fmt(activeUnits().reduce((s,u)=>s+(+unitData(u).hours||0),0),2)}</td><td class="num">${fmt(activeUnits().reduce((s,u)=>s+(+unitData(u).downtime||0),0),2)}</td></tr></tbody></table></div></div></div>`}
+function renderMetricTable(metric,label){const rows=allUnits().map(u=>{const d=unitData(u);return `<tr><td>${periodLabel()}</td><td>${u.code}</td><td>${esc(u.name)}</td><td>${u.enabled?'<span class="badge on">Enabled</span>':'<span class="badge off">Disabled</span>'}</td><td><input type="number" step="0.001" value="${d[metric]}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','${metric}',this.value)"></td></tr>`}).join('');const t=calcTotals();const total=metric==='ash'?fmt(t.ash,2):fmt(t[metric]);return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Unit</th><th>Name</th><th>Status</th><th class="num">${label}</th></tr></thead><tbody>${rows}<tr><th colspan="4">Combined Enabled Units</th><th class="num">${total}</th></tr></tbody></table></div>`}
+function renderGeneral(metric,label,unit){const r=getRecord();return `<div class="input-grid four"><div class="field"><label>Period</label><input readonly value="${periodLabel()}"></div><div class="field"><label>${label}</label><input type="number" step="0.01" value="${r[metric]||0}" onchange="setGeneral('${metric}',this.value)"></div><div class="field"><label>Unit</label><input readonly value="${unit}"></div><div class="field"><label>Remarks</label><input placeholder="Enter remarks"></div></div>`}
+
+function totalManufacturingCost(r=getRecord()){return ['rawMaterial','chemicals','fuel','powerCost','labour','maintenance','packing','overheads','otherCost'].reduce((s,k)=>s+(+r[k]||0),0)}
+function renderCostBreakdown(){const r=getRecord();const fields=[['rawMaterial','Raw Material'],['chemicals','Chemicals'],['fuel','Fuel / Coal'],['powerCost','Electricity Cost'],['labour','Labour'],['maintenance','Maintenance'],['packing','Packing'],['overheads','Factory Overheads'],['otherCost','Other Cost']];const inputs=fields.map(([k,l])=>`<div class="field"><label>${l} (PKR)</label><input type="number" step="0.01" value="${r[k]||0}" onchange="setGeneral('${k}',this.value)"></div>`).join('');return `<div class="card-title"><h2>Manufacturing Cost Breakdown</h2><span class="badge on">LIVE CALCULATION</span></div><div class="input-grid four">${inputs}</div><div class="unit-report-card" style="margin-top:14px"><div class="unit-report-head"><h3>Total Manufacturing Cost</h3><strong>${money(totalManufacturingCost(r))}</strong></div></div>`}
+function renderCostSummary(){const r=getRecord(),t=calcTotals(),total=totalManufacturingCost(r),cpt=t.production?total/t.production:0,steamPerTon=t.production?t.steam/t.production:0,powerPerTon=t.production?t.elec/t.production:0;return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th class="num">Production (Ton)</th><th class="num">Total Cost</th><th class="num">Cost / Ton</th><th class="num">Steam / Ton</th><th class="num">Electricity / Ton</th></tr></thead><tbody><tr><td>${periodLabel()}</td><td class="num">${fmt(t.production)}</td><td class="num">${money(total)}</td><td class="num"><strong>${money(cpt)}</strong></td><td class="num">${fmt(steamPerTon)}</td><td class="num">${fmt(powerPerTon,2)} kWh</td></tr></tbody></table></div>`}
+function renderElectricity(){const r=getRecord();const total=(+r.wapda||0)+(+r.solar||0);return `<div class="input-grid four"><div class="field"><label>WAPDA Units</label><input type="number" step="0.01" value="${r.wapda||0}" onchange="setGeneral('wapda',this.value)"></div><div class="field"><label>Solar Units</label><input type="number" step="0.01" value="${r.solar||0}" onchange="setGeneral('solar',this.value)"></div><div class="field"><label>Total Units</label><input readonly value="${fmt(total,0)}"></div><div class="field"><label>Solar Contribution</label><input readonly value="${total?fmt((+r.solar||0)/total*100,2):'0.00'}%"></div></div><div class="note">WAPDA and Solar remain separate sources in every period and are combined only for production and costing analysis.</div>`}
+function setUnitMetric(id,key,val){unitData(state.units.find(u=>u.id===id))[key]=Number(val)||0;persist();renderReports();renderOverview()}
+function setGeneral(key,val){getRecord()[key]=Number(val)||0;persist();renderReports();renderKPIs()}
+function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='costing-v3-data.json';a.click();URL.revokeObjectURL(a.href)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showPanel(b.dataset.panel));
+document.querySelectorAll('.period-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.period-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentPeriod=b.dataset.period;document.getElementById('periodFilter').value=currentPeriod;renderReports()});
+document.querySelectorAll('.report-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.report-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentReport=b.dataset.report;renderReports()});
+document.getElementById('periodFilter').onchange=e=>{currentPeriod=e.target.value;document.querySelectorAll('.period-tab').forEach(x=>x.classList.toggle('active',x.dataset.period===currentPeriod));renderReports()};document.getElementById('reportDate').onchange=()=>{renderOverview();renderReports()};
+document.getElementById('reportDate').value=today;document.querySelectorAll('[data-formula]').forEach(x=>{if(state.formulas[x.dataset.formula])x.value=state.formulas[x.dataset.formula]});renderUnits();renderOverview();renderReports();
+</script>
+</body></html>
