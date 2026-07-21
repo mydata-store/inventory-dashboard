@@ -1,1613 +1,228 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Production Control Center — Costing V3</title>
-<link rel="stylesheet" href="public/common.css">
-<script src="public/common-tools.js"></script>
-<script src="public/theme-settings.js"></script>
-<script src="public/common-theme-manager.js"></script>
-<script src="public/common-shell-engine.js"></script>
-<script src="public/page-renderer.js"></script>
-<script src="public/design-studio-bootstrap.js"></script>
-<script src="public/common-font-controller.js"></script>
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="public/core/styles/erp-runtime.css">
-<link rel="stylesheet" href="public/core/styles/erp-platform-runtime.css">
-<script src="public/core/erp-runtime.js"></script>
-<script src="public/core/erp-registry.js"></script>
-<script src="public/core/erp-module-registry.js"></script>
-<script src="public/core/erp-platform-runtime.js" defer></script>
-<style>
-:root{--cost:#f59e0b;--ok:#16a34a;--danger:#dc2626;--muted2:#64748b}
-*{box-sizing:border-box}body{overflow-x:hidden}
-body.erp-shell-left .production-main,body.erp-shell-hybrid .production-main{margin-left:var(--erp-side-width,170px)!important;width:calc(100% - var(--erp-side-width,170px))!important}
-body.erp-shell-collapsed .production-main{margin-left:var(--erp-side-collapsed,58px)!important;width:calc(100% - var(--erp-side-collapsed,58px))!important}
-.production-main{padding:20px 18px 40px;min-height:100vh;overflow-x:hidden}.erp-side-panel{left:auto!important;right:-430px!important}.erp-side-panel.open{right:0!important;left:auto!important}
-.page-head{gap:18px}.page-head h1{font-size:26px}.page-subtitle{max-width:820px}.top-actions,.toolbar,.tabs,.period-tabs,.report-tabs,.inline-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.control-card{position:sticky;top:0;z-index:20}.field{min-width:145px}.field label{display:block;font-size:11px;font-weight:800;color:var(--muted2);margin-bottom:5px}.field input,.field select{width:100%;height:38px;border:1px solid #d8dee8;border-radius:9px;padding:0 10px;background:#fff}
-.kpis{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:10px;margin:14px 0}.kpi{background:#fff;border:1px solid #e4e9f0;border-radius:14px;padding:13px;box-shadow:0 7px 18px #0f172a0b;position:relative;overflow:hidden}.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cost)}.kpi small{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase}.kpi strong{display:block;font-size:19px;margin-top:5px}.kpi span{font-size:10px;color:var(--muted2)}
-.tabs{margin:12px 0}.tab.active,.period-tab.active,.report-tab.active{background:var(--accent,#f5a316)!important;color:#111827!important;border-color:var(--accent,#f5a316)!important}.panel{display:none}.panel.active{display:block}.section-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.full{grid-column:1/-1}.card-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.card-title h2{font-size:16px;margin:0}.badge{padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}.badge.on{background:#dcfce7;color:#166534}.badge.off{background:#fee2e2;color:#991b1b}.badge.draft{background:#ffedd5;color:#9a3412}.badge.info{background:#dbeafe;color:#1e40af}.badge.archived{background:#e2e8f0;color:#475569}
-.input-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.input-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.input-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
-.table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:11px}.data-table{width:100%;border-collapse:collapse;min-width:920px}.data-table th,.data-table td{padding:8px 9px;border-bottom:1px solid #e5e7eb;font-size:11px;white-space:nowrap}.data-table th{position:sticky;top:0;z-index:2;background:#fff8e7!important;color:#1f2937!important;text-align:left}.data-table input,.data-table select{height:31px;width:100%;min-width:82px;border:1px solid #d8dee8;border-radius:7px;padding:0 7px}.num{text-align:right!important;font-variant-numeric:tabular-nums}.muted-row{opacity:.66;background:#f8fafc}
-.unit-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.unit-card{border:1px solid #e2e8f0;border-radius:13px;padding:12px;background:#fbfdff}.unit-card.offline{opacity:.72;background:#f8fafc}.unit-card.archived{border-style:dashed;background:#f1f5f9}.unit-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.switch{position:relative;width:42px;height:23px}.switch input{display:none}.slider{position:absolute;inset:0;background:#cbd5e1;border-radius:99px;cursor:pointer}.slider:before{content:"";position:absolute;width:17px;height:17px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}.switch input:checked+.slider{background:#16a34a}.switch input:checked+.slider:before{transform:translateX(19px)}
-.unit-table-grid{display:grid;grid-template-columns:1fr;gap:14px}.unit-report-card{border:1px solid #e2e8f0;border-radius:13px;overflow:hidden}.unit-report-head{padding:10px 12px;background:#f8fafc;display:flex;justify-content:space-between;align-items:center}.unit-report-head h3{margin:0;font-size:14px}.note{font-size:11px;color:var(--muted2);margin-top:7px}.alert{padding:11px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:10px;font-size:12px;margin-bottom:12px}.btn-danger{background:#fff!important;color:#b91c1c!important;border-color:#fecaca!important}.btn-small{height:30px!important;padding:0 9px!important;font-size:11px!important}.add-unit{border:1px dashed #f59e0b;background:#fffbeb;border-radius:13px;padding:13px;margin-bottom:13px}.empty{padding:28px;text-align:center;color:var(--muted2)}.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.settings-card{border:1px solid #e2e8f0;border-radius:13px;padding:14px;background:#fff}.settings-card h3{margin:0 0 4px;font-size:15px}.formula-row{display:grid;grid-template-columns:1.05fr 1.6fr .55fr .55fr;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid #eef2f7}.formula-row:last-child{border-bottom:0}.formula-row textarea{width:100%;min-height:64px;border:1px solid #d8dee8;border-radius:8px;padding:8px;font:11px/1.45 Consolas,monospace;resize:vertical}.settings-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}.setting-help{font-size:10px;color:var(--muted2);line-height:1.5;margin-top:4px}.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
-@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.unit-cards{grid-template-columns:1fr 1fr}.section-grid{grid-template-columns:1fr}}
-@media(max-width:900px){.settings-grid{grid-template-columns:1fr}.formula-row{grid-template-columns:1fr 1fr}}
-@media(max-width:800px){.settings-layout{grid-template-columns:1fr}.settings-nav{position:static}.formula-grid{grid-template-columns:1fr}.formula-meta{grid-template-columns:1fr}body.erp-shell-left .production-main,body.erp-shell-hybrid .production-main,body.erp-shell-collapsed .production-main{margin-left:var(--erp-side-collapsed,58px)!important;width:calc(100% - var(--erp-side-collapsed,58px))!important}.kpis,.unit-cards,.input-grid,.input-grid.two,.input-grid.four{grid-template-columns:1fr}.production-main{padding:14px 10px 30px}}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Costing Formula Engine V1.0</title>
+  <style>
+    :root{
+      --accent:#ffcc00;
+      --dark:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --danger:#b91c1c;
+      --success:#166534;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:#1f2937}
+    .topbar{height:72px;background:var(--dark);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+    .brand{display:flex;align-items:center;gap:14px}.logo{width:42px;height:42px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#111;font-weight:900}
+    .brand h1{font-size:20px;margin:0}.brand small{color:#cbd5e1}
+    .status-badge{background:#233044;border:1px solid #475569;padding:8px 12px;border-radius:999px;font-size:13px}
+    .wrap{max-width:1500px;margin:auto;padding:24px}
+    .hero{background:linear-gradient(135deg,#fff7cc,#fff);border:1px solid #f1d15a;border-radius:18px;padding:22px 24px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .hero h2{margin:0 0 6px;font-size:26px}.hero p{margin:0;color:var(--muted)}
+    .hero .count{font-size:34px;font-weight:800;text-align:right}.hero .count span{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+    .tab{border:1px solid var(--line);background:#fff;padding:11px 16px;border-radius:10px;cursor:pointer;font-weight:700}
+    .tab.active{background:var(--dark);color:#fff;border-color:var(--dark)}
+    .panel{display:none}.panel.active{display:block}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 4px 16px rgba(15,23,42,.05)}
+    .span-12{grid-column:span 12}.span-8{grid-column:span 8}.span-6{grid-column:span 6}.span-4{grid-column:span 4}
+    h3{margin:0 0 14px}.sub{font-size:13px;color:var(--muted);margin-top:-8px;margin-bottom:14px}
+    label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+    input,select,textarea{width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:9px;background:white;font:inherit;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:#b18a00;box-shadow:0 0 0 3px rgba(255,204,0,.2)}
+    input[readonly],textarea[readonly]{background:#f8fafc;color:#475569}
+    .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .formula-row{display:grid;grid-template-columns:85px 1.3fr 2fr 110px 110px 160px;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+    .formula-row:last-child{border-bottom:0}.formula-row.header{font-weight:800;font-size:12px;text-transform:uppercase;color:#64748b;padding-top:0}
+    .formula-code{font-family:Consolas,monospace;font-size:12px;background:#f8fafc;padding:8px;border-radius:8px;border:1px solid var(--line);overflow:auto}
+    .lock{display:inline-flex;align-items:center;justify-content:center;padding:7px 9px;border-radius:999px;font-size:12px;font-weight:800;background:#fee2e2;color:#991b1b}.unlock{background:#dcfce7;color:#166534}
+    button{border:none;border-radius:9px;padding:10px 14px;font-weight:800;cursor:pointer}.btn-primary{background:var(--accent);color:#111}.btn-dark{background:var(--dark);color:#fff}.btn-light{background:#eef2f7;color:#111827}.btn-danger{background:#fee2e2;color:#991b1b}.btn-success{background:#dcfce7;color:#166534}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    table{width:100%;border-collapse:collapse;font-size:14px}th,td{border:1px solid var(--line);padding:10px;text-align:left}th{background:#fff4bf;position:sticky;top:72px;z-index:2}tfoot td{font-weight:800;background:#f8fafc}
+    .result{background:#111827;color:white;border-radius:14px;padding:18px}.result .big{font-size:30px;font-weight:900;color:var(--accent)}
+    .note{padding:12px 14px;border-left:4px solid var(--accent);background:#fff9db;border-radius:8px;font-size:14px}
+    .footer{text-align:center;color:#64748b;font-size:12px;padding:24px}
+    @media(max-width:1000px){.span-8,.span-6,.span-4{grid-column:span 12}.form-grid{grid-template-columns:repeat(2,1fr)}.formula-row{grid-template-columns:70px 1fr;align-items:start}.formula-row>*:nth-child(n+3){grid-column:2}.formula-row.header{display:none}}
+    @media(max-width:620px){.wrap{padding:14px}.form-grid{grid-template-columns:1fr}.hero{align-items:flex-start;gap:20px}.topbar{padding:0 14px}.brand small{display:none}}
+  </style>
 </head>
-<body data-erp-page="costing">
-<div id="appSidebar"></div>
-<main class="app-main production-main">
- <div class="page-head">
-  <div><h1>Production Control Center — Costing V3</h1><div class="page-subtitle">Dynamic unit control with daily, monthly and yearly production, electricity allocation, unit-wise cost, Cost/Kg and Units/Ton reporting.</div></div>
-  <div class="top-actions"><button class="btn btn-light" onclick="exportData()">Export Data</button><button class="btn btn-primary" onclick="saveAll()">Save Changes</button></div>
- </div>
- <section class="card control-card"><div class="toolbar">
-  <div class="field"><label>Report Date</label><input id="reportDate" type="date"></div>
-  <div class="field"><label>Unit</label><select id="unitFilter"></select></div>
-  <div class="field"><label>Report Period</label><select id="periodFilter"><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div>
-  <div class="field"><label>Costing Version</label><select disabled><option>Costing V3</option></select></div>
-  <button class="btn btn-light" onclick="showPanel('units')">Manage Units</button><button class="btn btn-primary" onclick="showPanel('reports')">Open Reports</button>
- </div></section>
- <section class="kpis">
-  <div class="kpi"><small>Enabled Units</small><strong id="kpiUnits">0 / 0</strong><span>Included in new calculations</span></div>
-  <div class="kpi"><small>Total Production</small><strong id="kpiProduction">0.000 TON</strong><span>Enabled units</span></div>
-  <div class="kpi"><small>Average Ash</small><strong id="kpiAsh">0.00%</strong><span>Weighted by production</span></div>
-  <div class="kpi"><small>Total Electricity</small><strong id="kpiElectricity">0 kWh</strong><span>Unit allocation</span></div>
-  <div class="kpi"><small>Total Unit Cost</small><strong id="kpiCost">PKR 0</strong><span>Enabled units</span></div>
-  <div class="kpi"><small>Combined Cost/Kg</small><strong id="kpiCostKg">PKR 0.00</strong><span>Total cost ÷ total kg</span></div>
- </section>
- <div class="tabs"><button class="btn btn-light tab active" data-panel="overview">Overview</button><button class="btn btn-light tab" data-panel="units">Unit Management</button><button class="btn btn-light tab" data-panel="reports">Reports Center</button><button class="btn btn-light tab" data-panel="costing">Costing Formulas</button><button class="btn btn-light tab" data-panel="settings">Formula Settings</button></div>
- <section class="panel active" id="overview">
-  <div class="alert"><strong>Costing V3:</strong> New units are automatically added to Daily, Monthly and Yearly reports. Archived units retain their history and are excluded from new calculations.</div>
-  <div class="section-grid">
-   <div class="card full"><div class="card-title"><h2>Today's Unit Summary</h2><span class="badge info">DAILY</span></div><div id="overviewTable" class="table-wrap"></div></div>
-   <div class="card full"><div class="card-title"><h2>Monthly Unit Summary</h2><span class="badge info" id="monthBadge">MONTHLY</span></div><div id="monthlyOverviewTable" class="table-wrap"></div></div>
-  </div>
- </section>
- <section class="panel" id="units"><div class="card"><div class="card-title"><h2>Unit Management</h2><span class="badge info">DYNAMIC CONTROL</span></div>
-  <div class="add-unit"><div class="input-grid four"><div class="field"><label>New Unit Code</label><input id="newUnitCode" placeholder="e.g. Unit 4"></div><div class="field"><label>Display Name</label><input id="newUnitName" placeholder="e.g. PM-04"></div><div class="field"><label>Production Type</label><select id="newUnitType"><option>Paper Machine</option><option>Pulp Mill</option><option>Board Machine</option><option>Other</option></select></div><div class="field"><label>&nbsp;</label><button class="btn btn-primary" style="width:100%;height:38px" onclick="addUnit()">Add Unit</button></div></div></div>
-  <div class="unit-cards" id="unitCards"></div><div class="note">A unit with saved history can be archived but not permanently deleted. A unit without history can be deleted.</div>
- </div></section>
- <section class="panel" id="reports"><div class="card"><div class="card-title"><h2>Production Reports Center</h2><span class="badge info">AUTO UNIT INCLUSION</span></div>
-  <div class="period-tabs"><button class="btn btn-light period-tab active" data-period="daily">Daily</button><button class="btn btn-light period-tab" data-period="monthly">Monthly</button><button class="btn btn-light period-tab" data-period="yearly">Yearly</button></div>
-  <div class="report-tabs" style="margin:10px 0 14px"><button class="btn btn-light report-tab active" data-report="production">Production</button><button class="btn btn-light report-tab" data-report="consumption">Consumption</button><button class="btn btn-light report-tab" data-report="ash">Ash</button><button class="btn btn-light report-tab" data-report="steam">Steam</button><button class="btn btn-light report-tab" data-report="electricity">Electricity Allocation</button><button class="btn btn-light report-tab" data-report="cost">Unit Cost</button></div>
-  <div id="reportContent"></div>
- </div></section>
- <section class="panel" id="costing"><div class="section-grid"><div class="card"><div class="card-title"><h2>Costing V3 Formula Register</h2><span class="badge on">ACTIVE</span></div><table class="data-table"><thead><tr><th>Calculation</th><th>Rule</th></tr></thead><tbody><tr><td>Units/Ton</td><td>Unit Electricity ÷ Unit Production</td></tr><tr><td>Unit Cost</td><td>Material + Labour + Maintenance + Overhead + Other Cost</td></tr><tr><td>Cost/Kg</td><td>Unit Cost ÷ (Production Ton × 1,000)</td></tr><tr><td>Combined Cost/Kg</td><td>Total Enabled Unit Cost ÷ Total Enabled Production Kg</td></tr><tr><td>Weighted Ash</td><td>Σ(Unit Production × Ash %) ÷ Total Production</td></tr></tbody></table></div><div class="card"><div class="card-title"><h2>History Rules</h2><span class="badge info">PROTECTED</span></div><div class="note" style="font-size:12px;line-height:1.8">• Enabled units are included in new reports and totals.<br>• Disabled units remain available but are excluded from totals.<br>• Archived units keep historical records and are hidden from new entries.<br>• Units without history may be permanently deleted.<br>• Every new unit is automatically available in Daily, Monthly and Yearly reports.</div></div></div></section>
-
- <section class="panel" id="settings">
-  <div class="alert"><strong>Formula Settings:</strong> This page is ready for your exact formulas. Settings are saved separately so calculation rules can be changed later without redesigning the page.</div>
-  <div class="settings-layout">
-   <div class="card settings-nav">
-    <div class="card-title"><h2>Settings Groups</h2><span class="badge info">V3</span></div>
-    <button class="btn btn-light formula-nav active" data-settings="production">Production</button>
-    <button class="btn btn-light formula-nav" data-settings="ash">Ash & Average Ash</button>
-    <button class="btn btn-light formula-nav" data-settings="yield">Yield & Recovery</button>
-    <button class="btn btn-light formula-nav" data-settings="steam">Steam Control</button>
-    <button class="btn btn-light formula-nav" data-settings="electricity">Electricity</button>
-    <button class="btn btn-light formula-nav" data-settings="material">Material Control</button>
-    <button class="btn btn-light formula-nav" data-settings="cost">Costing</button>
-    <button class="btn btn-light formula-nav" data-settings="general">General Controls</button>
-   </div>
-   <div>
-    <div id="formulaSettingsContent"></div>
-    <div class="settings-footer"><button class="btn btn-light" onclick="resetFormulaSettings()">Reset Defaults</button><button class="btn btn-primary" onclick="saveFormulaSettings()">Save Formula Settings</button></div>
-   </div>
-  </div>
- </section>
-</main>
-<script>
-const KEY='erp_production_control_v3';
-const LEGACY_KEY='erp_production_control_v2';
-const today=new Date().toISOString().slice(0,10);
-const defaultFormulaSettings={
- production:{title:'Production',items:[{id:'dailyProduction',name:'Daily Production',formula:'MANUAL INPUT',unit:'Ton',decimals:3,enabled:true,locked:true,description:'Actual daily production entered unit-wise in the Production report. This is the master production value.'},{id:'productionKg',name:'Production in Kg',formula:'production * 1000',unit:'Kg',decimals:0,enabled:true,locked:true,description:'Automatically converts entered production from tons to kilograms.'},{id:'monthlyProduction',name:'Monthly Production',formula:'SUM(dailyProduction)',unit:'Ton',decimals:3,enabled:true,locked:true,description:'Automatically totals all saved daily production entries for the selected month.'},{id:'yearlyProduction',name:'Yearly Production',formula:'SUM(monthlyProduction)',unit:'Ton',decimals:3,enabled:true,locked:true,description:'Automatically totals production for all months in the selected year.'}]},
- ash:{title:'Ash & Average Ash',items:[{id:'unitAsh',name:'Unit Ash %',formula:'INPUT',unit:'%',decimals:2,enabled:true,description:'Unit-wise ash percentage entry.'},{id:'averageAsh',name:'Weighted Average Ash',formula:'SUM(production * ash) / SUM(production)',unit:'%',decimals:2,enabled:true,description:'Combined ash weighted by unit production.'}]},
- yield:{title:'Yield & Recovery',items:[{id:'yieldPercent',name:'Yield %',formula:'production / materialConsumption * 100',unit:'%',decimals:2,enabled:true,description:'Production yield from consumed material.'},{id:'processLoss',name:'Process Loss %',formula:'100 - yieldPercent',unit:'%',decimals:2,enabled:true,description:'Calculated process loss.'}]},
- steam:{title:'Steam Control',items:[{id:'steamPerTon',name:'Steam / Ton',formula:'steam / production',unit:'Ton/Ton',decimals:3,enabled:true,description:'Steam consumed per ton of production.'},{id:'steamAllocation',name:'Unit Steam Allocation',formula:'MANUAL',unit:'Ton',decimals:3,enabled:true,description:'Method used to allocate steam to each unit.'}]},
- electricity:{title:'Electricity',items:[{id:'totalElectricity',name:'Total Electricity',formula:'wapda + solar + generator',unit:'kWh',decimals:0,enabled:true,description:'Combined electricity from all sources.'},{id:'electricityAllocation',name:'Unit Electricity Allocation',formula:'MANUAL',unit:'kWh',decimals:0,enabled:true,description:'Allocation method for unit-wise electricity.'},{id:'unitsPerTon',name:'Units / Ton',formula:'electricity / production',unit:'kWh/Ton',decimals:2,enabled:true,description:'Unit electricity efficiency.'}]},
- material:{title:'Material Control',items:[{id:'actualConsumption',name:'Actual Consumption',formula:'openingStock + received - closingStock',unit:'Ton',decimals:3,enabled:true,description:'Actual material consumed in the period.'},{id:'materialVariance',name:'Consumption Variance',formula:'actualConsumption - standardConsumption',unit:'Ton',decimals:3,enabled:true,description:'Difference between actual and standard use.'}]},
- cost:{title:'Costing',items:[{id:'unitCost',name:'Unit Cost',formula:'materialCost + labourCost + maintenanceCost + overheadCost + otherCost',unit:'PKR',decimals:2,enabled:true,description:'Total manufacturing cost for one unit.'},{id:'costPerTon',name:'Cost / Ton',formula:'unitCost / production',unit:'PKR/Ton',decimals:2,enabled:true,description:'Manufacturing cost per production ton.'},{id:'costPerKg',name:'Cost / Kg',formula:'unitCost / (production * 1000)',unit:'PKR/Kg',decimals:4,enabled:true,description:'Manufacturing cost per kilogram.'}]},
- general:{title:'General Controls',items:[{id:'zeroDivision',name:'Zero Division Rule',formula:'RETURN 0',unit:'Rule',decimals:0,enabled:true,description:'Return zero where divisor is zero.'},{id:'rounding',name:'Default Rounding',formula:'ROUND',unit:'Decimals',decimals:2,enabled:true,description:'Default decimal precision for reports.'}]}
-};
-const defaults={units:[{id:'u1',code:'Unit 1',name:'PM-01',enabled:true,archived:false,type:'Paper Machine',order:1},{id:'u2',code:'Unit 2',name:'PM-03',enabled:true,archived:false,type:'Paper Machine',order:2},{id:'u3',code:'Unit 3',name:'Future Unit',enabled:false,archived:false,type:'Paper Machine',order:3}],records:{},formulaSettings:defaultFormulaSettings};
-let state=load(),currentPeriod='daily',currentReport='production';
-function clone(v){return JSON.parse(JSON.stringify(v))}
-function load(){try{const raw=localStorage.getItem(KEY)||localStorage.getItem(LEGACY_KEY);const saved=raw?JSON.parse(raw):{};const merged=Object.assign(clone(defaults),saved);merged.units=(merged.units||[]).map((u,i)=>Object.assign({id:'u'+Date.now()+i,code:'Unit '+(i+1),name:'Unit '+(i+1),enabled:true,archived:false,type:'Other',order:i+1},u));merged.records=merged.records||{};merged.formulaSettings=Object.assign(clone(defaultFormulaSettings),merged.formulaSettings||{});return merged}catch(e){return clone(defaults)}}
-function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
-function allUnits(){return [...state.units].sort((a,b)=>(a.order||0)-(b.order||0))}
-function liveUnits(){return allUnits().filter(u=>!u.archived)}
-function activeUnits(){return liveUnits().filter(u=>u.enabled)}
-function reportUnits(period=currentPeriod){const r=getRecord(period,false);return allUnits().filter(u=>!u.archived||Boolean(r&&r.units&&r.units[u.id]))}
-function recordKey(period=currentPeriod,dateValue){const d=dateValue||document.getElementById('reportDate').value||today;if(period==='daily')return d;if(period==='monthly')return d.slice(0,7);return d.slice(0,4)}
-function getRecord(period=currentPeriod,create=true,dateValue){const k=period+'|'+recordKey(period,dateValue);if(!state.records[k]&&create)state.records[k]={units:{},wapda:0,solar:0};return state.records[k]||null}
-function unitData(u,period=currentPeriod,create=true,dateValue){const r=getRecord(period,create,dateValue);if(!r)return null;if(!r.units[u.id]&&create)r.units[u.id]={production:0,hours:24,downtime:0,ash:0,consumption:0,steam:0,electricity:0,materialCost:0,labourCost:0,maintenanceCost:0,overheadCost:0,otherCost:0,remarks:''};return r.units[u.id]||null}
-function unitTotalCost(d){return ['materialCost','labourCost','maintenanceCost','overheadCost','otherCost'].reduce((s,k)=>s+(+d?.[k]||0),0)}
-function unitsPerTon(d){return (+d?.production||0)?(+d.electricity||0)/(+d.production||0):0}
-function costPerKg(d){return (+d?.production||0)?unitTotalCost(d)/((+d.production||0)*1000):0}
-function fmt(v,d=3){return Number(v||0).toLocaleString('en-PK',{minimumFractionDigits:d,maximumFractionDigits:d})}
-function money(v,d=2){return 'PKR '+Number(v||0).toLocaleString('en-PK',{minimumFractionDigits:d,maximumFractionDigits:d})}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function hasHistory(id){return Object.values(state.records).some(r=>r&&r.units&&r.units[id]&&Object.values(r.units[id]).some(v=>typeof v==='number'?v!==0:String(v||'').trim()!==''))}
-function saveAll(){persist();alert('Costing V3 changes saved.')}
-function showPanel(id){document.querySelectorAll('.panel,.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelector(`.tab[data-panel="${id}"]`)?.classList.add('active');if(id==='reports')renderReports();if(id==='units')renderUnits();if(id==='settings')renderFormulaSettings()}
-function addUnit(){const code=document.getElementById('newUnitCode').value.trim(),name=document.getElementById('newUnitName').value.trim(),type=document.getElementById('newUnitType').value;if(!code||!name){alert('Enter both Unit Code and Display Name.');return}if(state.units.some(u=>u.code.toLowerCase()===code.toLowerCase()&&!u.archived)){alert('This Unit Code already exists.');return}state.units.push({id:'u_'+Date.now().toString(36),code,name,type,enabled:true,archived:false,order:Math.max(0,...state.units.map(u=>+u.order||0))+1});document.getElementById('newUnitCode').value='';document.getElementById('newUnitName').value='';persist();renderAll()}
-function updateUnit(id,key,val){const u=state.units.find(x=>x.id===id);if(!u)return;if((key==='code'||key==='name')&&!String(val).trim()){alert('Unit Code and Name cannot be blank.');renderUnits();return}u[key]=key==='order'?Number(val)||1:val;persist();renderAll()}
-function archiveUnit(id){const u=state.units.find(x=>x.id===id);if(!u)return;if(!hasHistory(id)){alert('This unit has no history. Use Delete instead.');return}if(!confirm(`Archive ${u.code} — ${u.name}? Its history will be preserved.`))return;u.archived=true;u.enabled=false;persist();renderAll()}
-function restoreUnit(id){const u=state.units.find(x=>x.id===id);if(!u)return;u.archived=false;persist();renderAll()}
-function deleteUnit(id){const u=state.units.find(x=>x.id===id);if(!u)return;if(hasHistory(id)){alert('This unit has history and cannot be deleted. Archive it instead.');return}if(!confirm(`Permanently delete ${u.code} — ${u.name}?`))return;state.units=state.units.filter(x=>x.id!==id);Object.values(state.records).forEach(r=>{if(r.units)delete r.units[id]});persist();renderAll()}
-function renderUnits(){const box=document.getElementById('unitCards');box.innerHTML=allUnits().map(u=>{const history=hasHistory(u.id);return `<div class="unit-card ${u.archived?'archived':u.enabled?'':'offline'}"><div class="unit-head"><strong>${esc(u.code)}</strong>${u.archived?'<span class="badge archived">ARCHIVED</span>':`<label class="switch"><input type="checkbox" ${u.enabled?'checked':''} onchange="updateUnit('${u.id}','enabled',this.checked)"><span class="slider"></span></label>`}</div><div class="input-grid two"><div class="field"><label>Unit Code</label><input value="${esc(u.code)}" ${u.archived?'disabled':''} onchange="updateUnit('${u.id}','code',this.value)"></div><div class="field"><label>Display Name</label><input value="${esc(u.name)}" ${u.archived?'disabled':''} onchange="updateUnit('${u.id}','name',this.value)"></div><div class="field"><label>Production Type</label><select ${u.archived?'disabled':''} onchange="updateUnit('${u.id}','type',this.value)">${['Paper Machine','Pulp Mill','Board Machine','Other'].map(t=>`<option ${u.type===t?'selected':''}>${t}</option>`).join('')}</select></div><div class="field"><label>Display Order</label><input type="number" min="1" value="${u.order}" ${u.archived?'disabled':''} onchange="updateUnit('${u.id}','order',this.value)"></div></div><div class="inline-actions" style="margin-top:10px">${u.archived?`<button class="btn btn-light btn-small" onclick="restoreUnit('${u.id}')">Restore Unit</button>`:history?`<button class="btn btn-light btn-small" onclick="archiveUnit('${u.id}')">Archive Unit</button>`:`<button class="btn btn-danger btn-small" onclick="deleteUnit('${u.id}')">Delete Unit</button>`}<span class="badge ${history?'info':'draft'}">${history?'HISTORY SAVED':'NO HISTORY'}</span></div></div>`}).join('')||'<div class="empty">No units. Add your first production unit above.</div>';renderUnitFilter()}
-function renderUnitFilter(){const f=document.getElementById('unitFilter'),old=f.value;f.innerHTML='<option value="combined">Combined</option>'+liveUnits().map(u=>`<option value="${u.id}" ${u.enabled?'':'disabled'}>${esc(u.code)} - ${esc(u.name)}</option>`).join('');if([...f.options].some(o=>o.value===old))f.value=old}
-function calcTotals(period='daily',dateValue){let production=0,ashAmount=0,steam=0,consumption=0,electricity=0,cost=0;const r=getRecord(period,false,dateValue);if(!r)return{production:0,ash:0,steam:0,consumption:0,electricity:0,cost:0,costKg:0};activeUnits().forEach(u=>{const d=r.units?.[u.id];if(!d)return;production+=+d.production||0;ashAmount+=(+d.production||0)*(+d.ash||0);steam+=+d.steam||0;consumption+=+d.consumption||0;electricity+=+d.electricity||0;cost+=unitTotalCost(d)});return{production,ash:production?ashAmount/production:0,steam,consumption,electricity,cost,costKg:production?cost/(production*1000):0}}
-function aggregateMonth(month){const out={};allUnits().forEach(u=>out[u.id]={production:0,ashAmount:0,steam:0,electricity:0,cost:0});let found=false;Object.entries(state.records).forEach(([k,r])=>{if(!k.startsWith('daily|'+month+'-'))return;found=true;allUnits().forEach(u=>{const d=r.units?.[u.id];if(!d)return;const x=out[u.id];x.production+=+d.production||0;x.ashAmount+=(+d.production||0)*(+d.ash||0);x.steam+=+d.steam||0;x.electricity+=+d.electricity||0;x.cost+=unitTotalCost(d)})});if(!found){const r=state.records['monthly|'+month];if(r)allUnits().forEach(u=>{const d=r.units?.[u.id];if(!d)return;const x=out[u.id];x.production=+d.production||0;x.ashAmount=x.production*(+d.ash||0);x.steam=+d.steam||0;x.electricity=+d.electricity||0;x.cost=unitTotalCost(d)})}return out}
-function aggregateYear(year){const out={};allUnits().forEach(u=>out[u.id]={production:0});Object.entries(state.records).forEach(([k,r])=>{if(!k.startsWith('daily|'+year+'-'))return;allUnits().forEach(u=>{const d=r.units?.[u.id];if(d)out[u.id].production+=+d.production||0})});return out}
-function renderOverview(){const date=document.getElementById('reportDate').value||today;const r=getRecord('daily',false,date);let rows=allUnits().filter(u=>!u.archived||r?.units?.[u.id]).map(u=>{const d=r?.units?.[u.id]||{};return `<tr class="${u.archived||!u.enabled?'muted-row':''}"><td>${esc(u.code)}</td><td>${esc(u.name)}</td><td>${u.archived?'<span class="badge archived">Archived</span>':u.enabled?'<span class="badge on">Enabled</span>':'<span class="badge off">Disabled</span>'}</td><td class="num">${fmt(d.production)}</td><td class="num">${fmt(d.ash,2)}%</td><td class="num">${fmt(d.electricity,0)}</td><td class="num">${fmt(unitsPerTon(d),2)}</td><td class="num">${money(unitTotalCost(d))}</td><td class="num">${money(costPerKg(d),4)}</td></tr>`}).join('');const t=calcTotals('daily',date);rows+=`<tr><th colspan="3">Combined Enabled Units</th><th class="num">${fmt(t.production)}</th><th class="num">${fmt(t.ash,2)}%</th><th class="num">${fmt(t.electricity,0)}</th><th class="num">${fmt(t.production?t.electricity/t.production:0,2)}</th><th class="num">${money(t.cost)}</th><th class="num">${money(t.costKg,4)}</th></tr>`;document.getElementById('overviewTable').innerHTML=`<table class="data-table"><thead><tr><th>Unit Code</th><th>Unit Name</th><th>Status</th><th class="num">Production (Ton)</th><th class="num">Ash %</th><th class="num">Electricity</th><th class="num">Units/Ton</th><th class="num">Unit Cost</th><th class="num">Cost/Kg</th></tr></thead><tbody>${rows}</tbody></table>`;
- const month=date.slice(0,7),m=aggregateMonth(month);document.getElementById('monthBadge').textContent=month;let mrows=allUnits().filter(u=>!u.archived||m[u.id]?.production||m[u.id]?.cost).map(u=>{const d=m[u.id]||{};const ash=d.production?d.ashAmount/d.production:0;return `<tr class="${u.archived||!u.enabled?'muted-row':''}"><td>${esc(u.code)}</td><td>${esc(u.name)}</td><td class="num">${fmt(d.production)}</td><td class="num">${fmt(ash,2)}%</td><td class="num">${fmt(d.electricity,0)}</td><td class="num">${fmt(d.production?d.electricity/d.production:0,2)}</td><td class="num">${money(d.cost)}</td><td class="num">${money(d.production?d.cost/(d.production*1000):0,4)}</td></tr>`}).join('');const mt=Object.values(m).reduce((a,d)=>{a.production+=d.production||0;a.ashAmount+=d.ashAmount||0;a.electricity+=d.electricity||0;a.cost+=d.cost||0;return a},{production:0,ashAmount:0,electricity:0,cost:0});mrows+=`<tr><th colspan="2">Monthly Combined</th><th class="num">${fmt(mt.production)}</th><th class="num">${fmt(mt.production?mt.ashAmount/mt.production:0,2)}%</th><th class="num">${fmt(mt.electricity,0)}</th><th class="num">${fmt(mt.production?mt.electricity/mt.production:0,2)}</th><th class="num">${money(mt.cost)}</th><th class="num">${money(mt.production?mt.cost/(mt.production*1000):0,4)}</th></tr>`;document.getElementById('monthlyOverviewTable').innerHTML=`<table class="data-table"><thead><tr><th>Unit Code</th><th>Unit Name</th><th class="num">Production (Ton)</th><th class="num">Ash %</th><th class="num">Electricity</th><th class="num">Units/Ton</th><th class="num">Unit Cost</th><th class="num">Cost/Kg</th></tr></thead><tbody>${mrows}</tbody></table>`;renderKPIs()}
-function renderKPIs(){const t=calcTotals('daily',document.getElementById('reportDate').value||today);document.getElementById('kpiUnits').textContent=`${activeUnits().length} / ${liveUnits().length}`;document.getElementById('kpiProduction').textContent=fmt(t.production)+' TON';document.getElementById('kpiAsh').textContent=fmt(t.ash,2)+'%';document.getElementById('kpiElectricity').textContent=fmt(t.electricity,0)+' kWh';document.getElementById('kpiCost').textContent=money(t.cost);document.getElementById('kpiCostKg').textContent=money(t.costKg,4)}
-function periodLabel(){const k=recordKey();return currentPeriod==='daily'?k:currentPeriod==='monthly'?k+' Monthly Report':k+' Yearly Report'}
-function setUnitMetric(id,key,val){const u=state.units.find(x=>x.id===id);if(!u)return;let value=key==='remarks'?val:Number(val)||0;if(key==='production')value=Math.max(0,Math.round(value*1000)/1000);unitData(u)[key]=value;persist();renderReports();renderOverview()}
-function renderReports(){const box=document.getElementById('reportContent');if(currentReport==='production')box.innerHTML=renderProduction();else if(['consumption','ash','steam'].includes(currentReport))box.innerHTML=renderMetric(currentReport,{consumption:'Consumption (Ton)',ash:'Ash %',steam:'Steam (Ton)'}[currentReport]);else if(currentReport==='electricity')box.innerHTML=renderElectricity();else if(currentReport==='cost')box.innerHTML=renderCost()}
-function renderProduction(){
- const date=document.getElementById('reportDate').value||today;
- let source=null;
- if(currentPeriod==='monthly')source=aggregateMonth(date.slice(0,7));
- if(currentPeriod==='yearly')source=aggregateYear(date.slice(0,4));
- const rows=reportUnits().map(u=>{
-  const d=currentPeriod==='daily'?unitData(u):(source?.[u.id]||{production:0});
-  const locked=u.archived||!u.enabled;
-  const production=+d.production||0,kg=production*1000;
-  if(currentPeriod!=='daily')return `<tr class="${locked?'muted-row':''}"><td>${periodLabel()}</td><td>${esc(u.code)}</td><td>${esc(u.name)}</td><td class="num"><strong>${fmt(production,3)}</strong></td><td class="num">${fmt(kg,0)}</td><td><span class="badge info">AUTO TOTAL</span></td></tr>`;
-  return `<tr class="${locked?'muted-row':''}"><td>${periodLabel()}</td><td>${esc(u.code)}</td><td>${esc(u.name)}</td><td><input type="number" min="0" step="0.001" value="${production}" ${locked?'disabled':''} onchange="setUnitMetric('${u.id}','production',this.value)"></td><td class="num">${fmt(kg,0)}</td><td><input type="number" step="0.01" value="${d.hours||0}" ${locked?'disabled':''} onchange="setUnitMetric('${u.id}','hours',this.value)"></td><td><input type="number" step="0.01" value="${d.downtime||0}" ${locked?'disabled':''} onchange="setUnitMetric('${u.id}','downtime',this.value)"></td><td><input value="${esc(d.remarks||'')}" ${locked?'disabled':''} onchange="setUnitMetric('${u.id}','remarks',this.value)"></td></tr>`
- }).join('');
- if(currentPeriod!=='daily')return `<div class="alert"><strong>Automatic ${currentPeriod==='monthly'?'Monthly':'Yearly'} Production:</strong> Calculated from saved daily production. These totals are read-only.</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Unit Code</th><th>Unit Name</th><th class="num">Production (Ton)</th><th class="num">Production (Kg)</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
- return `<div class="alert"><strong>Production Formula #1:</strong> Enter actual daily production in tons. Production Kg is calculated automatically as Ton × 1,000.</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Unit Code</th><th>Unit Name</th><th>Daily Production (Ton)</th><th class="num">Production (Kg)</th><th>Operating Hours</th><th>Downtime Hours</th><th>Remarks</th></tr></thead><tbody>${rows}</tbody></table></div>`
-}
-function renderMetric(metric,label){const rows=reportUnits().map(u=>{const d=unitData(u),locked=u.archived||!u.enabled;return `<tr class="${locked?'muted-row':''}"><td>${periodLabel()}</td><td>${esc(u.code)}</td><td>${esc(u.name)}</td><td>${u.archived?'Archived':u.enabled?'Enabled':'Disabled'}</td><td><input type="number" step="0.001" value="${d[metric]||0}" ${locked?'disabled':''} onchange="setUnitMetric('${u.id}','${metric}',this.value)"></td></tr>`}).join('');return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Unit Code</th><th>Unit Name</th><th>Status</th><th>${label}</th></tr></thead><tbody>${rows}</tbody></table></div>`}
-function renderElectricity(){const r=getRecord();const rows=reportUnits().map(u=>{const d=unitData(u),locked=u.archived||!u.enabled;return `<tr class="${locked?'muted-row':''}"><td>${periodLabel()}</td><td>${esc(u.code)}</td><td>${esc(u.name)}</td><td class="num">${fmt(d.production)}</td><td><input type="number" step="0.01" value="${d.electricity||0}" ${locked?'disabled':''} onchange="setUnitMetric('${u.id}','electricity',this.value)"></td><td class="num">${fmt(unitsPerTon(d),2)}</td></tr>`}).join('');const allocated=activeUnits().reduce((s,u)=>s+(+unitData(u).electricity||0),0),source=(+r.wapda||0)+(+r.solar||0);return `<div class="input-grid four" style="margin-bottom:12px"><div class="field"><label>WAPDA Units</label><input type="number" value="${r.wapda||0}" onchange="setGeneral('wapda',this.value)"></div><div class="field"><label>Solar Units</label><input type="number" value="${r.solar||0}" onchange="setGeneral('solar',this.value)"></div><div class="field"><label>Allocated to Units</label><input readonly value="${fmt(allocated,0)}"></div><div class="field"><label>Unallocated Units</label><input readonly value="${fmt(source-allocated,0)}"></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Unit Code</th><th>Unit Name</th><th class="num">Production (Ton)</th><th>Allocated Electricity</th><th class="num">Units/Ton</th></tr></thead><tbody>${rows}</tbody></table></div>`}
-function renderCost(){const rows=reportUnits().map(u=>{const d=unitData(u),locked=u.archived||!u.enabled;return `<tr class="${locked?'muted-row':''}"><td>${esc(u.code)}</td><td>${esc(u.name)}</td><td class="num">${fmt(d.production)}</td>${['materialCost','labourCost','maintenanceCost','overheadCost','otherCost'].map(k=>`<td><input type="number" step="0.01" value="${d[k]||0}" ${locked?'disabled':''} onchange="setUnitMetric('${u.id}','${k}',this.value)"></td>`).join('')}<td class="num"><strong>${money(unitTotalCost(d))}</strong></td><td class="num"><strong>${money(costPerKg(d),4)}</strong></td></tr>`}).join('');const t=calcTotals();return `<div class="table-wrap"><table class="data-table" style="min-width:1250px"><thead><tr><th>Unit Code</th><th>Unit Name</th><th class="num">Production (Ton)</th><th>Material Cost</th><th>Labour Cost</th><th>Maintenance</th><th>Overhead</th><th>Other Cost</th><th class="num">Unit Cost</th><th class="num">Cost/Kg</th></tr></thead><tbody>${rows}<tr><th colspan="8">Combined Enabled Units</th><th class="num">${money(t.cost)}</th><th class="num">${money(t.costKg,4)}</th></tr></tbody></table></div>`}
-function setGeneral(key,val){getRecord()[key]=Number(val)||0;persist();renderReports();renderOverview()}
-
-
-let currentSettingsGroup='production';
-function renderFormulaSettings(){const group=state.formulaSettings[currentSettingsGroup]||defaultFormulaSettings[currentSettingsGroup];const box=document.getElementById('formulaSettingsContent');if(!box)return;box.innerHTML=`<div class="card settings-section active"><div class="card-title"><div><h2>${esc(group.title)}</h2><div class="note">${currentSettingsGroup==='production'?'Production is entered daily in tons; kilograms, monthly totals and yearly totals are automatic.':'Enter or revise the approved calculation rules here.'}</div></div><span class="badge ${currentSettingsGroup==='production'?'on':'draft'}">${currentSettingsGroup==='production'?'FORMULA #1 LOCKED':'EDITABLE'}</span></div><div class="formula-grid">${group.items.map(item=>`<div class="formula-card"><div class="formula-head"><div><h3>${esc(item.name)}</h3><div class="note">${esc(item.description||'')}</div></div><label class="setting-switch"><input type="checkbox" ${item.enabled?'checked':''} ${item.locked?'disabled':''} onchange="updateFormulaSetting('${currentSettingsGroup}','${item.id}','enabled',this.checked)"> ${item.locked?'Locked':'Enabled'}</label></div><label class="field"><label>Formula / Method</label><textarea class="formula-code" ${item.locked?'readonly':''} onchange="updateFormulaSetting('${currentSettingsGroup}','${item.id}','formula',this.value)">${esc(item.formula)}</textarea></label><div class="formula-meta"><div class="field"><label>Result Unit</label><input value="${esc(item.unit)}" ${item.locked?'readonly':''} onchange="updateFormulaSetting('${currentSettingsGroup}','${item.id}','unit',this.value)"></div><div class="field"><label>Decimal Places</label><input type="number" min="0" max="6" value="${item.decimals}" ${item.locked?'readonly':''} onchange="updateFormulaSetting('${currentSettingsGroup}','${item.id}','decimals',this.value)"></div><div class="field"><label>Effective From</label><input type="date" value="${esc(item.effectiveFrom||'')}" onchange="updateFormulaSetting('${currentSettingsGroup}','${item.id}','effectiveFrom',this.value)"></div></div><button class="btn btn-light btn-small" style="margin-top:9px" onclick="testFormula('${currentSettingsGroup}','${item.id}')">Test Formula</button><div class="test-result" id="test_${item.id}">Waiting for your final formula.</div></div>`).join('')}</div><div class="note" style="margin-top:12px"><strong>Available controlled variables:</strong><br><span class="variable-chip">production</span><span class="variable-chip">ash</span><span class="variable-chip">materialConsumption</span><span class="variable-chip">steam</span><span class="variable-chip">electricity</span><span class="variable-chip">wapda</span><span class="variable-chip">solar</span><span class="variable-chip">generator</span><span class="variable-chip">openingStock</span><span class="variable-chip">received</span><span class="variable-chip">closingStock</span><span class="variable-chip">unitCost</span></div></div>`}
-function updateFormulaSetting(group,id,key,value){const item=state.formulaSettings[group].items.find(x=>x.id===id);if(!item)return;item[key]=key==='decimals'?Math.max(0,Math.min(6,Number(value)||0)):value}
-function saveFormulaSettings(){persist();alert('Formula settings saved. Calculations will be connected after you provide the final formulas.')}
-function resetFormulaSettings(){if(!confirm('Reset all formula settings to the default placeholders?'))return;state.formulaSettings=clone(defaultFormulaSettings);persist();renderFormulaSettings()}
-function testFormula(group,id){const item=state.formulaSettings[group].items.find(x=>x.id===id),el=document.getElementById('test_'+id);if(!el)return;el.textContent=item.formula&&item.formula!=='INPUT'&&item.formula!=='MANUAL'?'Formula structure is saved and ready for final calculation mapping.':'This setting currently uses manual input. Final logic will be added after formula approval.'}
-
-function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='costing-v3-data.json';a.click();URL.revokeObjectURL(a.href)}
-function renderAll(){renderUnits();renderOverview();renderReports();renderFormulaSettings()}
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showPanel(b.dataset.panel));
-document.querySelectorAll('.period-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.period-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentPeriod=b.dataset.period;document.getElementById('periodFilter').value=currentPeriod;renderReports()});
-document.querySelectorAll('.report-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.report-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentReport=b.dataset.report;renderReports()});
-document.querySelectorAll('.formula-nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.formula-nav').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentSettingsGroup=b.dataset.settings;renderFormulaSettings()});
-document.getElementById('periodFilter').onchange=e=>{currentPeriod=e.target.value;document.querySelectorAll('.period-tab').forEach(x=>x.classList.toggle('active',x.dataset.period===currentPeriod));renderReports()};
-document.getElementById('reportDate').onchange=()=>{renderOverview();renderReports()};document.getElementById('reportDate').value=today;renderAll();
-</script>
- <!-- =========================================================
-     COSTING V3 — ASH & PULP YIELD FORMULA CONTROL CENTER
-     Paste this complete block immediately before </body>
-========================================================== -->
-<style>
-/* ===== Costing V3 Formula Control Center Upgrade ===== */
-.formula-control-shell{
-  display:grid;
-  grid-template-columns:250px minmax(0,1fr);
-  gap:16px;
-  align-items:start;
-}
-
-.formula-control-sidebar{
-  position:sticky;
-  top:86px;
-  border:1px solid #e2e8f0;
-  border-radius:16px;
-  background:#ffffff;
-  overflow:hidden;
-  box-shadow:0 10px 28px rgba(15,23,42,.06);
-}
-
-.formula-control-sidebar-head{
-  padding:16px;
-  background:linear-gradient(135deg,#111827,#1f2937);
-  color:#ffffff;
-}
-
-.formula-control-sidebar-head h3{
-  margin:0;
-  font-size:15px;
-}
-
-.formula-control-sidebar-head p{
-  margin:5px 0 0;
-  font-size:10px;
-  line-height:1.5;
-  color:#cbd5e1;
-}
-
-.formula-control-nav{
-  padding:10px;
-}
-
-.formula-control-nav button{
-  width:100%;
-  min-height:42px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  border:1px solid transparent;
-  border-radius:10px;
-  padding:0 11px;
-  margin-bottom:7px;
-  background:#f8fafc;
-  color:#334155;
-  font-size:11px;
-  font-weight:800;
-  cursor:pointer;
-  text-align:left;
-}
-
-.formula-control-nav button:hover{
-  border-color:#f5a316;
-  background:#fffaf0;
-}
-
-.formula-control-nav button.active{
-  background:linear-gradient(135deg,#ffcc00,#f5a316);
-  border-color:#e5a300;
-  color:#111827;
-  box-shadow:0 7px 16px rgba(245,163,22,.24);
-}
-
-.formula-control-nav .nav-status{
-  min-width:8px;
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  background:#16a34a;
-}
-
-.formula-control-main{
-  min-width:0;
-}
-
-.formula-hero{
-  position:relative;
-  overflow:hidden;
-  border:1px solid #e2e8f0;
-  border-radius:17px;
-  padding:18px;
-  margin-bottom:14px;
-  background:
-    radial-gradient(circle at top right,rgba(255,204,0,.28),transparent 34%),
-    linear-gradient(135deg,#ffffff,#fffaf0);
-  box-shadow:0 10px 28px rgba(15,23,42,.06);
-}
-
-.formula-hero:before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:0;
-  bottom:0;
-  width:5px;
-  background:#f5a316;
-}
-
-.formula-hero-top{
-  display:flex;
-  justify-content:space-between;
-  gap:14px;
-  align-items:flex-start;
-  flex-wrap:wrap;
-}
-
-.formula-hero h2{
-  margin:0;
-  font-size:21px;
-  color:#111827;
-}
-
-.formula-hero p{
-  margin:7px 0 0;
-  max-width:820px;
-  color:#64748b;
-  font-size:11px;
-  line-height:1.65;
-}
-
-.formula-version{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  background:#dcfce7;
-  color:#166534;
-  border:1px solid #bbf7d0;
-  border-radius:999px;
-  padding:6px 10px;
-  font-size:10px;
-  font-weight:900;
-}
-
-.formula-version:before{
-  content:"";
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:#16a34a;
-}
-
-.formula-kpi-strip{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;
-  margin-top:16px;
-}
-
-.formula-mini-kpi{
-  border:1px solid #e2e8f0;
-  background:rgba(255,255,255,.9);
-  border-radius:12px;
-  padding:11px;
-}
-
-.formula-mini-kpi small{
-  display:block;
-  color:#64748b;
-  font-size:9px;
-  text-transform:uppercase;
-  font-weight:900;
-}
-
-.formula-mini-kpi strong{
-  display:block;
-  margin-top:5px;
-  font-size:15px;
-  color:#111827;
-}
-
-.formula-card-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:14px;
-}
-
-.advanced-formula-card{
-  border:1px solid #e2e8f0;
-  border-radius:16px;
-  background:#ffffff;
-  overflow:hidden;
-  box-shadow:0 8px 24px rgba(15,23,42,.05);
-}
-
-.advanced-formula-head{
-  padding:14px 15px;
-  border-bottom:1px solid #eef2f7;
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  background:linear-gradient(180deg,#ffffff,#fbfdff);
-}
-
-.advanced-formula-head h3{
-  margin:0;
-  color:#111827;
-  font-size:15px;
-}
-
-.advanced-formula-head p{
-  margin:5px 0 0;
-  color:#64748b;
-  font-size:10px;
-  line-height:1.5;
-}
-
-.formula-number{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-width:30px;
-  height:30px;
-  padding:0 9px;
-  border-radius:9px;
-  background:#111827;
-  color:#ffcc00;
-  font-size:10px;
-  font-weight:900;
-}
-
-.formula-card-body{
-  padding:15px;
-}
-
-.formula-equation{
-  border:1px solid #fde68a;
-  border-left:4px solid #f5a316;
-  background:#fffbeb;
-  border-radius:11px;
-  padding:12px;
-  color:#713f12;
-  font-family:Consolas,Monaco,monospace;
-  font-size:12px;
-  line-height:1.65;
-  word-break:break-word;
-  margin-bottom:12px;
-}
-
-.formula-detail-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:8px;
-}
-
-.formula-detail-box{
-  border:1px solid #e2e8f0;
-  border-radius:10px;
-  padding:9px;
-  background:#f8fafc;
-}
-
-.formula-detail-box small{
-  display:block;
-  color:#64748b;
-  font-size:9px;
-  text-transform:uppercase;
-  font-weight:900;
-}
-
-.formula-detail-box strong{
-  display:block;
-  margin-top:4px;
-  font-size:11px;
-  color:#111827;
-}
-
-.live-calculator-card{
-  grid-column:1/-1;
-  border:1px solid #e2e8f0;
-  border-radius:17px;
-  background:#ffffff;
-  padding:16px;
-  box-shadow:0 10px 28px rgba(15,23,42,.06);
-}
-
-.live-calculator-title{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-  margin-bottom:13px;
-}
-
-.live-calculator-title h3{
-  margin:0;
-  font-size:16px;
-}
-
-.live-calculator-inputs{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;
-}
-
-.calc-field label{
-  display:block;
-  margin-bottom:5px;
-  color:#64748b;
-  font-size:10px;
-  font-weight:900;
-}
-
-.calc-field input{
-  width:100%;
-  height:39px;
-  border:1px solid #d8dee8;
-  border-radius:9px;
-  padding:0 10px;
-  background:#ffffff;
-  font-size:12px;
-}
-
-.calc-field input:focus{
-  outline:none;
-  border-color:#f5a316;
-  box-shadow:0 0 0 3px rgba(245,163,22,.14);
-}
-
-.calculation-results{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;
-  margin-top:14px;
-}
-
-.calculation-result{
-  position:relative;
-  overflow:hidden;
-  border:1px solid #e2e8f0;
-  border-radius:13px;
-  padding:12px;
-  background:#f8fafc;
-}
-
-.calculation-result:before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:0;
-  bottom:0;
-  width:4px;
-  background:#f5a316;
-}
-
-.calculation-result small{
-  display:block;
-  color:#64748b;
-  font-size:9px;
-  font-weight:900;
-  text-transform:uppercase;
-}
-
-.calculation-result strong{
-  display:block;
-  margin-top:6px;
-  font-size:18px;
-  color:#111827;
-}
-
-.calculation-result span{
-  display:block;
-  margin-top:4px;
-  color:#64748b;
-  font-size:9px;
-}
-
-.calculation-breakdown{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-top:14px;
-}
-
-.breakdown-panel,
-.suggestion-panel{
-  border:1px solid #e2e8f0;
-  border-radius:13px;
-  padding:13px;
-  background:#ffffff;
-}
-
-.breakdown-panel h4,
-.suggestion-panel h4{
-  margin:0 0 10px;
-  font-size:12px;
-  color:#111827;
-}
-
-.breakdown-row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:7px 0;
-  border-bottom:1px dashed #e2e8f0;
-  font-size:10px;
-}
-
-.breakdown-row:last-child{
-  border-bottom:0;
-}
-
-.breakdown-row span{
-  color:#64748b;
-}
-
-.breakdown-row strong{
-  color:#111827;
-  font-variant-numeric:tabular-nums;
-}
-
-.formula-message{
-  padding:10px 11px;
-  border-radius:10px;
-  font-size:10px;
-  line-height:1.55;
-  margin-bottom:8px;
-}
-
-.formula-message.success{
-  background:#ecfdf5;
-  border:1px solid #bbf7d0;
-  color:#166534;
-}
-
-.formula-message.warning{
-  background:#fff7ed;
-  border:1px solid #fed7aa;
-  color:#9a3412;
-}
-
-.formula-message.danger{
-  background:#fef2f2;
-  border:1px solid #fecaca;
-  color:#991b1b;
-}
-
-.formula-footer-actions{
-  display:flex;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:14px;
-}
-
-@media(max-width:1100px){
-  .formula-control-shell{
-    grid-template-columns:1fr;
-  }
-
-  .formula-control-sidebar{
-    position:static;
-  }
-
-  .formula-control-nav{
-    display:flex;
-    gap:7px;
-    overflow:auto;
-  }
-
-  .formula-control-nav button{
-    min-width:150px;
-    margin:0;
-  }
-
-  .formula-kpi-strip,
-  .live-calculator-inputs,
-  .calculation-results{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-}
-
-@media(max-width:700px){
-  .formula-card-grid,
-  .formula-kpi-strip,
-  .live-calculator-inputs,
-  .calculation-results,
-  .calculation-breakdown,
-  .formula-detail-grid{
-    grid-template-columns:1fr;
-  }
-}
-</style>
-
-<script>
-(function(){
-
-  /* =========================================================
-     1. APPROVED FORMULA SETTINGS
-  ========================================================= */
-
-  const approvedAshFormulas = {
-    title: "Ash Control",
-    items: [
-      {
-        id: "totalPaperAsh",
-        number: "2.1",
-        name: "Total Paper Ash",
-        formula: "paperProduction * finishedPaperAshPercent / 100",
-        displayFormula: "Paper Production × Finished Paper Ash % ÷ 100",
-        unit: "Ton",
-        decimals: 3,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Calculates total ash available in the finished paper."
-      },
-      {
-        id: "pulpAsh",
-        number: "2.2",
-        name: "Pulp Ash",
-        formula: "pulpProduced * pulpAshPercent / 100",
-        displayFormula: "Pulp Produced × Pulp Ash % ÷ 100",
-        unit: "Ton",
-        decimals: 3,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Calculates natural ash already contributed by the pulp portion."
-      },
-      {
-        id: "retainedFillerAsh",
-        number: "2.3",
-        name: "Retained Filler Ash",
-        formula: "totalPaperAsh - pulpAsh",
-        displayFormula: "Total Paper Ash − Pulp Ash",
-        unit: "Ton",
-        decimals: 3,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Calculates ash retained from calcium carbonate, soap stone and other mineral fillers."
-      },
-      {
-        id: "fillerAshPercent",
-        number: "2.4",
-        name: "Filler Ash Contribution",
-        formula: "retainedFillerAsh / paperProduction * 100",
-        displayFormula: "Retained Filler Ash ÷ Paper Production × 100",
-        unit: "%",
-        decimals: 2,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Shows the filler ash contribution as a percentage of finished production."
-      }
-    ]
-  };
-
-  const approvedPulpYieldFormulas = {
-    title: "Pulp Yield & Recovery",
-    items: [
-      {
-        id: "pulpProduced",
-        number: "3.1",
-        name: "Pulp Produced",
-        formula: "paperProduction - totalPaperAsh - longFibre - shortFibre",
-        displayFormula: "Paper Production − Total Paper Ash − Long Fibre − Short Fibre",
-        unit: "Ton",
-        decimals: 3,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Calculates the remaining pulp-produced portion after deducting ash and separately measured fibres."
-      },
-      {
-        id: "pulpYieldPercent",
-        number: "3.2",
-        name: "Pulp Yield",
-        formula: "pulpProduced / materialConsumed * 100",
-        displayFormula: "Pulp Produced ÷ Material Consumed × 100",
-        unit: "%",
-        decimals: 2,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Measures actual pulp recovery from total pulp material consumed."
-      },
-      {
-        id: "pulpLoss",
-        number: "3.3",
-        name: "Pulp Process Loss",
-        formula: "materialConsumed - pulpProduced",
-        displayFormula: "Material Consumed − Pulp Produced",
-        unit: "Ton",
-        decimals: 3,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Calculates pulp quantity lost during pulping, cleaning, screening and process handling."
-      },
-      {
-        id: "pulpLossPercent",
-        number: "3.4",
-        name: "Pulp Process Loss %",
-        formula: "100 - pulpYieldPercent",
-        displayFormula: "100 − Pulp Yield %",
-        unit: "%",
-        decimals: 2,
-        enabled: true,
-        locked: true,
-        effectiveFrom: "",
-        description: "Shows pulp process loss as a percentage of consumed material."
-      }
-    ]
-  };
-
-
-  /* =========================================================
-     2. INSTALL / UPDATE FORMULA DATA
-  ========================================================= */
-
-  function installApprovedFormulas(){
-    if(typeof state === "undefined") return;
-
-    state.formulaSettings = state.formulaSettings || {};
-
-    state.formulaSettings.ash =
-      JSON.parse(JSON.stringify(approvedAshFormulas));
-
-    state.formulaSettings.yield =
-      JSON.parse(JSON.stringify(approvedPulpYieldFormulas));
-
-    if(typeof persist === "function"){
-      persist();
-    }
-
-    const ashButton =
-      document.querySelector('.formula-nav[data-settings="ash"]');
-
-    const yieldButton =
-      document.querySelector('.formula-nav[data-settings="yield"]');
-
-    if(ashButton){
-      ashButton.textContent = "Ash Control";
-    }
-
-    if(yieldButton){
-      yieldButton.textContent = "Pulp Yield";
-    }
-  }
-
-
-  /* =========================================================
-     3. NUMBER HELPERS
-  ========================================================= */
-
-  function n(value){
-    const number = Number(value);
-    return Number.isFinite(number) ? number : 0;
-  }
-
-  function displayNumber(value, decimals){
-    return n(value).toLocaleString("en-PK",{
-      minimumFractionDigits:decimals,
-      maximumFractionDigits:decimals
-    });
-  }
-
-  function inputValue(id){
-    const element = document.getElementById(id);
-    return element ? n(element.value) : 0;
-  }
-
-  function safePercent(numerator, denominator){
-    return denominator > 0
-      ? numerator / denominator * 100
-      : 0;
-  }
-
-
-  /* =========================================================
-     4. FORMULA CALCULATIONS
-  ========================================================= */
-
-  function calculateFormulaResults(){
-
-    const paperProduction =
-      inputValue("formulaPaperProduction");
-
-    const finishedPaperAshPercent =
-      inputValue("formulaFinishedAsh");
-
-    const pulpAshPercent =
-      inputValue("formulaPulpAshPercent");
-
-    const longFibre =
-      inputValue("formulaLongFibre");
-
-    const shortFibre =
-      inputValue("formulaShortFibre");
-
-    const materialConsumed =
-      inputValue("formulaMaterialConsumed");
-
-    const totalPaperAsh =
-      paperProduction * finishedPaperAshPercent / 100;
-
-    const pulpProduced =
-      Math.max(
-        0,
-        paperProduction
-        - totalPaperAsh
-        - longFibre
-        - shortFibre
-      );
-
-    const pulpAsh =
-      pulpProduced * pulpAshPercent / 100;
-
-    const retainedFillerAsh =
-      totalPaperAsh - pulpAsh;
-
-    const fillerAshPercent =
-      safePercent(retainedFillerAsh,paperProduction);
-
-    const pulpYieldPercent =
-      safePercent(pulpProduced,materialConsumed);
-
-    const pulpLoss =
-      materialConsumed - pulpProduced;
-
-    const pulpLossPercent =
-      materialConsumed > 0
-        ? 100 - pulpYieldPercent
-        : 0;
-
-    return {
-      paperProduction,
-      finishedPaperAshPercent,
-      pulpAshPercent,
-      longFibre,
-      shortFibre,
-      materialConsumed,
-      totalPaperAsh,
-      pulpProduced,
-      pulpAsh,
-      retainedFillerAsh,
-      fillerAshPercent,
-      pulpYieldPercent,
-      pulpLoss,
-      pulpLossPercent
-    };
-  }
-
-
-  /* =========================================================
-     5. LIVE RESULT UPDATE
-  ========================================================= */
-
-  window.updateAshPulpCalculator = function(){
-
-    const r = calculateFormulaResults();
-
-    const values = {
-      resultTotalPaperAsh:
-        displayNumber(r.totalPaperAsh,3) + " Ton",
-
-      resultPulpProduced:
-        displayNumber(r.pulpProduced,3) + " Ton",
-
-      resultPulpAsh:
-        displayNumber(r.pulpAsh,3) + " Ton",
-
-      resultRetainedFillerAsh:
-        displayNumber(r.retainedFillerAsh,3) + " Ton",
-
-      resultFillerAshPercent:
-        displayNumber(r.fillerAshPercent,2) + "%",
-
-      resultPulpYield:
-        displayNumber(r.pulpYieldPercent,2) + "%",
-
-      resultPulpLoss:
-        displayNumber(r.pulpLoss,3) + " Ton",
-
-      resultPulpLossPercent:
-        displayNumber(r.pulpLossPercent,2) + "%"
-    };
-
-    Object.entries(values).forEach(function(entry){
-      const element = document.getElementById(entry[0]);
-      if(element){
-        element.textContent = entry[1];
-      }
-    });
-
-    const breakdown = document.getElementById(
-      "formulaCalculationBreakdown"
-    );
-
-    if(breakdown){
-      breakdown.innerHTML = `
-        <div class="breakdown-row">
-          <span>Paper Production</span>
-          <strong>${displayNumber(r.paperProduction,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Finished Paper Ash</span>
-          <strong>${displayNumber(r.finishedPaperAshPercent,2)}%</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Total Paper Ash</span>
-          <strong>${displayNumber(r.totalPaperAsh,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Long Fibre</span>
-          <strong>${displayNumber(r.longFibre,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Short Fibre</span>
-          <strong>${displayNumber(r.shortFibre,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Pulp Produced</span>
-          <strong>${displayNumber(r.pulpProduced,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Pulp Ash Percentage</span>
-          <strong>${displayNumber(r.pulpAshPercent,2)}%</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Pulp Ash</span>
-          <strong>${displayNumber(r.pulpAsh,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Retained Filler Ash</span>
-          <strong>${displayNumber(r.retainedFillerAsh,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Material Consumed</span>
-          <strong>${displayNumber(r.materialConsumed,3)} Ton</strong>
-        </div>
-
-        <div class="breakdown-row">
-          <span>Pulp Yield</span>
-          <strong>${displayNumber(r.pulpYieldPercent,2)}%</strong>
-        </div>
-      `;
-    }
-
-    const suggestionPanel =
-      document.getElementById("formulaSuggestions");
-
-    if(suggestionPanel){
-
-      let messages = [];
-
-      if(r.paperProduction <= 0){
-        messages.push(`
-          <div class="formula-message warning">
-            Enter Paper Production to calculate ash and pulp yield.
-          </div>
-        `);
-      }
-
-      if(r.materialConsumed <= 0){
-        messages.push(`
-          <div class="formula-message warning">
-            Material Consumed must be greater than zero for Pulp Yield calculation.
-          </div>
-        `);
-      }
-
-      if(r.retainedFillerAsh < 0){
-        messages.push(`
-          <div class="formula-message danger">
-            Pulp Ash is higher than Total Paper Ash. Check the pulp ash percentage,
-            finished ash percentage or pulp-produced quantity.
-          </div>
-        `);
-      }
-
-      if(r.pulpYieldPercent > 100){
-        messages.push(`
-          <div class="formula-message danger">
-            Pulp Yield is above 100%. Material Consumed may be too low or one of
-            the production deductions may be incorrect.
-          </div>
-        `);
-      }
-
-      if(
-        r.paperProduction > 0 &&
-        r.materialConsumed > 0 &&
-        r.retainedFillerAsh >= 0 &&
-        r.pulpYieldPercent <= 100
-      ){
-        messages.push(`
-          <div class="formula-message success">
-            Ash and Pulp Yield formulas are calculating normally.
-          </div>
-        `);
-      }
-
-      messages.push(`
-        <div class="formula-message warning">
-          Retained Filler Ash currently represents the combined ash retained from
-          calcium carbonate, soap stone and other mineral fillers.
-        </div>
-      `);
-
-      suggestionPanel.innerHTML = messages.join("");
-    }
-  };
-
-
-  /* =========================================================
-     6. FORMULA CARD HTML
-  ========================================================= */
-
-  function formulaCard(item){
-
-    const lockedBadge = item.locked
-      ? `<span class="badge on">LOCKED</span>`
-      : `<span class="badge draft">EDITABLE</span>`;
-
-    return `
-      <article class="advanced-formula-card">
-
-        <div class="advanced-formula-head">
-          <div style="display:flex;gap:10px;align-items:flex-start">
-
-            <span class="formula-number">
-              ${item.number || "V3"}
-            </span>
-
-            <div>
-              <h3>${esc(item.name)}</h3>
-              <p>${esc(item.description || "")}</p>
-            </div>
-
-          </div>
-
-          ${lockedBadge}
-        </div>
-
-        <div class="formula-card-body">
-
-          <div class="formula-equation">
-            ${esc(item.displayFormula || item.formula)}
-          </div>
-
-          <div class="formula-detail-grid">
-
-            <div class="formula-detail-box">
-              <small>Result Unit</small>
-              <strong>${esc(item.unit)}</strong>
-            </div>
-
-            <div class="formula-detail-box">
-              <small>Decimals</small>
-              <strong>${item.decimals}</strong>
-            </div>
-
-            <div class="formula-detail-box">
-              <small>Status</small>
-              <strong>${item.enabled ? "Enabled" : "Disabled"}</strong>
-            </div>
-
-          </div>
-
-        </div>
-
-      </article>
-    `;
-  }
-
-
-  /* =========================================================
-     7. LIVE CALCULATOR HTML
-  ========================================================= */
-
-  function renderLiveCalculator(){
-
-    return `
-      <section class="live-calculator-card">
-
-        <div class="live-calculator-title">
-
-          <div>
-            <h3>Ash & Pulp Yield Live Calculator</h3>
-            <div class="note">
-              Enter sample production values to test all approved formulas.
-            </div>
-          </div>
-
-          <span class="badge on">LIVE CALCULATION</span>
-
-        </div>
-
-        <div class="live-calculator-inputs">
-
-          <div class="calc-field">
-            <label>Paper Production (Ton)</label>
-            <input
-              id="formulaPaperProduction"
-              type="number"
-              min="0"
-              step="0.001"
-              value="100"
-              oninput="updateAshPulpCalculator()"
-            >
-          </div>
-
-          <div class="calc-field">
-            <label>Finished Paper Ash (%)</label>
-            <input
-              id="formulaFinishedAsh"
-              type="number"
-              min="0"
-              step="0.01"
-              value="8"
-              oninput="updateAshPulpCalculator()"
-            >
-          </div>
-
-          <div class="calc-field">
-            <label>Long Fibre (Ton)</label>
-            <input
-              id="formulaLongFibre"
-              type="number"
-              min="0"
-              step="0.001"
-              value="5"
-              oninput="updateAshPulpCalculator()"
-            >
-          </div>
-
-          <div class="calc-field">
-            <label>Short Fibre (Ton)</label>
-            <input
-              id="formulaShortFibre"
-              type="number"
-              min="0"
-              step="0.001"
-              value="7"
-              oninput="updateAshPulpCalculator()"
-            >
-          </div>
-
-          <div class="calc-field">
-            <label>Pulp Ash (%)</label>
-            <input
-              id="formulaPulpAshPercent"
-              type="number"
-              min="0"
-              step="0.01"
-              value="7"
-              oninput="updateAshPulpCalculator()"
-            >
-          </div>
-
-          <div class="calc-field">
-            <label>Material Consumed (Ton)</label>
-            <input
-              id="formulaMaterialConsumed"
-              type="number"
-              min="0"
-              step="0.001"
-              value="95"
-              oninput="updateAshPulpCalculator()"
-            >
-          </div>
-
-        </div>
-
-        <div class="calculation-results">
-
-          <div class="calculation-result">
-            <small>Total Paper Ash</small>
-            <strong id="resultTotalPaperAsh">0.000 Ton</strong>
-            <span>Production × Ash %</span>
-          </div>
-
-          <div class="calculation-result">
-            <small>Pulp Produced</small>
-            <strong id="resultPulpProduced">0.000 Ton</strong>
-            <span>Production less ash and fibres</span>
-          </div>
-
-          <div class="calculation-result">
-            <small>Pulp Ash</small>
-            <strong id="resultPulpAsh">0.000 Ton</strong>
-            <span>Natural ash from pulp</span>
-          </div>
-
-          <div class="calculation-result">
-            <small>Retained Filler Ash</small>
-            <strong id="resultRetainedFillerAsh">0.000 Ton</strong>
-            <span>Mineral filler contribution</span>
-          </div>
-
-          <div class="calculation-result">
-            <small>Filler Ash Contribution</small>
-            <strong id="resultFillerAshPercent">0.00%</strong>
-            <span>Percentage of production</span>
-          </div>
-
-          <div class="calculation-result">
-            <small>Pulp Yield</small>
-            <strong id="resultPulpYield">0.00%</strong>
-            <span>Pulp produced ÷ consumed</span>
-          </div>
-
-          <div class="calculation-result">
-            <small>Pulp Process Loss</small>
-            <strong id="resultPulpLoss">0.000 Ton</strong>
-            <span>Consumed less produced</span>
-          </div>
-
-          <div class="calculation-result">
-            <small>Pulp Process Loss %</small>
-            <strong id="resultPulpLossPercent">0.00%</strong>
-            <span>100 − Pulp Yield</span>
-          </div>
-
-        </div>
-
-        <div class="calculation-breakdown">
-
-          <div class="breakdown-panel">
-            <h4>Calculation Breakdown</h4>
-            <div id="formulaCalculationBreakdown"></div>
-          </div>
-
-          <div class="suggestion-panel">
-            <h4>Formula Validation & Suggestions</h4>
-            <div id="formulaSuggestions"></div>
-          </div>
-
-        </div>
-
-      </section>
-    `;
-  }
-
-
-  /* =========================================================
-     8. REPLACE OLD FORMULA SETTINGS RENDERER
-  ========================================================= */
-
-  renderFormulaSettings = function(){
-
-    const box =
-      document.getElementById("formulaSettingsContent");
-
-    if(!box) return;
-
-    const group =
-      state.formulaSettings[currentSettingsGroup]
-      || defaultFormulaSettings[currentSettingsGroup];
-
-    const approvedGroup =
-      currentSettingsGroup === "ash"
-      || currentSettingsGroup === "yield";
-
-    const title =
-      currentSettingsGroup === "yield"
-        ? "Pulp Yield & Recovery"
-        : group.title;
-
-    const subtitle =
-      currentSettingsGroup === "ash"
-        ? "Calculate finished paper ash, natural pulp ash and retained filler ash."
-        : currentSettingsGroup === "yield"
-        ? "Calculate pulp produced, pulp recovery and pulp process loss."
-        : "Review and manage the approved formula rules.";
-
-    const formulaItems =
-      group.items || [];
-
-    box.innerHTML = `
-      <div class="formula-control-shell">
-
-        <aside class="formula-control-sidebar">
-
-          <div class="formula-control-sidebar-head">
-            <h3>Formula Control Center</h3>
-            <p>
-              Approved costing formulas with live testing,
-              validation and calculation breakdown.
-            </p>
-          </div>
-
-          <div class="formula-control-nav">
-
-            <button
-              class="${currentSettingsGroup === "production" ? "active" : ""}"
-              onclick="openCostingFormulaGroup('production',this)"
-            >
-              <span>Production</span>
-              <span class="nav-status"></span>
-            </button>
-
-            <button
-              class="${currentSettingsGroup === "ash" ? "active" : ""}"
-              onclick="openCostingFormulaGroup('ash',this)"
-            >
-              <span>Ash Control</span>
-              <span class="nav-status"></span>
-            </button>
-
-            <button
-              class="${currentSettingsGroup === "yield" ? "active" : ""}"
-              onclick="openCostingFormulaGroup('yield',this)"
-            >
-              <span>Pulp Yield</span>
-              <span class="nav-status"></span>
-            </button>
-
-            <button
-              class="${currentSettingsGroup === "steam" ? "active" : ""}"
-              onclick="openCostingFormulaGroup('steam',this)"
-            >
-              <span>Steam Control</span>
-              <span class="nav-status"></span>
-            </button>
-
-            <button
-              class="${currentSettingsGroup === "electricity" ? "active" : ""}"
-              onclick="openCostingFormulaGroup('electricity',this)"
-            >
-              <span>Electricity</span>
-              <span class="nav-status"></span>
-            </button>
-
-            <button
-              class="${currentSettingsGroup === "material" ? "active" : ""}"
-              onclick="openCostingFormulaGroup('material',this)"
-            >
-              <span>Material Control</span>
-              <span class="nav-status"></span>
-            </button>
-
-            <button
-              class="${currentSettingsGroup === "cost" ? "active" : ""}"
-              onclick="openCostingFormulaGroup('cost',this)"
-            >
-              <span>Costing</span>
-              <span class="nav-status"></span>
-            </button>
-
-          </div>
-
-        </aside>
-
-        <div class="formula-control-main">
-
-          <section class="formula-hero">
-
-            <div class="formula-hero-top">
-
-              <div>
-                <h2>${esc(title)}</h2>
-                <p>${esc(subtitle)}</p>
-              </div>
-
-              <span class="formula-version">
-                COSTING V3 APPROVED
-              </span>
-
-            </div>
-
-            <div class="formula-kpi-strip">
-
-              <div class="formula-mini-kpi">
-                <small>Formula Group</small>
-                <strong>${esc(title)}</strong>
-              </div>
-
-              <div class="formula-mini-kpi">
-                <small>Formula Count</small>
-                <strong>${formulaItems.length}</strong>
-              </div>
-
-              <div class="formula-mini-kpi">
-                <small>Status</small>
-                <strong>${approvedGroup ? "Locked" : "Draft"}</strong>
-              </div>
-
-              <div class="formula-mini-kpi">
-                <small>Calculation Mode</small>
-                <strong>${approvedGroup ? "Automatic" : "Configurable"}</strong>
-              </div>
-
-            </div>
-
-          </section>
-
-          <div class="formula-card-grid">
-
-            ${formulaItems.map(formulaCard).join("")}
-
-            ${
-              approvedGroup
-                ? renderLiveCalculator()
-                : `
-                  <section class="live-calculator-card">
-                    <div class="live-calculator-title">
-                      <div>
-                        <h3>${esc(title)} Formula Group</h3>
-                        <div class="note">
-                          This formula group will be finalized after Ash and
-                          Pulp Yield formulas are completed.
-                        </div>
-                      </div>
-                      <span class="badge draft">DRAFT</span>
-                    </div>
-                  </section>
-                `
-            }
-
-          </div>
-
-          <div class="formula-footer-actions">
-
-            <button
-              class="btn btn-light"
-              onclick="resetFormulaSettings()"
-            >
-              Reset Defaults
-            </button>
-
-            <button
-              class="btn btn-primary"
-              onclick="saveFormulaSettings()"
-            >
-              Save Formula Settings
-            </button>
-
-          </div>
-
-        </div>
-
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="logo">CF</div><div><h1>Costing Formula Engine V1.0</h1><small>Inventory ERP • Formula Control Center</small></div></div>
+    <div class="status-badge">7 Formulas Locked • 1 Reporting Rule Locked</div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div><h2>Formula Control Center</h2><p>Approved production, costing, filler and ash reporting calculations.</p></div>
+      <div class="count">7<span>Locked Formulas</span></div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="library">Formula Library</button>
+      <button class="tab" data-tab="tester">Formula Tester</button>
+      <button class="tab" data-tab="standards">Standards Master</button>
+      <button class="tab" data-tab="ash">Ash Reporting</button>
+      <button class="tab" data-tab="history">Version History</button>
+    </nav>
+
+    <section id="library" class="panel active">
+      <div class="card">
+        <div class="formula-row header"><div>No.</div><div>Formula Name</div><div>Formula</div><div>Unit</div><div>Status</div><div>Action</div></div>
+        <div id="formulaList"></div>
       </div>
-    `;
+    </section>
 
-    if(approvedGroup){
-      setTimeout(updateAshPulpCalculator,0);
-    }
-  };
+    <section id="tester" class="panel">
+      <div class="grid">
+        <div class="card span-8">
+          <h3>Production & Costing Test</h3><p class="sub">Enter actual production data to test all approved formulas.</p>
+          <div class="form-grid">
+            <div><label>Paper Produced (Ton)</label><input id="paperProduced" type="number" step="0.001" value="42"></div>
+            <div><label>Paper Ash %</label><input id="paperAshPercent" type="number" step="0.001" value="17.85"></div>
+            <div><label>Pulp Ash %</label><input id="pulpAshPercent" type="number" step="0.001" value="8"></div>
+            <div><label>Long Fiber (Ton)</label><input id="longFiber" type="number" step="0.001" value="0"></div>
+            <div><label>Short Fiber (Ton)</label><input id="shortFiber" type="number" step="0.001" value="0"></div>
+            <div><label>Raw Material Consumed (Ton)</label><input id="rawMaterialConsumed" type="number" step="0.001" value="38"></div>
+            <div><label>Total Filler Consumed (Ton)</label><input id="totalFillerConsumed" type="number" step="0.001" value="10"></div>
+            <div><label>Standard Filler Yield %</label><input id="standardFillerYield" type="number" step="0.001" value="60"></div>
+          </div>
+          <div class="actions"><button class="btn-primary" onclick="calculateAll()">Calculate All</button><button class="btn-light" onclick="resetTester()">Reset</button></div>
+        </div>
+        <div class="card span-4 result">
+          <h3>Calculated Results</h3>
+          <div id="resultBox"></div>
+        </div>
 
+        <div class="card span-12">
+          <h3>Combined Standard Filler Yield</h3><p class="sub">Add one or more fillers. Separate individual actual yields are not calculated because laboratory ash is combined.</p>
+          <table>
+            <thead><tr><th>Filler</th><th>Consumed (Ton)</th><th>Standard Yield %</th><th>Expected Retained Ash (Ton)</th><th>Action</th></tr></thead>
+            <tbody id="fillerRows"></tbody>
+            <tfoot><tr><td>Total</td><td id="fillerTotal">0.000</td><td id="combinedYield">0.00%</td><td id="expectedAshTotal">0.000</td><td></td></tr></tfoot>
+          </table>
+          <div class="actions"><button class="btn-dark" onclick="addFillerRow()">Add Filler</button><button class="btn-primary" onclick="calculateCombinedYield()">Calculate Combined Yield</button></div>
+        </div>
+      </div>
+    </section>
 
-  /* =========================================================
-     9. FORMULA GROUP NAVIGATION
-  ========================================================= */
+    <section id="standards" class="panel">
+      <div class="grid">
+        <div class="card span-8">
+          <h3>Standards Master</h3><p class="sub">Standards are manual master data. Unlock before editing.</p>
+          <table>
+            <thead><tr><th>Standard</th><th>Value</th><th>Unit</th><th>Effective Date</th><th>Status</th></tr></thead>
+            <tbody id="standardRows"></tbody>
+          </table>
+          <div class="actions"><button id="standardLockBtn" class="btn-danger" onclick="toggleStandardsLock()">Unlock Standards</button><button class="btn-primary" onclick="saveStandards()">Save Standards</button></div>
+        </div>
+        <div class="card span-4"><h3>Control Rule</h3><div class="note">All standards remain locked by default. Each approved change creates a new version and effective date in local history.</div></div>
+      </div>
+    </section>
 
-  window.openCostingFormulaGroup =
-    function(group,button){
+    <section id="ash" class="panel">
+      <div class="grid">
+        <div class="card span-8">
+          <h3>Monthly / Yearly Ash Reporting</h3>
+          <p class="sub">Only production days are counted. Zero-production days are excluded.</p>
+          <table>
+            <thead><tr><th>Date</th><th>Production (Ton)</th><th>Daily Average Ash %</th><th>Included?</th><th>Action</th></tr></thead>
+            <tbody id="ashRows"></tbody>
+            <tfoot><tr><td>Summary</td><td id="totalProduction">0.000</td><td id="ashAverage">0.00%</td><td id="productionDays">0 production days</td><td></td></tr></tfoot>
+          </table>
+          <div class="actions"><button class="btn-dark" onclick="addAshRow()">Add Day</button><button class="btn-primary" onclick="calculateAshReport()">Calculate Report</button><button class="btn-light" onclick="clearAshRows()">Clear</button></div>
+        </div>
+        <div class="card span-4 result">
+          <h3>Locked Rule R-1</h3>
+          <div class="formula-code" style="background:#1e293b;border-color:#334155;color:white">Average Ash % = Sum of Daily Ash % ÷ Production Days</div>
+          <p>Production Day means production is greater than zero.</p>
+          <div class="big" id="ashBig">0.00%</div>
+        </div>
+      </div>
+    </section>
 
-      currentSettingsGroup = group;
+    <section id="history" class="panel">
+      <div class="card"><h3>Version History</h3><p class="sub">Changes saved in this browser.</p><table><thead><tr><th>Date & Time</th><th>Module</th><th>Action</th><th>Version</th></tr></thead><tbody id="historyRows"></tbody></table></div>
+    </section>
 
-      document
-        .querySelectorAll(".formula-control-nav button")
-        .forEach(function(item){
-          item.classList.remove("active");
-        });
+    <div class="footer">This is computer generated formula control page.</div>
+  </main>
 
-      if(button){
-        button.classList.add("active");
-      }
+<script>
+const formulas = [
+  {no:'2.1',name:'Paper Ash Content',formula:'(Paper Produced × Paper Ash %) ÷ 100',unit:'Ton'},
+  {no:'2.2',name:'Pulp Consumed',formula:'Paper Produced − Paper Ash Content',unit:'Ton'},
+  {no:'3.1',name:'Total Pulp Consumed',formula:'Paper Produced − Paper Ash Content − Long Fiber − Short Fiber',unit:'Ton'},
+  {no:'3.2',name:'Pulp Yield',formula:'(Total Pulp Consumed ÷ Raw Material Consumed) × 100',unit:'%'},
+  {no:'4.1',name:'Filler Yield',formula:'(Actual Retained Filler Ash ÷ Total Filler Consumed) × 100',unit:'%'},
+  {no:'5.1',name:'Consumption on Standard',formula:'(Actual Retained Filler Ash ÷ Standard Filler Yield) × 100',unit:'Ton'},
+  {no:'6.1',name:'Combined Standard Filler Yield',formula:'Σ Expected Retained Ash ÷ Σ Filler Consumed × 100',unit:'%'}
+];
+let standardsLocked = true;
 
-      renderFormulaSettings();
-    };
+function n(id){return Number(document.getElementById(id).value)||0}
+function fmt(v,d=3){return Number.isFinite(v)?v.toFixed(d):'0.000'}
+function safeDivide(a,b){return b===0?0:a/b}
 
+function renderFormulaList(){
+  document.getElementById('formulaList').innerHTML=formulas.map(f=>`<div class="formula-row"><div><b>${f.no}</b></div><div><b>${f.name}</b></div><div class="formula-code">${f.formula}</div><div>${f.unit}</div><div><span class="lock">🔒 Locked</span></div><div><button class="btn-light" onclick="alert('Formula ${f.no} is approved and locked.')">View</button></div></div>`).join('');
+}
 
-  /* =========================================================
-     10. SAVE MESSAGE UPDATE
-  ========================================================= */
+function calculateAll(){
+  const paperProduced=n('paperProduced'), paperAshPercent=n('paperAshPercent'), pulpAshPercent=n('pulpAshPercent');
+  const longFiber=n('longFiber'), shortFiber=n('shortFiber'), rawMaterialConsumed=n('rawMaterialConsumed');
+  const totalFillerConsumed=n('totalFillerConsumed'), standardFillerYield=n('standardFillerYield');
+  const paperAshContent=paperProduced*paperAshPercent/100;
+  const pulpConsumed=paperProduced-paperAshContent;
+  const totalPulpConsumed=paperProduced-paperAshContent-longFiber-shortFiber;
+  const pulpYield=safeDivide(totalPulpConsumed,rawMaterialConsumed)*100;
+  const pulpAshContent=pulpConsumed*pulpAshPercent/100;
+  const actualRetainedFillerAsh=paperAshContent-pulpAshContent;
+  const fillerYield=safeDivide(actualRetainedFillerAsh,totalFillerConsumed)*100;
+  const consumptionOnStandard=safeDivide(actualRetainedFillerAsh,standardFillerYield)*100;
+  document.getElementById('resultBox').innerHTML=`
+    <p>Paper Ash Content<br><span class="big">${fmt(paperAshContent)} Ton</span></p>
+    <p>Pulp Consumed: <b>${fmt(pulpConsumed)} Ton</b></p>
+    <p>Total Pulp Consumed: <b>${fmt(totalPulpConsumed)} Ton</b></p>
+    <p>Pulp Yield: <b>${fmt(pulpYield,2)}%</b></p>
+    <p>Pulp Ash Content: <b>${fmt(pulpAshContent)} Ton</b></p>
+    <p>Actual Retained Filler Ash: <b>${fmt(actualRetainedFillerAsh)} Ton</b></p>
+    <p>Filler Yield: <b>${fmt(fillerYield,2)}%</b></p>
+    <p>Consumption on Standard: <b>${fmt(consumptionOnStandard)} Ton</b></p>`;
+}
+function resetTester(){['paperProduced','paperAshPercent','pulpAshPercent','longFiber','shortFiber','rawMaterialConsumed','totalFillerConsumed','standardFillerYield'].forEach(id=>document.getElementById(id).value='');document.getElementById('resultBox').innerHTML='';}
 
-  saveFormulaSettings = function(){
-    persist();
+function addFillerRow(name='',consumed='',yieldPct='60'){
+  const tr=document.createElement('tr');tr.innerHTML=`<td><input value="${name}" placeholder="e.g. Soap Stone"></td><td><input class="f-consumed" type="number" step="0.001" value="${consumed}"></td><td><input class="f-yield" type="number" step="0.001" value="${yieldPct}"></td><td class="f-ash">0.000</td><td><button class="btn-danger" onclick="this.closest('tr').remove();calculateCombinedYield()">Delete</button></td>`;document.getElementById('fillerRows').appendChild(tr);
+}
+function calculateCombinedYield(){let total=0,expected=0;document.querySelectorAll('#fillerRows tr').forEach(tr=>{const c=Number(tr.querySelector('.f-consumed').value)||0,y=Number(tr.querySelector('.f-yield').value)||0,a=c*y/100;tr.querySelector('.f-ash').textContent=fmt(a);total+=c;expected+=a;});document.getElementById('fillerTotal').textContent=fmt(total);document.getElementById('expectedAshTotal').textContent=fmt(expected);document.getElementById('combinedYield').textContent=fmt(safeDivide(expected,total)*100,2)+'%';}
 
-    alert(
-      "Ash and Pulp Yield formula settings have been saved successfully."
-    );
-  };
+const defaultStandards=[
+  {name:'Pulp Yield Standard',value:'',unit:'%'},{name:'Filler Yield Standard',value:'60',unit:'%'},{name:'Soap Stone Standard',value:'60',unit:'%'},{name:'Calcium Carbonate Standard',value:'60',unit:'%'},{name:'Pulp Ash Standard',value:'8',unit:'%'},{name:'Steam Standard',value:'',unit:'Ton/Ton'},{name:'Electricity Standard',value:'',unit:'kWh/Ton'}
+];
+function loadStandards(){return JSON.parse(localStorage.getItem('costingStandards')||'null')||defaultStandards}
+function renderStandards(){const s=loadStandards();document.getElementById('standardRows').innerHTML=s.map((x,i)=>`<tr><td>${x.name}</td><td><input class="std-value" data-index="${i}" value="${x.value}" ${standardsLocked?'readonly':''}></td><td>${x.unit}</td><td><input class="std-date" data-index="${i}" type="date" value="${x.date||new Date().toISOString().slice(0,10)}" ${standardsLocked?'disabled':''}></td><td><span class="${standardsLocked?'lock':'lock unlock'}">${standardsLocked?'🔒 Locked':'🔓 Unlocked'}</span></td></tr>`).join('');}
+function toggleStandardsLock(){standardsLocked=!standardsLocked;document.getElementById('standardLockBtn').textContent=standardsLocked?'Unlock Standards':'Lock Standards';document.getElementById('standardLockBtn').className=standardsLocked?'btn-danger':'btn-success';renderStandards();}
+function saveStandards(){if(standardsLocked){alert('Unlock Standards before saving changes.');return;}const base=loadStandards();document.querySelectorAll('.std-value').forEach(el=>base[el.dataset.index].value=el.value);document.querySelectorAll('.std-date').forEach(el=>base[el.dataset.index].date=el.value);localStorage.setItem('costingStandards',JSON.stringify(base));addHistory('Standards Master','Standards updated','1.'+(getHistory().length+1));standardsLocked=true;renderStandards();document.getElementById('standardLockBtn').textContent='Unlock Standards';document.getElementById('standardLockBtn').className='btn-danger';alert('Standards saved and locked.');}
 
+function addAshRow(date='',production='',ash=''){
+  const tr=document.createElement('tr');tr.innerHTML=`<td><input type="date" class="ash-date" value="${date}"></td><td><input type="number" step="0.001" class="ash-production" value="${production}"></td><td><input type="number" step="0.001" class="ash-percent" value="${ash}"></td><td class="ash-included">—</td><td><button class="btn-danger" onclick="this.closest('tr').remove();calculateAshReport()">Delete</button></td>`;document.getElementById('ashRows').appendChild(tr);
+}
+function calculateAshReport(){let totalProd=0,sumAsh=0,days=0;document.querySelectorAll('#ashRows tr').forEach(tr=>{const p=Number(tr.querySelector('.ash-production').value)||0,a=Number(tr.querySelector('.ash-percent').value)||0;totalProd+=p;if(p>0){sumAsh+=a;days++;tr.querySelector('.ash-included').textContent='Yes';}else tr.querySelector('.ash-included').textContent='No';});const avg=safeDivide(sumAsh,days);document.getElementById('totalProduction').textContent=fmt(totalProd);document.getElementById('ashAverage').textContent=fmt(avg,2)+'%';document.getElementById('productionDays').textContent=days+' production days';document.getElementById('ashBig').textContent=fmt(avg,2)+'%';}
+function clearAshRows(){document.getElementById('ashRows').innerHTML='';addAshRow();calculateAshReport();}
 
-  /* =========================================================
-     11. START UPGRADE
-  ========================================================= */
+function getHistory(){return JSON.parse(localStorage.getItem('formulaHistory')||'[]')}
+function addHistory(module,action,version){const h=getHistory();h.unshift({date:new Date().toLocaleString(),module,action,version});localStorage.setItem('formulaHistory',JSON.stringify(h.slice(0,100)));renderHistory();}
+function renderHistory(){const h=getHistory();document.getElementById('historyRows').innerHTML=h.length?h.map(x=>`<tr><td>${x.date}</td><td>${x.module}</td><td>${x.action}</td><td>${x.version}</td></tr>`).join(''):'<tr><td colspan="4">No changes recorded yet.</td></tr>';}
 
-  installApprovedFormulas();
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.tab).classList.add('active');}));
 
-  if(
-    currentSettingsGroup !== "production" &&
-    currentSettingsGroup !== "ash" &&
-    currentSettingsGroup !== "yield"
-  ){
-    currentSettingsGroup = "ash";
-  }
-
-  renderFormulaSettings();
-
-})();
+renderFormulaList();renderStandards();renderHistory();addFillerRow('Soap Stone',5,60);addFillerRow('Calcium Carbonate',5,60);calculateCombinedYield();addAshRow('',70,10);addAshRow('',50,12);addAshRow('',0,'');calculateAshReport();calculateAll();
 </script>
-<!-- ===== END COSTING V3 FORMULA CONTROL CENTER ===== -->
-</body></html>
+</body>
+</html>
