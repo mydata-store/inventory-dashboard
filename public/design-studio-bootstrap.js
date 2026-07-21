@@ -5,6 +5,7 @@ window.ERPDesignBootstrap = {
     "master-center.html":"master_center",
     "rack-management.html":"rack_management",
     "inventory-intelligence.html":"inventory_intelligence",
+    "costing.html":"costing",
     "erp-core-settings.html":"erp_core_settings",
     "erp-relationship-center.html":"erp_relationship_center",
     "erp-health-center.html":"erp_health_center",

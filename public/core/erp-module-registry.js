@@ -12,6 +12,7 @@ const list=[
 {id:"gate-pass",title:"Gate Pass",module:"gate-pass",url:"gate-pass.html",status:"pending"},
 {id:"stock-ledger",title:"Stock Ledger",module:"inventory",url:"stock-ledger.html",status:"pending"},
 {id:"reports",title:"Reports",module:"reports",url:"reports.html",status:"pending"},
+{id:"costing",title:"Costing & Material Consumption",module:"costing",url:"costing.html",status:"connected"},
 {id:"design-studio",title:"ERP Design Studio",module:"framework",url:"erp-design-studio.html",status:"connected"},
 {id:"host-manager",title:"Host Manager",module:"framework",url:"host-manager.html",status:"connected"},
 {id:"framework-status",title:"Framework Status",module:"framework",url:"framework-status.html",status:"connected"},

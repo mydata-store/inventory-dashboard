@@ -105,6 +105,7 @@
     { id:"stockledger", label:"Stock Ledger", icon:"▤", href:"stock-ledger.html" },
     { id:"rack", label:"Rack Management", icon:"▥", href:"rack-management.html" },
     { id:"intelligence", label:"Inventory Intelligence", icon:"◆", href:"inventory-intelligence.html" },
+    { id:"costing", label:"Costing & Consumption", icon:"◈", href:"costing.html" },
     { id:"reports", label:"Reports", icon:"▧", href:"reports.html" },
     { id:"control", label:"ERP Control Center", icon:"⚙", children:[
       { label:"Control Center Dashboard", href:"erp-control-center.html" },
