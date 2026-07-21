@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Costing & Consumption</title>
+<title>Production Control Center</title>
 <link rel="stylesheet" href="public/common.css">
 <script src="public/common-tools.js"></script>
 <script src="public/theme-settings.js"></script>
@@ -13,222 +13,165 @@
 <script src="public/common-font-controller.js"></script>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="public/core/styles/erp-runtime.css">
+<link rel="stylesheet" href="public/core/styles/erp-platform-runtime.css">
 <script src="public/core/erp-runtime.js"></script>
 <script src="public/core/erp-registry.js"></script>
 <script src="public/core/erp-module-registry.js"></script>
 <script src="public/core/erp-platform-runtime.js" defer></script>
 <style>
-:root{--cost:#f59e0b;--ok:#16a34a;--warn:#d97706;--pending:#64748b}
-.cost-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:#fff;border:1px solid #e5e7eb;border-radius:15px;padding:15px;box-shadow:0 8px 22px #0000000d;position:relative;overflow:hidden}
-.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cost)}
-.kpi small{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.kpi strong{display:block;font-size:22px;margin-top:6px}.kpi span{font-size:11px;color:var(--muted)}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.toolbar .field{min-width:150px}.field label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:5px}.field input,.field select{width:100%;height:38px;border:1px solid #d8dee8;border-radius:9px;padding:0 10px;background:#fff}
-.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.tab.active{background:var(--accent);color:#111827;border-color:var(--accent)}
-.panel{display:none}.panel.active{display:block}.section-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.card-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.card-title h2{font-size:16px;margin:0}.status{padding:4px 9px;border-radius:999px;font-size:10px;font-weight:800}.status.draft{background:#fff7ed;color:#c2410c}.status.ready{background:#ecfdf5;color:#15803d}.status.pending{background:#f1f5f9;color:#475569}
-.input-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.input-grid .wide{grid-column:span 2}.formula-list{display:grid;gap:9px}.formula-row{border:1px solid #e2e8f0;border-radius:11px;padding:10px;background:#fafcff}.formula-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.formula-head strong{font-size:12px}.formula-code{margin-top:7px;background:#0f172a;color:#e2e8f0;padding:9px;border-radius:8px;font:12px/1.5 Consolas,monospace;white-space:pre-wrap}.formula-note{font-size:10px;color:var(--muted);margin-top:5px}.result-table{width:100%;border-collapse:collapse}.result-table th,.result-table td{padding:9px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:12px}.result-table th{background:#fff8e7;position:sticky;top:0}.num{text-align:right!important;font-variant-numeric:tabular-nums}.alert{padding:11px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;font-size:12px;color:#9a3412;margin-bottom:12px}.formula-editor{width:100%;min-height:72px;border:1px solid #d8dee8;border-radius:9px;padding:9px;font:12px/1.45 Consolas,monospace;resize:vertical}.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}.source-tag{display:inline-flex;padding:3px 7px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:800}.footer-note{font-size:11px;color:var(--muted);margin-top:12px}
-@media(max-width:1100px){.cost-grid{grid-template-columns:repeat(2,1fr)}.section-grid{grid-template-columns:1fr}}@media(max-width:700px){.cost-grid,.input-grid,.split{grid-template-columns:1fr}.input-grid .wide{grid-column:auto}}
+:root{--cost:#f59e0b;--ok:#16a34a;--danger:#dc2626;--muted2:#64748b}
+*{box-sizing:border-box}
+body{overflow-x:hidden}
+/* Keep all costing content clear of the universal sidebar in every shell state. */
+body.erp-shell-left .production-main,body.erp-shell-hybrid .production-main{margin-left:var(--erp-side-width,170px)!important;width:calc(100% - var(--erp-side-width,170px))!important}
+body.erp-shell-collapsed .production-main{margin-left:var(--erp-side-collapsed,58px)!important;width:calc(100% - var(--erp-side-collapsed,58px))!important}
+.production-main{padding:20px 18px 40px;min-height:100vh;overflow-x:hidden}
+/* Runtime drawers must always open from the right and never hide behind the sidebar. */
+.erp-side-panel{left:auto!important;right:-430px!important}.erp-side-panel.open{right:0!important;left:auto!important}
+.page-head{gap:18px}.page-head h1{font-size:26px}.page-subtitle{max-width:760px}
+.top-actions,.toolbar,.tabs,.period-tabs,.report-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.control-card{position:sticky;top:0;z-index:20}
+.field{min-width:145px}.field label{display:block;font-size:11px;font-weight:800;color:var(--muted2);margin-bottom:5px}.field input,.field select{width:100%;height:38px;border:1px solid #d8dee8;border-radius:9px;padding:0 10px;background:#fff}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:10px;margin:14px 0}.kpi{background:#fff;border:1px solid #e4e9f0;border-radius:14px;padding:13px;box-shadow:0 7px 18px #0f172a0b;position:relative;overflow:hidden}.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cost)}.kpi small{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase}.kpi strong{display:block;font-size:19px;margin-top:5px}.kpi span{font-size:10px;color:var(--muted2)}
+.tabs{margin:12px 0}.tab.active,.period-tab.active,.report-tab.active{background:var(--accent,#f5a316)!important;color:#111827!important;border-color:var(--accent,#f5a316)!important}
+.panel,.period-panel,.report-panel{display:none}.panel.active,.period-panel.active,.report-panel.active{display:block}
+.section-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.full{grid-column:1/-1}.card-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.card-title h2{font-size:16px;margin:0}.badge{padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}.badge.on{background:#dcfce7;color:#166534}.badge.off{background:#fee2e2;color:#991b1b}.badge.draft{background:#ffedd5;color:#9a3412}.badge.info{background:#dbeafe;color:#1e40af}
+.input-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.input-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.input-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:11px}.data-table{width:100%;border-collapse:collapse;min-width:780px}.data-table th,.data-table td{padding:8px 9px;border-bottom:1px solid #e5e7eb;font-size:11px;white-space:nowrap}.data-table th{position:sticky;top:0;z-index:2;background:#fff8e7!important;color:#1f2937!important;text-align:left}.data-table input,.data-table select{height:31px;width:100%;min-width:85px;border:1px solid #d8dee8;border-radius:7px;padding:0 7px}.num{text-align:right!important;font-variant-numeric:tabular-nums}
+.unit-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.unit-card{border:1px solid #e2e8f0;border-radius:13px;padding:12px;background:#fbfdff}.unit-card.offline{opacity:.66;background:#f8fafc}.unit-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.switch{position:relative;width:42px;height:23px}.switch input{display:none}.slider{position:absolute;inset:0;background:#cbd5e1;border-radius:99px;cursor:pointer}.slider:before{content:"";position:absolute;width:17px;height:17px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}.switch input:checked+.slider{background:#16a34a}.switch input:checked+.slider:before{transform:translateX(19px)}
+.unit-table-grid{display:grid;grid-template-columns:1fr;gap:14px}.unit-report-card{border:1px solid #e2e8f0;border-radius:13px;overflow:hidden}.unit-report-head{padding:10px 12px;background:#f8fafc;display:flex;justify-content:space-between;align-items:center}.unit-report-head h3{margin:0;font-size:14px}.empty{padding:28px;text-align:center;color:var(--muted2)}
+.formula-box{width:100%;min-height:84px;border:1px solid #d8dee8;border-radius:9px;padding:9px;font:12px/1.5 Consolas,monospace}.note{font-size:11px;color:var(--muted2);margin-top:7px}.alert{padding:11px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:10px;font-size:12px;margin-bottom:12px}
+@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.unit-cards{grid-template-columns:1fr 1fr}.section-grid{grid-template-columns:1fr}}
+@media(max-width:800px){body.erp-shell-left .production-main,body.erp-shell-hybrid .production-main,body.erp-shell-collapsed .production-main{margin-left:var(--erp-side-collapsed,58px)!important;width:calc(100% - var(--erp-side-collapsed,58px))!important}.kpis,.unit-cards,.input-grid,.input-grid.two,.input-grid.four{grid-template-columns:1fr}.production-main{padding:14px 10px 30px}}
 </style>
 </head>
 <body data-erp-page="costing">
 <div id="appSidebar"></div>
-<main class="app-main">
+<main class="app-main production-main">
  <div class="page-head">
-  <div><h1>Costing & Material Consumption</h1><div class="page-subtitle">Production, ash, yield, steam, electricity and cost calculation control</div></div>
-  <div class="toolbar"><button class="btn btn-light" onclick="resetDemo()">Clear</button><button class="btn btn-primary" onclick="saveDraft()">Save Formula Draft</button></div>
+  <div><h1>Production Control Center</h1><div class="page-subtitle">Control production units and manage daily, monthly and yearly production, consumption, ash, rates, steam, electricity and costing reports.</div></div>
+  <div class="top-actions"><button class="btn btn-light" onclick="exportData()">Export Data</button><button class="btn btn-primary" onclick="saveAll()">Save Changes</button></div>
  </div>
 
- <section class="card">
+ <section class="card control-card">
   <div class="toolbar">
-   <div class="field"><label>Report Date</label><input id="reportDate" value="01-Jul-26"></div>
-   <div class="field"><label>Machine</label><select id="machine"><option>Combined PM-01 & PM-03</option><option>PM-01</option><option>PM-03</option></select></div>
-   <div class="field"><label>Shift / Period</label><select><option>Daily</option><option>Shift A</option><option>Shift B</option><option>Shift C</option><option>Monthly</option></select></div>
-   <div class="field"><label>Costing Version</label><select><option>Draft V1</option></select></div>
+   <div class="field"><label>Report Date</label><input id="reportDate" type="date"></div>
+   <div class="field"><label>Unit</label><select id="unitFilter"></select></div>
+   <div class="field"><label>Report Period</label><select id="periodFilter"><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div>
+   <div class="field"><label>Costing Version</label><select><option>Draft V2</option></select></div>
+   <button class="btn btn-light" onclick="showPanel('units')">Manage Units</button>
+   <button class="btn btn-primary" onclick="showPanel('reports')">Open Reports</button>
   </div>
  </section>
 
- <section class="cost-grid">
-  <div class="kpi"><small>Paper Production</small><strong id="kpiProduction">0.000 TON</strong><span>PM-01 + PM-03</span></div>
+ <section class="kpis">
+  <div class="kpi"><small>Enabled Units</small><strong id="kpiUnits">0 / 3</strong><span>Included in calculations</span></div>
+  <div class="kpi"><small>Total Production</small><strong id="kpiProduction">0.000 TON</strong><span>All enabled units</span></div>
+  <div class="kpi"><small>Average Ash</small><strong id="kpiAsh">0.00%</strong><span>Weighted draft formula</span></div>
+  <div class="kpi"><small>Total Steam</small><strong id="kpiSteam">0.000 TON</strong><span>Generated</span></div>
   <div class="kpi"><small>Total Electricity</small><strong id="kpiElectricity">0 kWh</strong><span>WAPDA + Solar</span></div>
-  <div class="kpi"><small>Total Steam</small><strong id="kpiSteam">0.000 TON</strong><span>Generated / allocated</span></div>
-  <div class="kpi"><small>Estimated Cost / Ton</small><strong id="kpiCost">PKR 0</strong><span>Draft calculation</span></div>
+  <div class="kpi"><small>Estimated Cost / Ton</small><strong id="kpiCost">PKR 0</strong><span>Draft engine</span></div>
  </section>
 
  <div class="tabs">
-  <button class="btn btn-light tab active" data-tab="overview">Overview</button>
-  <button class="btn btn-light tab" data-tab="production">Production & Ash</button>
-  <button class="btn btn-light tab" data-tab="yield">Yield</button>
-  <button class="btn btn-light tab" data-tab="steam">Steam</button>
-  <button class="btn btn-light tab" data-tab="electricity">Electricity</button>
-  <button class="btn btn-light tab" data-tab="materials">Materials</button>
-  <button class="btn btn-light tab" data-tab="formulas">Formula Register</button>
+  <button class="btn btn-light tab active" data-panel="overview">Overview</button>
+  <button class="btn btn-light tab" data-panel="units">Unit Management</button>
+  <button class="btn btn-light tab" data-panel="reports">Reports Center</button>
+  <button class="btn btn-light tab" data-panel="costing">Costing Formulas</button>
  </div>
 
  <section class="panel active" id="overview">
-  <div class="alert"><strong>Formula setup mode:</strong> confirmed basic formulas are active. Ash, steam and detailed costing formulas remain marked as drafts until you provide the exact Excel logic.</div>
+  <div class="alert"><strong>Production Control Center V2:</strong> Unit names and status are controlled centrally. Disabled units remain in history but are excluded from new combined calculations.</div>
   <div class="section-grid">
-   <div class="card"><div class="card-title"><h2>Daily Cost Summary</h2><span class="status draft">DRAFT ENGINE</span></div>
-    <table class="result-table"><thead><tr><th>Cost Element</th><th>Source</th><th class="num">Quantity</th><th class="num">Amount (PKR)</th><th class="num">Cost / Ton</th></tr></thead><tbody id="summaryRows"></tbody></table>
-   </div>
-   <div class="card"><div class="card-title"><h2>Calculation Status</h2><span class="status pending">IN PROGRESS</span></div>
-    <div class="formula-list">
-     <div class="formula-row"><div class="formula-head"><strong>Electricity source total</strong><span class="status ready">READY</span></div><div class="formula-note">WAPDA and Solar are recorded separately, then combined.</div></div>
-     <div class="formula-row"><div class="formula-head"><strong>Yield calculation</strong><span class="status draft">DRAFT</span></div><div class="formula-note">Waiting for your exact definition and unit handling.</div></div>
-     <div class="formula-row"><div class="formula-head"><strong>Ash calculation</strong><span class="status pending">PENDING</span></div><div class="formula-note">Input structure created; exact weighted formula required.</div></div>
-     <div class="formula-row"><div class="formula-head"><strong>Steam calculation</strong><span class="status pending">PENDING</span></div><div class="formula-note">Generation and allocation fields created.</div></div>
-     <div class="formula-row"><div class="formula-head"><strong>Final Cost / Ton</strong><span class="status draft">DRAFT</span></div><div class="formula-note">Uses available cost elements and production; will be refined formula by formula.</div></div>
-    </div>
+   <div class="card"><div class="card-title"><h2>Today's Unit Summary</h2><span class="badge info">LIVE DRAFT</span></div><div id="overviewTable" class="table-wrap"></div></div>
+   <div class="card"><div class="card-title"><h2>Calculation Status</h2><span class="badge draft">FORMULAS IN PROGRESS</span></div>
+    <div class="unit-report-card"><div class="unit-report-head"><h3>Production</h3><span class="badge on">READY</span></div><div class="note" style="padding:10px">Combined Production = total of enabled units.</div></div>
+    <div class="unit-report-card" style="margin-top:8px"><div class="unit-report-head"><h3>Ash, Yield & Steam</h3><span class="badge draft">DRAFT</span></div><div class="note" style="padding:10px">Input sections are ready. Exact Excel formulas will be locked one by one.</div></div>
+    <div class="unit-report-card" style="margin-top:8px"><div class="unit-report-head"><h3>Electricity</h3><span class="badge on">READY</span></div><div class="note" style="padding:10px">WAPDA and Solar are stored separately and combined for costing.</div></div>
    </div>
   </div>
  </section>
 
- <section class="panel" id="production">
+ <section class="panel" id="units">
+  <div class="card"><div class="card-title"><h2>Unit Management</h2><span class="badge info">CENTRAL CONTROL</span></div>
+   <div class="unit-cards" id="unitCards"></div>
+   <div class="note">Rename any unit, enable or disable it, select its production type and change its display order. Historical records are not deleted when a unit is disabled.</div>
+  </div>
+ </section>
+
+ <section class="panel" id="reports">
+  <div class="card">
+   <div class="card-title"><h2>Production Reports Center</h2><span class="badge info">VIEW & EDIT</span></div>
+   <div class="period-tabs">
+    <button class="btn btn-light period-tab active" data-period="daily">Daily</button><button class="btn btn-light period-tab" data-period="monthly">Monthly</button><button class="btn btn-light period-tab" data-period="yearly">Yearly</button>
+   </div>
+   <div class="report-tabs" style="margin:10px 0 14px">
+    <button class="btn btn-light report-tab active" data-report="production">Production</button><button class="btn btn-light report-tab" data-report="consumption">Consumption</button><button class="btn btn-light report-tab" data-report="ash">Ash</button><button class="btn btn-light report-tab" data-report="rates">Rates</button><button class="btn btn-light report-tab" data-report="steam">Steam</button><button class="btn btn-light report-tab" data-report="electricity">Electricity</button><button class="btn btn-light report-tab" data-report="cost">Cost</button>
+   </div>
+   <div id="reportContent"></div>
+  </div>
+ </section>
+
+ <section class="panel" id="costing">
   <div class="section-grid">
-   <div class="card"><div class="card-title"><h2>Production Inputs</h2><span class="source-tag">DAILY REPORT</span></div>
-    <div class="input-grid">
-     <div class="field"><label>PM-01 Production (Ton)</label><input type="number" step="0.001" id="pm1" value="0"></div>
-     <div class="field"><label>PM-03 Production (Ton)</label><input type="number" step="0.001" id="pm3" value="0"></div>
-     <div class="field"><label>Total Production</label><input id="totalProduction" readonly></div>
-     <div class="field"><label>PM-01 Ash %</label><input type="number" step="0.01" id="ash1" value="0"></div>
-     <div class="field"><label>PM-03 Ash %</label><input type="number" step="0.01" id="ash3" value="0"></div>
-     <div class="field"><label>Paper Ash Average %</label><input id="ashAverage" readonly></div>
-     <div class="field"><label>Ash Standard %</label><input type="number" step="0.01" id="ashStd" value="23"></div>
-     <div class="field"><label>Minimum %</label><input type="number" step="0.01" id="ashMin" value="22.5"></div>
-     <div class="field"><label>Maximum %</label><input type="number" step="0.01" id="ashMax" value="23.5"></div>
-    </div>
+   <div class="card"><div class="card-title"><h2>Formula Register</h2><span class="badge draft">EDITABLE DRAFTS</span></div>
+    <table class="data-table"><thead><tr><th>Calculation</th><th>Current Rule</th><th>Status</th></tr></thead><tbody>
+     <tr><td>Combined Production</td><td>Sum of enabled unit production</td><td><span class="badge on">READY</span></td></tr>
+     <tr><td>Paper Ash Average</td><td>Weighted average placeholder</td><td><span class="badge draft">DRAFT</span></td></tr>
+     <tr><td>Pulp Yield</td><td>Pulp Produced ÷ Raw Material × 100</td><td><span class="badge draft">DRAFT</span></td></tr>
+     <tr><td>Steam / Ton Paper</td><td>Steam to machine ÷ production</td><td><span class="badge draft">DRAFT</span></td></tr>
+     <tr><td>Total Electricity</td><td>WAPDA Units + Solar Units</td><td><span class="badge on">READY</span></td></tr>
+     <tr><td>Cost / Ton</td><td>Total cost ÷ combined production</td><td><span class="badge draft">DRAFT</span></td></tr>
+    </tbody></table>
    </div>
-   <div class="card"><div class="card-title"><h2>Ash Formula</h2><span class="status pending">EXACT FORMULA NEEDED</span></div>
-    <textarea class="formula-editor" data-formula="ash">Draft: Weighted Ash Average = ((PM1 Production × PM1 Ash%) + (PM3 Production × PM3 Ash%)) ÷ Total Production</textarea>
-    <div class="formula-note">This weighted-average draft is only a placeholder. It will be replaced with your confirmed Excel formula.</div>
+   <div class="card"><div class="card-title"><h2>Exact Formula Notes</h2><span class="badge info">ONE BY ONE</span></div>
+    <label class="field"><label>Ash Formula</label><textarea class="formula-box" data-formula="ash">Draft: weighted ash using each unit's production and ash percentage.</textarea></label>
+    <label class="field" style="display:block;margin-top:9px"><label>Steam Formula</label><textarea class="formula-box" data-formula="steam">Draft: steam generated and allocation formula pending.</textarea></label>
+    <label class="field" style="display:block;margin-top:9px"><label>Yield Formula</label><textarea class="formula-box" data-formula="yield">Draft: pulp produced divided by raw material consumed.</textarea></label>
    </div>
-  </div>
- </section>
-
- <section class="panel" id="yield">
-  <div class="section-grid">
-   <div class="card"><div class="card-title"><h2>Pulp & Yield Inputs</h2><span class="source-tag">PULP MILL</span></div>
-    <div class="input-grid">
-     <div class="field"><label>Raw Material Consumed (Ton)</label><input type="number" step="0.001" id="rawConsumed" value="0"></div>
-     <div class="field"><label>Total Pulp Produced (Ton)</label><input type="number" step="0.001" id="pulpProduced" value="0"></div>
-     <div class="field"><label>Actual Yield %</label><input id="yieldActual" readonly></div>
-     <div class="field"><label>Standard Yield %</label><input type="number" step="0.01" id="yieldStd" value="30"></div>
-     <div class="field"><label>Minimum Yield %</label><input type="number" step="0.01" id="yieldMin" value="29"></div>
-     <div class="field"><label>Maximum Yield %</label><input type="number" step="0.01" id="yieldMax" value="31"></div>
-     <div class="field"><label>Expected Pulp on Standard</label><input id="pulpStandard" readonly></div>
-     <div class="field"><label>Raw Material Variance</label><input id="rawVariance" readonly></div>
-     <div class="field"><label>Yield Status</label><input id="yieldStatus" readonly></div>
-    </div>
-   </div>
-   <div class="card"><div class="card-title"><h2>Yield Formula</h2><span class="status draft">DRAFT</span></div>
-    <textarea class="formula-editor" data-formula="yield">Draft: Yield % = (Pulp Produced ÷ Raw Material Consumed) × 100
-Expected Pulp = Raw Material Consumed × Standard Yield %</textarea>
-    <div class="formula-note">We will confirm whether your Excel expresses yield as pulp/raw material or raw material/pulp.</div>
-   </div>
-  </div>
- </section>
-
- <section class="panel" id="steam">
-  <div class="section-grid">
-   <div class="card"><div class="card-title"><h2>Steam Inputs & Allocation</h2><span class="source-tag">BOILER HOUSE</span></div>
-    <div class="input-grid">
-     <div class="field"><label>Total Steam Produced (Ton)</label><input type="number" step="0.001" id="steamTotal" value="0"></div>
-     <div class="field"><label>Steam to Paper Machine</label><input type="number" step="0.001" id="steamMachine" value="0"></div>
-     <div class="field"><label>Steam to Pulp Mill</label><input type="number" step="0.001" id="steamPulp" value="0"></div>
-     <div class="field"><label>Steam to Boiler / Other</label><input type="number" step="0.001" id="steamOther" value="0"></div>
-     <div class="field"><label>Steam / Ton Paper</label><input id="steamPerPaper" readonly></div>
-     <div class="field"><label>Steam / Ton Pulp</label><input id="steamPerPulp" readonly></div>
-     <div class="field"><label>Steam Rate / Ton (PKR)</label><input type="number" step="0.01" id="steamRate" value="0"></div>
-     <div class="field"><label>Total Steam Cost</label><input id="steamCost" readonly></div>
-     <div class="field"><label>Allocation Difference</label><input id="steamDifference" readonly></div>
-    </div>
-   </div>
-   <div class="card"><div class="card-title"><h2>Steam Formula</h2><span class="status pending">EXACT FORMULA NEEDED</span></div>
-    <textarea class="formula-editor" data-formula="steam">Draft controls only:
-Steam / Ton Paper = Steam to Machine ÷ Paper Production
-Steam / Ton Pulp = Steam to Pulp Mill ÷ Pulp Production
-Steam Cost = Total Steam Produced × Steam Rate</textarea>
-    <div class="formula-note">The boiler fuel-to-steam production standard and your exact allocation logic will be added next.</div>
-   </div>
-  </div>
- </section>
-
- <section class="panel" id="electricity">
-  <div class="section-grid">
-   <div class="card"><div class="card-title"><h2>Electricity Sources</h2><span class="status ready">TWO SOURCES</span></div>
-    <div class="split">
-     <div class="formula-row"><div class="formula-head"><strong>WAPDA / Main Grid</strong><span class="source-tag">GRID</span></div><div class="input-grid" style="grid-template-columns:1fr 1fr;margin-top:9px"><div class="field"><label>Units (kWh)</label><input type="number" step="0.01" id="wapdaUnits" value="6762"></div><div class="field"><label>Rate / Unit</label><input type="number" step="0.01" id="wapdaRate" value="47"></div><div class="field wide"><label>WAPDA Cost</label><input id="wapdaCost" readonly></div></div></div>
-     <div class="formula-row"><div class="formula-head"><strong>Solar Electricity</strong><span class="source-tag">SOLAR</span></div><div class="input-grid" style="grid-template-columns:1fr 1fr;margin-top:9px"><div class="field"><label>Units (kWh)</label><input type="number" step="0.01" id="solarUnits" value="0"></div><div class="field"><label>Cost / Unit</label><input type="number" step="0.01" id="solarRate" value="0"></div><div class="field wide"><label>Solar Cost</label><input id="solarCost" readonly></div></div></div>
-    </div>
-    <div class="input-grid" style="margin-top:10px">
-     <div class="field"><label>Total Electricity Units</label><input id="electricityTotal" readonly></div>
-     <div class="field"><label>Total Electricity Cost</label><input id="electricityCost" readonly></div>
-     <div class="field"><label>Units / Ton Paper</label><input id="unitsPerTon" readonly></div>
-     <div class="field"><label>Cost to Pulp %</label><input type="number" step="0.01" id="pulpElectricityPct" value="45"></div>
-     <div class="field"><label>Cost to Machine %</label><input type="number" step="0.01" id="machineElectricityPct" value="55"></div>
-     <div class="field"><label>Solar Contribution %</label><input id="solarContribution" readonly></div>
-     <div class="field"><label>Electricity Cost to Pulp</label><input id="electricityPulpCost" readonly></div>
-     <div class="field"><label>Electricity Cost to Machine</label><input id="electricityMachineCost" readonly></div>
-     <div class="field"><label>Electricity Cost / Ton</label><input id="electricityPerTon" readonly></div>
-    </div>
-   </div>
-   <div class="card"><div class="card-title"><h2>Electricity Formula</h2><span class="status ready">BASIC FORMULAS ACTIVE</span></div>
-    <textarea class="formula-editor" data-formula="electricity">Total Units = WAPDA Units + Solar Units
-WAPDA Cost = WAPDA Units × WAPDA Rate
-Solar Cost = Solar Units × Solar Cost/Unit
-Total Cost = WAPDA Cost + Solar Cost
-Units/Ton = Total Units ÷ Paper Production
-Pulp Allocation = Total Cost × Pulp %
-Machine Allocation = Total Cost × Machine %</textarea>
-   </div>
-  </div>
- </section>
-
- <section class="panel" id="materials">
-  <div class="card"><div class="card-title"><h2>Material Consumption Cost</h2><span class="status draft">STARTER LIST</span></div>
-   <table class="result-table"><thead><tr><th>Material</th><th>Unit</th><th class="num">Consumed</th><th class="num">Rate</th><th class="num">Amount</th><th class="num">Cost / Ton</th><th>Status</th></tr></thead><tbody id="materialRows"></tbody></table>
-   <button class="btn btn-light" style="margin-top:10px" onclick="addMaterial()">+ Add Material</button>
-  </div>
- </section>
-
- <section class="panel" id="formulas">
-  <div class="card"><div class="card-title"><h2>Costing Formula Register</h2><span class="status pending">EDITABLE</span></div>
-   <table class="result-table"><thead><tr><th>#</th><th>Calculation</th><th>Current Formula / Rule</th><th>Status</th><th>Next Action</th></tr></thead><tbody>
-    <tr><td>1</td><td>Paper Production</td><td>PM-01 Production + PM-03 Production</td><td><span class="status ready">READY</span></td><td>Confirm source cells</td></tr>
-    <tr><td>2</td><td>Paper Ash Average</td><td>Weighted average placeholder</td><td><span class="status pending">PENDING</span></td><td>Provide exact ash formula</td></tr>
-    <tr><td>3</td><td>Pulp Yield</td><td>Pulp Produced ÷ Raw Material × 100 (draft)</td><td><span class="status draft">DRAFT</span></td><td>Confirm formula direction</td></tr>
-    <tr><td>4</td><td>Steam Produced</td><td>Input placeholder</td><td><span class="status pending">PENDING</span></td><td>Provide boiler formula</td></tr>
-    <tr><td>5</td><td>Steam / Ton Paper</td><td>Steam to Machine ÷ Paper Production</td><td><span class="status draft">DRAFT</span></td><td>Confirm allocation</td></tr>
-    <tr><td>6</td><td>Total Electricity</td><td>WAPDA Units + Solar Units</td><td><span class="status ready">READY</span></td><td>Confirm solar costing method</td></tr>
-    <tr><td>7</td><td>Electricity Allocation</td><td>Pulp 45% / Machine 55%</td><td><span class="status draft">DRAFT</span></td><td>Confirm fixed or variable</td></tr>
-    <tr><td>8</td><td>Material Amount</td><td>Consumed Quantity × Rate</td><td><span class="status ready">READY</span></td><td>Connect inventory rates</td></tr>
-    <tr><td>9</td><td>Total Cost</td><td>Sum of material, utilities, salary and overhead costs</td><td><span class="status draft">DRAFT</span></td><td>Define included heads</td></tr>
-    <tr><td>10</td><td>Cost / Ton</td><td>Total Cost ÷ Paper Production</td><td><span class="status draft">DRAFT</span></td><td>Confirm final production basis</td></tr>
-   </tbody></table>
-   <div class="footer-note">Each formula will be locked only after you confirm it. Draft formulas are deliberately separated from confirmed formulas.</div>
   </div>
  </section>
 </main>
 <script>
-const $=id=>document.getElementById(id), n=id=>Number($(id)?.value||0), money=v=>`PKR ${Number(v||0).toLocaleString('en-PK',{maximumFractionDigits:2})}`, fixed=(v,d=3)=>Number.isFinite(v)?Number(v).toFixed(d):'0.000';
-const materials=[
- {name:'Wheat Straw',unit:'TON',qty:16,rate:28824},{name:'Baggas Boiler',unit:'TON',qty:2,rate:12300},{name:'Soda Ash',unit:'TON',qty:4.3,rate:117000},{name:'Sulphur',unit:'TON',qty:1.2,rate:242000},{name:'AC-324 (Sludge Dispersant)',unit:'KGS',qty:4.5,rate:425},{name:'Kraft Paper',unit:'KGS',qty:85,rate:195},{name:'Gum Packing Tape 2 Inch',unit:'KGS',qty:10,rate:200},{name:'Salt @ Boiler House',unit:'KGS',qty:100,rate:10},{name:'LPG Cylinder',unit:'KGS',qty:2,rate:5100}
-];
-function calc(){
- const production=n('pm1')+n('pm3');$('totalProduction').value=fixed(production);$('kpiProduction').textContent=`${fixed(production)} TON`;
- const weighted=production?((n('pm1')*n('ash1'))+(n('pm3')*n('ash3')))/production:0;$('ashAverage').value=fixed(weighted,2);
- const raw=n('rawConsumed'),pulp=n('pulpProduced'),yieldPct=raw?pulp/raw*100:0;$('yieldActual').value=fixed(yieldPct,2)+'%';$('pulpStandard').value=fixed(raw*n('yieldStd')/100);$('rawVariance').value=fixed(pulp-(raw*n('yieldStd')/100));$('yieldStatus').value=!raw?'-':yieldPct<n('yieldMin')?'Low':yieldPct>n('yieldMax')?'High':'OK';
- const st=n('steamTotal'),sm=n('steamMachine'),sp=n('steamPulp'),so=n('steamOther');$('steamPerPaper').value=production?fixed(sm/production):'0.000';$('steamPerPulp').value=pulp?fixed(sp/pulp):'0.000';$('steamCost').value=money(st*n('steamRate'));$('steamDifference').value=fixed(st-sm-sp-so);$('kpiSteam').textContent=`${fixed(st)} TON`;
- const wu=n('wapdaUnits'),wr=n('wapdaRate'),su=n('solarUnits'),sr=n('solarRate'),wc=wu*wr,sc=su*sr,units=wu+su,ec=wc+sc;$('wapdaCost').value=money(wc);$('solarCost').value=money(sc);$('electricityTotal').value=fixed(units,2);$('electricityCost').value=money(ec);$('unitsPerTon').value=production?fixed(units/production,2):'0.00';$('solarContribution').value=units?fixed(su/units*100,2)+'%':'0.00%';$('electricityPulpCost').value=money(ec*n('pulpElectricityPct')/100);$('electricityMachineCost').value=money(ec*n('machineElectricityPct')/100);$('electricityPerTon').value=production?money(ec/production):money(0);$('kpiElectricity').textContent=`${Number(units).toLocaleString('en-PK',{maximumFractionDigits:2})} kWh`;
- renderMaterials(production);renderSummary(production,ec,st*n('steamRate'));
-}
-function renderMaterials(production){$('materialRows').innerHTML=materials.map((m,i)=>{const a=m.qty*m.rate;return `<tr><td><input value="${m.name}" onchange="materials[${i}].name=this.value"></td><td><input value="${m.unit}" onchange="materials[${i}].unit=this.value"></td><td class="num"><input type="number" value="${m.qty}" onchange="materials[${i}].qty=Number(this.value);calc()"></td><td class="num"><input type="number" value="${m.rate}" onchange="materials[${i}].rate=Number(this.value);calc()"></td><td class="num">${money(a)}</td><td class="num">${production?money(a/production):money(0)}</td><td><span class="status ${m.qty?'ready':'pending'}">${m.qty?'CONSUMED':'NONE'}</span></td></tr>`}).join('')}
-function renderSummary(production,electricityCost,steamCost){const materialCost=materials.reduce((s,m)=>s+m.qty*m.rate,0), total=materialCost+electricityCost+steamCost;$('summaryRows').innerHTML=[['Materials','Consumption',materials.reduce((s,m)=>s+m.qty,0),materialCost],['Electricity','WAPDA + Solar',n('wapdaUnits')+n('solarUnits'),electricityCost],['Steam','Boiler House',n('steamTotal'),steamCost],['Other Costs','To be configured',0,0],['TOTAL','Costing Engine','',total]].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="num">${typeof r[2]==='number'?Number(r[2]).toLocaleString('en-PK',{maximumFractionDigits:3}):r[2]}</td><td class="num">${money(r[3])}</td><td class="num">${production?money(r[3]/production):money(0)}</td></tr>`).join('');$('kpiCost').textContent=production?money(total/production):money(0)}
-function addMaterial(){materials.push({name:'New Material',unit:'KGS',qty:0,rate:0});calc()}
-function saveDraft(){const payload={savedAt:new Date().toISOString(),formulas:{}};document.querySelectorAll('[data-formula]').forEach(x=>payload.formulas[x.dataset.formula]=x.value);localStorage.setItem('erp_costing_formula_draft',JSON.stringify(payload));AppTools.toast('Costing formula draft saved.','success')}
-function loadDraft(){try{const p=JSON.parse(localStorage.getItem('erp_costing_formula_draft')||'null');if(p?.formulas)document.querySelectorAll('[data-formula]').forEach(x=>{if(p.formulas[x.dataset.formula])x.value=p.formulas[x.dataset.formula]})}catch(e){}}
-function resetDemo(){document.querySelectorAll('input[type=number]').forEach(x=>x.value=0);calc();AppTools.toast('Costing inputs cleared.','success')}
-document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.tab))}));
-document.addEventListener('input',e=>{if(e.target.matches('input[type=number]'))calc()});document.addEventListener('DOMContentLoaded',()=>{loadDraft();calc()});
-window.APP_COMMANDS=[{title:'Costing & Material Consumption',subtitle:'Ash, yield, steam, electricity and cost report',href:'costing.html'},{title:'Inventory Intelligence',subtitle:'Stock and consumption analytics',href:'inventory-intelligence.html'},{title:'Reports',subtitle:'Open report center',href:'reports.html'}];
+const KEY='erp_production_control_v2';
+const today=new Date().toISOString().slice(0,10);
+const defaults={units:[
+ {id:'u1',code:'Unit 1',name:'PM-01',enabled:true,type:'Paper Machine',order:1},
+ {id:'u2',code:'Unit 2',name:'PM-03',enabled:true,type:'Paper Machine',order:2},
+ {id:'u3',code:'Unit 3',name:'Future Unit',enabled:false,type:'Paper Machine',order:3}
+],records:{},formulas:{}};
+let state=load();let currentPeriod='daily',currentReport='production';
+function load(){try{return Object.assign(structuredClone(defaults),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return structuredClone(defaults)}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
+function activeUnits(){return state.units.filter(u=>u.enabled).sort((a,b)=>a.order-b.order)}
+function allUnits(){return [...state.units].sort((a,b)=>a.order-b.order)}
+function recordKey(period=currentPeriod){const d=document.getElementById('reportDate').value||today;if(period==='daily')return d;if(period==='monthly')return d.slice(0,7);return d.slice(0,4)}
+function getRecord(period=currentPeriod){const k=period+'|'+recordKey(period);if(!state.records[k])state.records[k]={units:{},consumption:0,steam:0,wapda:0,solar:0,rate:0,cost:0};return state.records[k]}
+function unitData(u,period=currentPeriod){const r=getRecord(period);if(!r.units[u.id])r.units[u.id]={production:0,hours:24,downtime:0,ash:0,consumption:0,steam:0};return r.units[u.id]}
+function fmt(v,d=3){return Number(v||0).toLocaleString('en-PK',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function money(v){return 'PKR '+Number(v||0).toLocaleString('en-PK',{maximumFractionDigits:2})}
+function saveAll(){document.querySelectorAll('[data-formula]').forEach(x=>state.formulas[x.dataset.formula]=x.value);persist();alert('Production Control changes saved.')}
+function showPanel(id){document.querySelectorAll('.panel,.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelector(`.tab[data-panel="${id}"]`).classList.add('active');if(id==='reports')renderReports()}
+function renderUnits(){const box=document.getElementById('unitCards');box.innerHTML=allUnits().map(u=>`<div class="unit-card ${u.enabled?'':'offline'}"><div class="unit-head"><strong>${u.code}</strong><label class="switch"><input type="checkbox" ${u.enabled?'checked':''} onchange="updateUnit('${u.id}','enabled',this.checked)"><span class="slider"></span></label></div><div class="input-grid two"><div class="field"><label>Display Name</label><input value="${esc(u.name)}" onchange="updateUnit('${u.id}','name',this.value)"></div><div class="field"><label>Status</label><input readonly value="${u.enabled?'Running / Active':'Stopped / Disabled'}"></div><div class="field"><label>Production Type</label><select onchange="updateUnit('${u.id}','type',this.value)"><option ${u.type==='Paper Machine'?'selected':''}>Paper Machine</option><option ${u.type==='Pulp Mill'?'selected':''}>Pulp Mill</option><option ${u.type==='Board Machine'?'selected':''}>Board Machine</option><option ${u.type==='Other'?'selected':''}>Other</option></select></div><div class="field"><label>Display Order</label><input type="number" min="1" value="${u.order}" onchange="updateUnit('${u.id}','order',Number(this.value))"></div></div><div class="note">Report label: <strong>${u.code} — ${esc(u.name)}</strong></div></div>`).join('');renderUnitFilter();renderKPIs();}
+function updateUnit(id,key,val){const u=state.units.find(x=>x.id===id);u[key]=val;persist();renderUnits();renderOverview();if(document.getElementById('reports').classList.contains('active'))renderReports()}
+function renderUnitFilter(){const f=document.getElementById('unitFilter'),old=f.value;f.innerHTML='<option value="combined">Combined</option>'+allUnits().map(u=>`<option value="${u.id}" ${u.enabled?'':'disabled'}>${u.code} - ${esc(u.name)}</option>`).join('');if([...f.options].some(o=>o.value===old))f.value=old}
+function renderOverview(){const r=getRecord('daily');let rows=allUnits().map(u=>{const d=unitData(u,'daily');return `<tr><td>${u.code}</td><td>${esc(u.name)}</td><td>${u.enabled?'<span class="badge on">Enabled</span>':'<span class="badge off">Disabled</span>'}</td><td class="num">${fmt(d.production)}</td><td class="num">${fmt(d.ash,2)}%</td><td class="num">${fmt(d.steam)}</td></tr>`}).join('');const totals=calcTotals('daily');rows+=`<tr><th colspan="3">Combined Enabled Units</th><th class="num">${fmt(totals.production)}</th><th class="num">${fmt(totals.ash,2)}%</th><th class="num">${fmt(totals.steam)}</th></tr>`;document.getElementById('overviewTable').innerHTML=`<table class="data-table"><thead><tr><th>Unit</th><th>Name</th><th>Status</th><th class="num">Production (Ton)</th><th class="num">Ash %</th><th class="num">Steam (Ton)</th></tr></thead><tbody>${rows}</tbody></table>`;renderKPIs()}
+function calcTotals(period=currentPeriod){let production=0,ashAmount=0,steam=0,consumption=0;activeUnits().forEach(u=>{const d=unitData(u,period);production+=+d.production||0;ashAmount+=(+d.production||0)*(+d.ash||0);steam+=+d.steam||0;consumption+=+d.consumption||0});const r=getRecord(period);return{production,ash:production?ashAmount/production:0,steam,consumption,elec:(+r.wapda||0)+(+r.solar||0),cost:+r.cost||0}}
+function renderKPIs(){const t=calcTotals('daily');document.getElementById('kpiUnits').textContent=`${activeUnits().length} / ${state.units.length}`;document.getElementById('kpiProduction').textContent=fmt(t.production)+' TON';document.getElementById('kpiAsh').textContent=fmt(t.ash,2)+'%';document.getElementById('kpiSteam').textContent=fmt(t.steam)+' TON';document.getElementById('kpiElectricity').textContent=fmt(t.elec,0)+' kWh';document.getElementById('kpiCost').textContent=t.production?money(t.cost/t.production):money(0)}
+function renderReports(){const box=document.getElementById('reportContent');if(currentReport==='production'){box.innerHTML=renderProductionTables();return}if(currentReport==='consumption'){box.innerHTML=renderMetricTable('consumption','Consumption (Ton)');return}if(currentReport==='ash'){box.innerHTML=renderMetricTable('ash','Ash %');return}if(currentReport==='steam'){box.innerHTML=renderMetricTable('steam','Steam (Ton)');return}if(currentReport==='rates'){box.innerHTML=renderGeneral('rate','Material / Utility Rate','PKR');return}if(currentReport==='electricity'){box.innerHTML=renderElectricity();return}if(currentReport==='cost'){box.innerHTML=renderGeneral('cost','Total Cost','PKR');return}}
+function periodLabel(){const k=recordKey();return currentPeriod==='daily'?k:currentPeriod==='monthly'?k+' Monthly Report':k+' Yearly Report'}
+function renderProductionTables(){const cards=allUnits().map(u=>{const d=unitData(u);return `<div class="unit-report-card ${u.enabled?'':'offline'}"><div class="unit-report-head"><h3>${u.code} — ${esc(u.name)}</h3>${u.enabled?'<span class="badge on">Included</span>':'<span class="badge off">Disabled</span>'}</div><div class="table-wrap"><table class="data-table"><thead><tr><th>${currentPeriod==='daily'?'Date':currentPeriod==='monthly'?'Month':'Year'}</th><th>Unit</th><th class="num">Production (Ton)</th><th class="num">Operating Hours</th><th class="num">Downtime Hours</th><th>Remarks</th></tr></thead><tbody><tr><td>${periodLabel()}</td><td>${esc(u.name)}</td><td><input type="number" step="0.001" value="${d.production}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','production',this.value)"></td><td><input type="number" step="0.01" value="${d.hours}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','hours',this.value)"></td><td><input type="number" step="0.01" value="${d.downtime}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','downtime',this.value)"></td><td><input placeholder="Remarks"></td></tr></tbody></table></div></div>`}).join('');const t=calcTotals();return `<div class="unit-table-grid">${cards}<div class="unit-report-card"><div class="unit-report-head"><h3>Combined Total Production</h3><span class="badge info">ENABLED UNITS ONLY</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Enabled Units</th><th class="num">Total Production (Ton)</th><th class="num">Total Operating Hours</th><th class="num">Total Downtime</th></tr></thead><tbody><tr><td>${periodLabel()}</td><td>${activeUnits().map(u=>esc(u.name)).join(', ')||'None'}</td><td class="num"><strong>${fmt(t.production)}</strong></td><td class="num">${fmt(activeUnits().reduce((s,u)=>s+(+unitData(u).hours||0),0),2)}</td><td class="num">${fmt(activeUnits().reduce((s,u)=>s+(+unitData(u).downtime||0),0),2)}</td></tr></tbody></table></div></div></div>`}
+function renderMetricTable(metric,label){const rows=allUnits().map(u=>{const d=unitData(u);return `<tr><td>${periodLabel()}</td><td>${u.code}</td><td>${esc(u.name)}</td><td>${u.enabled?'<span class="badge on">Enabled</span>':'<span class="badge off">Disabled</span>'}</td><td><input type="number" step="0.001" value="${d[metric]}" ${u.enabled?'':'disabled'} onchange="setUnitMetric('${u.id}','${metric}',this.value)"></td></tr>`}).join('');const t=calcTotals();const total=metric==='ash'?fmt(t.ash,2):fmt(t[metric]);return `<div class="table-wrap"><table class="data-table"><thead><tr><th>Period</th><th>Unit</th><th>Name</th><th>Status</th><th class="num">${label}</th></tr></thead><tbody>${rows}<tr><th colspan="4">Combined Enabled Units</th><th class="num">${total}</th></tr></tbody></table></div>`}
+function renderGeneral(metric,label,unit){const r=getRecord();return `<div class="input-grid four"><div class="field"><label>Period</label><input readonly value="${periodLabel()}"></div><div class="field"><label>${label}</label><input type="number" step="0.01" value="${r[metric]||0}" onchange="setGeneral('${metric}',this.value)"></div><div class="field"><label>Unit</label><input readonly value="${unit}"></div><div class="field"><label>Remarks</label><input placeholder="Enter remarks"></div></div>`}
+function renderElectricity(){const r=getRecord();const total=(+r.wapda||0)+(+r.solar||0);return `<div class="input-grid four"><div class="field"><label>WAPDA Units</label><input type="number" step="0.01" value="${r.wapda||0}" onchange="setGeneral('wapda',this.value)"></div><div class="field"><label>Solar Units</label><input type="number" step="0.01" value="${r.solar||0}" onchange="setGeneral('solar',this.value)"></div><div class="field"><label>Total Units</label><input readonly value="${fmt(total,0)}"></div><div class="field"><label>Solar Contribution</label><input readonly value="${total?fmt((+r.solar||0)/total*100,2):'0.00'}%"></div></div><div class="note">WAPDA and Solar remain separate sources in every period and are combined only for production and costing analysis.</div>`}
+function setUnitMetric(id,key,val){unitData(state.units.find(u=>u.id===id))[key]=Number(val)||0;persist();renderReports();renderOverview()}
+function setGeneral(key,val){getRecord()[key]=Number(val)||0;persist();renderReports();renderKPIs()}
+function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='production-control-data.json';a.click();URL.revokeObjectURL(a.href)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showPanel(b.dataset.panel));
+document.querySelectorAll('.period-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.period-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentPeriod=b.dataset.period;document.getElementById('periodFilter').value=currentPeriod;renderReports()});
+document.querySelectorAll('.report-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.report-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentReport=b.dataset.report;renderReports()});
+document.getElementById('periodFilter').onchange=e=>{currentPeriod=e.target.value;document.querySelectorAll('.period-tab').forEach(x=>x.classList.toggle('active',x.dataset.period===currentPeriod));renderReports()};document.getElementById('reportDate').onchange=()=>{renderOverview();renderReports()};
+document.getElementById('reportDate').value=today;document.querySelectorAll('[data-formula]').forEach(x=>{if(state.formulas[x.dataset.formula])x.value=state.formulas[x.dataset.formula]});renderUnits();renderOverview();renderReports();
 </script>
 </body></html>
