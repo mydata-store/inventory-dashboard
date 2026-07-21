@@ -187,4 +187,1427 @@ document.querySelectorAll('.formula-nav').forEach(b=>b.onclick=()=>{document.que
 document.getElementById('periodFilter').onchange=e=>{currentPeriod=e.target.value;document.querySelectorAll('.period-tab').forEach(x=>x.classList.toggle('active',x.dataset.period===currentPeriod));renderReports()};
 document.getElementById('reportDate').onchange=()=>{renderOverview();renderReports()};document.getElementById('reportDate').value=today;renderAll();
 </script>
+ <!-- =========================================================
+     COSTING V3 — ASH & PULP YIELD FORMULA CONTROL CENTER
+     Paste this complete block immediately before </body>
+========================================================== -->
+<style>
+/* ===== Costing V3 Formula Control Center Upgrade ===== */
+.formula-control-shell{
+  display:grid;
+  grid-template-columns:250px minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+}
+
+.formula-control-sidebar{
+  position:sticky;
+  top:86px;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  background:#ffffff;
+  overflow:hidden;
+  box-shadow:0 10px 28px rgba(15,23,42,.06);
+}
+
+.formula-control-sidebar-head{
+  padding:16px;
+  background:linear-gradient(135deg,#111827,#1f2937);
+  color:#ffffff;
+}
+
+.formula-control-sidebar-head h3{
+  margin:0;
+  font-size:15px;
+}
+
+.formula-control-sidebar-head p{
+  margin:5px 0 0;
+  font-size:10px;
+  line-height:1.5;
+  color:#cbd5e1;
+}
+
+.formula-control-nav{
+  padding:10px;
+}
+
+.formula-control-nav button{
+  width:100%;
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  border:1px solid transparent;
+  border-radius:10px;
+  padding:0 11px;
+  margin-bottom:7px;
+  background:#f8fafc;
+  color:#334155;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+  text-align:left;
+}
+
+.formula-control-nav button:hover{
+  border-color:#f5a316;
+  background:#fffaf0;
+}
+
+.formula-control-nav button.active{
+  background:linear-gradient(135deg,#ffcc00,#f5a316);
+  border-color:#e5a300;
+  color:#111827;
+  box-shadow:0 7px 16px rgba(245,163,22,.24);
+}
+
+.formula-control-nav .nav-status{
+  min-width:8px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#16a34a;
+}
+
+.formula-control-main{
+  min-width:0;
+}
+
+.formula-hero{
+  position:relative;
+  overflow:hidden;
+  border:1px solid #e2e8f0;
+  border-radius:17px;
+  padding:18px;
+  margin-bottom:14px;
+  background:
+    radial-gradient(circle at top right,rgba(255,204,0,.28),transparent 34%),
+    linear-gradient(135deg,#ffffff,#fffaf0);
+  box-shadow:0 10px 28px rgba(15,23,42,.06);
+}
+
+.formula-hero:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:5px;
+  background:#f5a316;
+}
+
+.formula-hero-top{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+
+.formula-hero h2{
+  margin:0;
+  font-size:21px;
+  color:#111827;
+}
+
+.formula-hero p{
+  margin:7px 0 0;
+  max-width:820px;
+  color:#64748b;
+  font-size:11px;
+  line-height:1.65;
+}
+
+.formula-version{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:#dcfce7;
+  color:#166534;
+  border:1px solid #bbf7d0;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:10px;
+  font-weight:900;
+}
+
+.formula-version:before{
+  content:"";
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#16a34a;
+}
+
+.formula-kpi-strip{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:16px;
+}
+
+.formula-mini-kpi{
+  border:1px solid #e2e8f0;
+  background:rgba(255,255,255,.9);
+  border-radius:12px;
+  padding:11px;
+}
+
+.formula-mini-kpi small{
+  display:block;
+  color:#64748b;
+  font-size:9px;
+  text-transform:uppercase;
+  font-weight:900;
+}
+
+.formula-mini-kpi strong{
+  display:block;
+  margin-top:5px;
+  font-size:15px;
+  color:#111827;
+}
+
+.formula-card-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+
+.advanced-formula-card{
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  background:#ffffff;
+  overflow:hidden;
+  box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+
+.advanced-formula-head{
+  padding:14px 15px;
+  border-bottom:1px solid #eef2f7;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  background:linear-gradient(180deg,#ffffff,#fbfdff);
+}
+
+.advanced-formula-head h3{
+  margin:0;
+  color:#111827;
+  font-size:15px;
+}
+
+.advanced-formula-head p{
+  margin:5px 0 0;
+  color:#64748b;
+  font-size:10px;
+  line-height:1.5;
+}
+
+.formula-number{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:30px;
+  height:30px;
+  padding:0 9px;
+  border-radius:9px;
+  background:#111827;
+  color:#ffcc00;
+  font-size:10px;
+  font-weight:900;
+}
+
+.formula-card-body{
+  padding:15px;
+}
+
+.formula-equation{
+  border:1px solid #fde68a;
+  border-left:4px solid #f5a316;
+  background:#fffbeb;
+  border-radius:11px;
+  padding:12px;
+  color:#713f12;
+  font-family:Consolas,Monaco,monospace;
+  font-size:12px;
+  line-height:1.65;
+  word-break:break-word;
+  margin-bottom:12px;
+}
+
+.formula-detail-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+
+.formula-detail-box{
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  padding:9px;
+  background:#f8fafc;
+}
+
+.formula-detail-box small{
+  display:block;
+  color:#64748b;
+  font-size:9px;
+  text-transform:uppercase;
+  font-weight:900;
+}
+
+.formula-detail-box strong{
+  display:block;
+  margin-top:4px;
+  font-size:11px;
+  color:#111827;
+}
+
+.live-calculator-card{
+  grid-column:1/-1;
+  border:1px solid #e2e8f0;
+  border-radius:17px;
+  background:#ffffff;
+  padding:16px;
+  box-shadow:0 10px 28px rgba(15,23,42,.06);
+}
+
+.live-calculator-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:13px;
+}
+
+.live-calculator-title h3{
+  margin:0;
+  font-size:16px;
+}
+
+.live-calculator-inputs{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+
+.calc-field label{
+  display:block;
+  margin-bottom:5px;
+  color:#64748b;
+  font-size:10px;
+  font-weight:900;
+}
+
+.calc-field input{
+  width:100%;
+  height:39px;
+  border:1px solid #d8dee8;
+  border-radius:9px;
+  padding:0 10px;
+  background:#ffffff;
+  font-size:12px;
+}
+
+.calc-field input:focus{
+  outline:none;
+  border-color:#f5a316;
+  box-shadow:0 0 0 3px rgba(245,163,22,.14);
+}
+
+.calculation-results{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:14px;
+}
+
+.calculation-result{
+  position:relative;
+  overflow:hidden;
+  border:1px solid #e2e8f0;
+  border-radius:13px;
+  padding:12px;
+  background:#f8fafc;
+}
+
+.calculation-result:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:4px;
+  background:#f5a316;
+}
+
+.calculation-result small{
+  display:block;
+  color:#64748b;
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.calculation-result strong{
+  display:block;
+  margin-top:6px;
+  font-size:18px;
+  color:#111827;
+}
+
+.calculation-result span{
+  display:block;
+  margin-top:4px;
+  color:#64748b;
+  font-size:9px;
+}
+
+.calculation-breakdown{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:14px;
+}
+
+.breakdown-panel,
+.suggestion-panel{
+  border:1px solid #e2e8f0;
+  border-radius:13px;
+  padding:13px;
+  background:#ffffff;
+}
+
+.breakdown-panel h4,
+.suggestion-panel h4{
+  margin:0 0 10px;
+  font-size:12px;
+  color:#111827;
+}
+
+.breakdown-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:7px 0;
+  border-bottom:1px dashed #e2e8f0;
+  font-size:10px;
+}
+
+.breakdown-row:last-child{
+  border-bottom:0;
+}
+
+.breakdown-row span{
+  color:#64748b;
+}
+
+.breakdown-row strong{
+  color:#111827;
+  font-variant-numeric:tabular-nums;
+}
+
+.formula-message{
+  padding:10px 11px;
+  border-radius:10px;
+  font-size:10px;
+  line-height:1.55;
+  margin-bottom:8px;
+}
+
+.formula-message.success{
+  background:#ecfdf5;
+  border:1px solid #bbf7d0;
+  color:#166534;
+}
+
+.formula-message.warning{
+  background:#fff7ed;
+  border:1px solid #fed7aa;
+  color:#9a3412;
+}
+
+.formula-message.danger{
+  background:#fef2f2;
+  border:1px solid #fecaca;
+  color:#991b1b;
+}
+
+.formula-footer-actions{
+  display:flex;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+
+@media(max-width:1100px){
+  .formula-control-shell{
+    grid-template-columns:1fr;
+  }
+
+  .formula-control-sidebar{
+    position:static;
+  }
+
+  .formula-control-nav{
+    display:flex;
+    gap:7px;
+    overflow:auto;
+  }
+
+  .formula-control-nav button{
+    min-width:150px;
+    margin:0;
+  }
+
+  .formula-kpi-strip,
+  .live-calculator-inputs,
+  .calculation-results{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:700px){
+  .formula-card-grid,
+  .formula-kpi-strip,
+  .live-calculator-inputs,
+  .calculation-results,
+  .calculation-breakdown,
+  .formula-detail-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
+<script>
+(function(){
+
+  /* =========================================================
+     1. APPROVED FORMULA SETTINGS
+  ========================================================= */
+
+  const approvedAshFormulas = {
+    title: "Ash Control",
+    items: [
+      {
+        id: "totalPaperAsh",
+        number: "2.1",
+        name: "Total Paper Ash",
+        formula: "paperProduction * finishedPaperAshPercent / 100",
+        displayFormula: "Paper Production × Finished Paper Ash % ÷ 100",
+        unit: "Ton",
+        decimals: 3,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Calculates total ash available in the finished paper."
+      },
+      {
+        id: "pulpAsh",
+        number: "2.2",
+        name: "Pulp Ash",
+        formula: "pulpProduced * pulpAshPercent / 100",
+        displayFormula: "Pulp Produced × Pulp Ash % ÷ 100",
+        unit: "Ton",
+        decimals: 3,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Calculates natural ash already contributed by the pulp portion."
+      },
+      {
+        id: "retainedFillerAsh",
+        number: "2.3",
+        name: "Retained Filler Ash",
+        formula: "totalPaperAsh - pulpAsh",
+        displayFormula: "Total Paper Ash − Pulp Ash",
+        unit: "Ton",
+        decimals: 3,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Calculates ash retained from calcium carbonate, soap stone and other mineral fillers."
+      },
+      {
+        id: "fillerAshPercent",
+        number: "2.4",
+        name: "Filler Ash Contribution",
+        formula: "retainedFillerAsh / paperProduction * 100",
+        displayFormula: "Retained Filler Ash ÷ Paper Production × 100",
+        unit: "%",
+        decimals: 2,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Shows the filler ash contribution as a percentage of finished production."
+      }
+    ]
+  };
+
+  const approvedPulpYieldFormulas = {
+    title: "Pulp Yield & Recovery",
+    items: [
+      {
+        id: "pulpProduced",
+        number: "3.1",
+        name: "Pulp Produced",
+        formula: "paperProduction - totalPaperAsh - longFibre - shortFibre",
+        displayFormula: "Paper Production − Total Paper Ash − Long Fibre − Short Fibre",
+        unit: "Ton",
+        decimals: 3,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Calculates the remaining pulp-produced portion after deducting ash and separately measured fibres."
+      },
+      {
+        id: "pulpYieldPercent",
+        number: "3.2",
+        name: "Pulp Yield",
+        formula: "pulpProduced / materialConsumed * 100",
+        displayFormula: "Pulp Produced ÷ Material Consumed × 100",
+        unit: "%",
+        decimals: 2,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Measures actual pulp recovery from total pulp material consumed."
+      },
+      {
+        id: "pulpLoss",
+        number: "3.3",
+        name: "Pulp Process Loss",
+        formula: "materialConsumed - pulpProduced",
+        displayFormula: "Material Consumed − Pulp Produced",
+        unit: "Ton",
+        decimals: 3,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Calculates pulp quantity lost during pulping, cleaning, screening and process handling."
+      },
+      {
+        id: "pulpLossPercent",
+        number: "3.4",
+        name: "Pulp Process Loss %",
+        formula: "100 - pulpYieldPercent",
+        displayFormula: "100 − Pulp Yield %",
+        unit: "%",
+        decimals: 2,
+        enabled: true,
+        locked: true,
+        effectiveFrom: "",
+        description: "Shows pulp process loss as a percentage of consumed material."
+      }
+    ]
+  };
+
+
+  /* =========================================================
+     2. INSTALL / UPDATE FORMULA DATA
+  ========================================================= */
+
+  function installApprovedFormulas(){
+    if(typeof state === "undefined") return;
+
+    state.formulaSettings = state.formulaSettings || {};
+
+    state.formulaSettings.ash =
+      JSON.parse(JSON.stringify(approvedAshFormulas));
+
+    state.formulaSettings.yield =
+      JSON.parse(JSON.stringify(approvedPulpYieldFormulas));
+
+    if(typeof persist === "function"){
+      persist();
+    }
+
+    const ashButton =
+      document.querySelector('.formula-nav[data-settings="ash"]');
+
+    const yieldButton =
+      document.querySelector('.formula-nav[data-settings="yield"]');
+
+    if(ashButton){
+      ashButton.textContent = "Ash Control";
+    }
+
+    if(yieldButton){
+      yieldButton.textContent = "Pulp Yield";
+    }
+  }
+
+
+  /* =========================================================
+     3. NUMBER HELPERS
+  ========================================================= */
+
+  function n(value){
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  function displayNumber(value, decimals){
+    return n(value).toLocaleString("en-PK",{
+      minimumFractionDigits:decimals,
+      maximumFractionDigits:decimals
+    });
+  }
+
+  function inputValue(id){
+    const element = document.getElementById(id);
+    return element ? n(element.value) : 0;
+  }
+
+  function safePercent(numerator, denominator){
+    return denominator > 0
+      ? numerator / denominator * 100
+      : 0;
+  }
+
+
+  /* =========================================================
+     4. FORMULA CALCULATIONS
+  ========================================================= */
+
+  function calculateFormulaResults(){
+
+    const paperProduction =
+      inputValue("formulaPaperProduction");
+
+    const finishedPaperAshPercent =
+      inputValue("formulaFinishedAsh");
+
+    const pulpAshPercent =
+      inputValue("formulaPulpAshPercent");
+
+    const longFibre =
+      inputValue("formulaLongFibre");
+
+    const shortFibre =
+      inputValue("formulaShortFibre");
+
+    const materialConsumed =
+      inputValue("formulaMaterialConsumed");
+
+    const totalPaperAsh =
+      paperProduction * finishedPaperAshPercent / 100;
+
+    const pulpProduced =
+      Math.max(
+        0,
+        paperProduction
+        - totalPaperAsh
+        - longFibre
+        - shortFibre
+      );
+
+    const pulpAsh =
+      pulpProduced * pulpAshPercent / 100;
+
+    const retainedFillerAsh =
+      totalPaperAsh - pulpAsh;
+
+    const fillerAshPercent =
+      safePercent(retainedFillerAsh,paperProduction);
+
+    const pulpYieldPercent =
+      safePercent(pulpProduced,materialConsumed);
+
+    const pulpLoss =
+      materialConsumed - pulpProduced;
+
+    const pulpLossPercent =
+      materialConsumed > 0
+        ? 100 - pulpYieldPercent
+        : 0;
+
+    return {
+      paperProduction,
+      finishedPaperAshPercent,
+      pulpAshPercent,
+      longFibre,
+      shortFibre,
+      materialConsumed,
+      totalPaperAsh,
+      pulpProduced,
+      pulpAsh,
+      retainedFillerAsh,
+      fillerAshPercent,
+      pulpYieldPercent,
+      pulpLoss,
+      pulpLossPercent
+    };
+  }
+
+
+  /* =========================================================
+     5. LIVE RESULT UPDATE
+  ========================================================= */
+
+  window.updateAshPulpCalculator = function(){
+
+    const r = calculateFormulaResults();
+
+    const values = {
+      resultTotalPaperAsh:
+        displayNumber(r.totalPaperAsh,3) + " Ton",
+
+      resultPulpProduced:
+        displayNumber(r.pulpProduced,3) + " Ton",
+
+      resultPulpAsh:
+        displayNumber(r.pulpAsh,3) + " Ton",
+
+      resultRetainedFillerAsh:
+        displayNumber(r.retainedFillerAsh,3) + " Ton",
+
+      resultFillerAshPercent:
+        displayNumber(r.fillerAshPercent,2) + "%",
+
+      resultPulpYield:
+        displayNumber(r.pulpYieldPercent,2) + "%",
+
+      resultPulpLoss:
+        displayNumber(r.pulpLoss,3) + " Ton",
+
+      resultPulpLossPercent:
+        displayNumber(r.pulpLossPercent,2) + "%"
+    };
+
+    Object.entries(values).forEach(function(entry){
+      const element = document.getElementById(entry[0]);
+      if(element){
+        element.textContent = entry[1];
+      }
+    });
+
+    const breakdown = document.getElementById(
+      "formulaCalculationBreakdown"
+    );
+
+    if(breakdown){
+      breakdown.innerHTML = `
+        <div class="breakdown-row">
+          <span>Paper Production</span>
+          <strong>${displayNumber(r.paperProduction,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Finished Paper Ash</span>
+          <strong>${displayNumber(r.finishedPaperAshPercent,2)}%</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Total Paper Ash</span>
+          <strong>${displayNumber(r.totalPaperAsh,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Long Fibre</span>
+          <strong>${displayNumber(r.longFibre,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Short Fibre</span>
+          <strong>${displayNumber(r.shortFibre,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Pulp Produced</span>
+          <strong>${displayNumber(r.pulpProduced,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Pulp Ash Percentage</span>
+          <strong>${displayNumber(r.pulpAshPercent,2)}%</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Pulp Ash</span>
+          <strong>${displayNumber(r.pulpAsh,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Retained Filler Ash</span>
+          <strong>${displayNumber(r.retainedFillerAsh,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Material Consumed</span>
+          <strong>${displayNumber(r.materialConsumed,3)} Ton</strong>
+        </div>
+
+        <div class="breakdown-row">
+          <span>Pulp Yield</span>
+          <strong>${displayNumber(r.pulpYieldPercent,2)}%</strong>
+        </div>
+      `;
+    }
+
+    const suggestionPanel =
+      document.getElementById("formulaSuggestions");
+
+    if(suggestionPanel){
+
+      let messages = [];
+
+      if(r.paperProduction <= 0){
+        messages.push(`
+          <div class="formula-message warning">
+            Enter Paper Production to calculate ash and pulp yield.
+          </div>
+        `);
+      }
+
+      if(r.materialConsumed <= 0){
+        messages.push(`
+          <div class="formula-message warning">
+            Material Consumed must be greater than zero for Pulp Yield calculation.
+          </div>
+        `);
+      }
+
+      if(r.retainedFillerAsh < 0){
+        messages.push(`
+          <div class="formula-message danger">
+            Pulp Ash is higher than Total Paper Ash. Check the pulp ash percentage,
+            finished ash percentage or pulp-produced quantity.
+          </div>
+        `);
+      }
+
+      if(r.pulpYieldPercent > 100){
+        messages.push(`
+          <div class="formula-message danger">
+            Pulp Yield is above 100%. Material Consumed may be too low or one of
+            the production deductions may be incorrect.
+          </div>
+        `);
+      }
+
+      if(
+        r.paperProduction > 0 &&
+        r.materialConsumed > 0 &&
+        r.retainedFillerAsh >= 0 &&
+        r.pulpYieldPercent <= 100
+      ){
+        messages.push(`
+          <div class="formula-message success">
+            Ash and Pulp Yield formulas are calculating normally.
+          </div>
+        `);
+      }
+
+      messages.push(`
+        <div class="formula-message warning">
+          Retained Filler Ash currently represents the combined ash retained from
+          calcium carbonate, soap stone and other mineral fillers.
+        </div>
+      `);
+
+      suggestionPanel.innerHTML = messages.join("");
+    }
+  };
+
+
+  /* =========================================================
+     6. FORMULA CARD HTML
+  ========================================================= */
+
+  function formulaCard(item){
+
+    const lockedBadge = item.locked
+      ? `<span class="badge on">LOCKED</span>`
+      : `<span class="badge draft">EDITABLE</span>`;
+
+    return `
+      <article class="advanced-formula-card">
+
+        <div class="advanced-formula-head">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+
+            <span class="formula-number">
+              ${item.number || "V3"}
+            </span>
+
+            <div>
+              <h3>${esc(item.name)}</h3>
+              <p>${esc(item.description || "")}</p>
+            </div>
+
+          </div>
+
+          ${lockedBadge}
+        </div>
+
+        <div class="formula-card-body">
+
+          <div class="formula-equation">
+            ${esc(item.displayFormula || item.formula)}
+          </div>
+
+          <div class="formula-detail-grid">
+
+            <div class="formula-detail-box">
+              <small>Result Unit</small>
+              <strong>${esc(item.unit)}</strong>
+            </div>
+
+            <div class="formula-detail-box">
+              <small>Decimals</small>
+              <strong>${item.decimals}</strong>
+            </div>
+
+            <div class="formula-detail-box">
+              <small>Status</small>
+              <strong>${item.enabled ? "Enabled" : "Disabled"}</strong>
+            </div>
+
+          </div>
+
+        </div>
+
+      </article>
+    `;
+  }
+
+
+  /* =========================================================
+     7. LIVE CALCULATOR HTML
+  ========================================================= */
+
+  function renderLiveCalculator(){
+
+    return `
+      <section class="live-calculator-card">
+
+        <div class="live-calculator-title">
+
+          <div>
+            <h3>Ash & Pulp Yield Live Calculator</h3>
+            <div class="note">
+              Enter sample production values to test all approved formulas.
+            </div>
+          </div>
+
+          <span class="badge on">LIVE CALCULATION</span>
+
+        </div>
+
+        <div class="live-calculator-inputs">
+
+          <div class="calc-field">
+            <label>Paper Production (Ton)</label>
+            <input
+              id="formulaPaperProduction"
+              type="number"
+              min="0"
+              step="0.001"
+              value="100"
+              oninput="updateAshPulpCalculator()"
+            >
+          </div>
+
+          <div class="calc-field">
+            <label>Finished Paper Ash (%)</label>
+            <input
+              id="formulaFinishedAsh"
+              type="number"
+              min="0"
+              step="0.01"
+              value="8"
+              oninput="updateAshPulpCalculator()"
+            >
+          </div>
+
+          <div class="calc-field">
+            <label>Long Fibre (Ton)</label>
+            <input
+              id="formulaLongFibre"
+              type="number"
+              min="0"
+              step="0.001"
+              value="5"
+              oninput="updateAshPulpCalculator()"
+            >
+          </div>
+
+          <div class="calc-field">
+            <label>Short Fibre (Ton)</label>
+            <input
+              id="formulaShortFibre"
+              type="number"
+              min="0"
+              step="0.001"
+              value="7"
+              oninput="updateAshPulpCalculator()"
+            >
+          </div>
+
+          <div class="calc-field">
+            <label>Pulp Ash (%)</label>
+            <input
+              id="formulaPulpAshPercent"
+              type="number"
+              min="0"
+              step="0.01"
+              value="7"
+              oninput="updateAshPulpCalculator()"
+            >
+          </div>
+
+          <div class="calc-field">
+            <label>Material Consumed (Ton)</label>
+            <input
+              id="formulaMaterialConsumed"
+              type="number"
+              min="0"
+              step="0.001"
+              value="95"
+              oninput="updateAshPulpCalculator()"
+            >
+          </div>
+
+        </div>
+
+        <div class="calculation-results">
+
+          <div class="calculation-result">
+            <small>Total Paper Ash</small>
+            <strong id="resultTotalPaperAsh">0.000 Ton</strong>
+            <span>Production × Ash %</span>
+          </div>
+
+          <div class="calculation-result">
+            <small>Pulp Produced</small>
+            <strong id="resultPulpProduced">0.000 Ton</strong>
+            <span>Production less ash and fibres</span>
+          </div>
+
+          <div class="calculation-result">
+            <small>Pulp Ash</small>
+            <strong id="resultPulpAsh">0.000 Ton</strong>
+            <span>Natural ash from pulp</span>
+          </div>
+
+          <div class="calculation-result">
+            <small>Retained Filler Ash</small>
+            <strong id="resultRetainedFillerAsh">0.000 Ton</strong>
+            <span>Mineral filler contribution</span>
+          </div>
+
+          <div class="calculation-result">
+            <small>Filler Ash Contribution</small>
+            <strong id="resultFillerAshPercent">0.00%</strong>
+            <span>Percentage of production</span>
+          </div>
+
+          <div class="calculation-result">
+            <small>Pulp Yield</small>
+            <strong id="resultPulpYield">0.00%</strong>
+            <span>Pulp produced ÷ consumed</span>
+          </div>
+
+          <div class="calculation-result">
+            <small>Pulp Process Loss</small>
+            <strong id="resultPulpLoss">0.000 Ton</strong>
+            <span>Consumed less produced</span>
+          </div>
+
+          <div class="calculation-result">
+            <small>Pulp Process Loss %</small>
+            <strong id="resultPulpLossPercent">0.00%</strong>
+            <span>100 − Pulp Yield</span>
+          </div>
+
+        </div>
+
+        <div class="calculation-breakdown">
+
+          <div class="breakdown-panel">
+            <h4>Calculation Breakdown</h4>
+            <div id="formulaCalculationBreakdown"></div>
+          </div>
+
+          <div class="suggestion-panel">
+            <h4>Formula Validation & Suggestions</h4>
+            <div id="formulaSuggestions"></div>
+          </div>
+
+        </div>
+
+      </section>
+    `;
+  }
+
+
+  /* =========================================================
+     8. REPLACE OLD FORMULA SETTINGS RENDERER
+  ========================================================= */
+
+  renderFormulaSettings = function(){
+
+    const box =
+      document.getElementById("formulaSettingsContent");
+
+    if(!box) return;
+
+    const group =
+      state.formulaSettings[currentSettingsGroup]
+      || defaultFormulaSettings[currentSettingsGroup];
+
+    const approvedGroup =
+      currentSettingsGroup === "ash"
+      || currentSettingsGroup === "yield";
+
+    const title =
+      currentSettingsGroup === "yield"
+        ? "Pulp Yield & Recovery"
+        : group.title;
+
+    const subtitle =
+      currentSettingsGroup === "ash"
+        ? "Calculate finished paper ash, natural pulp ash and retained filler ash."
+        : currentSettingsGroup === "yield"
+        ? "Calculate pulp produced, pulp recovery and pulp process loss."
+        : "Review and manage the approved formula rules.";
+
+    const formulaItems =
+      group.items || [];
+
+    box.innerHTML = `
+      <div class="formula-control-shell">
+
+        <aside class="formula-control-sidebar">
+
+          <div class="formula-control-sidebar-head">
+            <h3>Formula Control Center</h3>
+            <p>
+              Approved costing formulas with live testing,
+              validation and calculation breakdown.
+            </p>
+          </div>
+
+          <div class="formula-control-nav">
+
+            <button
+              class="${currentSettingsGroup === "production" ? "active" : ""}"
+              onclick="openCostingFormulaGroup('production',this)"
+            >
+              <span>Production</span>
+              <span class="nav-status"></span>
+            </button>
+
+            <button
+              class="${currentSettingsGroup === "ash" ? "active" : ""}"
+              onclick="openCostingFormulaGroup('ash',this)"
+            >
+              <span>Ash Control</span>
+              <span class="nav-status"></span>
+            </button>
+
+            <button
+              class="${currentSettingsGroup === "yield" ? "active" : ""}"
+              onclick="openCostingFormulaGroup('yield',this)"
+            >
+              <span>Pulp Yield</span>
+              <span class="nav-status"></span>
+            </button>
+
+            <button
+              class="${currentSettingsGroup === "steam" ? "active" : ""}"
+              onclick="openCostingFormulaGroup('steam',this)"
+            >
+              <span>Steam Control</span>
+              <span class="nav-status"></span>
+            </button>
+
+            <button
+              class="${currentSettingsGroup === "electricity" ? "active" : ""}"
+              onclick="openCostingFormulaGroup('electricity',this)"
+            >
+              <span>Electricity</span>
+              <span class="nav-status"></span>
+            </button>
+
+            <button
+              class="${currentSettingsGroup === "material" ? "active" : ""}"
+              onclick="openCostingFormulaGroup('material',this)"
+            >
+              <span>Material Control</span>
+              <span class="nav-status"></span>
+            </button>
+
+            <button
+              class="${currentSettingsGroup === "cost" ? "active" : ""}"
+              onclick="openCostingFormulaGroup('cost',this)"
+            >
+              <span>Costing</span>
+              <span class="nav-status"></span>
+            </button>
+
+          </div>
+
+        </aside>
+
+        <div class="formula-control-main">
+
+          <section class="formula-hero">
+
+            <div class="formula-hero-top">
+
+              <div>
+                <h2>${esc(title)}</h2>
+                <p>${esc(subtitle)}</p>
+              </div>
+
+              <span class="formula-version">
+                COSTING V3 APPROVED
+              </span>
+
+            </div>
+
+            <div class="formula-kpi-strip">
+
+              <div class="formula-mini-kpi">
+                <small>Formula Group</small>
+                <strong>${esc(title)}</strong>
+              </div>
+
+              <div class="formula-mini-kpi">
+                <small>Formula Count</small>
+                <strong>${formulaItems.length}</strong>
+              </div>
+
+              <div class="formula-mini-kpi">
+                <small>Status</small>
+                <strong>${approvedGroup ? "Locked" : "Draft"}</strong>
+              </div>
+
+              <div class="formula-mini-kpi">
+                <small>Calculation Mode</small>
+                <strong>${approvedGroup ? "Automatic" : "Configurable"}</strong>
+              </div>
+
+            </div>
+
+          </section>
+
+          <div class="formula-card-grid">
+
+            ${formulaItems.map(formulaCard).join("")}
+
+            ${
+              approvedGroup
+                ? renderLiveCalculator()
+                : `
+                  <section class="live-calculator-card">
+                    <div class="live-calculator-title">
+                      <div>
+                        <h3>${esc(title)} Formula Group</h3>
+                        <div class="note">
+                          This formula group will be finalized after Ash and
+                          Pulp Yield formulas are completed.
+                        </div>
+                      </div>
+                      <span class="badge draft">DRAFT</span>
+                    </div>
+                  </section>
+                `
+            }
+
+          </div>
+
+          <div class="formula-footer-actions">
+
+            <button
+              class="btn btn-light"
+              onclick="resetFormulaSettings()"
+            >
+              Reset Defaults
+            </button>
+
+            <button
+              class="btn btn-primary"
+              onclick="saveFormulaSettings()"
+            >
+              Save Formula Settings
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+    `;
+
+    if(approvedGroup){
+      setTimeout(updateAshPulpCalculator,0);
+    }
+  };
+
+
+  /* =========================================================
+     9. FORMULA GROUP NAVIGATION
+  ========================================================= */
+
+  window.openCostingFormulaGroup =
+    function(group,button){
+
+      currentSettingsGroup = group;
+
+      document
+        .querySelectorAll(".formula-control-nav button")
+        .forEach(function(item){
+          item.classList.remove("active");
+        });
+
+      if(button){
+        button.classList.add("active");
+      }
+
+      renderFormulaSettings();
+    };
+
+
+  /* =========================================================
+     10. SAVE MESSAGE UPDATE
+  ========================================================= */
+
+  saveFormulaSettings = function(){
+    persist();
+
+    alert(
+      "Ash and Pulp Yield formula settings have been saved successfully."
+    );
+  };
+
+
+  /* =========================================================
+     11. START UPGRADE
+  ========================================================= */
+
+  installApprovedFormulas();
+
+  if(
+    currentSettingsGroup !== "production" &&
+    currentSettingsGroup !== "ash" &&
+    currentSettingsGroup !== "yield"
+  ){
+    currentSettingsGroup = "ash";
+  }
+
+  renderFormulaSettings();
+
+})();
+</script>
+<!-- ===== END COSTING V3 FORMULA CONTROL CENTER ===== -->
 </body></html>
