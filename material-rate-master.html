@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Material Rate Master</title><link rel="stylesheet" href="public/common.css">
+<script src="public/common-tools.js"></script>
+<script src="public/theme-settings.js"></script>
+<script src="public/common-theme-manager.js"></script>
+<script src="public/common-shell-engine.js"></script>
+<script src="public/page-renderer.js"></script>
+<script src="public/design-studio-bootstrap.js"></script>
+<script src="public/common-font-controller.js"></script>
+<link rel="stylesheet" href="public/core/styles/erp-runtime.css">
+<link rel="stylesheet" href="public/core/styles/erp-platform-runtime.css">
+<script src="public/core/erp-runtime.js"></script>
+<script src="public/core/erp-registry.js"></script>
+<script src="public/core/erp-module-registry.js"></script>
+<script src="public/core/erp-platform-runtime.js" defer></script><link rel="stylesheet" href="costing-v2.css"><script src="costing-v2-store.js"></script></head><body data-erp-page="material-rate-master"><div id="appSidebar"></div><main class="app-main app-page">
+<div class="page-head"><div><h1>Material Rate Master</h1><p>Rates remain active until a new effective-date rate replaces them.</p></div><div class="actions"><a class="btn" href="costing.html">Dashboard</a><a class="btn" href="cost-group-mapping.html">Mapping Master</a></div></div>
+<section class="panel"><div class="toolbar"><div class="field" style="min-width:230px"><label>Material</label><select id="rateMaterial" class="select"></select></div><div class="field"><label>New Rate</label><input id="newRate" class="input" type="number" step="0.01"></div><div class="field"><label>Effective From</label><input id="effectiveFrom" class="input" type="date"></div><div class="field"><label>Supplier (Optional)</label><input id="supplier" class="input"></div><div class="field" style="min-width:220px"><label>Remarks</label><input id="rateRemarks" class="input"></div><button id="saveRate" class="btn primary">Save New Rate</button></div><div class="note">The old rate automatically closes one day before the new rate starts. Historical rates are never overwritten.</div></section>
+<section class="panel"><div class="panel-title"><h2>Rate History</h2><span id="currentRate" class="badge green">No Current Rate</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Material</th><th>Rate</th><th>Unit</th><th>Effective From</th><th>Effective To</th><th>Supplier</th><th>Status</th><th>Remarks</th></tr></thead><tbody id="rateBody"></tbody></table></div><div id="rateStatus" class="status">Ready.</div></section>
+<script>
+const mats=CostingV2.materials().filter(x=>!x.system&&x.active!==false);rateMaterial.innerHTML=mats.map(x=>`<option value="${x.id}">${x.name} (${x.group})</option>`).join('');const qp=new URLSearchParams(location.search).get('material');if(qp)rateMaterial.value=qp;effectiveFrom.value=new Date().toISOString().slice(0,10);
+function render(){const id=rateMaterial.value,m=mats.find(x=>x.id===id),today=new Date().toISOString().slice(0,10),cur=CostingV2.effectiveRate(id,today);currentRate.textContent=cur?`Current: Rs ${cur.rate.toLocaleString()} / ${m.unit}`:'No Current Rate';rateBody.innerHTML=CostingV2.rates().filter(r=>r.materialId===id).sort((a,b)=>b.effectiveFrom.localeCompare(a.effectiveFrom)).map(r=>`<tr><td>${m.name}</td><td>Rs ${r.rate.toLocaleString()}</td><td>${m.unit}</td><td>${r.effectiveFrom}</td><td>${r.effectiveTo||'Current'}</td><td>${r.supplier||'—'}</td><td><span class="badge ${!r.effectiveTo?'green':'silver'}">${!r.effectiveTo?'Active':'Expired'}</span></td><td>${r.remarks||''}</td></tr>`).join('')||'<tr><td colspan="8" class="center muted">No rate history available.</td></tr>'}
+rateMaterial.onchange=render;saveRate.onclick=()=>{if(!newRate.value||!effectiveFrom.value)return alert('Enter rate and effective date.');CostingV2.addRate(rateMaterial.value,newRate.value,effectiveFrom.value,supplier.value,rateRemarks.value);newRate.value='';supplier.value='';rateRemarks.value='';rateStatus.textContent='New rate saved. Previous active rate has been closed automatically.';render()};render();
+</script></main></body></html>
