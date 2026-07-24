@@ -46,12 +46,21 @@ const defaults=[
 {id:'cmc',name:'CMC',group:'Binder',unit:'Kg',standardYield:60,sequence:304,active:true},
 {id:'blue-color',name:'Blue Color',group:'Color',unit:'Kg',sequence:401,active:true},
 {id:'yellow-color',name:'Yellow Color',group:'Color',unit:'Kg',sequence:402,active:true},
-{id:'optical-brightener',name:'Optical Brightener',group:'Color',unit:'Kg',sequence:403,active:true}
+{id:'optical-brightener',name:'Optical Brightener',group:'Color',unit:'Kg',sequence:403,active:true},
+
+{id:'long-fiber',name:'Long Fiber',group:'Stock Pulp Plant',unit:'Ton',sequence:501,active:true},
+{id:'short-fiber',name:'Short Fiber',group:'Stock Pulp Plant',unit:'Ton',sequence:502,active:true},
+{id:'kraft-paper',name:'Kraft Paper',group:'Packing',unit:'Kg',sequence:601,active:true},
+{id:'gum-packing-tape',name:'Gum Packing Tape',group:'Packing',unit:'Roll',sequence:602,active:true},
+{id:'gear-oil',name:'Gear Oil',group:'Lubricants',unit:'Ltr',sequence:701,active:true},
+{id:'hydraulic-oil',name:'Hydraulic Oil',group:'Lubricants',unit:'Ltr',sequence:702,active:true},
+{id:'diesel',name:'Diesel',group:'Lubricants',unit:'Ltr',sequence:703,active:true},
+{id:'petrol',name:'Petrol',group:'Lubricants',unit:'Ltr',sequence:704,active:true}
 ];
 const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v??f}catch{return f}};
 const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const n=v=>{const x=parseFloat(v);return Number.isFinite(x)?x:0};
-function materials(){let x=read(K.materials,null);if(!Array.isArray(x)||!x.length){x=defaults;write(K.materials,x)}return x.slice().sort((a,b)=>(a.sequence||9999)-(b.sequence||9999)||a.name.localeCompare(b.name))}
+function materials(){let x=read(K.materials,null);if(!Array.isArray(x)||!x.length){x=defaults.slice();write(K.materials,x)}else{const ids=new Set(x.map(m=>m.id));let changed=false;defaults.forEach(m=>{if(!ids.has(m.id)){x.push({...m});changed=true}});if(changed)write(K.materials,x)}return x.slice().sort((a,b)=>(a.sequence||9999)-(b.sequence||9999)||a.name.localeCompare(b.name))}
 function saveMaterials(x){write(K.materials,x)}
 function rates(){return read(K.rates,[])} function saveRates(x){write(K.rates,x)}
 function entries(){return read(K.entries,[])} function saveEntries(x){write(K.entries,x)}
