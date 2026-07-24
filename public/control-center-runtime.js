@@ -117,3 +117,69 @@ document.addEventListener('click',e=>{if(e.target.closest?.('.theme,[data-settin
 setInterval(ccForceShellTheme,1500);
 
 })();
+
+
+// Control Center 2.3 — self-page sidebar synchronizer.
+// The legacy shell can repaint its sidebar after the Control Center runtime,
+// so this applies the selected theme after every shell render and interaction.
+function cc23State(){
+  try{return window.ERPControlCenter.load();}catch(e){return {global:{}}}
+}
+function cc23SidebarCandidates(){
+  const out=[];
+  document.querySelectorAll('aside,nav,div,section').forEach(el=>{
+    try{
+      const r=el.getBoundingClientRect(), cs=getComputedStyle(el);
+      const left=r.left<=2, tall=r.height>=innerHeight*.70, narrow=r.width>=45&&r.width<=260;
+      const positioned=['fixed','sticky','absolute'].includes(cs.position) || r.top<=80;
+      if(left&&tall&&narrow&&positioned) out.push(el);
+    }catch(e){}
+  });
+  return out.sort((a,b)=>b.getBoundingClientRect().height-a.getBoundingClientRect().height);
+}
+function cc23Paint(){
+  const st=cc23State(),g=st.global||{};
+  const bg=g.sidebar||'#0e1b2f', text=g.sidebarText||'#fff', active=g.sidebarActive||g.accent||'#f59e0b';
+  const activeText=g.sidebarActiveText||'#fff', profile=g.profile||bg;
+  const side=cc23SidebarCandidates()[0];
+  if(!side)return;
+  side.dataset.ccThemeSidebar='1';
+  side.style.setProperty('background-color',bg,'important');
+  side.style.setProperty('background-image','none','important');
+  side.style.setProperty('color',text,'important');
+  const all=side.querySelectorAll('*');
+  all.forEach(el=>{
+    const tag=el.tagName;
+    if(['A','BUTTON','SPAN','I','SVG','PATH','P','B','STRONG','SMALL','DIV'].includes(tag)){
+      el.style.setProperty('--sidebar-text',text);
+    }
+    if((el.textContent||'').trim()==='ERP Design Studio') el.textContent='Control Center';
+  });
+  side.querySelectorAll('a,button,[role="button"],.menu-item,.nav-item,.sidebar-item,.side-item').forEach(el=>{
+    el.style.setProperty('color',text,'important');
+    const cls=String(el.className||'').toLowerCase();
+    const aria=el.getAttribute('aria-current');
+    if(cls.includes('active')||aria==='page'){
+      el.style.setProperty('background-color',active,'important');
+      el.style.setProperty('color',activeText,'important');
+      el.querySelectorAll('*').forEach(ch=>ch.style.setProperty('color',activeText,'important'));
+    }
+  });
+  side.querySelectorAll('.profile-card,.sidebar-profile,.user-card,[class*="profile"],[class*="user-card"]').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    if(r.width>60&&r.height>30){
+      el.style.setProperty('background-color',profile,'important');
+      el.style.setProperty('color',text,'important');
+      el.querySelectorAll('*').forEach(ch=>ch.style.setProperty('color',text,'important'));
+    }
+  });
+}
+window.CC23PaintSidebar=cc23Paint;
+function cc23Start(){
+  cc23Paint();
+  [0,50,150,350,700,1200,2000].forEach(ms=>setTimeout(cc23Paint,ms));
+  document.addEventListener('click',()=>[0,30,150,400].forEach(ms=>setTimeout(cc23Paint,ms)),true);
+  new MutationObserver(()=>requestAnimationFrame(cc23Paint)).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  setInterval(cc23Paint,1000);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',cc23Start);else cc23Start();
