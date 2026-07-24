@@ -33,42 +33,5 @@ window.ERPControlCenter={KEY,defaults,themes,load,save:s=>{localStorage.setItem(
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
 window.addEventListener('storage',e=>{if(e.key===KEY)apply()});
 
-// Control Center 3.6 - safe, finite shell synchronization.
-function safeShellSync(){
-  const s=load(), g=s.global||{};
-  const root=document.documentElement.style;
-  const aliases={
-    '--erp-sidebar-bg':g.sidebar,'--erp-sidebar-background':g.sidebar,
-    '--sidebar-bg':g.sidebar,'--sidebar-background':g.sidebar,
-    '--erp-sidebar-text':g.sidebarText,'--sidebar-text':g.sidebarText,
-    '--erp-sidebar-active':g.sidebarActive,'--sidebar-active':g.sidebarActive,
-    '--erp-topbar-bg':g.topbar,'--topbar-bg':g.topbar,
-    '--erp-profile-bg':g.profile,'--profile-bg':g.profile
-  };
-  Object.entries(aliases).forEach(([k,v])=>{if(v!=null)root.setProperty(k,v)});
-  const side=document.querySelector('#appSidebar .erp-sidebar,#appSidebar aside,#appSidebar nav,#appSidebar>[class*=sidebar],#appSidebar');
-  if(side){
-    side.style.setProperty('background-color',g.sidebar||'#0e1b2f','important');
-    side.style.setProperty('color',g.sidebarText||'#fff','important');
-    side.querySelectorAll('a,button,.menu-item,.nav-item,.sidebar-item').forEach(el=>{
-      el.style.setProperty('font-family',g.font||'Inter, Segoe UI, Arial, sans-serif','important');
-      el.style.setProperty('font-size',(g.sidebarMainFontSize||13)+'px','important');
-      el.style.setProperty('font-weight',String(g.sidebarMainFontWeight||650),'important');
-      el.style.setProperty('color',g.sidebarText||'#fff','important');
-      if((el.textContent||'').trim()==='ERP Control Center'||(el.textContent||'').trim()==='ERP Design Studio') el.textContent='Settings';
-    });
-    side.querySelectorAll('.submenu a,.submenu button,[class*=submenu] a,[class*=submenu] button').forEach(el=>{
-      el.style.setProperty('font-size',(g.sidebarSubFontSize||11)+'px','important');
-      el.style.setProperty('font-weight',String(g.sidebarSubFontWeight||500),'important');
-    });
-  }
-}
-function finiteInit(){
-  apply();
-  safeShellSync();
-  [100,300,700,1400].forEach(ms=>setTimeout(safeShellSync,ms));
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',finiteInit,{once:true});else finiteInit();
-window.addEventListener('erp-control-center-change',()=>{apply();safeShellSync()});
-window.addEventListener('storage',e=>{if(e.key===KEY){apply();safeShellSync()}});
+// Control Center 3.7 standalone recovery: no Universal Shell hooks.
 })();
