@@ -52,4 +52,68 @@ function shellSync(){
 const originalApply=apply;window.ERPControlCenter.apply=()=>{originalApply();shellSync()};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{shellSync();new MutationObserver(shellSync).observe(document.body,{childList:true,subtree:true})});
 else{shellSync();new MutationObserver(shellSync).observe(document.body,{childList:true,subtree:true})}
+
+
+// Control Center 2.2 — force theme into the Universal Sidebar even when its
+// HTML uses unknown classes, is injected late, or lives inside a shadow root.
+function ccLuminance(rgb){
+  const m=String(rgb||'').match(/[\d.]+/g); if(!m||m.length<3) return 1;
+  const a=m.slice(0,3).map(Number).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});
+  return .2126*a[0]+.7152*a[1]+.0722*a[2];
+}
+function ccAllRoots(root=document){
+  const roots=[root];
+  try{root.querySelectorAll('*').forEach(el=>{if(el.shadowRoot) roots.push(...ccAllRoots(el.shadowRoot));});}catch(e){}
+  return roots;
+}
+function ccFindSidebars(){
+  const found=new Set();
+  const known='#appSidebar,#erpSidebar,#erp-sidebar,#universalSidebar,#universal-sidebar,#erpUniversalSidebar,.erp-sidebar,.erpSidebar,.universal-sidebar,.universalSidebar,.sidebar-shell,.side-shell,.sidebar-container,.sidebar-wrapper,.left-sidebar,.main-sidebar,.app-side-nav,.sidenav,.side-nav,[data-erp-sidebar],[data-sidebar-root],[data-sidebar]';
+  ccAllRoots().forEach(root=>{
+    try{root.querySelectorAll(known).forEach(el=>found.add(el));}catch(e){}
+    try{root.querySelectorAll('aside,nav,div').forEach(el=>{
+      const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
+      if(r.width>=38&&r.width<=360&&r.height>=innerHeight*.68&&r.left<=12&&r.top<=110 && ['fixed','sticky','absolute'].includes(cs.position)) found.add(el);
+    });}catch(e){}
+  });
+  return [...found].filter(el=>{
+    const r=el.getBoundingClientRect(); return r.width>35&&r.height>innerHeight*.55&&r.left<20;
+  });
+}
+function ccPaintSidebar(side,g){
+  const bg=g.sidebar||'#0e1b2f', text=g.sidebarText||'#fff', active=g.sidebarActive||g.accent||'#f59e0b', activeText=g.sidebarActiveText||'#101827', profile=g.profile||bg;
+  side.style.setProperty('background',bg,'important');
+  side.style.setProperty('background-color',bg,'important');
+  side.style.setProperty('color',text,'important');
+  side.style.setProperty('--sidebar-bg',bg); side.style.setProperty('--sidebar-background',bg);
+  side.style.setProperty('--sidebar-text',text); side.style.setProperty('--sidebar-active',active);
+  const nodes=[side,...side.querySelectorAll('*')];
+  nodes.forEach(el=>{
+    const cls=((el.className&&String(el.className))||'').toLowerCase();
+    const role=(el.getAttribute&&((el.getAttribute('role')||'')+' '+(el.getAttribute('aria-current')||''))).toLowerCase();
+    const txt=(el.textContent||'').trim();
+    if(txt==='ERP Design Studio') el.textContent='Control Center';
+    const isProfile=/profile|user-card|account-card/.test(cls);
+    const isActive=/\bactive\b|selected|current|menu-active|nav-active/.test(cls)||role.includes('page')||el.getAttribute?.('aria-selected')==='true';
+    const isClickable=el.matches?.('a,button,[role="button"],.menu-item,.nav-item,.sidebar-item,.submenu-item');
+    if(isProfile){el.style.setProperty('background',profile,'important');el.style.setProperty('background-color',profile,'important');el.style.setProperty('color',text,'important');}
+    else if(isActive){el.style.setProperty('background',active,'important');el.style.setProperty('background-color',active,'important');el.style.setProperty('color',activeText,'important');}
+    else if(isClickable){el.style.setProperty('color',text,'important');}
+    if(el.matches?.('svg,i,.icon,[class*="icon"]')){el.style.setProperty('color','currentColor','important');el.style.setProperty('fill','currentColor','important');}
+  });
+}
+function ccForceShellTheme(){
+  const s=load(),g=s.global||{};
+  ccFindSidebars().forEach(side=>ccPaintSidebar(side,g));
+  // Same-origin frames are also supported.
+  document.querySelectorAll('iframe').forEach(fr=>{try{const d=fr.contentDocument;if(!d)return; const oldDoc=document; d.querySelectorAll('aside,nav,[class*="sidebar"],[id*="sidebar"]').forEach(el=>ccPaintSidebar(el,g));}catch(e){}});
+}
+let ccThemeTimer;
+function ccScheduleForce(){clearTimeout(ccThemeTimer);ccForceShellTheme();ccThemeTimer=setTimeout(ccForceShellTheme,80);setTimeout(ccForceShellTheme,350);setTimeout(ccForceShellTheme,1000);}
+window.addEventListener('erp-control-center-change',ccScheduleForce);
+window.addEventListener('storage',e=>{if(e.key===KEY)ccScheduleForce()});
+window.addEventListener('load',ccScheduleForce);
+document.addEventListener('click',e=>{if(e.target.closest?.('.theme,[data-setting],#saveBtn'))setTimeout(ccScheduleForce,0)},true);
+setInterval(ccForceShellTheme,1500);
+
 })();
