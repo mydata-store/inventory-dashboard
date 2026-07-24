@@ -54,8 +54,8 @@ function shellSync(){
  document.querySelectorAll('.topbar,.top-ribbon,.app-topbar,#topbar,#appTopbar,.erp-topbar,.erp-ribbon,[data-erp-topbar]').forEach(el=>el.style.setProperty('background',g.topbar||'#fff','important'));
 }
 const originalApply=apply;window.ERPControlCenter.apply=()=>{originalApply();shellSync()};
-function ccStartShellSync(){shellSync();[100,350,900,1800].forEach(ms=>setTimeout(shellSync,ms));}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ccStartShellSync);else ccStartShellSync();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{shellSync();new MutationObserver(shellSync).observe(document.body,{childList:true,subtree:true})});
+else{shellSync();new MutationObserver(shellSync).observe(document.body,{childList:true,subtree:true})}
 
 
 // Control Center 2.2 — force theme into the Universal Sidebar even when its
@@ -96,12 +96,12 @@ function ccPaintSidebar(side,g){
     const cls=((el.className&&String(el.className))||'').toLowerCase();
     const role=(el.getAttribute&&((el.getAttribute('role')||'')+' '+(el.getAttribute('aria-current')||''))).toLowerCase();
     const txt=(el.textContent||'').trim();
-    const isProfile=/profile|user-card|account-card/.test(cls);
-    if(['ERP Design Studio','ERP Control Center'].includes(txt)) el.textContent=txt==='ERP Control Center'?'Settings':'Control Center';
+    if(txt==='ERP Design Studio') el.textContent='Control Center';
     if(isProfile && g.profileNameText){
       const n=el.querySelector?.('.cc-profile-name,strong,b,.name,[class*=name i]');
       if(n && !n.closest('[class*=status i],[class*=role i]')) n.textContent=g.profileNameText;
     }
+    const isProfile=/profile|user-card|account-card/.test(cls);
     const isActive=/\bactive\b|selected|current|menu-active|nav-active/.test(cls)||role.includes('page')||el.getAttribute?.('aria-selected')==='true';
     const isClickable=el.matches?.('a,button,[role="button"],.menu-item,.nav-item,.sidebar-item,.submenu-item');
     if(isProfile){el.style.setProperty('background',profile,'important');el.style.setProperty('background-color',profile,'important');el.style.setProperty('color',text,'important');}
@@ -122,7 +122,7 @@ window.addEventListener('erp-control-center-change',ccScheduleForce);
 window.addEventListener('storage',e=>{if(e.key===KEY)ccScheduleForce()});
 window.addEventListener('load',ccScheduleForce);
 document.addEventListener('click',e=>{if(e.target.closest?.('.theme,[data-setting],#saveBtn'))setTimeout(ccScheduleForce,0)},true);
-// Continuous repaint removed: bounded retries prevent browser lockups.
+setInterval(ccForceShellTheme,1500);
 
 
 function enhanceShell(){
@@ -151,7 +151,8 @@ function enhanceShell(){
    });
  });
 }
-function startEnhance(){enhanceShell();[250,700,1400].forEach(ms=>setTimeout(enhanceShell,ms))}
+const ccObs=new MutationObserver(()=>enhanceShell());
+function startEnhance(){enhanceShell();ccObs.observe(document.body,{subtree:true,childList:true});setTimeout(enhanceShell,250);setTimeout(enhanceShell,900)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startEnhance);else startEnhance();
 window.addEventListener('erp-control-center-change',enhanceShell);
 })();
@@ -191,7 +192,7 @@ function cc23Paint(){
     if(['A','BUTTON','SPAN','I','SVG','PATH','P','B','STRONG','SMALL','DIV'].includes(tag)){
       el.style.setProperty('--sidebar-text',text);
     }
-    {const t=(el.textContent||'').trim();if(t==='ERP Design Studio')el.textContent='Control Center';else if(t==='ERP Control Center')el.textContent='Settings';}
+    if((el.textContent||'').trim()==='ERP Design Studio') el.textContent='Control Center';
   });
   side.querySelectorAll('a,button,[role="button"],.menu-item,.nav-item,.sidebar-item,.side-item').forEach(el=>{
     el.style.setProperty('color',text,'important');
@@ -217,105 +218,7 @@ function cc23Start(){
   cc23Paint();
   [0,50,150,350,700,1200,2000].forEach(ms=>setTimeout(cc23Paint,ms));
   document.addEventListener('click',()=>[0,30,150,400].forEach(ms=>setTimeout(cc23Paint,ms)),true);
-  // Avoid observing style mutations created by this painter itself.
-  [2600,4200].forEach(ms=>setTimeout(cc23Paint,ms));
+  new MutationObserver(()=>requestAnimationFrame(cc23Paint)).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  setInterval(cc23Paint,1000);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',cc23Start);else cc23Start();
-
-
-// Control Center 3.2 — stable closed-by-default sidebar, Settings rename,
-// consistent menu typography, and profile-card repair.
-(()=>{
- const OPEN='data-cc-user-open';
- const menuSelectors='a,button,[role="button"],.menu-item,.nav-item,.sidebar-item,.side-item';
- const submenuSelectors='ul ul,.submenu,.sub-menu,[class*="submenu" i],[class*="sub-menu" i],[data-submenu]';
- function state(){try{return window.ERPControlCenter.load().global||{}}catch(e){return {}}}
- function sidebars(){try{return ccFindSidebars()}catch(e){return [...document.querySelectorAll('#appSidebar,.erp-sidebar,.universal-sidebar,[data-erp-sidebar],aside')].filter(x=>x.getBoundingClientRect().left<20)}}
- function cleanText(el){return (el.textContent||'').replace(/\s+/g,' ').trim()}
- function rename(side){
-   side.querySelectorAll('*').forEach(el=>{
-     if(el.children.length>2)return;
-     const t=cleanText(el);
-     if(t==='ERP Control Center') el.textContent='Settings';
-     if(t==='Control Center Dashboard') el.textContent='Settings Dashboard';
-   });
- }
- function submenus(side){return [...side.querySelectorAll(submenuSelectors)].filter(el=>el!==side)}
- function parentTrigger(sm){
-   const li=sm.closest('li')||sm.parentElement;
-   if(!li)return null;
-   return [...li.children].find(x=>x!==sm&&x.matches?.(menuSelectors))||li.querySelector(menuSelectors);
- }
- function setClosed(sm,closed){
-   sm.style.setProperty('display',closed?'none':'block','important');
-   sm.style.setProperty('height',closed?'0':'auto','important');
-   sm.style.setProperty('max-height',closed?'0':'none','important');
-   sm.style.setProperty('overflow',closed?'hidden':'visible','important');
-   sm.hidden=closed;
-   sm.setAttribute('aria-hidden',String(closed));
-   const tr=parentTrigger(sm); if(tr)tr.setAttribute('aria-expanded',String(!closed));
- }
- function enforceMenuState(side){
-   submenus(side).forEach(sm=>setClosed(sm,sm.getAttribute(OPEN)!=='1'));
- }
- function classify(side,g){
-   side.classList.add('cc-enhanced-sidebar','cc32-sidebar');
-   const mainSize=(g.sidebarMainFontSize||13)+'px', subSize=(g.sidebarSubFontSize||11)+'px';
-   const mainWeight=String(g.sidebarMainFontWeight||650),subWeight=String(g.sidebarSubFontWeight||500);
-   side.querySelectorAll(menuSelectors).forEach(el=>{
-     const nested=!!el.closest('ul ul,.submenu,.sub-menu,[class*="submenu" i],[class*="sub-menu" i]');
-     el.classList.toggle('cc-submenu-item',nested);el.classList.toggle('cc-main-menu-item',!nested);
-     const fs=nested?subSize:mainSize, fw=nested?subWeight:mainWeight;
-     el.style.setProperty('font-size',fs,'important');el.style.setProperty('font-weight',fw,'important');
-     el.style.setProperty('line-height',String(g.sidebarLineHeight||1.2),'important');
-     el.querySelectorAll('span,label,b,strong,small,div').forEach(ch=>{
-       if(ch.querySelector('a,button'))return;
-       ch.style.setProperty('font-size',fs,'important');ch.style.setProperty('font-weight',fw,'important');
-       ch.style.setProperty('line-height',String(g.sidebarLineHeight||1.2),'important');
-     });
-   });
- }
- function repairProfile(side,g){
-   const cards=[...side.querySelectorAll('.profile-card,.sidebar-profile,.user-card,[class*="profile-card" i],[class*="sidebar-profile" i]')];
-   cards.forEach(card=>{
-     card.classList.add('cc-profile-card','cc32-profile-card');
-     const img=card.querySelector('img'); if(img){img.classList.add('cc-profile-photo');if(g.profilePicture)img.src=g.profilePicture}
-     let name=card.querySelector('.cc-profile-name,.profile-name,.user-name,[class*="profile-name" i]');
-     if(!name){
-       name=[...card.querySelectorAll('strong,b,span,div')].find(x=>/muhammad|waqas/i.test(cleanText(x))&&!/online|officer/i.test(cleanText(x)));
-     }
-     if(name){name.classList.add('cc-profile-name');if(g.profileNameText)name.textContent=g.profileNameText}
-     let role=card.querySelector('.cc-profile-role,.role,[class*="role" i]');
-     if(!role) role=[...card.querySelectorAll('small,span,div')].find(x=>/officer|manager|admin/i.test(cleanText(x)));
-     if(role){role.classList.add('cc-profile-role');if(g.profileRoleText)role.textContent=g.profileRoleText}
-     let status=card.querySelector('.cc-profile-status,.status,[class*="status" i]');
-     if(!status) status=[...card.querySelectorAll('small,span,div')].find(x=>/^online$|^offline$/i.test(cleanText(x)));
-     if(status){status.classList.add('cc-profile-status');if(g.profileStatusText&&status.children.length===0)status.textContent=g.profileStatusText}
-     if(name){
-       let host=card.querySelector(':scope > .cc-profile-text-host');
-       if(!host){host=document.createElement('div');host.className='cc-profile-text-host';card.appendChild(host)}
-       [name,role,status].filter(Boolean).forEach(x=>{if(x.parentElement!==host)host.appendChild(x)});
-     }
-   });
- }
- function apply32(){
-   const g=state();
-   sidebars().forEach(side=>{rename(side);classify(side,g);repairProfile(side,g);enforceMenuState(side)});
- }
- document.addEventListener('click',e=>{
-   const side=sidebars().find(s=>s.contains(e.target));if(!side)return;
-   const trigger=e.target.closest(menuSelectors);if(!trigger)return;
-   const li=trigger.closest('li')||trigger.parentElement;if(!li)return;
-   const sm=[...li.children].find(x=>x.matches?.(submenuSelectors))||li.querySelector(':scope > ul,:scope > .submenu,:scope > .sub-menu,:scope > [data-submenu]');
-   if(!sm)return;
-   e.preventDefault();e.stopPropagation();
-   const willOpen=sm.getAttribute(OPEN)!=='1';
-   submenus(side).forEach(other=>{other.removeAttribute(OPEN);setClosed(other,true)});
-   if(willOpen){sm.setAttribute(OPEN,'1');setClosed(sm,false)}
- },true);
- function start(){apply32();[80,250,700,1400,2600].forEach(ms=>setTimeout(apply32,ms))}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
- window.addEventListener('erp-control-center-change',apply32);
-})();
-
-// Control Center 3.4: removed forced-width rescue loop.
