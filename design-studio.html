@@ -246,6 +246,13 @@
 .layout-top .control-group .side-submenu-inner,.layout-bottom .control-group .side-submenu-inner{padding-left:0}
 @media(max-width:1000px){.control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.control-two{grid-template-columns:1fr}}
 @media(max-width:620px){.control-grid{grid-template-columns:1fr}}
+
+/* Control Center Users page */
+.control-users-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.control-users-head h2{margin:0 0 4px}.control-users-head p{margin:0;color:var(--muted)}
+.control-filters{display:grid;grid-template-columns:minmax(240px,1.5fr) minmax(170px,.7fr) minmax(190px,.8fr);gap:12px;margin-bottom:14px}.control-filters input,.control-filters select{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:0 12px}
+.control-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}.control-table{width:100%;border-collapse:collapse;min-width:1080px;background:var(--surface)}.control-table th,.control-table td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}.control-table th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:color-mix(in srgb,var(--bg) 65%,var(--surface));position:sticky;top:0;z-index:1}.control-table tr:last-child td{border-bottom:0}.cc-user-cell{display:flex;align-items:center;gap:10px}.cc-user-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);background:#e8eef0}.cc-user-name{font-weight:800}.cc-user-email{font-size:11px;color:var(--muted);margin-top:2px}.cc-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;text-transform:capitalize}.cc-badge.active{background:#dcfce7;color:#166534}.cc-badge.disabled{background:#fee2e2;color:#991b1b}.cc-protected{display:inline-block;margin-left:5px;color:#9a6700;font-size:10px}.cc-actions{display:flex;gap:6px;flex-wrap:wrap}.cc-mini{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 9px;font-size:11px;font-weight:800;cursor:pointer}.cc-mini.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.cc-mini.danger{color:#a61b1b}.cc-empty{text-align:center;padding:34px;color:var(--muted)}
+.cc-modal{position:fixed;inset:0;background:rgba(5,18,31,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:200}.cc-modal.open{display:flex}.cc-modal-box{width:min(880px,96vw);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:20px}.cc-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.cc-modal-head h2{margin:0}.cc-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.cc-form-grid .full{grid-column:1/-1}.cc-form-grid label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;color:var(--muted)}.cc-form-grid input,.cc-form-grid select,.cc-form-grid textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:10px}.cc-form-grid input,.cc-form-grid select{height:42px}.cc-form-grid textarea{min-height:78px;resize:vertical}.cc-photo-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px;border:1px solid var(--border);border-radius:14px}.cc-photo-preview{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);background:#e8eef0}.cc-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.cc-security-note{padding:12px 14px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-top:14px;display:none}
+@media(max-width:850px){.control-filters{grid-template-columns:1fr}.cc-form-grid{grid-template-columns:1fr}.cc-form-grid .full{grid-column:auto}}
 </style>
 </head>
 <body>
@@ -368,9 +375,38 @@
       <div class="card"><h2>Recent Activity</h2><p class="sub">Latest actions in the Control Center.</p><div class="control-list" id="ccRecentActivity"></div></div>
     </div>
   </div>
+  <div class="control-workspace" id="control-users">
+    <div class="card">
+      <div class="control-users-head">
+        <div><h2>User Management</h2><p>Add users, assign roles, manage status and open individual security controls.</p></div>
+        <button class="btn primary" id="ccAddUser">Add User</button>
+      </div>
+      <div class="control-filters">
+        <input id="ccUserSearch" placeholder="Search by name, email, phone or department">
+        <select id="ccUserStatus"><option value="all">All statuses</option><option value="active">Active</option><option value="disabled">Disabled</option></select>
+        <select id="ccUserRole"><option value="all">All roles</option></select>
+      </div>
+      <div class="control-table-wrap"><table class="control-table"><thead><tr><th>User</th><th>Phone</th><th>Role</th><th>Department</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead><tbody id="ccUserRows"></tbody></table></div>
+    </div>
+  </div>
   <div class="control-workspace" id="control-placeholder"><div class="control-empty"><h2 id="ccPlaceholderTitle">Section</h2><p>This section will be moved here next, without opening another page.</p></div></div>
 </section>
-</main></div></div><div class="toast" id="toast"></div>
+</main></div></div>
+<div class="cc-modal" id="ccUserModal" aria-hidden="true"><div class="cc-modal-box">
+  <div class="cc-modal-head"><h2 id="ccUserModalTitle">Add User</h2><button class="btn" id="ccCloseUser">Close</button></div>
+  <div class="cc-photo-row"><img class="cc-photo-preview" id="ccPhotoPreview" alt="User photo"><div><input type="file" id="ccPhotoInput" accept="image/*" hidden><button class="btn" id="ccChangePhoto" type="button">Upload / Change Picture</button> <button class="btn" id="ccRemovePhoto" type="button">Remove</button><div class="value">A compressed preview is stored for testing.</div></div></div>
+  <div class="cc-form-grid">
+    <div><label>Full Name</label><input id="ccName"></div><div><label>Email</label><input id="ccEmail" type="email"></div>
+    <div><label>Phone Number</label><input id="ccPhone" placeholder="0300-1234567"></div><div><label>Alternate Phone</label><input id="ccAltPhone"></div>
+    <div><label>Role</label><select id="ccRole"></select></div><div><label>Department</label><input id="ccDepartment"></div>
+    <div><label>Designation</label><input id="ccDesignation"></div><div><label>Employee Code</label><input id="ccEmployeeCode"></div>
+    <div><label>Status</label><select id="ccStatus"><option value="active">Active</option><option value="disabled">Disabled</option></select></div><div><label>Account Expiry</label><input id="ccExpiry" type="date"></div>
+    <div class="full"><label>Remarks</label><textarea id="ccRemarks"></textarea></div>
+  </div>
+  <div class="cc-security-note" id="ccSuperNote"><b>Protected Super Administrator:</b> The final active Super Administrator cannot be disabled, deleted or downgraded.</div>
+  <div class="cc-modal-actions"><button class="btn" id="ccCancelUser">Cancel</button><button class="btn primary" id="ccSaveUser">Save User</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
 <script>
 (()=>{'use strict';
 const KEY='erpDesignStudioV45';
@@ -421,6 +457,58 @@ function renderControlDashboard(){
   $('#ccRecentActivity').innerHTML=activity.slice(0,6).map(a=>`<div class="control-list-item"><b>${a.action||'Activity'}</b><small>${new Date(a.time||Date.now()).toLocaleString()} · ${a.actor||'System'}</small></div>`).join('')||'<div class="control-list-item">No recent activity</div>';
 }
 
+
+let ccEditingUserId=null;
+function ccEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function ccControlState(){
+  const state=loadControlState();
+  if(!Array.isArray(state.users)) state.users=[];
+  if(!Array.isArray(state.roles)) state.roles=[];
+  if(!Array.isArray(state.activity)) state.activity=[];
+  if(!state.users.length) state.users=[{id:'mw-super-admin',name:'Muhammad Waqas',email:'',phone:'',altPhone:'',role:'Super Administrator',department:'Store',designation:'Store Officer',employeeCode:'',status:'active',lastLogin:'Now',remarks:'',avatar:''}];
+  state.users.forEach((u,i)=>{if(!u.id)u.id='user-'+Date.now()+'-'+i});
+  return state;
+}
+function ccSaveState(st){localStorage.setItem('erpProgramControlCenterV3',JSON.stringify(st));}
+function ccInitialsAvatar(name){
+  const initials=(name||'User').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'U';
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" rx="60" fill="#dce8f5"/><text x="60" y="70" text-anchor="middle" font-family="Segoe UI,Arial" font-size="38" font-weight="700" fill="#173b68">${initials}</text></svg>`)}`;
+}
+function ccRoleNames(st){return st.roles.map(r=>typeof r==='string'?r:r.name).filter(Boolean)}
+function ccPopulateRoles(st){
+  let roles=ccRoleNames(st); if(!roles.includes('Super Administrator'))roles.unshift('Super Administrator');
+  const filter=$('#ccUserRole'),form=$('#ccRole'); const fv=filter.value,rv=form.value;
+  filter.innerHTML='<option value="all">All roles</option>'+roles.map(r=>`<option>${ccEsc(r)}</option>`).join('');
+  form.innerHTML=roles.map(r=>`<option>${ccEsc(r)}</option>`).join('');
+  if([...filter.options].some(o=>o.value===fv))filter.value=fv;if([...form.options].some(o=>o.value===rv))form.value=rv;
+}
+function renderControlUsers(){
+  const st=ccControlState();ccPopulateRoles(st);
+  const q=($('#ccUserSearch').value||'').toLowerCase(),status=$('#ccUserStatus').value||'all',role=$('#ccUserRole').value||'all';
+  const users=st.users.filter(u=>(`${u.name||''} ${u.email||''} ${u.phone||''} ${u.department||''}`).toLowerCase().includes(q)&&(status==='all'||u.status===status)&&(role==='all'||u.role===role));
+  $('#ccUserRows').innerHTML=users.map(u=>`<tr><td><div class="cc-user-cell"><img class="cc-user-avatar" src="${u.avatar||ccInitialsAvatar(u.name)}"><div><div class="cc-user-name">${ccEsc(u.name)}${u.role==='Super Administrator'?'<span class="cc-protected">Protected</span>':''}</div><div class="cc-user-email">${ccEsc(u.email||'No email')}</div></div></div></td><td>${ccEsc(u.phone||'—')}</td><td>${ccEsc(u.role||'Unassigned')}</td><td>${ccEsc(u.department||'—')}</td><td><span class="cc-badge ${u.status==='disabled'?'disabled':'active'}">${ccEsc(u.status||'active')}</span></td><td>${ccEsc(u.lastLogin||'Never')}</td><td><div class="cc-actions"><button class="cc-mini primary" data-cc-edit="${u.id}">${u.role==='Super Administrator'?'Profile':'Edit'}</button><button class="cc-mini" data-cc-security="${u.id}">Security</button>${u.role==='Super Administrator'?'':`<button class="cc-mini" data-cc-toggle="${u.id}">${u.status==='disabled'?'Activate':'Disable'}</button><button class="cc-mini danger" data-cc-delete="${u.id}">Delete</button>`}</div></td></tr>`).join('')||'<tr><td colspan="7" class="cc-empty">No users found</td></tr>';
+  $$('[data-cc-edit]').forEach(b=>b.onclick=()=>ccOpenUser(b.dataset.ccEdit));
+  $$('[data-cc-security]').forEach(b=>b.onclick=()=>{const u=st.users.find(x=>x.id===b.dataset.ccSecurity);toast(`Security page for ${u?.name||'user'} will be moved after Users`)});
+  $$('[data-cc-toggle]').forEach(b=>b.onclick=()=>{const x=st.users.find(u=>u.id===b.dataset.ccToggle);if(!x)return;x.status=x.status==='disabled'?'active':'disabled';st.activity.unshift({action:`User ${x.status}: ${x.name}`,time:new Date().toISOString(),actor:'Muhammad Waqas'});ccSaveState(st);renderControlUsers();renderControlDashboard()});
+  $$('[data-cc-delete]').forEach(b=>b.onclick=()=>{const x=st.users.find(u=>u.id===b.dataset.ccDelete);if(x&&confirm(`Delete ${x.name}?`)){st.users=st.users.filter(u=>u.id!==x.id);st.activity.unshift({action:`User deleted: ${x.name}`,time:new Date().toISOString(),actor:'Muhammad Waqas'});ccSaveState(st);renderControlUsers();renderControlDashboard()}});
+}
+function ccOpenUser(id){
+  const st=ccControlState();ccPopulateRoles(st);const u=id?st.users.find(x=>x.id===id):null;ccEditingUserId=u?.id||null;
+  $('#ccUserModalTitle').textContent=u?(u.role==='Super Administrator'?'Super Administrator Profile':'Edit User'):'Add User';
+  const vals={Name:u?.name||'',Email:u?.email||'',Phone:u?.phone||'',AltPhone:u?.altPhone||'',Department:u?.department||'',Designation:u?.designation||'',EmployeeCode:u?.employeeCode||'',Expiry:u?.expiry||'',Remarks:u?.remarks||''};Object.entries(vals).forEach(([k,v])=>$('#cc'+k).value=v);
+  $('#ccRole').value=u?.role||ccRoleNames(st)[0]||'Super Administrator';$('#ccStatus').value=u?.status||'active';$('#ccPhotoPreview').src=u?.avatar||ccInitialsAvatar(u?.name||'New User');$('#ccPhotoPreview').dataset.avatar=u?.avatar||'';
+  const protectedUser=u?.role==='Super Administrator';$('#ccSuperNote').style.display=protectedUser?'block':'none';$('#ccRole').disabled=protectedUser;$('#ccStatus').disabled=protectedUser;
+  $('#ccUserModal').classList.add('open');$('#ccUserModal').setAttribute('aria-hidden','false');
+}
+function ccCloseUser(){$('#ccUserModal').classList.remove('open');$('#ccUserModal').setAttribute('aria-hidden','true');ccEditingUserId=null}
+function ccSaveUser(){
+  const st=ccControlState(),name=$('#ccName').value.trim(),email=$('#ccEmail').value.trim(),phone=$('#ccPhone').value.trim();if(!name)return toast('Full name is required');
+  if(phone&&st.users.some(u=>u.id!==ccEditingUserId&&String(u.phone||'').replace(/\D/g,'')===phone.replace(/\D/g,'')))return toast('Phone number already belongs to another user');
+  let u=st.users.find(x=>x.id===ccEditingUserId);if(!u){u={id:'user-'+Date.now(),lastLogin:'Never'};st.users.push(u)}
+  const wasSuper=u.role==='Super Administrator';Object.assign(u,{name,email,phone,altPhone:$('#ccAltPhone').value.trim(),role:wasSuper?'Super Administrator':$('#ccRole').value,department:$('#ccDepartment').value.trim(),designation:$('#ccDesignation').value.trim(),employeeCode:$('#ccEmployeeCode').value.trim(),status:wasSuper?'active':$('#ccStatus').value,expiry:$('#ccExpiry').value,remarks:$('#ccRemarks').value.trim(),avatar:$('#ccPhotoPreview').dataset.avatar||''});
+  st.activity.unshift({action:`User ${ccEditingUserId?'updated':'created'}: ${u.name}`,time:new Date().toISOString(),actor:'Muhammad Waqas'});ccSaveState(st);ccCloseUser();renderControlUsers();renderControlDashboard();toast('User saved')
+}
+
 function openStudioPanel(name,section){
   $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
   $$('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
@@ -433,9 +521,11 @@ function openStudioPanel(name,section){
     $('#controlGroup').classList.add('open');
     const target=section||'dashboard';
     $('#control-dashboard').classList.toggle('active',target==='dashboard');
-    $('#control-placeholder').classList.toggle('active',target!=='dashboard');
-    if(target!=='dashboard') $('#ccPlaceholderTitle').textContent=target.replace(/(^|[-_ ])\w/g,m=>m.toUpperCase());
+    $('#control-users').classList.toggle('active',target==='users');
+    $('#control-placeholder').classList.toggle('active',target!=='dashboard'&&target!=='users');
+    if(target!=='dashboard'&&target!=='users') $('#ccPlaceholderTitle').textContent=target.replace(/(^|[-_ ])\w/g,m=>m.toUpperCase());
     if(target==='dashboard') renderControlDashboard();
+    if(target==='users') renderControlUsers();
     const u=new URL(location.href);u.searchParams.set('studio','control-center');u.searchParams.set('section',target);history.replaceState(null,'',u);
   }else{
     const u=new URL(location.href);u.searchParams.delete('studio');u.searchParams.delete('section');history.replaceState(null,'',u);
@@ -450,6 +540,12 @@ function bind(){
   $$('[data-control-section]').forEach(b=>b.addEventListener('click',()=>openStudioPanel('control',b.dataset.controlSection)));
   $('#saveBtn').addEventListener('click',()=>{localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem('erpDesignSystem',JSON.stringify(state));toast('Design saved and applied')});
   $('#ccSave').addEventListener('click',()=>{localStorage.setItem('erpProgramControlCenterLastSaved',new Date().toISOString());toast('Control Center configuration saved')});
+  $('#ccAddUser').addEventListener('click',()=>ccOpenUser());
+  $('#ccUserSearch').addEventListener('input',renderControlUsers);$('#ccUserStatus').addEventListener('change',renderControlUsers);$('#ccUserRole').addEventListener('change',renderControlUsers);
+  $('#ccCloseUser').addEventListener('click',ccCloseUser);$('#ccCancelUser').addEventListener('click',ccCloseUser);$('#ccSaveUser').addEventListener('click',ccSaveUser);
+  $('#ccChangePhoto').addEventListener('click',()=>$('#ccPhotoInput').click());$('#ccRemovePhoto').addEventListener('click',()=>{$('#ccPhotoPreview').dataset.avatar='';$('#ccPhotoPreview').src=ccInitialsAvatar($('#ccName').value)});
+  $('#ccPhotoInput').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas'),max=260,scale=Math.min(1,max/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const data=c.toDataURL('image/jpeg',.86);$('#ccPhotoPreview').src=data;$('#ccPhotoPreview').dataset.avatar=data};img.src=r.result};r.readAsDataURL(f)});
+  $('#ccUserModal').addEventListener('click',e=>{if(e.target===$('#ccUserModal'))ccCloseUser()});
   $('#undoBtn').addEventListener('click',()=>{state=structuredClone(previous);sync();render();toast('Last change undone')});
   $('#restoreBtn').addEventListener('click',()=>{previous=structuredClone(state);state=structuredClone(defaults);sync();render();toast('Defaults restored')});
   $('#pictureInput').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{state.profile.picture=rd.result;render()};rd.readAsDataURL(f)});
