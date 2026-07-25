@@ -549,12 +549,24 @@ function bind(){
   $('#undoBtn').addEventListener('click',()=>{state=structuredClone(previous);sync();render();toast('Last change undone')});
   $('#restoreBtn').addEventListener('click',()=>{previous=structuredClone(state);state=structuredClone(defaults);sync();render();toast('Defaults restored')});
   $('#pictureInput').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{state.profile.picture=rd.result;render()};rd.readAsDataURL(f)});
-  const params=new URLSearchParams(location.search);if(params.get('studio')==='control-center')openStudioPanel('control',params.get('section')||'dashboard');
+  const params=new URLSearchParams(location.search);
+  if(params.get('studio')==='control-center'){
+    const requested=(params.get('section')||'dashboard').trim().toLowerCase();
+    openStudioPanel('control',requested);
+  }
 }
-sync();bind();render();clearInterval(clockTimer);clockTimer=setInterval(updateClock,1000);
+sync();bind();render();
+// Final route enforcement after all rendering so Users can never fall back to the placeholder.
+setTimeout(()=>{
+  const params=new URLSearchParams(location.search);
+  if(params.get('studio')==='control-center'){
+    const requested=(params.get('section')||'dashboard').trim().toLowerCase();
+    openStudioPanel('control',requested);
+  }
+},0);
+clearInterval(clockTimer);clockTimer=setInterval(updateClock,1000);
 })();
 </script>
 <script src="public/erp-security-bridge.js"></script>
-<script src="public/page-design-runtime.js"></script>
 <script>window.ERP_USER_ROLE='administrator';</script>
 </body></html>
