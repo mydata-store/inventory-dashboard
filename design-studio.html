@@ -569,6 +569,11 @@
   .master-list-head .master-toolbar .search{max-width:none}
 }
 
+
+/* Master dropdown and autofill controls V3.0 */
+.master-field-note{display:block;margin-top:4px;font-size:10px;color:var(--muted)}
+.master-autofill-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--primary) 12%,var(--surface));color:var(--primary);font-size:9px;font-weight:900;text-transform:uppercase}
+.master-form-grid input[list]{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:30px}
 </style>
 
 <script>
@@ -1811,13 +1816,38 @@ const MASTER_CONFIG={
   ],columns:['code','name','area','status']}
 };
 
+
+function seedMasterDefaults(raw){
+  if(!raw.units?.length)raw.units=[
+    {id:'seed-unit-kg',code:'UNT-0001',name:'Kilogram',symbol:'KG',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-unit-nos',code:'UNT-0002',name:'Numbers',symbol:'Nos',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-unit-ltr',code:'UNT-0003',name:'Litre',symbol:'Ltr',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-unit-mtr',code:'UNT-0004',name:'Metre',symbol:'Mtr',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}
+  ];
+  if(!raw.categories?.length)raw.categories=[
+    {id:'seed-cat-store',code:'CAT-0001',name:'Store Item',inventoryType:'Inventory',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-cat-lub',code:'CAT-0002',name:'Lubricants',inventoryType:'Inventory',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-cat-chem',code:'CAT-0003',name:'Chemicals',inventoryType:'Inventory',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-cat-raw',code:'CAT-0004',name:'Raw Materials',inventoryType:'Inventory',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-cat-bearing',code:'CAT-0005',name:'Bearings',inventoryType:'Inventory',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-cat-vbelt',code:'CAT-0006',name:'V Belts',inventoryType:'Inventory',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    {id:'seed-cat-other',code:'CAT-0007',name:'Others',inventoryType:'Inventory',status:'Active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}
+  ];
+  return raw;
+}
+
 function loadMasterData(){
   try{
     const raw=JSON.parse(localStorage.getItem(MASTER_DATA_KEY)||'{}');
     Object.keys(MASTER_CONFIG).forEach(k=>{if(!Array.isArray(raw[k]))raw[k]=[]});
+    seedMasterDefaults(raw);
+    localStorage.setItem(MASTER_DATA_KEY,JSON.stringify(raw));
     return raw;
   }catch(e){
-    return Object.fromEntries(Object.keys(MASTER_CONFIG).map(k=>[k,[]]));
+    const raw=Object.fromEntries(Object.keys(MASTER_CONFIG).map(k=>[k,[]]));
+    seedMasterDefaults(raw);
+    localStorage.setItem(MASTER_DATA_KEY,JSON.stringify(raw));
+    return raw;
   }
 }
 function saveMasterData(data){localStorage.setItem(MASTER_DATA_KEY,JSON.stringify(data))}
@@ -1848,15 +1878,87 @@ function renderMasterPage(){
   renderMasterFields();
   renderMasterTable();
 }
+function masterOptionsForField(tab,key,data){
+  const map={
+    items:{
+      unit:()=>data.units.filter(x=>(x.status||'Active')==='Active').map(x=>x.name||x.symbol).filter(Boolean),
+      category:()=>data.categories.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+    },
+    departments:{
+      authority:()=>data.authorizations.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+    },
+    workshops:{
+      contact:()=>data.employees.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+    },
+    authorizations:{
+      department:()=>data.departments.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+    },
+    employees:{
+      department:()=>data.departments.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+    },
+    vehicles:{
+      owner:()=>[
+        ...data.departments.filter(x=>(x.status||'Active')==='Active').map(x=>x.name),
+        ...data.suppliers.filter(x=>(x.status||'Active')==='Active').map(x=>x.name)
+      ].filter(Boolean)
+    },
+    locations:{
+      items:()=>data.items.filter(x=>(x.status||'Active')==='Active').map(x=>`${x.name||''}${x.size?' - '+x.size:''}`).filter(Boolean)
+    }
+  };
+  return [...new Set((map[tab]?.[key]?.()||[]).filter(Boolean))];
+}
+function masterAutoFill(tab,key,value,data){
+  const val=String(value||'').trim().toLowerCase();
+  if(!val)return;
+  if(tab==='items'&&key==='name'){
+    const found=data.items.find(x=>String(x.name||'').toLowerCase()===val);
+    if(found){
+      ['size','unit','category'].forEach(k=>{
+        const el=document.querySelector(`[data-master-field="${k}"]`);
+        if(el&&!el.value)el.value=found[k]||'';
+      });
+    }
+  }
+  if(tab==='suppliers'&&key==='name'){
+    const found=data.suppliers.find(x=>String(x.name||'').toLowerCase()===val);
+    if(found){
+      ['proprietor','phone','address','items'].forEach(k=>{
+        const el=document.querySelector(`[data-master-field="${k}"]`);
+        if(el&&!el.value)el.value=found[k]||'';
+      });
+    }
+  }
+  if(tab==='employees'&&key==='name'){
+    const found=data.employees.find(x=>String(x.name||'').toLowerCase()===val);
+    if(found){
+      ['department','designation','phone'].forEach(k=>{
+        const el=document.querySelector(`[data-master-field="${k}"]`);
+        if(el&&!el.value)el.value=found[k]||'';
+      });
+    }
+  }
+}
 function renderMasterFields(){
   const cfg=MASTER_CONFIG[currentMasterTab],data=loadMasterData(),row=editingMasterId?data[currentMasterTab].find(r=>r.id===editingMasterId):null;
   $('#masterFormFields').innerHTML=cfg.fields.map(f=>{
     const value=row?.[f.key]??(f.key==='status'?'Active':f.auto?masterCode(currentMasterTab,data):'');
     const cls=f.full?'full':'';
-    if(f.type==='select')return `<div class="${cls}"><label>${masterEsc(f.label)}</label><select data-master-field="${f.key}">${f.options.map(o=>`<option ${o===value?'selected':''}>${masterEsc(o)}</option>`).join('')}</select></div>`;
-    if(f.type==='textarea')return `<div class="${cls}"><label>${masterEsc(f.label)}</label><textarea data-master-field="${f.key}">${masterEsc(value)}</textarea></div>`;
-    return `<div class="${cls}"><label>${masterEsc(f.label)}</label><input data-master-field="${f.key}" value="${masterEsc(value)}" ${f.auto&&!row?'readonly':''}></div>`;
+    const options=masterOptionsForField(currentMasterTab,f.key,data);
+    const listId=`master-list-${currentMasterTab}-${f.key}`;
+    const linked=options.length>0;
+    const label=`${masterEsc(f.label)}${linked?'<span class="master-autofill-badge">Dropdown</span>':''}`;
+    if(f.type==='select')return `<div class="${cls}"><label>${label}</label><select data-master-field="${f.key}">${f.options.map(o=>`<option ${o===value?'selected':''}>${masterEsc(o)}</option>`).join('')}</select></div>`;
+    if(f.type==='textarea'){
+      if(linked)return `<div class="${cls}"><label>${label}</label><input data-master-field="${f.key}" list="${listId}" value="${masterEsc(value)}"><datalist id="${listId}">${options.map(o=>`<option value="${masterEsc(o)}"></option>`).join('')}</datalist><small class="master-field-note">Type to search or select an existing record.</small></div>`;
+      return `<div class="${cls}"><label>${label}</label><textarea data-master-field="${f.key}">${masterEsc(value)}</textarea></div>`;
+    }
+    return `<div class="${cls}"><label>${label}</label><input data-master-field="${f.key}" ${linked?`list="${listId}"`:''} value="${masterEsc(value)}" ${f.auto&&!row?'readonly':''}>${linked?`<datalist id="${listId}">${options.map(o=>`<option value="${masterEsc(o)}"></option>`).join('')}</datalist><small class="master-field-note">Type one or two letters to search.</small>`:''}</div>`;
   }).join('');
+  $$('[data-master-field]').forEach(el=>{
+    el.addEventListener('change',()=>masterAutoFill(currentMasterTab,el.dataset.masterField,el.value,data));
+    el.addEventListener('blur',()=>masterAutoFill(currentMasterTab,el.dataset.masterField,el.value,data));
+  });
 }
 function renderMasterTable(){
   const cfg=MASTER_CONFIG[currentMasterTab],data=loadMasterData(),q=$('#masterSearch').value.trim().toLowerCase(),status=$('#masterStatusFilter').value;
