@@ -226,6 +226,13 @@
   z-index:1;
 }
 
+
+/* Built-in Control Center studio */
+.control-studio-card{padding:0;overflow:hidden;min-height:calc(100vh - 150px)}
+.control-studio-frame{display:block;width:100%;height:calc(100vh - 154px);min-height:760px;border:0;background:var(--bg)}
+.side-group.control-group .side-submenu-inner{padding-left:var(--side-subindent)}
+.layout-top .control-group .side-submenu-inner,.layout-bottom .control-group .side-submenu-inner{padding-left:0}
+@media(max-width:700px){.control-studio-frame{height:calc(100vh - 190px);min-height:650px}}
 </style>
 </head>
 <body>
@@ -243,6 +250,19 @@
         <button class="side-subitem" data-panel="profile"><span>Profile Card Designer</span></button>
       </div></div>
     </div>
+    <div class="side-group control-group" id="controlGroup">
+      <button class="side-group-toggle" title="Control Center"><span class="side-icon">⛨</span><span>Control Center</span><span class="chev">⌃</span></button>
+      <div class="side-submenu"><div class="side-submenu-inner">
+        <button class="side-subitem" data-control-section="dashboard"><span>Dashboard</span></button>
+        <button class="side-subitem" data-control-section="users"><span>Users</span></button>
+        <button class="side-subitem" data-control-section="roles"><span>Roles</span></button>
+        <button class="side-subitem" data-control-section="permissions"><span>Permissions</span></button>
+        <button class="side-subitem" data-control-section="restrictions"><span>Data Restrictions</span></button>
+        <button class="side-subitem" data-control-section="sessions"><span>Sessions</span></button>
+        <button class="side-subitem" data-control-section="activity"><span>Activity Log</span></button>
+        <button class="side-subitem" data-control-section="security"><span>Security</span></button>
+      </div></div>
+    </div>
   </nav>
   <div class="side-bottom">
     <div class="side-clock" id="sideClock"><span class="clock-icon">◷</span><div class="clock-copy"><div class="clock-time" id="clockTime"></div><div class="clock-date" id="clockDate"></div></div></div>
@@ -250,7 +270,7 @@
   </div>
 </aside>
 <div class="page-shell">
-<header class="top"><div class="title"><h1>Design Studio</h1><p>Theme, sidebar and profile design for the complete ERP.</p></div><div class="actions"><a class="btn" href="program-control-center.html">Program Control Center</a><a class="btn" href="costing.html">← Costing Dashboard</a><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
+<header class="top"><div class="title"><h1 id="workspaceTitle">Design Studio</h1><p id="workspaceSubtitle">Theme, sidebar and profile design for the complete ERP.</p></div><div class="actions"><a class="btn" href="costing.html">← Costing Dashboard</a><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
 <main class="content">
 <div class="notice">Changes preview instantly. Use <b>Save & Apply</b> to store them for connected ERP pages.</div>
 <section class="panel active" id="panel-theme">
@@ -316,6 +336,12 @@
     <div class="field"><label>Show Picture</label><div class="switch"><input type="checkbox" data-key="profile.showPicture"> Visible</div></div><div class="field"><label>Show Role</label><div class="switch"><input type="checkbox" data-key="profile.showRole"> Visible</div></div><div class="field"><label>Show Status</label><div class="switch"><input type="checkbox" data-key="profile.showStatus"> Visible</div></div>
   </div></div></div></div>
 </section>
+
+<section class="panel" id="panel-control">
+  <div class="card control-studio-card">
+    <iframe id="controlFrame" class="control-studio-frame" src="program-control-center.html?embedded=1&amp;section=dashboard" title="Control Center"></iframe>
+  </div>
+</section>
 </main></div></div><div class="toast" id="toast"></div>
 <script>
 (()=>{'use strict';
@@ -348,7 +374,37 @@ function formatDate(d,fmt){const pad=n=>String(n).padStart(2,'0'),mons=['Jan','F
 function updateClock(){const d=new Date(),opt={hour:'2-digit',minute:'2-digit',hour12:state.clock.format==='12'};if(state.clock.seconds)opt.second='2-digit';$('#clockTime').textContent=d.toLocaleTimeString('en-US',opt);$('#clockDate').textContent=formatDate(d,state.clock.dateFormat);$('#clockDate').style.display=state.clock.showDate?'block':'none'}
 function render(){const r=document.documentElement.style,t=state.theme,s=state.sidebar,c=state.clock,p=state.profile;r.setProperty('--bg',t.background);r.setProperty('--surface',t.surface);r.setProperty('--text',t.text);r.setProperty('--muted',t.muted);r.setProperty('--primary',t.primary);r.setProperty('--accent',t.accent);r.setProperty('--border',t.border);r.setProperty('--font',`'${t.fontFamily}',Arial,sans-serif`);r.setProperty('--side-w',s.width+'px');r.setProperty('--side-cw',s.collapsedWidth+'px');r.setProperty('--side-row',s.rowHeight+'px');r.setProperty('--side-subrow',s.subRowHeight+'px');r.setProperty('--side-icon',s.iconSize+'px');r.setProperty('--side-radius',s.radius+'px');r.setProperty('--side-gap',s.gap+'px');r.setProperty('--side-subindent',s.subIndent+'px');r.setProperty('--side-main',s.mainSize+'px');r.setProperty('--side-sub',s.subSize+'px');r.setProperty('--side-line',s.lineHeight);r.setProperty('--side-letter',s.letterSpacing+'px');r.setProperty('--side-anim',s.animation+'ms');r.setProperty('--side-bg',t.sidebar);r.setProperty('--side-text',t.sidebarText);r.setProperty('--side-active',t.sidebarActive);r.setProperty('--side-active-text',t.sidebarActiveText);r.setProperty('--clock-bg',c.background);r.setProperty('--clock-border',t.sidebarText+'35');document.body.style.fontSize=t.baseSize+'px';$$('h1,h2,h3').forEach(h=>h.style.fontWeight=t.headingWeight);$$('.side-item,.side-group-toggle').forEach(x=>{x.style.fontSize=s.mainSize+'px';x.style.fontWeight=s.mainWeight;x.style.lineHeight=s.lineHeight;x.style.letterSpacing=s.letterSpacing+'px';x.style.textAlign=s.alignment;x.style.whiteSpace=s.wrap});$$('.side-subitem').forEach(x=>{x.style.fontSize=s.subSize+'px';x.style.fontWeight=s.subWeight;x.style.textAlign=s.alignment;x.style.whiteSpace=s.wrap});const app=$('#app');app.classList.remove('layout-left','layout-top','layout-bottom','taskbar-peek');app.classList.add('layout-'+s.position);const horizontal=s.position==='top'||s.position==='bottom';app.classList.toggle('collapsed',!horizontal&&s.defaultState==='collapsed');app.classList.remove('peek');$('#sideClock').style.display=c.show?'flex':'none';$('#sideClock').style.color=c.color;$('#clockTime').style.fontSize=c.fontSize+'px';$('#sideAvatar').style.display=p.showPicture?'block':'none';$('#sideAvatar').src=p.picture||'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e8eef0"/%3E%3Ccircle cx="50" cy="37" r="18" fill="%235f7280"/%3E%3Cpath d="M17 95c4-25 19-36 33-36s29 11 33 36" fill="%235f7280"/%3E%3C/svg%3E';$('#sideAvatar').style.width=p.pictureSize+'px';$('#sideAvatar').style.height=p.pictureSize+'px';$('#sideAvatar').style.borderWidth=p.pictureBorderWidth+'px';$('#sideAvatar').style.borderColor=p.pictureBorder;$('#sideAvatar').style.borderRadius=p.pictureShape==='circle'?'50%':p.pictureShape==='square'?'0':p.pictureShape==='oval'?'50% / 38%':'12px';$('#sidePname').textContent=p.name;$('#sidePname').style.fontFamily=p.nameFont;$('#sidePname').style.fontSize=p.nameSize+'px';$('#sidePname').style.color=p.nameColor;$('#sidePname').style.fontWeight=p.nameWeight;$('#sidePname').style.fontStyle=p.nameStyle;$('#sidePname').style.whiteSpace=p.nameWrap;$('#sidePname').style.textAlign=p.textAlign;$('#sideProle').textContent=p.role;$('#sideProle').style.display=p.showRole?'block':'none';$('#sideProle').style.color=p.roleColor;$('#sidePstatus').textContent='● '+p.status;$('#sidePstatus').style.display=p.showStatus?'block':'none';$('#sidePstatus').style.color=p.statusColor;$$('.side-profile,.profile-card').forEach(x=>{x.style.background=p.cardBackground;x.style.borderColor=p.cardBorder;x.style.borderRadius=p.cardRadius+'px'});$('#profilePreviewImg').src=$('#sideAvatar').src;$('#profilePreviewImg').style.display=p.showPicture?'block':'none';$('#profilePreviewImg').style.width=p.pictureSize+'px';$('#profilePreviewImg').style.height=p.pictureSize+'px';$('#profilePreviewImg').style.borderWidth=p.pictureBorderWidth+'px';$('#profilePreviewImg').style.borderColor=p.pictureBorder;$('#profilePreviewImg').style.borderRadius=$('#sideAvatar').style.borderRadius;$('#profilePreviewName').textContent=p.name;$('#profilePreviewName').style.cssText=`font-family:${p.nameFont};font-size:${p.nameSize}px;color:${p.nameColor};font-weight:${p.nameWeight};font-style:${p.nameStyle};white-space:${p.nameWrap};text-align:${p.textAlign}`;$('#profilePreviewRole').textContent=p.role;$('#profilePreviewRole').style.display=p.showRole?'block':'none';$('#profilePreviewRole').style.color=p.roleColor;$('#profilePreviewStatus').textContent='● '+p.status;$('#profilePreviewStatus').style.display=p.showStatus?'block':'none';$('#profilePreviewStatus').style.color=p.statusColor;updateClock();applySubmenuOpening()}
 function applySubmenuOpening(){const g=$('#settingsGroup');if(state.sidebar.submenuOpening==='current')g.classList.add('open');else if(state.sidebar.submenuOpening==='remember'){g.classList.toggle('open',localStorage.getItem('ds:lastGroup')==='settings')}else g.classList.remove('open')}
-function bind(){$$('[data-key]').forEach(el=>{['input','change'].forEach(ev=>el.addEventListener(ev,()=>{previous=structuredClone(state);set(el.dataset.key,parse(el));updateValue(el);render()}))});$('#studioSidebar').addEventListener('mouseenter',()=>{const app=$('#app');if(state.sidebar.position==='left'&&state.sidebar.defaultState==='collapsed')app.classList.add('peek');if(state.sidebar.position==='top'||state.sidebar.position==='bottom')app.classList.add('taskbar-peek')});$('#studioSidebar').addEventListener('mouseleave',()=>{const app=$('#app');app.classList.remove('peek','taskbar-peek')});$('.side-group-toggle').addEventListener('click',()=>{const g=$('#settingsGroup');g.classList.toggle('open');if(g.classList.contains('open'))localStorage.setItem('ds:lastGroup','settings');else localStorage.removeItem('ds:lastGroup')});$$('[data-panel]').forEach(b=>b.addEventListener('click',()=>{$$('[data-panel]').forEach(x=>x.classList.remove('active'));b.classList.add('active');$$('.panel').forEach(p=>p.classList.remove('active'));$('#panel-'+b.dataset.panel).classList.add('active')}));$('#saveBtn').addEventListener('click',()=>{localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem('erpDesignSystem',JSON.stringify(state));toast('Design saved and applied')});$('#undoBtn').addEventListener('click',()=>{state=structuredClone(previous);sync();render();toast('Last change undone')});$('#restoreBtn').addEventListener('click',()=>{previous=structuredClone(state);state=structuredClone(defaults);sync();render();toast('Defaults restored')});$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{state.profile.picture=rd.result;render()};rd.readAsDataURL(f)})}
+function openStudioPanel(name,section){
+  $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
+  $$('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
+  $$('.panel').forEach(p=>p.classList.remove('active'));
+  const panel=$('#panel-'+name); if(panel) panel.classList.add('active');
+  const isControl=name==='control';
+  $('#workspaceTitle').textContent=isControl?'Control Center':'Design Studio';
+  $('#workspaceSubtitle').textContent=isControl?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.';
+  if(isControl){
+    $('#controlGroup').classList.add('open');
+    const frame=$('#controlFrame'),target=section||'dashboard';
+    const send=()=>frame.contentWindow&&frame.contentWindow.postMessage({type:'erp-control-section',section:target},'*');
+    if(frame.dataset.ready==='1')send();else frame.addEventListener('load',()=>{frame.dataset.ready='1';send()},{once:true});
+    const u=new URL(location.href);u.searchParams.set('studio','control-center');u.searchParams.set('section',target);history.replaceState(null,'',u);
+  }else{
+    const u=new URL(location.href);u.searchParams.delete('studio');u.searchParams.delete('section');history.replaceState(null,'',u);
+  }
+}
+function bind(){
+  $$('[data-key]').forEach(el=>{['input','change'].forEach(ev=>el.addEventListener(ev,()=>{previous=structuredClone(state);set(el.dataset.key,parse(el));updateValue(el);render()}))});
+  $('#studioSidebar').addEventListener('mouseenter',()=>{const app=$('#app');if(state.sidebar.position==='left'&&state.sidebar.defaultState==='collapsed')app.classList.add('peek');if(state.sidebar.position==='top'||state.sidebar.position==='bottom')app.classList.add('taskbar-peek')});
+  $('#studioSidebar').addEventListener('mouseleave',()=>{$('#app').classList.remove('peek','taskbar-peek')});
+  $$('.side-group-toggle').forEach(toggle=>toggle.addEventListener('click',()=>{const g=toggle.closest('.side-group');if(state.sidebar.submenuMode==='single')$$('.side-group').forEach(x=>{if(x!==g)x.classList.remove('open')});g.classList.toggle('open');if(g.id==='settingsGroup'){if(g.classList.contains('open'))localStorage.setItem('ds:lastGroup','settings');else localStorage.removeItem('ds:lastGroup')}}));
+  $$('[data-panel]').forEach(b=>b.addEventListener('click',()=>openStudioPanel(b.dataset.panel)));
+  $$('[data-control-section]').forEach(b=>b.addEventListener('click',()=>openStudioPanel('control',b.dataset.controlSection)));
+  $('#saveBtn').addEventListener('click',()=>{localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem('erpDesignSystem',JSON.stringify(state));toast('Design saved and applied')});
+  $('#undoBtn').addEventListener('click',()=>{state=structuredClone(previous);sync();render();toast('Last change undone')});
+  $('#restoreBtn').addEventListener('click',()=>{previous=structuredClone(state);state=structuredClone(defaults);sync();render();toast('Defaults restored')});
+  $('#pictureInput').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{state.profile.picture=rd.result;render()};rd.readAsDataURL(f)});
+  const params=new URLSearchParams(location.search);if(params.get('studio')==='control-center')openStudioPanel('control',params.get('section')||'dashboard');
+}
 sync();bind();render();clearInterval(clockTimer);clockTimer=setInterval(updateClock,1000);
 })();
 </script>
