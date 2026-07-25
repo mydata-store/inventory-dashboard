@@ -227,12 +227,25 @@
 }
 
 
-/* Built-in Control Center studio */
-.control-studio-card{padding:0;overflow:hidden;min-height:calc(100vh - 150px)}
-.control-studio-frame{display:block;width:100%;height:calc(100vh - 154px);min-height:760px;border:0;background:var(--bg)}
+/* Built-in Control Center workspace (native, no iframe) */
+.control-workspace{display:none}
+.control-workspace.active{display:block}
+.control-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap}
+.control-user-chip{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-weight:700}
+.control-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.control-kpi{padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.control-kpi small{display:block;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.control-kpi strong{display:block;font-size:30px;margin:8px 0 4px}
+.control-two{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
+.control-list{display:grid;gap:9px;margin-top:12px}
+.control-list-item{padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--surface) 94%,var(--primary) 6%)}
+.control-list-item b{display:block}
+.control-list-item small{display:block;color:var(--muted);margin-top:4px}
+.control-empty{padding:36px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:14px;background:var(--surface)}
 .side-group.control-group .side-submenu-inner{padding-left:var(--side-subindent)}
 .layout-top .control-group .side-submenu-inner,.layout-bottom .control-group .side-submenu-inner{padding-left:0}
-@media(max-width:700px){.control-studio-frame{height:calc(100vh - 190px);min-height:650px}}
+@media(max-width:1000px){.control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.control-two{grid-template-columns:1fr}}
+@media(max-width:620px){.control-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -338,9 +351,24 @@
 </section>
 
 <section class="panel" id="panel-control">
-  <div class="card control-studio-card">
-    <iframe id="controlFrame" class="control-studio-frame" src="program-control-center.html?embedded=1&amp;section=dashboard" title="Control Center"></iframe>
+  <div class="control-workspace active" id="control-dashboard">
+    <div class="control-toolbar">
+      <div class="control-user-chip">Current User <span id="ccCurrentUser">Muhammad Waqas · Super Administrator</span></div>
+      <button class="btn primary" id="ccSave">Save Configuration</button>
+    </div>
+    <div class="notice"><b>Super Administrator:</b> Full access is protected. User, role and security pages will be moved into this same workspace one by one.</div>
+    <div class="control-grid">
+      <div class="control-kpi"><small>Users</small><strong id="ccUsers">1</strong><span>Active and disabled accounts</span></div>
+      <div class="control-kpi"><small>Active Users</small><strong id="ccActive">1</strong><span>Allowed to sign in</span></div>
+      <div class="control-kpi"><small>Roles</small><strong id="ccRoles">9</strong><span>Standard and custom roles</span></div>
+      <div class="control-kpi"><small>Audit Events</small><strong id="ccEvents">2</strong><span>Recent administrative changes</span></div>
+    </div>
+    <div class="control-two">
+      <div class="card"><h2>Access Overview</h2><p class="sub">Current role assignments and restrictions.</p><div class="control-list" id="ccRoleSummary"></div></div>
+      <div class="card"><h2>Recent Activity</h2><p class="sub">Latest actions in the Control Center.</p><div class="control-list" id="ccRecentActivity"></div></div>
+    </div>
   </div>
+  <div class="control-workspace" id="control-placeholder"><div class="control-empty"><h2 id="ccPlaceholderTitle">Section</h2><p>This section will be moved here next, without opening another page.</p></div></div>
 </section>
 </main></div></div><div class="toast" id="toast"></div>
 <script>
@@ -374,6 +402,25 @@ function formatDate(d,fmt){const pad=n=>String(n).padStart(2,'0'),mons=['Jan','F
 function updateClock(){const d=new Date(),opt={hour:'2-digit',minute:'2-digit',hour12:state.clock.format==='12'};if(state.clock.seconds)opt.second='2-digit';$('#clockTime').textContent=d.toLocaleTimeString('en-US',opt);$('#clockDate').textContent=formatDate(d,state.clock.dateFormat);$('#clockDate').style.display=state.clock.showDate?'block':'none'}
 function render(){const r=document.documentElement.style,t=state.theme,s=state.sidebar,c=state.clock,p=state.profile;r.setProperty('--bg',t.background);r.setProperty('--surface',t.surface);r.setProperty('--text',t.text);r.setProperty('--muted',t.muted);r.setProperty('--primary',t.primary);r.setProperty('--accent',t.accent);r.setProperty('--border',t.border);r.setProperty('--font',`'${t.fontFamily}',Arial,sans-serif`);r.setProperty('--side-w',s.width+'px');r.setProperty('--side-cw',s.collapsedWidth+'px');r.setProperty('--side-row',s.rowHeight+'px');r.setProperty('--side-subrow',s.subRowHeight+'px');r.setProperty('--side-icon',s.iconSize+'px');r.setProperty('--side-radius',s.radius+'px');r.setProperty('--side-gap',s.gap+'px');r.setProperty('--side-subindent',s.subIndent+'px');r.setProperty('--side-main',s.mainSize+'px');r.setProperty('--side-sub',s.subSize+'px');r.setProperty('--side-line',s.lineHeight);r.setProperty('--side-letter',s.letterSpacing+'px');r.setProperty('--side-anim',s.animation+'ms');r.setProperty('--side-bg',t.sidebar);r.setProperty('--side-text',t.sidebarText);r.setProperty('--side-active',t.sidebarActive);r.setProperty('--side-active-text',t.sidebarActiveText);r.setProperty('--clock-bg',c.background);r.setProperty('--clock-border',t.sidebarText+'35');document.body.style.fontSize=t.baseSize+'px';$$('h1,h2,h3').forEach(h=>h.style.fontWeight=t.headingWeight);$$('.side-item,.side-group-toggle').forEach(x=>{x.style.fontSize=s.mainSize+'px';x.style.fontWeight=s.mainWeight;x.style.lineHeight=s.lineHeight;x.style.letterSpacing=s.letterSpacing+'px';x.style.textAlign=s.alignment;x.style.whiteSpace=s.wrap});$$('.side-subitem').forEach(x=>{x.style.fontSize=s.subSize+'px';x.style.fontWeight=s.subWeight;x.style.textAlign=s.alignment;x.style.whiteSpace=s.wrap});const app=$('#app');app.classList.remove('layout-left','layout-top','layout-bottom','taskbar-peek');app.classList.add('layout-'+s.position);const horizontal=s.position==='top'||s.position==='bottom';app.classList.toggle('collapsed',!horizontal&&s.defaultState==='collapsed');app.classList.remove('peek');$('#sideClock').style.display=c.show?'flex':'none';$('#sideClock').style.color=c.color;$('#clockTime').style.fontSize=c.fontSize+'px';$('#sideAvatar').style.display=p.showPicture?'block':'none';$('#sideAvatar').src=p.picture||'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e8eef0"/%3E%3Ccircle cx="50" cy="37" r="18" fill="%235f7280"/%3E%3Cpath d="M17 95c4-25 19-36 33-36s29 11 33 36" fill="%235f7280"/%3E%3C/svg%3E';$('#sideAvatar').style.width=p.pictureSize+'px';$('#sideAvatar').style.height=p.pictureSize+'px';$('#sideAvatar').style.borderWidth=p.pictureBorderWidth+'px';$('#sideAvatar').style.borderColor=p.pictureBorder;$('#sideAvatar').style.borderRadius=p.pictureShape==='circle'?'50%':p.pictureShape==='square'?'0':p.pictureShape==='oval'?'50% / 38%':'12px';$('#sidePname').textContent=p.name;$('#sidePname').style.fontFamily=p.nameFont;$('#sidePname').style.fontSize=p.nameSize+'px';$('#sidePname').style.color=p.nameColor;$('#sidePname').style.fontWeight=p.nameWeight;$('#sidePname').style.fontStyle=p.nameStyle;$('#sidePname').style.whiteSpace=p.nameWrap;$('#sidePname').style.textAlign=p.textAlign;$('#sideProle').textContent=p.role;$('#sideProle').style.display=p.showRole?'block':'none';$('#sideProle').style.color=p.roleColor;$('#sidePstatus').textContent='● '+p.status;$('#sidePstatus').style.display=p.showStatus?'block':'none';$('#sidePstatus').style.color=p.statusColor;$$('.side-profile,.profile-card').forEach(x=>{x.style.background=p.cardBackground;x.style.borderColor=p.cardBorder;x.style.borderRadius=p.cardRadius+'px'});$('#profilePreviewImg').src=$('#sideAvatar').src;$('#profilePreviewImg').style.display=p.showPicture?'block':'none';$('#profilePreviewImg').style.width=p.pictureSize+'px';$('#profilePreviewImg').style.height=p.pictureSize+'px';$('#profilePreviewImg').style.borderWidth=p.pictureBorderWidth+'px';$('#profilePreviewImg').style.borderColor=p.pictureBorder;$('#profilePreviewImg').style.borderRadius=$('#sideAvatar').style.borderRadius;$('#profilePreviewName').textContent=p.name;$('#profilePreviewName').style.cssText=`font-family:${p.nameFont};font-size:${p.nameSize}px;color:${p.nameColor};font-weight:${p.nameWeight};font-style:${p.nameStyle};white-space:${p.nameWrap};text-align:${p.textAlign}`;$('#profilePreviewRole').textContent=p.role;$('#profilePreviewRole').style.display=p.showRole?'block':'none';$('#profilePreviewRole').style.color=p.roleColor;$('#profilePreviewStatus').textContent='● '+p.status;$('#profilePreviewStatus').style.display=p.showStatus?'block':'none';$('#profilePreviewStatus').style.color=p.statusColor;updateClock();applySubmenuOpening()}
 function applySubmenuOpening(){const g=$('#settingsGroup');if(state.sidebar.submenuOpening==='current')g.classList.add('open');else if(state.sidebar.submenuOpening==='remember'){g.classList.toggle('open',localStorage.getItem('ds:lastGroup')==='settings')}else g.classList.remove('open')}
+
+function loadControlState(){
+  const fallback={users:[{name:'Muhammad Waqas',role:'Super Administrator',status:'active'}],roles:['Super Administrator','Administrator','Store Manager','Store Officer','Purchaser','Gate Pass Officer','Costing Officer','Report Viewer','Read Only'],activity:[{action:'Program Control Center initialized',time:new Date().toISOString(),actor:'Muhammad Waqas'}]};
+  try{return Object.assign(fallback,JSON.parse(localStorage.getItem('erpProgramControlCenterV3')||localStorage.getItem('erpProgramControlCenterV1')||'{}'))}catch(e){return fallback}
+}
+function renderControlDashboard(){
+  const cs=loadControlState(),users=Array.isArray(cs.users)?cs.users:[],roles=Array.isArray(cs.roles)?cs.roles:[],activity=Array.isArray(cs.activity)?cs.activity:[];
+  $('#ccUsers').textContent=users.length;
+  $('#ccActive').textContent=users.filter(u=>u.status!=='disabled').length;
+  $('#ccRoles').textContent=roles.length;
+  $('#ccEvents').textContent=activity.length;
+  const currentId=localStorage.getItem('erpCurrentUserId');
+  const current=users.find(u=>u.id===currentId)||users[0]||{name:'Muhammad Waqas',role:'Super Administrator'};
+  $('#ccCurrentUser').textContent=`${current.name||'Muhammad Waqas'} · ${current.role||'Super Administrator'}`;
+  const summary={};users.forEach(u=>summary[u.role||'Unassigned']=(summary[u.role||'Unassigned']||0)+1);
+  $('#ccRoleSummary').innerHTML=Object.entries(summary).map(([role,count])=>`<div class="control-list-item"><b>${role}</b><small>${count} user${count===1?'':'s'}</small></div>`).join('')||'<div class="control-list-item">No role assignments</div>';
+  $('#ccRecentActivity').innerHTML=activity.slice(0,6).map(a=>`<div class="control-list-item"><b>${a.action||'Activity'}</b><small>${new Date(a.time||Date.now()).toLocaleString()} · ${a.actor||'System'}</small></div>`).join('')||'<div class="control-list-item">No recent activity</div>';
+}
+
 function openStudioPanel(name,section){
   $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
   $$('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
@@ -384,9 +431,11 @@ function openStudioPanel(name,section){
   $('#workspaceSubtitle').textContent=isControl?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.';
   if(isControl){
     $('#controlGroup').classList.add('open');
-    const frame=$('#controlFrame'),target=section||'dashboard';
-    const send=()=>frame.contentWindow&&frame.contentWindow.postMessage({type:'erp-control-section',section:target},'*');
-    if(frame.dataset.ready==='1')send();else frame.addEventListener('load',()=>{frame.dataset.ready='1';send()},{once:true});
+    const target=section||'dashboard';
+    $('#control-dashboard').classList.toggle('active',target==='dashboard');
+    $('#control-placeholder').classList.toggle('active',target!=='dashboard');
+    if(target!=='dashboard') $('#ccPlaceholderTitle').textContent=target.replace(/(^|[-_ ])\w/g,m=>m.toUpperCase());
+    if(target==='dashboard') renderControlDashboard();
     const u=new URL(location.href);u.searchParams.set('studio','control-center');u.searchParams.set('section',target);history.replaceState(null,'',u);
   }else{
     const u=new URL(location.href);u.searchParams.delete('studio');u.searchParams.delete('section');history.replaceState(null,'',u);
@@ -400,6 +449,7 @@ function bind(){
   $$('[data-panel]').forEach(b=>b.addEventListener('click',()=>openStudioPanel(b.dataset.panel)));
   $$('[data-control-section]').forEach(b=>b.addEventListener('click',()=>openStudioPanel('control',b.dataset.controlSection)));
   $('#saveBtn').addEventListener('click',()=>{localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem('erpDesignSystem',JSON.stringify(state));toast('Design saved and applied')});
+  $('#ccSave').addEventListener('click',()=>{localStorage.setItem('erpProgramControlCenterLastSaved',new Date().toISOString());toast('Control Center configuration saved')});
   $('#undoBtn').addEventListener('click',()=>{state=structuredClone(previous);sync();render();toast('Last change undone')});
   $('#restoreBtn').addEventListener('click',()=>{previous=structuredClone(state);state=structuredClone(defaults);sync();render();toast('Defaults restored')});
   $('#pictureInput').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{state.profile.picture=rd.result;render()};rd.readAsDataURL(f)});
