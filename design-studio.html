@@ -574,6 +574,9 @@
 .master-field-note{display:block;margin-top:4px;font-size:10px;color:var(--muted)}
 .master-autofill-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--primary) 12%,var(--surface));color:var(--primary);font-size:9px;font-weight:900;text-transform:uppercase}
 .master-form-grid input[list]{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:30px}
+
+.master-autofill-badge::before{content:'↗';font-weight:1000}
+.master-field-note{line-height:1.35}
 </style>
 
 <script>
@@ -1878,32 +1881,48 @@ function renderMasterPage(){
   renderMasterFields();
   renderMasterTable();
 }
+function activeMasterValues(data,master,key='name'){
+  return (data[master]||[])
+    .filter(x=>(x.status||'Active')==='Active')
+    .map(x=>String(x[key]||'').trim())
+    .filter(Boolean);
+}
 function masterOptionsForField(tab,key,data){
   const map={
     items:{
-      unit:()=>data.units.filter(x=>(x.status||'Active')==='Active').map(x=>x.name||x.symbol).filter(Boolean),
-      category:()=>data.categories.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+      name:()=>activeMasterValues(data,'items','name'),
+      unit:()=>[
+        ...activeMasterValues(data,'units','symbol'),
+        ...activeMasterValues(data,'units','name')
+      ],
+      category:()=>activeMasterValues(data,'categories','name')
+    },
+    suppliers:{
+      items:()=>activeMasterValues(data,'items','name')
     },
     departments:{
-      authority:()=>data.authorizations.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+      authority:()=>activeMasterValues(data,'authorizations','name')
     },
     workshops:{
-      contact:()=>data.employees.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+      contact:()=>activeMasterValues(data,'employees','name')
     },
     authorizations:{
-      department:()=>data.departments.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+      department:()=>activeMasterValues(data,'departments','name')
     },
     employees:{
-      department:()=>data.departments.filter(x=>(x.status||'Active')==='Active').map(x=>x.name).filter(Boolean)
+      department:()=>activeMasterValues(data,'departments','name')
     },
     vehicles:{
       owner:()=>[
-        ...data.departments.filter(x=>(x.status||'Active')==='Active').map(x=>x.name),
-        ...data.suppliers.filter(x=>(x.status||'Active')==='Active').map(x=>x.name)
-      ].filter(Boolean)
+        ...activeMasterValues(data,'departments','name'),
+        ...activeMasterValues(data,'suppliers','name')
+      ]
     },
     locations:{
-      items:()=>data.items.filter(x=>(x.status||'Active')==='Active').map(x=>`${x.name||''}${x.size?' - '+x.size:''}`).filter(Boolean)
+      items:()=>data.items
+        .filter(x=>(x.status||'Active')==='Active')
+        .map(x=>`${x.name||''}${x.size?' - '+x.size:''}`)
+        .filter(Boolean)
     }
   };
   return [...new Set((map[tab]?.[key]?.()||[]).filter(Boolean))];
@@ -1911,12 +1930,20 @@ function masterOptionsForField(tab,key,data){
 function masterAutoFill(tab,key,value,data){
   const val=String(value||'').trim().toLowerCase();
   if(!val)return;
-  if(tab==='items'&&key==='name'){
-    const found=data.items.find(x=>String(x.name||'').toLowerCase()===val);
-    if(found){
-      ['size','unit','category'].forEach(k=>{
+  if(tab==='items'&&(key==='name'||key==='size')){
+    const nameEl=document.querySelector('[data-master-field="name"]');
+    const sizeEl=document.querySelector('[data-master-field="size"]');
+    const selectedName=String(nameEl?.value||'').trim().toLowerCase();
+    const selectedSize=String(sizeEl?.value||'').trim().toLowerCase();
+    const exact=data.items.find(x=>
+      String(x.name||'').trim().toLowerCase()===selectedName &&
+      (!selectedSize||String(x.size||'').trim().toLowerCase()===selectedSize)
+    );
+    if(exact){
+      if(sizeEl&&!sizeEl.value)sizeEl.value=exact.size||'';
+      ['unit','category'].forEach(k=>{
         const el=document.querySelector(`[data-master-field="${k}"]`);
-        if(el&&!el.value)el.value=found[k]||'';
+        if(el&&!el.value)el.value=exact[k]||'';
       });
     }
   }
@@ -1953,7 +1980,8 @@ function renderMasterFields(){
       if(linked)return `<div class="${cls}"><label>${label}</label><input data-master-field="${f.key}" list="${listId}" value="${masterEsc(value)}"><datalist id="${listId}">${options.map(o=>`<option value="${masterEsc(o)}"></option>`).join('')}</datalist><small class="master-field-note">Type to search or select an existing record.</small></div>`;
       return `<div class="${cls}"><label>${label}</label><textarea data-master-field="${f.key}">${masterEsc(value)}</textarea></div>`;
     }
-    return `<div class="${cls}"><label>${label}</label><input data-master-field="${f.key}" ${linked?`list="${listId}"`:''} value="${masterEsc(value)}" ${f.auto&&!row?'readonly':''}>${linked?`<datalist id="${listId}">${options.map(o=>`<option value="${masterEsc(o)}"></option>`).join('')}</datalist><small class="master-field-note">Type one or two letters to search.</small>`:''}</div>`;
+    const itemSizeNote=(currentMasterTab==='items'&&f.key==='size')?'<small class="master-field-note">Duplicate checking uses Item Name + Size together.</small>':'';
+    return `<div class="${cls}"><label>${label}</label><input data-master-field="${f.key}" ${linked?`list="${listId}"`:''} value="${masterEsc(value)}" ${f.auto&&!row?'readonly':''}>${linked?`<datalist id="${listId}">${options.map(o=>`<option value="${masterEsc(o)}"></option>`).join('')}</datalist><small class="master-field-note">Linked with its Master. Type one or two letters to search.</small>`:itemSizeNote}</div>`;
   }).join('');
   $$('[data-master-field]').forEach(el=>{
     el.addEventListener('change',()=>masterAutoFill(currentMasterTab,el.dataset.masterField,el.value,data));
@@ -1972,8 +2000,23 @@ function saveMasterRecord(){
   const cfg=MASTER_CONFIG[currentMasterTab],data=loadMasterData(),record={};
   $$('[data-master-field]').forEach(el=>record[el.dataset.masterField]=el.value.trim());
   const missing=cfg.fields.find(f=>f.required&&!record[f.key]);if(missing)return toast(`${missing.label} is required`);
-  const duplicateKey=currentMasterTab==='vehicles'?'number':'name';
-  if(record[duplicateKey]&&data[currentMasterTab].some(r=>r.id!==editingMasterId&&String(r[duplicateKey]||'').toLowerCase()===record[duplicateKey].toLowerCase()))return toast('Duplicate record is not allowed');
+  let isDuplicate=false;
+  if(currentMasterTab==='items'){
+    const itemName=String(record.name||'').trim().toLowerCase();
+    const itemSize=String(record.size||'').trim().toLowerCase();
+    isDuplicate=data.items.some(r=>
+      r.id!==editingMasterId &&
+      String(r.name||'').trim().toLowerCase()===itemName &&
+      String(r.size||'').trim().toLowerCase()===itemSize
+    );
+  }else{
+    const duplicateKey=currentMasterTab==='vehicles'?'number':'name';
+    isDuplicate=Boolean(record[duplicateKey])&&data[currentMasterTab].some(r=>
+      r.id!==editingMasterId &&
+      String(r[duplicateKey]||'').trim().toLowerCase()===String(record[duplicateKey]||'').trim().toLowerCase()
+    );
+  }
+  if(isDuplicate)return toast(currentMasterTab==='items'?'Duplicate Item Name + Size is not allowed':'Duplicate record is not allowed');
   const existing=data[currentMasterTab].find(r=>r.id===editingMasterId);
   if(existing)Object.assign(existing,record,{updatedAt:new Date().toISOString()});
   else data[currentMasterTab].unshift({...record,id:'mst-'+Date.now(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
