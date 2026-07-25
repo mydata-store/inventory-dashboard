@@ -442,6 +442,58 @@
 .master-summary-card small{display:block;color:var(--muted);font-weight:900;text-transform:uppercase}.master-summary-card strong{display:block;font-size:23px;margin-top:5px}
 .master-empty{text-align:center;padding:32px;color:var(--muted)}
 @media(max-width:1050px){.master-layout{grid-template-columns:1fr}.master-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.master-summary{grid-template-columns:1fr}.master-form-grid{grid-template-columns:1fr}.master-form-grid .full{grid-column:auto}}
+
+/* Masters layout cleanup V2.8 */
+.masters-top-row{
+  display:grid;
+  grid-template-columns:minmax(250px,1.25fr) repeat(3,minmax(170px,1fr));
+  gap:12px;
+  margin-bottom:14px;
+}
+.masters-title-card{
+  padding:16px 18px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+}
+.masters-title-card small{
+  display:block;
+  color:var(--muted);
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.masters-title-card h2{margin:5px 0 3px;font-size:24px}
+.masters-title-card p{margin:0;color:var(--muted);font-size:12px}
+.masters-action-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.masters-current-label{
+  font-size:18px;
+  font-weight:900;
+  color:var(--text);
+}
+.master-tabs{
+  width:100%;
+  display:flex;
+  flex-wrap:nowrap;
+  gap:8px;
+  overflow-x:auto;
+  padding:2px 0 10px;
+  margin-bottom:12px;
+}
+@media(max-width:1050px){
+  .masters-top-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .masters-top-row{grid-template-columns:1fr}
+}
+
 </style>
 
 <script>
@@ -481,24 +533,9 @@
     <a class="side-item" href="costing.html" title="Dashboard"><span class="side-icon">⌂</span><span>Dashboard</span></a>
     <a class="side-item" href="costing.html" title="Costing & Consumption"><span class="side-icon">◇</span><span>Costing & Consumption</span></a>
     
-    <div class="side-group" id="mastersGroup">
-      <button class="side-item side-group-toggle" type="button" data-group="mastersGroup" title="Masters">
-        <span class="side-icon">▦</span><span>Masters</span><span class="chev">⌄</span>
-      </button>
-      <div class="side-submenu">
-        <button class="side-subitem" data-master-tab="items"><span>Item Master</span></button>
-        <button class="side-subitem" data-master-tab="suppliers"><span>Supplier Master</span></button>
-        <button class="side-subitem" data-master-tab="departments"><span>Department Master</span></button>
-        <button class="side-subitem" data-master-tab="workshops"><span>Workshop / Party Master</span></button>
-        <button class="side-subitem" data-master-tab="units"><span>Unit Master</span></button>
-        <button class="side-subitem" data-master-tab="categories"><span>Category Master</span></button>
-        <button class="side-subitem" data-master-tab="carriers"><span>Carrier Master</span></button>
-        <button class="side-subitem" data-master-tab="authorizations"><span>Authorization Master</span></button>
-        <button class="side-subitem" data-master-tab="employees"><span>Employee Master</span></button>
-        <button class="side-subitem" data-master-tab="vehicles"><span>Vehicle Master</span></button>
-        <button class="side-subitem" data-master-tab="locations"><span>Rack / Location Master</span></button>
-      </div>
-    </div>
+    <button class="side-item" id="mastersMainBtn" type="button" title="Masters">
+      <span class="side-icon">▦</span><span>Masters</span>
+    </button>
 
 <div class="side-group" id="settingsGroup">
       <button class="side-group-toggle" title="Settings"><span class="side-icon">⚙</span><span>Settings</span><span class="chev">⌃</span></button>
@@ -673,16 +710,20 @@
 </section>
 
 <section class="panel" id="panel-masters">
-  <div class="master-summary">
-    <div class="master-summary-card"><small>Current Master</small><strong id="masterCurrentName">Item Master</strong></div>
+  <div class="masters-top-row">
+    <div class="masters-title-card">
+      <small>MASTER MANAGEMENT</small>
+      <h2>Masters</h2>
+      <p>Manage all ERP master records from one page.</p>
+    </div>
     <div class="master-summary-card"><small>Total Records</small><strong id="masterTotalRecords">0</strong></div>
     <div class="master-summary-card"><small>Active Records</small><strong id="masterActiveRecords">0</strong></div>
     <div class="master-summary-card"><small>Last Updated</small><strong id="masterLastUpdated" style="font-size:15px">—</strong></div>
   </div>
 
   <div class="card">
-    <div class="cc-section-head">
-      <div><h2>Masters</h2><p>Manage all ERP master records from one page.</p></div>
+    <div class="masters-action-row">
+      <div class="masters-current-label" id="mastersCurrentLabel">Item Master</div>
       <div class="cc-toolbar"><button class="btn" id="masterExportBtn">Export JSON</button><label class="btn" for="masterImportFile">Import JSON</label><input type="file" id="masterImportFile" accept=".json,application/json" style="display:none"></div>
     </div>
 
@@ -1707,7 +1748,6 @@ function openMasters(tab='items'){
   currentMasterTab=MASTER_CONFIG[tab]?tab:'items';editingMasterId=null;
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-masters'));
   $$('.master-tab').forEach(b=>b.classList.toggle('active',b.dataset.masterPageTab===currentMasterTab));
-  $$('[data-master-tab]').forEach(b=>b.classList.toggle('active',b.dataset.masterTab===currentMasterTab));
   const cfg=MASTER_CONFIG[currentMasterTab];
   $('#workspaceTitle').textContent='Masters';
   $('#workspaceSubtitle').textContent=cfg.title+' — manage shared data used across the ERP.';
@@ -1718,13 +1758,13 @@ function openMasters(tab='items'){
 }
 function renderMasterPage(){
   const cfg=MASTER_CONFIG[currentMasterTab],data=loadMasterData(),rows=data[currentMasterTab];
-  $('#masterCurrentName').textContent=cfg.title;
   $('#masterTotalRecords').textContent=rows.length;
   $('#masterActiveRecords').textContent=rows.filter(r=>(r.status||'Active')==='Active').length;
   $('#masterLastUpdated').textContent=rows[0]?.updatedAt?ccDateTime(rows[0].updatedAt):'—';
   $('#masterFormTitle').textContent=(editingMasterId?'Edit ':'Add ')+cfg.singular;
   $('#masterFormSubtitle').textContent=`${cfg.title} fields are shared across connected ERP modules.`;
   $('#masterListTitle').textContent=cfg.title+' List';
+  $('#mastersCurrentLabel').textContent=cfg.title;
   renderMasterFields();
   renderMasterTable();
 }
@@ -1818,6 +1858,7 @@ function bind(){
     $$('.side-group').forEach(group=>group.classList.remove('open'));
   }));
 
+  $('#mastersMainBtn').addEventListener('click',()=>openMasters(currentMasterTab||'items'));
   $$('[data-master-tab]').forEach(b=>b.addEventListener('click',()=>openMasters(b.dataset.masterTab)));
   $$('[data-master-page-tab]').forEach(b=>b.addEventListener('click',()=>openMasters(b.dataset.masterPageTab)));
   $('#masterSaveRecord').addEventListener('click',saveMasterRecord);
