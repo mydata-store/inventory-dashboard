@@ -779,6 +779,40 @@
 .local-master-note{display:block;margin-top:4px;color:var(--muted);font-size:10px}
 @media(max-width:1100px){.local-meta-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.local-meta-grid{grid-template-columns:1fr}}
+
+/* Local Purchase improvements V3.6 */
+.local-table{min-width:1350px}
+.local-table .local-col-item{min-width:270px}
+.local-table .local-col-supplier{min-width:250px}
+.local-table td:nth-child(1){min-width:270px}
+.local-table td:nth-child(8){min-width:250px}
+.local-autocomplete-wrap{position:relative}
+.local-autocomplete-menu{
+  position:fixed;
+  z-index:9999;
+  max-height:310px;
+  overflow-y:auto;
+  min-width:280px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  box-shadow:0 14px 34px rgba(15,23,42,.18);
+  display:none;
+}
+.local-autocomplete-menu.open{display:block}
+.local-autocomplete-option{
+  padding:9px 11px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  color:var(--text);
+}
+.local-autocomplete-option:last-child{border-bottom:0}
+.local-autocomplete-option:hover,.local-autocomplete-option.active{
+  background:color-mix(in srgb,var(--primary) 14%,var(--surface));
+}
+.local-autocomplete-option strong{display:block}
+.local-autocomplete-option small{display:block;color:var(--muted);margin-top:2px}
+.local-autocomplete-empty{padding:12px;color:var(--muted);text-align:center}
 </style>
 
 <script>
@@ -1147,13 +1181,7 @@
         <button class="btn primary" id="localSaveAll">Save All Rows</button>
       </div>
     </div>
-
-    <div class="local-purchase-note">
-      This form has <b>no separate sidebar or old page header</b>. Item, Unit and Supplier fields are connected to Masters.
-      Type <b>25-6</b> in the date field to format it as <b>25-Jun-26</b>.
-    </div>
-
-    <div class="local-meta-grid">
+<div class="local-meta-grid">
       <div class="local-field">
         <label>Purchase Date</label>
         <input id="localPurchaseDate" placeholder="25-6" autocomplete="off">
@@ -1177,17 +1205,14 @@
       <table class="local-table">
         <thead>
           <tr>
-            <th>Item Name</th>
+            <th class="local-col-item">Item Name</th>
             <th>Size</th>
-            <th>Category</th>
             <th>Quantity</th>
             <th>Unit</th>
             <th>Last Purchase Rate</th>
             <th>Unit Rate</th>
             <th>Amount</th>
-            <th>Supplier</th>
-            <th>Sales Tax %</th>
-            <th>Sales Tax Amount</th>
+            <th class="local-col-supplier">Supplier</th>
             <th>Gross Total</th>
             <th>Remarks</th>
             <th>Action</th>
@@ -1199,7 +1224,7 @@
 
     <div class="local-totals">
       <div class="local-total-card"><small>Net Amount</small><strong id="localNetTotal">PKR 0.00</strong></div>
-      <div class="local-total-card"><small>Sales Tax</small><strong id="localTaxTotal">PKR 0.00</strong></div>
+      
       <div class="local-total-card"><small>Gross Total</small><strong id="localGrossTotal">PKR 0.00</strong></div>
     </div>
 
@@ -1208,6 +1233,7 @@
     <datalist id="localSupplierList"></datalist>
     <datalist id="localEmployeeList"></datalist>
     <datalist id="localVehicleList"></datalist>
+    <div id="localAutocompleteMenu" class="local-autocomplete-menu"></div>
   </div>
 </div>
 
@@ -2592,9 +2618,8 @@ function localTitleCase(value){
 }
 function localBlankRow(){
   return {
-    item:'',size:'',category:'',qty:'',unit:'',lastRate:'',
-    rate:'',amount:'',supplier:'',taxPct:'',taxAmount:'',
-    grossTotal:'',remarks:''
+    item:'',size:'',qty:'',unit:'',lastRate:'',
+    rate:'',amount:'',supplier:'',grossTotal:'',remarks:''
   };
 }
 function localLoadMasterOptions(){
@@ -2620,17 +2645,14 @@ function localLoadMasterOptions(){
 }
 function localRowHtml(row,index){
   return `<tr data-local-row="${index}">
-    <td><input data-local-cell="item" list="localItemList" value="${masterEsc(row.item)}" autocomplete="off"></td>
+    <td><input data-local-cell="item" value="${masterEsc(row.item)}" autocomplete="off"></td>
     <td><input data-local-cell="size" value="${masterEsc(row.size)}"></td>
-    <td><input data-local-cell="category" value="${masterEsc(row.category)}" readonly></td>
     <td><input class="number" data-local-cell="qty" type="number" min="0" step="any" value="${masterEsc(row.qty)}"></td>
     <td><input data-local-cell="unit" list="localUnitList" value="${masterEsc(row.unit)}" autocomplete="off"></td>
     <td><input class="number" data-local-cell="lastRate" value="${masterEsc(row.lastRate)}" readonly></td>
     <td><input class="number" data-local-cell="rate" type="number" min="0" step="any" value="${masterEsc(row.rate)}"></td>
     <td><input class="number" data-local-cell="amount" value="${masterEsc(row.amount)}" readonly></td>
-    <td><input data-local-cell="supplier" list="localSupplierList" value="${masterEsc(row.supplier)}" autocomplete="off"></td>
-    <td><input class="number" data-local-cell="taxPct" type="number" min="0" step="any" value="${masterEsc(row.taxPct)}"></td>
-    <td><input class="number" data-local-cell="taxAmount" value="${masterEsc(row.taxAmount)}" readonly></td>
+    <td><input data-local-cell="supplier" value="${masterEsc(row.supplier)}" autocomplete="off"></td>
     <td><input class="number" data-local-cell="grossTotal" value="${masterEsc(row.grossTotal)}" readonly></td>
     <td><input data-local-cell="remarks" value="${masterEsc(row.remarks)}"></td>
     <td class="local-row-action"><button data-local-remove>Delete</button></td>
@@ -2677,64 +2699,237 @@ function localAutofillItem(input){
 
   const item=candidates.find(x=>String(x.size||'').trim().toLowerCase()===existingSize) || candidates[0];
   tr.querySelector('[data-local-cell="size"]').value=item.size||'';
-  tr.querySelector('[data-local-cell="category"]').value=item.category||'';
   tr.querySelector('[data-local-cell="unit"]').value=item.unit||'';
   tr.querySelector('[data-local-cell="lastRate"]').value=localLastRate(item.name,item.size);
 }
 function localCalculate(){
-  let net=0,tax=0,gross=0;
+  let net=0,gross=0;
 
   $('#localPurchaseBody').querySelectorAll('tr').forEach(tr=>{
     const qty=Number(tr.querySelector('[data-local-cell="qty"]').value||0);
     const rate=Number(tr.querySelector('[data-local-cell="rate"]').value||0);
-    const taxPct=Number(tr.querySelector('[data-local-cell="taxPct"]').value||0);
 
     const amount=qty*rate;
-    const taxAmount=amount*(taxPct/100);
-    const grossTotal=amount+taxAmount;
+    const grossTotal=amount;
 
     tr.querySelector('[data-local-cell="amount"]').value=amount?amount.toFixed(2):'';
-    tr.querySelector('[data-local-cell="taxAmount"]').value=taxAmount?taxAmount.toFixed(2):'';
     tr.querySelector('[data-local-cell="grossTotal"]').value=grossTotal?grossTotal.toFixed(2):'';
 
-    net+=amount;tax+=taxAmount;gross+=grossTotal;
+    net+=amount;
+    gross+=grossTotal;
   });
 
   $('#localNetTotal').textContent=localMoney(net);
-  $('#localTaxTotal').textContent=localMoney(tax);
   $('#localGrossTotal').textContent=localMoney(gross);
 }
+let localAutocompleteState={input:null,type:null,options:[],activeIndex:-1};
+
+function localAutocompleteOptions(type,query){
+  const data=loadMasterData();
+  const active=x=>(x.status||'Active')==='Active';
+  const q=String(query||'').trim().toLowerCase();
+
+  if(type==='item'){
+    return data.items.filter(active)
+      .filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.size||'').toLowerCase().includes(q))
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))||String(a.size||'').localeCompare(String(b.size||'')))
+      .slice(0,50)
+      .map(x=>({value:x.name,label:x.name,sub:[x.size,x.unit].filter(Boolean).join(' | '),record:x}));
+  }
+
+  if(type==='supplier'){
+    return data.suppliers.filter(active)
+      .filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.proprietor||'').toLowerCase().includes(q))
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
+      .slice(0,50)
+      .map(x=>({value:x.name,label:x.name,sub:x.proprietor||x.phone||'',record:x}));
+  }
+
+  return [];
+}
+
+function localPositionAutocomplete(input){
+  const menu=$('#localAutocompleteMenu');
+  const rect=input.getBoundingClientRect();
+  menu.style.left=`${rect.left}px`;
+  menu.style.top=`${rect.bottom+4}px`;
+  menu.style.width=`${Math.max(rect.width,300)}px`;
+}
+
+function localRenderAutocomplete(){
+  const menu=$('#localAutocompleteMenu');
+  const options=localAutocompleteState.options;
+
+  menu.innerHTML=options.length
+    ?options.map((o,i)=>`<div class="local-autocomplete-option ${i===localAutocompleteState.activeIndex?'active':''}" data-local-option="${i}"><strong>${masterEsc(o.label)}</strong>${o.sub?`<small>${masterEsc(o.sub)}</small>`:''}</div>`).join('')
+    :'<div class="local-autocomplete-empty">No matching records</div>';
+
+  menu.classList.add('open');
+  localPositionAutocomplete(localAutocompleteState.input);
+
+  menu.querySelectorAll('[data-local-option]').forEach(el=>{
+    el.onmousedown=e=>{
+      e.preventDefault();
+      localSelectAutocomplete(+el.dataset.localOption);
+    };
+  });
+}
+
+function localOpenAutocomplete(input,type){
+  localAutocompleteState={
+    input,
+    type,
+    options:localAutocompleteOptions(type,input.value),
+    activeIndex:-1
+  };
+  localRenderAutocomplete();
+}
+
+function localCloseAutocomplete(){
+  $('#localAutocompleteMenu').classList.remove('open');
+  localAutocompleteState={input:null,type:null,options:[],activeIndex:-1};
+}
+
+function localSelectAutocomplete(index){
+  const state=localAutocompleteState;
+  const option=state.options[index];
+  if(!state.input||!option)return;
+
+  state.input.value=option.value;
+
+  if(state.type==='item'){
+    const tr=state.input.closest('tr');
+    tr.querySelector('[data-local-cell="size"]').value=option.record.size||'';
+    tr.querySelector('[data-local-cell="unit"]').value=option.record.unit||'';
+    tr.querySelector('[data-local-cell="lastRate"]').value=localLastRate(option.record.name,option.record.size);
+  }
+
+  localCloseAutocomplete();
+  localCalculate();
+  state.input.dispatchEvent(new Event('change',{bubbles:true}));
+}
+
+function localMoveFocus(current,direction){
+  const body=$('#localPurchaseBody');
+  const rows=[...body.querySelectorAll('tr')];
+  const row=current.closest('tr');
+  const rowIndex=rows.indexOf(row);
+  const cells=[...row.querySelectorAll('[data-local-cell]')];
+  const colIndex=cells.indexOf(current);
+
+  let nextRow=rowIndex,nextCol=colIndex;
+
+  if(direction==='right')nextCol++;
+  if(direction==='left')nextCol--;
+  if(direction==='down')nextRow++;
+  if(direction==='up')nextRow--;
+
+  if(nextCol>=cells.length){nextRow++;nextCol=0}
+  if(nextCol<0){nextRow--;nextCol=cells.length-1}
+
+  if(nextRow>=rows.length){
+    localAddRow();
+    setTimeout(()=>{
+      const newRows=[...body.querySelectorAll('tr')];
+      newRows[newRows.length-1].querySelectorAll('[data-local-cell]')[Math.max(0,nextCol)]?.focus();
+    },0);
+    return;
+  }
+
+  if(nextRow<0)return;
+  rows[nextRow].querySelectorAll('[data-local-cell]')[Math.max(0,nextCol)]?.focus();
+}
+
 function localBindRows(){
   const body=$('#localPurchaseBody');
 
   body.querySelectorAll('[data-local-cell]').forEach(el=>{
-    el.addEventListener('input',localCalculate);
+    el.addEventListener('input',()=>{
+      if(['item','supplier'].includes(el.dataset.localCell)){
+        localOpenAutocomplete(el,el.dataset.localCell);
+      }
+      localCalculate();
+    });
 
     if(el.dataset.localCell==='item'){
-      el.addEventListener('change',()=>{localAutofillItem(el);localCalculate()});
-      el.addEventListener('blur',()=>{localAutofillItem(el);localCalculate()});
+      el.addEventListener('focus',()=>localOpenAutocomplete(el,'item'));
+      el.addEventListener('blur',()=>setTimeout(()=>{
+        if(localAutocompleteState.input===el)localCloseAutocomplete();
+        localAutofillItem(el);
+        localCalculate();
+      },120));
     }
 
-    if(['supplier','remarks'].includes(el.dataset.localCell)){
+    if(el.dataset.localCell==='supplier'){
+      el.addEventListener('focus',()=>localOpenAutocomplete(el,'supplier'));
+      el.addEventListener('blur',()=>setTimeout(()=>{
+        if(localAutocompleteState.input===el)localCloseAutocomplete();
+        el.value=localTitleCase(el.value);
+      },120));
+    }
+
+    if(el.dataset.localCell==='remarks'){
       el.addEventListener('blur',()=>el.value=localTitleCase(el.value));
     }
 
     el.addEventListener('keydown',event=>{
-      if(event.key!=='Enter')return;
-      event.preventDefault();
+      const menuOpen=$('#localAutocompleteMenu').classList.contains('open') &&
+        localAutocompleteState.input===el;
 
-      const cells=[...body.querySelectorAll('[data-local-cell]')];
-      const index=cells.indexOf(el);
-
-      if(index===cells.length-1){
-        localAddRow();
-        setTimeout(()=>{
-          const all=[...body.querySelectorAll('[data-local-cell]')];
-          all[index+1]?.focus();
-        },0);
-      }else{
-        cells[index+1]?.focus();
+      if(menuOpen&&['ArrowDown','ArrowUp'].includes(event.key)){
+        event.preventDefault();
+        const max=localAutocompleteState.options.length-1;
+        if(event.key==='ArrowDown')localAutocompleteState.activeIndex=Math.min(max,localAutocompleteState.activeIndex+1);
+        if(event.key==='ArrowUp')localAutocompleteState.activeIndex=Math.max(0,localAutocompleteState.activeIndex-1);
+        localRenderAutocomplete();
+        return;
       }
+
+      if(menuOpen&&event.key==='Enter'&&localAutocompleteState.activeIndex>=0){
+        event.preventDefault();
+        localSelectAutocomplete(localAutocompleteState.activeIndex);
+        return;
+      }
+
+      if(menuOpen&&event.key==='Escape'){
+        event.preventDefault();
+        localCloseAutocomplete();
+        return;
+      }
+
+      if(event.key==='Enter'){
+        event.preventDefault();
+        const rows=[...body.querySelectorAll('tr')];
+        const row=el.closest('tr');
+        const isLastRow=rows.indexOf(row)===rows.length-1;
+        const rowCells=[...row.querySelectorAll('[data-local-cell]')];
+        const isLastCell=rowCells.indexOf(el)===rowCells.length-1;
+
+        if(isLastRow&&isLastCell){
+          localAddRow();
+          setTimeout(()=>{
+            const newRows=[...body.querySelectorAll('tr')];
+            newRows[newRows.length-1].querySelector('[data-local-cell="item"]')?.focus();
+          },0);
+        }else{
+          localMoveFocus(el,'right');
+        }
+        return;
+      }
+
+      if(event.key==='Tab'){
+        if(menuOpen&&localAutocompleteState.activeIndex>=0){
+          event.preventDefault();
+          localSelectAutocomplete(localAutocompleteState.activeIndex);
+          localMoveFocus(el,event.shiftKey?'left':'right');
+        }
+        return;
+      }
+
+      if(event.key==='ArrowRight'){event.preventDefault();localMoveFocus(el,'right')}
+      if(event.key==='ArrowLeft'){event.preventDefault();localMoveFocus(el,'left')}
+      if(event.key==='ArrowDown'){event.preventDefault();localMoveFocus(el,'down')}
+      if(event.key==='ArrowUp'){event.preventDefault();localMoveFocus(el,'up')}
     });
   });
 
