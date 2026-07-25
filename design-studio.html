@@ -279,6 +279,41 @@
 .cc-page-design-grid input,.cc-page-design-grid select{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:0 10px}
 @media(max-width:760px){.cc-permission-head{flex-direction:column}.cc-role-picker{width:100%;min-width:0}.cc-page-design-grid{grid-template-columns:1fr}.cc-page-design-grid .full{grid-column:auto}}
 
+
+/* Remaining Control Center pages */
+.cc-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.cc-section-head h2{margin:0 0 4px}.cc-section-head p{margin:0;color:var(--muted)}
+.cc-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cc-toolbar input,.cc-toolbar select{height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:0 10px}
+.cc-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
+.cc-table{width:100%;border-collapse:collapse;min-width:900px;background:var(--surface)}
+.cc-table th,.cc-table td{padding:11px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+.cc-table th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;background:color-mix(in srgb,var(--bg) 65%,var(--surface));position:sticky;top:0;z-index:2}
+.cc-table tr:last-child td{border-bottom:0}
+.cc-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800}
+.cc-badge.good{background:#dcfce7;color:#166534}.cc-badge.warn{background:#fef3c7;color:#92400e}.cc-badge.bad{background:#fee2e2;color:#991b1b}.cc-badge.info{background:#dbeafe;color:#1d4ed8}
+.cc-mini-actions{display:flex;gap:6px;flex-wrap:wrap}
+.cc-mini{height:32px;padding:0 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-weight:700;font-size:11px}
+.cc-mini.danger{border-color:#fecaca;color:#b91c1c;background:#fff7f7}
+.cc-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cc-form-grid .full{grid-column:1/-1}
+.cc-form-grid label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px}
+.cc-form-grid input,.cc-form-grid select,.cc-form-grid textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:10px}
+.cc-form-grid input,.cc-form-grid select{height:42px}.cc-form-grid textarea{min-height:90px;resize:vertical}
+.cc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.cc-kpi{padding:15px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.cc-kpi small{display:block;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em}.cc-kpi strong{font-size:25px;display:block;margin-top:5px}
+.cc-security-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cc-setting{border:1px solid var(--border);border-radius:14px;padding:14px;background:var(--surface)}
+.cc-setting h3{margin:0 0 4px}.cc-setting p{margin:0 0 12px;color:var(--muted);font-size:12px}
+.cc-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.cc-setting-row input[type=number],.cc-setting-row select{height:38px;width:150px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:0 9px}
+.cc-switch{width:42px;height:23px;appearance:none;background:#cbd5e1;border-radius:999px;position:relative;cursor:pointer;transition:.2s}
+.cc-switch:checked{background:var(--primary)}.cc-switch:before{content:"";position:absolute;width:17px;height:17px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}.cc-switch:checked:before{transform:translateX(19px)}
+.cc-empty-state{text-align:center;padding:38px;color:var(--muted)}
+@media(max-width:900px){.cc-kpis{grid-template-columns:repeat(2,1fr)}.cc-security-grid{grid-template-columns:1fr}}
+@media(max-width:680px){.cc-form-grid{grid-template-columns:1fr}.cc-form-grid .full{grid-column:auto}.cc-kpis{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -437,9 +472,96 @@
     </div>
   </div>
 
+
+  <div class="control-workspace" id="control-roles">
+    <div class="card">
+      <div class="cc-section-head">
+        <div><h2>Role Management</h2><p>Create, edit, duplicate, disable and safely remove custom roles.</p></div>
+        <button class="btn primary" id="ccAddRole">+ Add Role</button>
+      </div>
+      <div class="cc-table-wrap"><table class="cc-table"><thead><tr><th>Role</th><th>Description</th><th>Users</th><th>Status</th><th>Default</th><th>Actions</th></tr></thead><tbody id="ccRoleRows"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="control-workspace" id="control-restrictions">
+    <div class="card">
+      <div class="cc-section-head">
+        <div><h2>Data Restrictions</h2><p>Limit each role to selected departments, workshops, suppliers, locations or record ownership.</p></div>
+        <div class="cc-toolbar"><select id="ccRestrictionRole"></select><button class="btn primary" id="ccSaveRestrictions">Save Restrictions</button></div>
+      </div>
+      <div class="cc-form-grid">
+        <div><label>Department Access</label><select id="ccRestrictDepartment"><option value="all">All Departments</option><option value="assigned">Assigned Department Only</option><option value="selected">Selected Departments</option></select></div>
+        <div><label>Workshop / Party Access</label><select id="ccRestrictWorkshop"><option value="all">All Workshops / Parties</option><option value="selected">Selected Only</option><option value="none">No Access</option></select></div>
+        <div><label>Supplier Access</label><select id="ccRestrictSupplier"><option value="all">All Suppliers</option><option value="selected">Selected Only</option><option value="none">No Access</option></select></div>
+        <div><label>Location / Rack Access</label><select id="ccRestrictLocation"><option value="all">All Locations</option><option value="selected">Selected Only</option><option value="none">No Access</option></select></div>
+        <div><label>Record Scope</label><select id="ccRestrictScope"><option value="all">All Records</option><option value="own">Own Created Records</option><option value="department">Own Department Records</option></select></div>
+        <div><label>Rate Visibility</label><select id="ccRestrictRates"><option value="show">Show Rates & Values</option><option value="hide">Hide Rates & Values</option></select></div>
+        <div class="full"><label>Selected Values / Notes</label><textarea id="ccRestrictionNotes" placeholder="Example: Store, Purchase, PM-1, PM-2"></textarea></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-workspace" id="control-sessions">
+    <div class="cc-kpis">
+      <div class="cc-kpi"><small>Active Sessions</small><strong id="ccActiveSessionCount">0</strong></div>
+      <div class="cc-kpi"><small>Online Users</small><strong id="ccOnlineUserCount">0</strong></div>
+      <div class="cc-kpi"><small>Trusted Devices</small><strong id="ccTrustedDeviceCount">0</strong></div>
+      <div class="cc-kpi"><small>Locked Accounts</small><strong id="ccLockedUserCount">0</strong></div>
+    </div>
+    <div class="card">
+      <div class="cc-section-head">
+        <div><h2>Active Sessions</h2><p>Review signed-in devices and force logout when necessary.</p></div>
+        <button class="btn warn" id="ccLogoutAllSessions">Logout All Other Sessions</button>
+      </div>
+      <div class="cc-table-wrap"><table class="cc-table"><thead><tr><th>User</th><th>Device</th><th>IP / Network</th><th>Started</th><th>Last Active</th><th>Status</th><th>Action</th></tr></thead><tbody id="ccSessionRows"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="control-workspace" id="control-activity">
+    <div class="card">
+      <div class="cc-section-head">
+        <div><h2>Activity Log</h2><p>Search and review important actions performed inside the ERP.</p></div>
+        <div class="cc-toolbar"><input id="ccActivitySearch" placeholder="Search action or user"><select id="ccActivityType"><option value="">All Activity</option><option value="login">Login</option><option value="user">User</option><option value="role">Role</option><option value="permission">Permission</option><option value="security">Security</option></select><button class="btn" id="ccExportActivity">Export CSV</button></div>
+      </div>
+      <div class="cc-table-wrap"><table class="cc-table"><thead><tr><th>Date & Time</th><th>Actor</th><th>Action</th><th>Type</th><th>Result</th></tr></thead><tbody id="ccActivityRows"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="control-workspace" id="control-security">
+    <div class="cc-kpis">
+      <div class="cc-kpi"><small>Security Score</small><strong id="ccSecurityScore">0%</strong></div>
+      <div class="cc-kpi"><small>MFA Coverage</small><strong id="ccMfaCoverage">0%</strong></div>
+      <div class="cc-kpi"><small>Password Expiry</small><strong id="ccPasswordExpiryKpi">90d</strong></div>
+      <div class="cc-kpi"><small>Session Timeout</small><strong id="ccSessionTimeoutKpi">30m</strong></div>
+    </div>
+    <div class="card">
+      <div class="cc-section-head"><div><h2>Global Security Policy</h2><p>These rules apply to every new user. Super Administrators always retain the strongest protection.</p></div><button class="btn primary" id="ccSaveSecurity">Save Security Policy</button></div>
+      <div class="cc-security-grid">
+        <div class="cc-setting"><h3>Multi-Factor Authentication</h3><p>Require an additional verification step at login.</p><div class="cc-setting-row"><span>Require MFA</span><input class="cc-switch" type="checkbox" id="ccSecMfa"></div><div class="cc-setting-row"><span>Applies To</span><select id="ccSecMfaScope"><option value="admins">Administrators</option><option value="all">All Users</option><option value="super">Super Administrators</option></select></div></div>
+        <div class="cc-setting"><h3>Password Policy</h3><p>Control strength, expiry and reuse.</p><div class="cc-setting-row"><span>Minimum Length</span><input type="number" id="ccSecMinLength" min="8" max="32"></div><div class="cc-setting-row"><span>Expiry Days</span><input type="number" id="ccSecExpiry" min="0" max="365"></div><div class="cc-setting-row"><span>Password History</span><input type="number" id="ccSecHistory" min="0" max="24"></div></div>
+        <div class="cc-setting"><h3>Login Protection</h3><p>Lock accounts after repeated failed attempts.</p><div class="cc-setting-row"><span>Failed Attempt Limit</span><input type="number" id="ccSecFailedLimit" min="3" max="20"></div><div class="cc-setting-row"><span>Lock Duration (minutes)</span><input type="number" id="ccSecLockMinutes" min="5" max="1440"></div><div class="cc-setting-row"><span>New Device Alert</span><input class="cc-switch" type="checkbox" id="ccSecDeviceAlert"></div></div>
+        <div class="cc-setting"><h3>Session Security</h3><p>Limit inactive and concurrent sessions.</p><div class="cc-setting-row"><span>Idle Timeout (minutes)</span><input type="number" id="ccSecTimeout" min="5" max="480"></div><div class="cc-setting-row"><span>Maximum Sessions</span><input type="number" id="ccSecMaxSessions" min="1" max="10"></div><div class="cc-setting-row"><span>Re-auth Sensitive Actions</span><input class="cc-switch" type="checkbox" id="ccSecReauth"></div></div>
+        <div class="cc-setting"><h3>Audit & Review</h3><p>Keep a complete security history.</p><div class="cc-setting-row"><span>Audit Retention (days)</span><input type="number" id="ccSecAuditDays" min="30" max="3650"></div><div class="cc-setting-row"><span>Permission Review (days)</span><input type="number" id="ccSecReviewDays" min="30" max="365"></div><div class="cc-setting-row"><span>Admin Change Alerts</span><input class="cc-switch" type="checkbox" id="ccSecAdminAlert"></div></div>
+        <div class="cc-setting"><h3>Inactive Accounts</h3><p>Automatically disable unused accounts.</p><div class="cc-setting-row"><span>Auto-disable</span><input class="cc-switch" type="checkbox" id="ccSecDisableInactive"></div><div class="cc-setting-row"><span>Inactive Days</span><input type="number" id="ccSecInactiveDays" min="30" max="730"></div><div class="cc-setting-row"><span>Force Password Change</span><input class="cc-switch" type="checkbox" id="ccSecForceChange"></div></div>
+      </div>
+    </div>
+  </div>
+
   <div class="control-workspace" id="control-placeholder"><div class="control-empty"><h2 id="ccPlaceholderTitle">Section</h2><p>This section will be moved here next, without opening another page.</p></div></div>
 </section>
 </main></div></div>
+
+
+<div class="cc-modal" id="ccRoleModal" aria-hidden="true"><div class="cc-modal-box">
+  <div class="cc-modal-head"><div><h2 id="ccRoleModalTitle">Add Role</h2><p class="sub" style="margin:4px 0 0">Create a role for a department or responsibility.</p></div><button class="btn" id="ccCloseRole">Close</button></div>
+  <div class="cc-form-grid">
+    <div><label>Role Name</label><input id="ccRoleName"></div>
+    <div><label>Status</label><select id="ccRoleStatus"><option value="Active">Active</option><option value="Disabled">Disabled</option></select></div>
+    <div class="full"><label>Description</label><textarea id="ccRoleDescription"></textarea></div>
+    <div><label>Default Role</label><select id="ccRoleDefault"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+  </div>
+  <div class="cc-modal-actions"><button class="btn" id="ccCancelRole">Cancel</button><button class="btn primary" id="ccSaveRole">Save Role</button></div>
+</div></div>
 
 <div class="cc-modal" id="ccPageDesignModal" aria-hidden="true"><div class="cc-modal-box" style="width:min(720px,96vw)">
   <div class="cc-modal-head"><div><h2>Design Page</h2><p class="sub" style="margin:4px 0 0">Page-specific controls for the current workspace.</p></div><button class="btn" id="ccClosePageDesign">Close</button></div>
@@ -528,6 +650,7 @@ function ccControlState(){
   if(!Array.isArray(state.roles)) state.roles=[];
   if(!Array.isArray(state.activity)) state.activity=[];
   if(!state.permissions||typeof state.permissions!=='object') state.permissions={};
+  ccNormalizeRoles(state);
   if(!state.users.length) state.users=[{id:'mw-super-admin',name:'Muhammad Waqas',email:'',phone:'',altPhone:'',role:'Super Administrator',department:'Store',designation:'Store Officer',employeeCode:'',status:'active',lastLogin:'Now',remarks:'',avatar:''}];
   state.users.forEach((u,i)=>{if(!u.id)u.id='user-'+Date.now()+'-'+i});
   return state;
@@ -677,6 +800,118 @@ function ccResetPageDesign(){
   ccClosePageDesign();openStudioPanel(ccCurrentStudio,ccCurrentSection);toast('Page design reset');
 }
 
+
+let ccEditingRoleId=null;
+function ccNormalizeRoles(st){
+  if(!Array.isArray(st.roles))st.roles=[];
+  if(!st.roles.length)st.roles=[
+    {id:'role-super',name:'Super Administrator',description:'Full protected access to the complete ERP.',status:'Active',isDefault:false,protected:true},
+    {id:'role-admin',name:'Administrator',description:'Administrative access according to assigned permissions.',status:'Active',isDefault:false},
+    {id:'role-store',name:'Store Officer',description:'Store operations and inventory transactions.',status:'Active',isDefault:true}
+  ];
+  st.roles=st.roles.map((r,i)=>typeof r==='string'?{id:'role-'+i,name:r,description:'',status:'Active',isDefault:false}:r);
+}
+function renderControlRoles(){
+  const st=ccControlState();ccNormalizeRoles(st);
+  $('#ccRoleRows').innerHTML=st.roles.map(r=>{
+    const users=st.users.filter(u=>u.role===r.name).length;
+    return `<tr><td><b>${ccEsc(r.name)}</b>${r.protected?' <span class="cc-badge info">Protected</span>':''}</td><td>${ccEsc(r.description||'')}</td><td>${users}</td><td><span class="cc-badge ${r.status==='Active'?'good':'warn'}">${ccEsc(r.status||'Active')}</span></td><td>${r.isDefault?'<span class="cc-badge info">Default</span>':'—'}</td><td><div class="cc-mini-actions"><button class="cc-mini" data-role-edit="${r.id}">Edit</button><button class="cc-mini" data-role-copy="${r.id}">Duplicate</button>${r.protected?'':`<button class="cc-mini" data-role-toggle="${r.id}">${r.status==='Active'?'Disable':'Enable'}</button><button class="cc-mini danger" data-role-delete="${r.id}">Delete</button>`}</div></td></tr>`;
+  }).join('');
+  $$('[data-role-edit]').forEach(b=>b.onclick=()=>ccOpenRole(b.dataset.roleEdit));
+  $$('[data-role-copy]').forEach(b=>b.onclick=()=>ccDuplicateRole(b.dataset.roleCopy));
+  $$('[data-role-toggle]').forEach(b=>b.onclick=()=>ccToggleRole(b.dataset.roleToggle));
+  $$('[data-role-delete]').forEach(b=>b.onclick=()=>ccDeleteRole(b.dataset.roleDelete));
+}
+function ccOpenRole(id){
+  const st=ccControlState();ccNormalizeRoles(st);const r=id?st.roles.find(x=>x.id===id):null;ccEditingRoleId=r?.id||null;
+  $('#ccRoleModalTitle').textContent=r?'Edit Role':'Add Role';
+  $('#ccRoleName').value=r?.name||'';$('#ccRoleDescription').value=r?.description||'';$('#ccRoleStatus').value=r?.status||'Active';$('#ccRoleDefault').value=r?.isDefault?'Yes':'No';
+  $('#ccRoleName').disabled=!!r?.protected;$('#ccRoleStatus').disabled=!!r?.protected;
+  $('#ccRoleModal').classList.add('open');
+}
+function ccCloseRole(){$('#ccRoleModal').classList.remove('open')}
+function ccSaveRole(){
+  const st=ccControlState();ccNormalizeRoles(st);const name=$('#ccRoleName').value.trim();if(!name)return toast('Role name is required');
+  if(st.roles.some(r=>r.name.toLowerCase()===name.toLowerCase()&&r.id!==ccEditingRoleId))return toast('This role already exists');
+  if($('#ccRoleDefault').value==='Yes')st.roles.forEach(r=>r.isDefault=false);
+  const existing=st.roles.find(r=>r.id===ccEditingRoleId);
+  if(existing){existing.name=name;existing.description=$('#ccRoleDescription').value.trim();if(!existing.protected)existing.status=$('#ccRoleStatus').value;existing.isDefault=$('#ccRoleDefault').value==='Yes'}
+  else st.roles.push({id:'role-'+Date.now(),name,description:$('#ccRoleDescription').value.trim(),status:$('#ccRoleStatus').value,isDefault:$('#ccRoleDefault').value==='Yes'});
+  st.activity.unshift({action:`Role ${existing?'updated':'created'}: ${name}`,time:new Date().toISOString(),actor:'Muhammad Waqas',type:'role',result:'Success'});
+  ccSaveState(st);ccCloseRole();renderControlRoles();renderControlPermissions();toast('Role saved');
+}
+function ccDuplicateRole(id){
+  const st=ccControlState();ccNormalizeRoles(st);const r=st.roles.find(x=>x.id===id);if(!r)return;
+  let name=`${r.name} Copy`,n=2;while(st.roles.some(x=>x.name===name))name=`${r.name} Copy ${n++}`;
+  st.roles.push({...r,id:'role-'+Date.now(),name,protected:false,isDefault:false});
+  if(st.permissions?.[r.name])st.permissions[name]=structuredClone(st.permissions[r.name]);
+  ccSaveState(st);renderControlRoles();toast('Role duplicated');
+}
+function ccToggleRole(id){
+  const st=ccControlState();ccNormalizeRoles(st);const r=st.roles.find(x=>x.id===id);if(!r||r.protected)return;r.status=r.status==='Active'?'Disabled':'Active';ccSaveState(st);renderControlRoles();toast(`Role ${r.status.toLowerCase()}`);
+}
+function ccDeleteRole(id){
+  const st=ccControlState();ccNormalizeRoles(st);const r=st.roles.find(x=>x.id===id);if(!r||r.protected)return;
+  if(st.users.some(u=>u.role===r.name))return toast('Cannot delete a role while users are assigned');
+  if(!confirm(`Delete role "${r.name}"?`))return;st.roles=st.roles.filter(x=>x.id!==id);if(st.permissions)delete st.permissions[r.name];ccSaveState(st);renderControlRoles();toast('Role deleted');
+}
+
+function ccEnsureRestrictions(st,role){
+  if(!st.restrictions)st.restrictions={};
+  if(!st.restrictions[role])st.restrictions[role]={department:'all',workshop:'all',supplier:'all',location:'all',scope:'all',rates:'show',notes:''};
+}
+function renderControlRestrictions(){
+  const st=ccControlState();ccNormalizeRoles(st);const sel=$('#ccRestrictionRole'),old=sel.value;sel.innerHTML=st.roles.map(r=>`<option>${ccEsc(r.name)}</option>`).join('');sel.value=st.roles.some(r=>r.name===old)?old:st.roles[0].name;
+  const role=sel.value;ccEnsureRestrictions(st,role);const r=st.restrictions[role];
+  $('#ccRestrictDepartment').value=r.department;$('#ccRestrictWorkshop').value=r.workshop;$('#ccRestrictSupplier').value=r.supplier;$('#ccRestrictLocation').value=r.location;$('#ccRestrictScope').value=r.scope;$('#ccRestrictRates').value=r.rates;$('#ccRestrictionNotes').value=r.notes||'';
+  const protectedRole=role==='Super Administrator';$$('#control-restrictions select,#control-restrictions textarea').forEach(x=>x.disabled=protectedRole);$('#ccRestrictionRole').disabled=false;$('#ccSaveRestrictions').disabled=protectedRole;
+}
+function ccSaveRestrictions(){
+  const st=ccControlState(),role=$('#ccRestrictionRole').value;if(role==='Super Administrator')return toast('Super Administrator cannot be restricted');ccEnsureRestrictions(st,role);
+  st.restrictions[role]={department:$('#ccRestrictDepartment').value,workshop:$('#ccRestrictWorkshop').value,supplier:$('#ccRestrictSupplier').value,location:$('#ccRestrictLocation').value,scope:$('#ccRestrictScope').value,rates:$('#ccRestrictRates').value,notes:$('#ccRestrictionNotes').value.trim()};
+  st.activity.unshift({action:`Data restrictions updated for ${role}`,time:new Date().toISOString(),actor:'Muhammad Waqas',type:'permission',result:'Success'});ccSaveState(st);toast('Data restrictions saved');
+}
+
+function ccEnsureSessions(st){
+  if(!Array.isArray(st.sessions)||!st.sessions.length)st.sessions=[
+    {id:'s1',user:'Muhammad Waqas',device:'Windows 10 • Chrome',network:'Current device',started:new Date(Date.now()-7200000).toISOString(),lastActive:new Date().toISOString(),status:'Active',current:true},
+    {id:'s2',user:'Test Costing Officer',device:'Windows 10 • Edge',network:'Office network',started:new Date(Date.now()-86400000).toISOString(),lastActive:new Date(Date.now()-1800000).toISOString(),status:'Active',current:false}
+  ];
+}
+function renderControlSessions(){
+  const st=ccControlState();ccEnsureSessions(st);const active=st.sessions.filter(s=>s.status==='Active');
+  $('#ccActiveSessionCount').textContent=active.length;$('#ccOnlineUserCount').textContent=new Set(active.map(s=>s.user)).size;$('#ccTrustedDeviceCount').textContent=st.trustedDevices?.length||1;$('#ccLockedUserCount').textContent=st.users.filter(u=>u.locked).length;
+  $('#ccSessionRows').innerHTML=st.sessions.map(s=>`<tr><td><b>${ccEsc(s.user)}</b>${s.current?' <span class="cc-badge info">Current</span>':''}</td><td>${ccEsc(s.device)}</td><td>${ccEsc(s.network)}</td><td>${ccDateTime(s.started)}</td><td>${ccDateTime(s.lastActive)}</td><td><span class="cc-badge ${s.status==='Active'?'good':'warn'}">${ccEsc(s.status)}</span></td><td>${s.current?'—':`<button class="cc-mini danger" data-session-end="${s.id}">Force Logout</button>`}</td></tr>`).join('');
+  $$('[data-session-end]').forEach(b=>b.onclick=()=>ccEndSession(b.dataset.sessionEnd));
+}
+function ccEndSession(id){const st=ccControlState();ccEnsureSessions(st);const s=st.sessions.find(x=>x.id===id);if(!s)return;s.status='Ended';st.activity.unshift({action:`Session ended for ${s.user}`,time:new Date().toISOString(),actor:'Muhammad Waqas',type:'security',result:'Success'});ccSaveState(st);renderControlSessions();toast('Session ended')}
+function ccLogoutAllSessions(){const st=ccControlState();ccEnsureSessions(st);st.sessions.forEach(s=>{if(!s.current)s.status='Ended'});ccSaveState(st);renderControlSessions();toast('All other sessions ended')}
+
+function ccActivityType(action){const a=(action||'').toLowerCase();if(a.includes('login')||a.includes('session'))return'login';if(a.includes('role'))return'role';if(a.includes('permission')||a.includes('restriction'))return'permission';if(a.includes('security')||a.includes('password')||a.includes('mfa'))return'security';return'user'}
+function renderControlActivity(){
+  const st=ccControlState(),q=$('#ccActivitySearch').value.trim().toLowerCase(),type=$('#ccActivityType').value;
+  const rows=st.activity.map(a=>({...a,type:a.type||ccActivityType(a.action),result:a.result||'Success'})).filter(a=>(!q||`${a.action} ${a.actor}`.toLowerCase().includes(q))&&(!type||a.type===type));
+  $('#ccActivityRows').innerHTML=rows.length?rows.map(a=>`<tr><td>${ccDateTime(a.time)}</td><td><b>${ccEsc(a.actor||'System')}</b></td><td>${ccEsc(a.action)}</td><td><span class="cc-badge info">${ccEsc(a.type)}</span></td><td><span class="cc-badge ${a.result==='Success'?'good':'bad'}">${ccEsc(a.result)}</span></td></tr>`).join(''):'<tr><td colspan="5"><div class="cc-empty-state">No matching activity found.</div></td></tr>';
+}
+function ccExportActivity(){
+  const st=ccControlState();const rows=[['Date & Time','Actor','Action','Type','Result'],...st.activity.map(a=>[ccDateTime(a.time),a.actor||'System',a.action,a.type||ccActivityType(a.action),a.result||'Success'])];
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='erp-activity-log.csv';a.click();URL.revokeObjectURL(url);
+}
+
+function ccEnsureSecurity(st){
+  if(!st.security)st.security={mfa:true,mfaScope:'admins',minLength:10,expiry:90,history:5,failedLimit:5,lockMinutes:30,deviceAlert:true,timeout:30,maxSessions:3,reauth:true,auditDays:365,reviewDays:90,adminAlert:true,disableInactive:true,inactiveDays:90,forceChange:true};
+}
+function renderControlSecurity(){
+  const st=ccControlState();ccEnsureSecurity(st);const s=st.security;
+  $('#ccSecMfa').checked=s.mfa;$('#ccSecMfaScope').value=s.mfaScope;$('#ccSecMinLength').value=s.minLength;$('#ccSecExpiry').value=s.expiry;$('#ccSecHistory').value=s.history;$('#ccSecFailedLimit').value=s.failedLimit;$('#ccSecLockMinutes').value=s.lockMinutes;$('#ccSecDeviceAlert').checked=s.deviceAlert;$('#ccSecTimeout').value=s.timeout;$('#ccSecMaxSessions').value=s.maxSessions;$('#ccSecReauth').checked=s.reauth;$('#ccSecAuditDays').value=s.auditDays;$('#ccSecReviewDays').value=s.reviewDays;$('#ccSecAdminAlert').checked=s.adminAlert;$('#ccSecDisableInactive').checked=s.disableInactive;$('#ccSecInactiveDays').value=s.inactiveDays;$('#ccSecForceChange').checked=s.forceChange;
+  const enabled=[s.mfa,s.minLength>=10,s.expiry>0,s.failedLimit<=5,s.deviceAlert,s.timeout<=30,s.reauth,s.auditDays>=365,s.adminAlert,s.disableInactive,s.forceChange].filter(Boolean).length;
+  $('#ccSecurityScore').textContent=Math.round(enabled/11*100)+'%';$('#ccMfaCoverage').textContent=s.mfa?(s.mfaScope==='all'?'100%':'Admin'):'0%';$('#ccPasswordExpiryKpi').textContent=s.expiry+'d';$('#ccSessionTimeoutKpi').textContent=s.timeout+'m';
+}
+function ccSaveSecurity(){
+  const st=ccControlState();ccEnsureSecurity(st);st.security={mfa:$('#ccSecMfa').checked,mfaScope:$('#ccSecMfaScope').value,minLength:+$('#ccSecMinLength').value,expiry:+$('#ccSecExpiry').value,history:+$('#ccSecHistory').value,failedLimit:+$('#ccSecFailedLimit').value,lockMinutes:+$('#ccSecLockMinutes').value,deviceAlert:$('#ccSecDeviceAlert').checked,timeout:+$('#ccSecTimeout').value,maxSessions:+$('#ccSecMaxSessions').value,reauth:$('#ccSecReauth').checked,auditDays:+$('#ccSecAuditDays').value,reviewDays:+$('#ccSecReviewDays').value,adminAlert:$('#ccSecAdminAlert').checked,disableInactive:$('#ccSecDisableInactive').checked,inactiveDays:+$('#ccSecInactiveDays').value,forceChange:$('#ccSecForceChange').checked};
+  st.activity.unshift({action:'Global security policy updated',time:new Date().toISOString(),actor:'Muhammad Waqas',type:'security',result:'Success'});ccSaveState(st);renderControlSecurity();toast('Security policy saved');
+}
+
 function openStudioPanel(name,section){
   ccCurrentStudio=name;ccCurrentSection=section||'';
   $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
@@ -689,14 +924,18 @@ function openStudioPanel(name,section){
   if(isControl){
     $('#controlGroup').classList.add('open');
     const target=section||'dashboard';
-    $('#control-dashboard').classList.toggle('active',target==='dashboard');
-    $('#control-users').classList.toggle('active',target==='users');
-    $('#control-permissions').classList.toggle('active',target==='permissions');
-    $('#control-placeholder').classList.toggle('active',!['dashboard','users','permissions'].includes(target));
-    if(!['dashboard','users','permissions'].includes(target)) $('#ccPlaceholderTitle').textContent=target.replace(/(^|[-_ ])\w/g,m=>m.toUpperCase());
+    const controlSections=['dashboard','users','roles','permissions','restrictions','sessions','activity','security'];
+    controlSections.forEach(s=>{const el=$('#control-'+s);if(el)el.classList.toggle('active',target===s)});
+    $('#control-placeholder').classList.toggle('active',!controlSections.includes(target));
+    if(!controlSections.includes(target)) $('#ccPlaceholderTitle').textContent=target.replace(/(^|[-_ ])\w/g,m=>m.toUpperCase());
     if(target==='dashboard') renderControlDashboard();
     if(target==='users') renderControlUsers();
+    if(target==='roles') renderControlRoles();
     if(target==='permissions') renderControlPermissions();
+    if(target==='restrictions') renderControlRestrictions();
+    if(target==='sessions') renderControlSessions();
+    if(target==='activity') renderControlActivity();
+    if(target==='security') renderControlSecurity();
     const u=new URL(location.href);u.searchParams.set('studio','control-center');u.searchParams.set('section',target);history.replaceState(null,'',u);
   }else{
     const u=new URL(location.href);u.searchParams.delete('studio');u.searchParams.delete('section');history.replaceState(null,'',u);
@@ -721,6 +960,12 @@ function bind(){
   $('#ccPermissionSave').addEventListener('click',ccSavePermissions);
   $('#ccPermissionSelectAll').addEventListener('click',()=>ccSetAllPermissions(true));
   $('#ccPermissionClear').addEventListener('click',()=>ccSetAllPermissions(false));
+  $('#ccAddRole').addEventListener('click',()=>ccOpenRole());
+  $('#ccCloseRole').addEventListener('click',ccCloseRole);$('#ccCancelRole').addEventListener('click',ccCloseRole);$('#ccSaveRole').addEventListener('click',ccSaveRole);$('#ccRoleModal').addEventListener('click',e=>{if(e.target===$('#ccRoleModal'))ccCloseRole()});
+  $('#ccRestrictionRole').addEventListener('change',renderControlRestrictions);$('#ccSaveRestrictions').addEventListener('click',ccSaveRestrictions);
+  $('#ccLogoutAllSessions').addEventListener('click',ccLogoutAllSessions);
+  $('#ccActivitySearch').addEventListener('input',renderControlActivity);$('#ccActivityType').addEventListener('change',renderControlActivity);$('#ccExportActivity').addEventListener('click',ccExportActivity);
+  $('#ccSaveSecurity').addEventListener('click',ccSaveSecurity);
   $('#ccAddUser').addEventListener('click',()=>ccOpenUser());
   $('#ccUserSearch').addEventListener('input',renderControlUsers);$('#ccUserStatus').addEventListener('change',renderControlUsers);$('#ccUserRole').addEventListener('change',renderControlUsers);
   $('#ccCloseUser').addEventListener('click',ccCloseUser);$('#ccCancelUser').addEventListener('click',ccCloseUser);$('#ccSaveUser').addEventListener('click',ccSaveUser);
