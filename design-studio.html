@@ -494,6 +494,81 @@
   .masters-top-row{grid-template-columns:1fr}
 }
 
+
+/* Correct Masters vertical layout V2.9 */
+.masters-page-card{padding:18px}
+.masters-page-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.masters-page-heading h2{margin:0 0 4px;font-size:25px}
+.masters-page-heading p{margin:0;color:var(--muted)}
+.master-form-horizontal{
+  width:100%;
+  margin-bottom:16px;
+  background:color-mix(in srgb,var(--surface) 96%,var(--bg));
+}
+.master-form-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:13px;
+}
+.master-form-head h3{margin:0 0 4px}
+.master-form-head .sub{margin:0}
+.master-form-grid-horizontal{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.master-form-grid-horizontal .full{
+  grid-column:span 2;
+}
+.master-tabs{
+  margin:0 0 14px;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  padding:12px 0;
+}
+.master-list-full{
+  width:100%;
+  padding:0;
+  border:0;
+  border-radius:0;
+}
+.master-list-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.master-list-head h3{margin:0 0 4px}
+.master-list-head .sub{margin:0}
+.master-list-head .master-toolbar{
+  margin:0;
+  flex:1;
+  justify-content:flex-end;
+}
+.master-list-head .master-toolbar .search{
+  max-width:420px;
+}
+@media(max-width:1050px){
+  .master-form-grid-horizontal{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .master-form-grid-horizontal .full{grid-column:1/-1}
+}
+@media(max-width:620px){
+  .master-form-grid-horizontal{grid-template-columns:1fr}
+  .master-form-grid-horizontal .full{grid-column:auto}
+  .master-list-head .master-toolbar{width:100%}
+  .master-list-head .master-toolbar .search{max-width:none}
+}
+
 </style>
 
 <script>
@@ -709,22 +784,33 @@
   </div></div></div></div>
 </section>
 
-<section class="panel" id="panel-masters">
-  <div class="masters-top-row">
-    <div class="masters-title-card">
-      <small>MASTER MANAGEMENT</small>
-      <h2>Masters</h2>
-      <p>Manage all ERP master records from one page.</p>
-    </div>
-    <div class="master-summary-card"><small>Total Records</small><strong id="masterTotalRecords">0</strong></div>
-    <div class="master-summary-card"><small>Active Records</small><strong id="masterActiveRecords">0</strong></div>
-    <div class="master-summary-card"><small>Last Updated</small><strong id="masterLastUpdated" style="font-size:15px">—</strong></div>
-  </div>
 
-  <div class="card">
-    <div class="masters-action-row">
-      <div class="masters-current-label" id="mastersCurrentLabel">Item Master</div>
-      <div class="cc-toolbar"><button class="btn" id="masterExportBtn">Export JSON</button><label class="btn" for="masterImportFile">Import JSON</label><input type="file" id="masterImportFile" accept=".json,application/json" style="display:none"></div>
+<section class="panel" id="panel-masters">
+  <div class="card masters-page-card">
+    <div class="masters-page-heading">
+      <div>
+        <h2 id="mastersCurrentLabel">Item Master</h2>
+        <p id="mastersPageSubtitle">Manage item records used across the ERP.</p>
+      </div>
+      <div class="cc-toolbar">
+        <button class="btn" id="masterExportBtn">Export JSON</button>
+        <label class="btn" for="masterImportFile">Import JSON</label>
+        <input type="file" id="masterImportFile" accept=".json,application/json" style="display:none">
+      </div>
+    </div>
+
+    <div class="master-form master-form-horizontal">
+      <div class="master-form-head">
+        <div>
+          <h3 id="masterFormTitle">Add Item</h3>
+          <p class="sub" id="masterFormSubtitle">Create or update a master record.</p>
+        </div>
+        <div class="master-form-actions">
+          <button class="btn" id="masterResetForm">Clear</button>
+          <button class="btn primary" id="masterSaveRecord">Save Record</button>
+        </div>
+      </div>
+      <div class="master-form-grid master-form-grid-horizontal" id="masterFormFields"></div>
     </div>
 
     <div class="master-tabs" id="masterTabs">
@@ -741,32 +827,28 @@
       <button class="master-tab" data-master-page-tab="locations">Rack / Location</button>
     </div>
 
-    <div class="master-toolbar">
-      <input class="search" id="masterSearch" placeholder="Search current master records">
-      <select id="masterStatusFilter"><option value="">All Statuses</option><option value="Active">Active</option><option value="Disabled">Disabled</option></select>
-      <button class="btn" id="masterClearSearch">Clear</button>
-    </div>
-
-    <div class="master-layout">
-      <div class="master-form">
-        <h3 id="masterFormTitle">Add Item</h3>
-        <p class="sub" id="masterFormSubtitle">Create or update a master record.</p>
-        <div class="master-form-grid" id="masterFormFields"></div>
-        <div class="master-form-actions">
-          <button class="btn" id="masterResetForm">Clear</button>
-          <button class="btn primary" id="masterSaveRecord">Save Record</button>
+    <div class="master-list master-list-full">
+      <div class="master-list-head">
+        <div>
+          <h3 id="masterListTitle">Item Master List</h3>
+          <p class="sub">Latest records appear first. Use Edit or Delete from Actions.</p>
+        </div>
+        <div class="master-toolbar">
+          <input class="search" id="masterSearch" placeholder="Search current master records">
+          <select id="masterStatusFilter">
+            <option value="">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Disabled">Disabled</option>
+          </select>
+          <button class="btn" id="masterClearSearch">Clear</button>
         </div>
       </div>
 
-      <div class="master-list">
-        <h3 id="masterListTitle">Item Master List</h3>
-        <p class="sub">Latest records appear first. Use Edit or Delete from Actions.</p>
-        <div class="master-table-wrap">
-          <table class="master-table">
-            <thead id="masterTableHead"></thead>
-            <tbody id="masterTableBody"></tbody>
-          </table>
-        </div>
+      <div class="master-table-wrap">
+        <table class="master-table">
+          <thead id="masterTableHead"></thead>
+          <tbody id="masterTableBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1758,13 +1840,11 @@ function openMasters(tab='items'){
 }
 function renderMasterPage(){
   const cfg=MASTER_CONFIG[currentMasterTab],data=loadMasterData(),rows=data[currentMasterTab];
-  $('#masterTotalRecords').textContent=rows.length;
-  $('#masterActiveRecords').textContent=rows.filter(r=>(r.status||'Active')==='Active').length;
-  $('#masterLastUpdated').textContent=rows[0]?.updatedAt?ccDateTime(rows[0].updatedAt):'—';
   $('#masterFormTitle').textContent=(editingMasterId?'Edit ':'Add ')+cfg.singular;
   $('#masterFormSubtitle').textContent=`${cfg.title} fields are shared across connected ERP modules.`;
   $('#masterListTitle').textContent=cfg.title+' List';
   $('#mastersCurrentLabel').textContent=cfg.title;
+  $('#mastersPageSubtitle').textContent=`Manage ${cfg.title.toLowerCase()} records used across the ERP.`;
   renderMasterFields();
   renderMasterTable();
 }
