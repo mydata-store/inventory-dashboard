@@ -54,7 +54,7 @@ body{overflow-x:hidden}.app{display:grid;grid-template-columns:var(--studio-side
   <nav class="settings-menu">
     <a class="settings-item" href="index.html"><span class="settings-icon">⌂</span><span>Dashboard</span></a>
     <a class="settings-item" href="costing.html"><span class="settings-icon">◇</span><span>Costing &amp; Consumption</span></a>
-    <div class="settings-group open" id="settingsGroup">
+    <div class="settings-group" id="settingsGroup">
       <button class="settings-group-toggle" type="button" id="settingsToggle"><span class="settings-icon">⚙</span><span>Settings</span><span class="chev">⌄</span></button>
       <div class="settings-submenu"><div class="settings-submenu-inner">
         <button class="settings-subitem active studio-tab" type="button" data-tab="theme"><span>Theme Studio</span></button>
@@ -115,7 +115,8 @@ body{overflow-x:hidden}.app{display:grid;grid-template-columns:var(--studio-side
 </div>
 <h3 class="section-title">Behavior</h3><div class="grid">
 <div class="field"><label>Animation Speed</label><input type="range" min="0" max="600" step="25" data-key="sidebar.animation"><div class="value"></div></div>
-<div class="field"><label>Submenus</label><select data-key="sidebar.submenuMode"><option value="single">Only one open</option><option value="multiple">Allow multiple open</option></select></div>
+<div class="field"><label>Submenu Opening</label><select data-key="sidebar.submenuOpening"><option value="closed">Closed by default</option><option value="current">Open current page group</option><option value="remember">Remember last opened group</option></select></div>
+<div class="field"><label>Open Behavior</label><select data-key="sidebar.submenuMode"><option value="single">Only one submenu open</option><option value="multiple">Allow multiple submenus open</option></select></div>
 <div class="field"><label>Default State</label><select data-key="sidebar.defaultState"><option value="expanded">Expanded</option><option value="collapsed">Collapsed</option></select></div>
 <div class="field"><label>Expand on Hover</label><div class="switch"><input type="checkbox" data-key="sidebar.expandHover"> Enable</div></div>
 </div></div></div>
@@ -183,7 +184,7 @@ const themes={
 'Enterprise Blue':{background:'#edf4f8',surface:'#ffffff',text:'#183247',muted:'#657b8d',primary:'#147ac2',accent:'#eb6b08',border:'#c3d3dd',sidebar:'#294357',sidebarText:'#ffffff',sidebarActive:'#147ac2',sidebarActiveText:'#ffffff'},
 'Sunrise Orange':{background:'#fff5ed',surface:'#ffffff',text:'#52200f',muted:'#8b6557',primary:'#c84e16',accent:'#ff6b18',border:'#efd0bf',sidebar:'#8c2f12',sidebarText:'#ffffff',sidebarActive:'#ff6b18',sidebarActiveText:'#ffffff'}
 };
-const defaults={theme:{name:'Emerald Inventory',fontFamily:'Segoe UI',baseSize:14,headingWeight:'700',...themes['Emerald Inventory']},sidebar:{width:230,collapsedWidth:58,rowHeight:42,subRowHeight:30,iconSize:15,radius:9,gap:3,subIndent:32,mainSize:13,mainWeight:'600',subSize:11,subWeight:'500',lineHeight:1.2,letterSpacing:0,alignment:'left',wrap:'nowrap',animation:220,submenuMode:'single',defaultState:'expanded',expandHover:false},profile:{picture:'',pictureSize:50,pictureZoom:1,pictureShape:'circle',pictureBorderWidth:2,pictureBorder:'#f5a400',pictureShadow:'none',cardHeight:78,cardPadding:10,cardRadius:15,cardBorderWidth:1,cardBackground:'#ffffff18',cardBorder:'#ffffff35',cardShadow:'none',layout:'horizontal',name:'Muhammad Waqas',nameFont:'Segoe UI',nameSize:13,nameColor:'#ffffff',nameWeight:'700',nameStyle:'normal',nameWrap:'nowrap',textAlign:'left',role:'Store Officer',roleSize:10,roleColor:'#dbe8e3',roleWeight:'500',roleStyle:'normal',status:'Online',statusSize:10,statusColor:'#32d583',showRole:true,showStatus:true,showPicture:true}};
+const defaults={theme:{name:'Emerald Inventory',fontFamily:'Segoe UI',baseSize:14,headingWeight:'700',...themes['Emerald Inventory']},sidebar:{width:230,collapsedWidth:58,rowHeight:42,subRowHeight:30,iconSize:15,radius:9,gap:3,subIndent:32,mainSize:13,mainWeight:'600',subSize:11,subWeight:'500',lineHeight:1.2,letterSpacing:0,alignment:'left',wrap:'nowrap',animation:220,submenuOpening:'closed',submenuMode:'single',defaultState:'expanded',expandHover:false},profile:{picture:'',pictureSize:50,pictureZoom:1,pictureShape:'circle',pictureBorderWidth:2,pictureBorder:'#f5a400',pictureShadow:'none',cardHeight:78,cardPadding:10,cardRadius:15,cardBorderWidth:1,cardBackground:'#ffffff18',cardBorder:'#ffffff35',cardShadow:'none',layout:'horizontal',name:'Muhammad Waqas',nameFont:'Segoe UI',nameSize:13,nameColor:'#ffffff',nameWeight:'700',nameStyle:'normal',nameWrap:'nowrap',textAlign:'left',role:'Store Officer',roleSize:10,roleColor:'#dbe8e3',roleWeight:'500',roleStyle:'normal',status:'Online',statusSize:10,statusColor:'#32d583',showRole:true,showStatus:true,showPicture:true}};
 let state=load(), previous=JSON.parse(JSON.stringify(state));
 function merge(a,b){const o=JSON.parse(JSON.stringify(a));for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k]))o[k]=merge(o[k]||{},b[k]);else o[k]=b[k]}return o}
 function load(){try{return merge(defaults,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return JSON.parse(JSON.stringify(defaults))}}
@@ -193,7 +194,7 @@ function initThemes(){const box=$('#themes');box.innerHTML='';Object.entries(the
 function syncControls(){$$('[data-key]').forEach(el=>{const v=get(el.dataset.key);if(el.type==='checkbox')el.checked=!!v;else el.value=v??'';updateValue(el)})}
 function parse(el){if(el.type==='checkbox')return el.checked;if(el.type==='range')return Number(el.value);return el.value}
 function updateValue(el){const v=el.parentElement.querySelector('.value');if(!v)return;let suffix='';const k=el.dataset.key||'';if(/Size|width|Width|Height|height|radius|Radius|gap|Gap|Indent|Padding|BorderWidth|iconSize|rowHeight|subRowHeight/.test(k))suffix=' px';if(k.includes('animation'))suffix=' ms';v.textContent=(el.value??'')+suffix}
-function bindControls(){$$('[data-key]').forEach(el=>{el.addEventListener('input',()=>{previous=JSON.parse(JSON.stringify(state));set(el.dataset.key,parse(el));updateValue(el);render()});el.addEventListener('change',()=>{set(el.dataset.key,parse(el));render()})})}
+function bindControls(){$$('[data-key]').forEach(el=>{el.addEventListener('input',()=>{previous=JSON.parse(JSON.stringify(state));set(el.dataset.key,parse(el));updateValue(el);render()});el.addEventListener('change',()=>{set(el.dataset.key,parse(el));render();if(el.dataset.key==='sidebar.submenuOpening')applySubmenuOpening()})})}
 function shapeRadius(shape){return shape==='circle'?'50%':shape==='rounded'?'12px':shape==='square'?'0':shape==='oval'?'50% / 38%':'12px'}
 function shadow(v){return v==='soft'?'0 5px 15px rgba(0,0,0,.18)':v==='strong'?'0 8px 24px rgba(0,0,0,.35)':'none'}
 const SidebarEngine={
@@ -228,13 +229,34 @@ const av=$('#avatar');av.style.display=p.showPicture?'block':'none';av.src=p.pic
 const pn=$('#pname');pn.textContent=p.name;pn.style.setProperty('--pv-name-font',`'${p.nameFont}',Arial,sans-serif`);pn.style.setProperty('--pv-name-size',p.nameSize+'px');pn.style.setProperty('--pv-name-color',p.nameColor);pn.style.setProperty('--pv-name-weight',p.nameWeight);pn.style.setProperty('--pv-name-style',p.nameStyle);pn.style.setProperty('--pv-name-wrap',p.nameWrap);const pr=$('#prole');pr.textContent=p.role;pr.style.display=p.showRole?'block':'none';pr.style.setProperty('--pv-role-size',p.roleSize+'px');pr.style.setProperty('--pv-role-color',p.roleColor);pr.style.setProperty('--pv-role-weight',p.roleWeight);pr.style.setProperty('--pv-role-style',p.roleStyle);const ps=$('#pstatus');ps.textContent='● '+p.status;ps.style.display=p.showStatus?'block':'none';ps.style.setProperty('--pv-status-size',p.statusSize+'px');ps.style.setProperty('--pv-status-color',p.statusColor)}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
 $$('.studio-tab').forEach(b=>b.onclick=()=>{$$('.studio-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');$$('.panel').forEach(x=>x.classList.remove('active'));$('#'+b.dataset.tab).classList.add('active')});
-$('#settingsToggle').onclick=()=>$('#settingsGroup').classList.toggle('open');
+function applySubmenuOpening(){
+  const groups=$$('.settings-group');
+  groups.forEach(g=>g.classList.remove('open'));
+  const policy=state.sidebar.submenuOpening||'closed';
+  if(policy==='current'){
+    const current=document.querySelector('.settings-subitem.active')?.closest('.settings-group');
+    current?.classList.add('open');
+  }else if(policy==='remember'){
+    const id=localStorage.getItem('designStudioOpenSubmenu');
+    if(id)document.getElementById(id)?.classList.add('open');
+  }
+}
+$('#settingsToggle').onclick=()=>{
+  const group=$('#settingsGroup');
+  const willOpen=!group.classList.contains('open');
+  if(willOpen&&state.sidebar.submenuMode==='single')$$('.settings-group').forEach(g=>g.classList.remove('open'));
+  group.classList.toggle('open',willOpen);
+  if((state.sidebar.submenuOpening||'closed')==='remember'){
+    if(willOpen)localStorage.setItem('designStudioOpenSubmenu',group.id);
+    else localStorage.removeItem('designStudioOpenSubmenu');
+  }
+};
 $('#saveBtn').onclick=()=>{localStorage.setItem(KEY,JSON.stringify(state));window.dispatchEvent(new StorageEvent('storage',{key:KEY,newValue:JSON.stringify(state)}));toast('Settings saved and applied')};$('#resetBtn').onclick=()=>{previous=JSON.parse(JSON.stringify(state));state=JSON.parse(JSON.stringify(defaults));initThemes();syncControls();render();toast('Defaults restored — save to apply')};$('#undoBtn').onclick=()=>{const cur=state;state=previous;previous=cur;initThemes();syncControls();render();toast('Last change undone')};$('#removePic').onclick=()=>{previous=JSON.parse(JSON.stringify(state));state.profile.picture='';render()};$('#pictureFile').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const img=new Image();img.onload=()=>{const c=document.createElement('canvas'),max=256,scale=Math.min(1,max/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);state.profile.picture=c.toDataURL('image/jpeg',.84);render()};img.src=URL.createObjectURL(f)};
 document.getElementById('sidebarCollapseBtn').onclick=()=>SidebarEngine.toggle();
 $$('.settings-group-toggle').forEach(toggle=>toggle.addEventListener('click',()=>{
   const group=toggle.closest('.settings-group');
   if(state.sidebar.submenuMode==='single')$$('.settings-group').forEach(g=>{if(g!==group)g.classList.remove('open')});
 }));
-initThemes();syncControls();bindControls();render();
+initThemes();syncControls();bindControls();render();applySubmenuOpening();
 })();
 </script></body></html>
