@@ -813,6 +813,15 @@
 .local-autocomplete-option strong{display:block}
 .local-autocomplete-option small{display:block;color:var(--muted);margin-top:2px}
 .local-autocomplete-empty{padding:12px;color:var(--muted);text-align:center}
+
+.erp-keyboard-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px;
+  background:color-mix(in srgb,var(--primary) 12%,var(--surface));
+  color:var(--primary);font-size:10px;font-weight:900;
+  text-transform:uppercase;letter-spacing:.04em
+}
+.erp-keyboard-badge::before{content:'⌨'}
 </style>
 
 <script>
@@ -1169,6 +1178,9 @@
 <div class="purchase-workspace" id="purchase-local">
   <div class="purchase-section-box local-purchase-shell">
     <div class="local-purchase-heading">
+      <div style="width:100%;display:flex;justify-content:flex-end;margin-bottom:6px">
+        <span class="erp-keyboard-badge">Excel Keyboard Mode Active</span>
+      </div>
       <div>
         <h3>Local Purchase Entry</h3>
         <p>Enter local purchases using the existing Design Studio header, sidebar and profile.</p>
@@ -2840,6 +2852,64 @@ function localMoveFocus(current,direction){
   rows[nextRow].querySelectorAll('[data-local-cell]')[Math.max(0,nextCol)]?.focus();
 }
 
+function localCellMatrix(){
+  return [...$('#localPurchaseBody').querySelectorAll('tr')].map(
+    tr=>[...tr.querySelectorAll('[data-local-cell]')]
+  );
+}
+function localFocusCell(rowIndex,colIndex){
+  const matrix=localCellMatrix();
+  if(rowIndex<0||rowIndex>=matrix.length)return;
+  const row=matrix[rowIndex];
+  if(!row.length)return;
+  const safeCol=Math.max(0,Math.min(colIndex,row.length-1));
+  row[safeCol]?.focus();
+  row[safeCol]?.select?.();
+}
+function localMoveGrid(current,move){
+  const matrix=localCellMatrix();
+  const row=current.closest('tr');
+  const rowIndex=matrix.findIndex(r=>r.includes(current));
+  const colIndex=matrix[rowIndex]?.indexOf(current)??-1;
+  if(rowIndex<0||colIndex<0)return;
+
+  if(move==='right'){
+    if(colIndex<matrix[rowIndex].length-1)localFocusCell(rowIndex,colIndex+1);
+    else if(rowIndex<matrix.length-1)localFocusCell(rowIndex+1,0);
+    return;
+  }
+  if(move==='left'){
+    if(colIndex>0)localFocusCell(rowIndex,colIndex-1);
+    else if(rowIndex>0)localFocusCell(rowIndex-1,matrix[rowIndex-1].length-1);
+    return;
+  }
+  if(move==='down'){
+    if(rowIndex<matrix.length-1)localFocusCell(rowIndex+1,colIndex);
+    else{
+      localAddRow();
+      setTimeout(()=>localFocusCell(localCellMatrix().length-1,colIndex),0);
+    }
+    return;
+  }
+  if(move==='up'){
+    if(rowIndex>0)localFocusCell(rowIndex-1,colIndex);
+  }
+}
+function localCopyAbove(current){
+  const matrix=localCellMatrix();
+  const rowIndex=matrix.findIndex(r=>r.includes(current));
+  const colIndex=matrix[rowIndex]?.indexOf(current)??-1;
+  if(rowIndex<=0||colIndex<0)return;
+  const above=matrix[rowIndex-1][colIndex];
+  if(!above)return;
+  current.value=above.value;
+  current.dispatchEvent(new Event('input',{bubbles:true}));
+  current.dispatchEvent(new Event('change',{bubbles:true}));
+}
+function localToday(){
+  const d=new Date();
+  return `${String(d.getDate()).padStart(2,'0')}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+}
 function localBindRows(){
   const body=$('#localPurchaseBody');
 
@@ -2876,6 +2946,7 @@ function localBindRows(){
       const menuOpen=$('#localAutocompleteMenu').classList.contains('open') &&
         localAutocompleteState.input===el;
 
+      // Dropdown navigation
       if(menuOpen&&['ArrowDown','ArrowUp'].includes(event.key)){
         event.preventDefault();
         const max=localAutocompleteState.options.length-1;
@@ -2884,52 +2955,95 @@ function localBindRows(){
         localRenderAutocomplete();
         return;
       }
-
       if(menuOpen&&event.key==='Enter'&&localAutocompleteState.activeIndex>=0){
         event.preventDefault();
         localSelectAutocomplete(localAutocompleteState.activeIndex);
         return;
       }
-
+      if(menuOpen&&event.key===' '&&localAutocompleteState.activeIndex>=0){
+        event.preventDefault();
+        localSelectAutocomplete(localAutocompleteState.activeIndex);
+        return;
+      }
       if(menuOpen&&event.key==='Escape'){
         event.preventDefault();
         localCloseAutocomplete();
         return;
       }
-
-      if(event.key==='Enter'){
+      if(event.altKey&&event.key==='ArrowDown'){
         event.preventDefault();
-        const rows=[...body.querySelectorAll('tr')];
-        const row=el.closest('tr');
-        const isLastRow=rows.indexOf(row)===rows.length-1;
-        const rowCells=[...row.querySelectorAll('[data-local-cell]')];
-        const isLastCell=rowCells.indexOf(el)===rowCells.length-1;
-
-        if(isLastRow&&isLastCell){
-          localAddRow();
-          setTimeout(()=>{
-            const newRows=[...body.querySelectorAll('tr')];
-            newRows[newRows.length-1].querySelector('[data-local-cell="item"]')?.focus();
-          },0);
-        }else{
-          localMoveFocus(el,'right');
+        if(['item','supplier'].includes(el.dataset.localCell)){
+          localOpenAutocomplete(el,el.dataset.localCell);
         }
         return;
       }
 
+      // Universal shortcuts
+      if(event.ctrlKey&&event.key.toLowerCase()==='d'){
+        event.preventDefault();
+        localCopyAbove(el);
+        return;
+      }
+      if(event.ctrlKey&&event.key===';'){
+        event.preventDefault();
+        if(el===document.activeElement)el.value=localToday();
+        return;
+      }
+      if(event.ctrlKey&&event.key.toLowerCase()==='s'){
+        event.preventDefault();
+        localSaveAll();
+        return;
+      }
+      if(event.key==='Delete'){
+        event.preventDefault();
+        el.value='';
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+        return;
+      }
+      if(event.key==='F2'){
+        event.preventDefault();
+        el.focus();
+        el.select?.();
+        return;
+      }
+
+      // Grid movement
+      if(event.key==='Enter'){
+        event.preventDefault();
+        localCloseAutocomplete();
+        localMoveGrid(el,event.shiftKey?'up':'down');
+        return;
+      }
       if(event.key==='Tab'){
+        // Browser Tab behavior already moves right; preserve it.
+        // If a dropdown option is highlighted, select it first.
         if(menuOpen&&localAutocompleteState.activeIndex>=0){
           event.preventDefault();
           localSelectAutocomplete(localAutocompleteState.activeIndex);
-          localMoveFocus(el,event.shiftKey?'left':'right');
+          localMoveGrid(el,event.shiftKey?'left':'right');
         }
         return;
       }
-
-      if(event.key==='ArrowRight'){event.preventDefault();localMoveFocus(el,'right')}
-      if(event.key==='ArrowLeft'){event.preventDefault();localMoveFocus(el,'left')}
-      if(event.key==='ArrowDown'){event.preventDefault();localMoveFocus(el,'down')}
-      if(event.key==='ArrowUp'){event.preventDefault();localMoveFocus(el,'up')}
+      if(event.key==='ArrowRight'){
+        event.preventDefault();
+        localMoveGrid(el,'right');
+        return;
+      }
+      if(event.key==='ArrowLeft'){
+        event.preventDefault();
+        localMoveGrid(el,'left');
+        return;
+      }
+      if(event.key==='ArrowDown'&&!menuOpen){
+        event.preventDefault();
+        localMoveGrid(el,'down');
+        return;
+      }
+      if(event.key==='ArrowUp'&&!menuOpen){
+        event.preventDefault();
+        localMoveGrid(el,'up');
+        return;
+      }
     });
   });
 
@@ -3022,7 +3136,33 @@ function localInitialise(){
   localLoadMasterOptions();
   localLoadDraft();
 
-  $('#localPurchaseDate').addEventListener('blur',event=>{
+
+  [$('#localPurchaseDate'),$('#localPurchaseBy'),$('#localVehicle'),$('#localBill'),$('#localIgp'),$('#localGrn')].forEach((el,index,arr)=>{
+    el.addEventListener('keydown',event=>{
+      if(event.ctrlKey&&event.key.toLowerCase()==='s'){
+        event.preventDefault();localSaveAll();return;
+      }
+      if(event.key==='Enter'){
+        event.preventDefault();
+        if(event.shiftKey){
+          arr[Math.max(0,index-1)]?.focus();
+        }else{
+          arr[Math.min(arr.length-1,index+1)]?.focus();
+        }
+      }
+      if(event.key==='ArrowRight'){event.preventDefault();arr[Math.min(arr.length-1,index+1)]?.focus()}
+      if(event.key==='ArrowLeft'){event.preventDefault();arr[Math.max(0,index-1)]?.focus()}
+      if(event.key==='Delete'){event.preventDefault();el.value=''}
+      if(event.key==='F2'){event.preventDefault();el.focus();el.select?.()}
+      if(event.altKey&&event.key==='ArrowDown'){
+        event.preventDefault();
+        const list=el.getAttribute('list');
+        if(list)el.showPicker?.();
+      }
+    });
+  });
+
+    $('#localPurchaseDate').addEventListener('blur',event=>{
     event.target.value=localFormatDate(event.target.value);
   });
   $('#localBill').addEventListener('blur',event=>event.target.value=event.target.value.toUpperCase());
