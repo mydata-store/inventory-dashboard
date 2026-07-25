@@ -352,6 +352,44 @@
 .home-theme-preview{padding:18px}.home-theme-preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.home-theme-preview-card{height:85px;border-radius:12px;border:1px solid var(--border);padding:12px}
 @media(max-width:950px){.theme-control-grid{grid-template-columns:repeat(2,1fr)}.login-theme-preview{grid-template-columns:1fr}.home-theme-preview-grid{grid-template-columns:1fr}}
 @media(max-width:620px){.theme-control-grid{grid-template-columns:1fr}}
+
+/* Sidebar usability fixes V2.0 */
+.layout-left .studio-sidebar{
+  overflow:hidden;
+}
+.layout-left .side-menu{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding-right:4px;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:color-mix(in srgb,var(--side-text) 42%,transparent) transparent;
+}
+.layout-left .side-menu::-webkit-scrollbar{width:7px}
+.layout-left .side-menu::-webkit-scrollbar-track{background:transparent}
+.layout-left .side-menu::-webkit-scrollbar-thumb{
+  background:color-mix(in srgb,var(--side-text) 38%,transparent);
+  border-radius:999px;
+}
+.layout-left .side-menu::-webkit-scrollbar-thumb:hover{
+  background:color-mix(in srgb,var(--side-text) 58%,transparent);
+}
+.layout-left .side-bottom{
+  flex:0 0 auto;
+  margin-top:8px;
+  position:relative;
+  z-index:2;
+  background:var(--side-bg);
+}
+.layout-left.peek .side-menu{
+  overflow-y:auto;
+}
+/* Do not show browser title tooltips over expanded submenu text */
+.layout-left.peek .side-group-toggle[title],
+.layout-left.peek .side-item[title]{pointer-events:auto}
+
 </style>
 </head>
 <body>
@@ -574,7 +612,7 @@
       <div class="cc-section-head">
         <div>
           <h2>Home Screen</h2>
-          <p>This page is reserved for the final ERP management dashboard.</p>
+          <p>This is the Home Screen page inside Control Center. Its business dashboard content is intentionally blank until the ERP modules are complete.</p>
         </div>
         <button class="btn primary" id="ccHomeSave">Save Home Screen</button>
       </div>
@@ -582,7 +620,7 @@
       <div style="min-height:470px;display:grid;place-items:center;border:1px dashed var(--border);border-radius:16px;background:var(--surface)">
         <div style="text-align:center;max-width:620px;padding:30px">
           <div style="font-size:54px;margin-bottom:14px">▦</div>
-          <h2 style="margin:0 0 10px">Home Screen Reserved</h2>
+          <h2 style="margin:0 0 10px">Home Screen — Reserved for Final Dashboard</h2>
           <p style="margin:0;color:var(--muted);line-height:1.7">
             We will complete this page after the Inventory, Purchase, Production, Gate Pass,
             Costing and Reports modules are connected. It will later show live graphs,
@@ -1181,7 +1219,6 @@ function openStudioPanel(name,section){
   $('#workspaceTitle').textContent=isControl?'Control Center':'Design Studio';
   $('#workspaceSubtitle').textContent=isControl?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.';
   if(isControl){
-    $('#controlGroup').classList.add('open');
     const target=section||'home';
     const controlSections=['login-page','home-screen','home','dashboard','users','roles','permissions','restrictions','sessions','activity','security'];
     controlSections.forEach(s=>{const el=$('#control-'+s);if(el)el.classList.toggle('active',target===s)});
@@ -1207,10 +1244,21 @@ function openStudioPanel(name,section){
 function bind(){
   $$('[data-key]').forEach(el=>{['input','change'].forEach(ev=>el.addEventListener(ev,()=>{previous=structuredClone(state);set(el.dataset.key,parse(el));updateValue(el);render()}))});
   $('#studioSidebar').addEventListener('mouseenter',()=>{const app=$('#app');if(state.sidebar.position==='left'&&state.sidebar.defaultState==='collapsed')app.classList.add('peek');if(state.sidebar.position==='top'||state.sidebar.position==='bottom')app.classList.add('taskbar-peek')});
-  $('#studioSidebar').addEventListener('mouseleave',()=>{$('#app').classList.remove('peek','taskbar-peek')});
+  $('#studioSidebar').addEventListener('mouseleave',()=>{
+    const app=$('#app');
+    app.classList.remove('peek','taskbar-peek');
+    $$('.side-group').forEach(group=>group.classList.remove('open'));
+    localStorage.removeItem('ds:lastGroup');
+  });
   $$('.side-group-toggle').forEach(toggle=>toggle.addEventListener('click',()=>{const g=toggle.closest('.side-group');if(state.sidebar.submenuMode==='single')$$('.side-group').forEach(x=>{if(x!==g)x.classList.remove('open')});g.classList.toggle('open');if(g.id==='settingsGroup'){if(g.classList.contains('open'))localStorage.setItem('ds:lastGroup','settings');else localStorage.removeItem('ds:lastGroup')}}));
-  $$('[data-panel]').forEach(b=>b.addEventListener('click',()=>openStudioPanel(b.dataset.panel)));
-  $$('[data-control-section]').forEach(b=>b.addEventListener('click',()=>openStudioPanel('control',b.dataset.controlSection)));
+  $$('[data-panel]').forEach(b=>b.addEventListener('click',()=>{
+    openStudioPanel(b.dataset.panel);
+    $$('.side-group').forEach(group=>group.classList.remove('open'));
+  }));
+  $$('[data-control-section]').forEach(b=>b.addEventListener('click',()=>{
+    openStudioPanel('control',b.dataset.controlSection);
+    $$('.side-group').forEach(group=>group.classList.remove('open'));
+  }));
   $('#saveBtn').addEventListener('click',()=>{localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem('erpDesignSystem',JSON.stringify(state));toast('Design saved and applied')});
   $('#ccSave').addEventListener('click',()=>{localStorage.setItem('erpProgramControlCenterLastSaved',new Date().toISOString());toast('Control Center configuration saved')});
   $('#designPageBtn').addEventListener('click',ccOpenPageDesign);
@@ -1254,6 +1302,13 @@ function bind(){
   }
 }
 sync();bind();render();
+// Always begin with the compact sidebar after a page refresh.
+if(state.sidebar.position==='left'){
+  $('#app').classList.add('collapsed');
+  $('#app').classList.remove('peek');
+}
+$$('.side-group').forEach(group=>group.classList.remove('open'));
+localStorage.removeItem('ds:lastGroup');
 // Final route enforcement after all rendering so Users can never fall back to the placeholder.
 setTimeout(()=>{
   const params=new URLSearchParams(location.search);
@@ -1261,6 +1316,11 @@ setTimeout(()=>{
     const requested=(params.get('section')||'dashboard').trim().toLowerCase();
     openStudioPanel('control',requested);
   }
+  if(state.sidebar.position==='left'){
+    $('#app').classList.add('collapsed');
+    $('#app').classList.remove('peek');
+  }
+  $$('.side-group').forEach(group=>group.classList.remove('open'));
 },0);
 clearInterval(clockTimer);clockTimer=setInterval(updateClock,1000);
 })();
