@@ -422,6 +422,12 @@
 @media(max-width:600px){.purchase-kpis{grid-template-columns:1fr}}
 
 .purchase-workspace{display:none}.purchase-workspace.active{display:block}
+
+.save-theme-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.save-theme-option{border:1px solid var(--border);border-radius:15px;padding:16px;background:var(--surface);cursor:pointer;transition:.18s;text-align:left}
+.save-theme-option:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.10)}
+.save-theme-option .icon{font-size:28px}.save-theme-option h3{margin:10px 0 5px;font-size:16px}.save-theme-option p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+@media(max-width:760px){.save-theme-options{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -497,7 +503,7 @@
 <section class="panel active" id="panel-theme">
   <div class="card"><h2>Theme Studio</h2><p class="sub">Control the complete ERP palette and global typography.</p>
   <div class="theme-library-toolbar" style="margin:12px 0 14px">
-    <button class="btn" id="erpSaveCustomTheme">Save Current Theme</button>
+    <button class="btn" id="erpSaveCustomTheme">Save Theme As ▾</button>
     <button class="btn" id="erpExportThemes">Export Themes</button>
     <label class="btn" for="erpImportThemes">Import Themes</label>
     <input type="file" id="erpImportThemes" accept=".json,application/json" style="display:none">
@@ -948,6 +954,36 @@
 </main></div></div>
 
 
+
+<div class="cc-modal" id="saveThemeAsModal" aria-hidden="true">
+  <div class="cc-modal-box" style="width:min(850px,96vw)">
+    <div class="cc-modal-head">
+      <div>
+        <h2>Save Theme As</h2>
+        <p class="sub" style="margin:4px 0 0">Choose exactly where this design should be saved.</p>
+      </div>
+      <button class="btn" id="closeSaveThemeAs">Close</button>
+    </div>
+    <div class="save-theme-options">
+      <button class="save-theme-option" id="saveCompleteErpTheme">
+        <div class="icon">🎨</div>
+        <h3>Complete ERP Theme</h3>
+        <p>Saves the full ERP palette, fonts, workspace, cards, sidebar and active-menu appearance.</p>
+      </button>
+      <button class="save-theme-option" id="saveHomeScreenTheme">
+        <div class="icon">🏠</div>
+        <h3>Home Screen Theme</h3>
+        <p>Saves only the Home Screen colours and visual style for the executive landing page.</p>
+      </button>
+      <button class="save-theme-option" id="saveLoginPageTheme">
+        <div class="icon">🔐</div>
+        <h3>Login Page Theme</h3>
+        <p>Saves only the Login Page background, card, button, logo and typography appearance.</p>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="cc-modal" id="ccRoleModal" aria-hidden="true"><div class="cc-modal-box">
   <div class="cc-modal-head"><div><h2 id="ccRoleModalTitle">Add Role</h2><p class="sub" style="margin:4px 0 0">Create a role for a department or responsibility.</p></div><button class="btn" id="ccCloseRole">Close</button></div>
   <div class="cc-form-grid">
@@ -1025,7 +1061,17 @@ const themes={
 'Copper Industrial':{background:'#fff7ed',surface:'#ffffff',text:'#431407',muted:'#8b5e49',primary:'#9a3412',accent:'#fb923c',border:'#fed7aa',sidebar:'#431407',sidebarText:'#fff7ed',sidebarActive:'#c2410c',sidebarActiveText:'#ffffff'},
 'Ice Blue':{background:'#f0f9ff',surface:'#ffffff',text:'#0c4a6e',muted:'#5d7f94',primary:'#0284c7',accent:'#67e8f9',border:'#bae6fd',sidebar:'#0c4a6e',sidebarText:'#f0f9ff',sidebarActive:'#0369a1',sidebarActiveText:'#ffffff'},
 'Graphite Pro':{background:'#f3f4f6',surface:'#ffffff',text:'#111827',muted:'#6b7280',primary:'#374151',accent:'#9ca3af',border:'#d1d5db',sidebar:'#111827',sidebarText:'#f9fafb',sidebarActive:'#4b5563',sidebarActiveText:'#ffffff'},
-'Lime Factory':{background:'#f7fee7',surface:'#ffffff',text:'#365314',muted:'#6b7a4e',primary:'#4d7c0f',accent:'#a3e635',border:'#d9f99d',sidebar:'#365314',sidebarText:'#f7fee7',sidebarActive:'#65a30d',sidebarActiveText:'#ffffff'}};
+'Lime Factory':{background:'#f7fee7',surface:'#ffffff',text:'#365314',muted:'#6b7a4e',primary:'#4d7c0f',accent:'#a3e635',border:'#d9f99d',sidebar:'#365314',sidebarText:'#f7fee7',sidebarActive:'#65a30d',sidebarActiveText:'#ffffff'},
+'Pearl Blue':{background:'#f5f9ff',surface:'#ffffff',text:'#17324d',muted:'#6c8096',primary:'#6ea8dc',accent:'#b9d7f0',border:'#d9e8f5',sidebar:'#dbeafe',sidebarText:'#17324d',sidebarActive:'#93c5fd',sidebarActiveText:'#102a43'},
+'Mint Breeze':{background:'#f3fff9',surface:'#ffffff',text:'#23443a',muted:'#6d8b80',primary:'#62b69b',accent:'#a7e8d2',border:'#d5f4e8',sidebar:'#d1fae5',sidebarText:'#23443a',sidebarActive:'#86efac',sidebarActiveText:'#18392f'},
+'Lavender Mist':{background:'#faf7ff',surface:'#ffffff',text:'#3f3155',muted:'#81738f',primary:'#9b87c7',accent:'#cfc2ed',border:'#e8e0f6',sidebar:'#ede9fe',sidebarText:'#3f3155',sidebarActive:'#c4b5fd',sidebarActiveText:'#312e55'},
+'Peach Cream':{background:'#fff8f3',surface:'#ffffff',text:'#5b3827',muted:'#947666',primary:'#e9a07a',accent:'#f7c7a8',border:'#f5dfd2',sidebar:'#ffedd5',sidebarText:'#5b3827',sidebarActive:'#fdba74',sidebarActiveText:'#4a2a1d'},
+'Sky Morning':{background:'#f2fbff',surface:'#ffffff',text:'#21445a',muted:'#708b9b',primary:'#75b9d6',accent:'#b5e3f3',border:'#d6edf6',sidebar:'#e0f2fe',sidebarText:'#21445a',sidebarActive:'#7dd3fc',sidebarActiveText:'#164e63'},
+'Soft Rose':{background:'#fff7fa',surface:'#ffffff',text:'#5a3140',muted:'#927381',primary:'#d98aa7',accent:'#f2bfd0',border:'#f5dce5',sidebar:'#fce7f3',sidebarText:'#5a3140',sidebarActive:'#f9a8d4',sidebarActiveText:'#4a2634'},
+'Ivory Gold':{background:'#fffdf5',surface:'#ffffff',text:'#4f4528',muted:'#8a8064',primary:'#c9a84c',accent:'#ecd78c',border:'#f1e7bd',sidebar:'#fef3c7',sidebarText:'#4f4528',sidebarActive:'#fde68a',sidebarActiveText:'#463d21'},
+'Cool Silver':{background:'#f8fafc',surface:'#ffffff',text:'#334155',muted:'#7b8796',primary:'#94a3b8',accent:'#cbd5e1',border:'#e2e8f0',sidebar:'#e2e8f0',sidebarText:'#334155',sidebarActive:'#cbd5e1',sidebarActiveText:'#1e293b'},
+'Aqua Pearl':{background:'#f2fffe',surface:'#ffffff',text:'#204b49',muted:'#718e8c',primary:'#62bcb6',accent:'#a7e3df',border:'#d6f1ef',sidebar:'#ccfbf1',sidebarText:'#204b49',sidebarActive:'#99f6e4',sidebarActiveText:'#134e4a'},
+'Vanilla Office':{background:'#fffdf7',surface:'#ffffff',text:'#55472f',muted:'#8a7d67',primary:'#d4b36b',accent:'#f2dda6',border:'#f1e7ca',sidebar:'#fef9c3',sidebarText:'#55472f',sidebarActive:'#fde68a',sidebarActiveText:'#463a25'}};
 const defaults={theme:{name:'Emerald Inventory',fontFamily:'Segoe UI',baseSize:14,headingWeight:'700',...themes['Emerald Inventory']},sidebar:{position:'left',width:230,collapsedWidth:58,rowHeight:42,subRowHeight:30,iconSize:15,radius:9,gap:3,subIndent:32,mainSize:13,mainWeight:'600',subSize:11,subWeight:'500',lineHeight:1.2,letterSpacing:0,alignment:'left',wrap:'nowrap',animation:220,submenuOpening:'closed',submenuMode:'single',defaultState:'collapsed',expandHover:true},clock:{show:true,showDate:true,format:'12',seconds:false,dateFormat:'dd-MMM-yy',fontSize:13,color:'#ffffff',background:'#1d6d56'},profile:{picture:'',pictureSize:50,pictureShape:'circle',pictureBorderWidth:2,pictureBorder:'#f5a400',cardRadius:15,cardBackground:'#1d6d56',cardBorder:'#ffffff35',name:'Muhammad Waqas',nameFont:'Segoe UI',nameSize:13,nameColor:'#ffffff',nameWeight:'700',nameStyle:'normal',nameWrap:'nowrap',textAlign:'left',role:'Store Officer',roleColor:'#dbe8e3',status:'Online',statusColor:'#32d583',showRole:true,showStatus:true,showPicture:true}};
 let state=load(),previous=structuredClone(state),clockTimer=null;
 function merge(a,b){const o=structuredClone(a);for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k]))o[k]=merge(o[k]||{},b[k]);else o[k]=b[k]}return o}
@@ -1053,6 +1099,28 @@ function erpRenderCustomThemes(){
   });
   $$('[data-delete-custom-theme]').forEach(b=>b.onclick=e=>{e.stopPropagation();const list=erpCustomThemes();list.splice(+b.dataset.deleteCustomTheme,1);localStorage.setItem(ERP_CUSTOM_THEME_KEY,JSON.stringify(list));erpRenderCustomThemes();toast('Custom theme deleted')});
 }
+
+function openSaveThemeAs(){
+  $('#saveThemeAsModal').classList.add('open');
+  $('#saveThemeAsModal').setAttribute('aria-hidden','false');
+}
+function closeSaveThemeAs(){
+  $('#saveThemeAsModal').classList.remove('open');
+  $('#saveThemeAsModal').setAttribute('aria-hidden','true');
+}
+function saveCompleteErpThemeChoice(){
+  closeSaveThemeAs();
+  erpSaveCurrentTheme();
+}
+function saveHomeScreenThemeChoice(){
+  closeSaveThemeAs();
+  saveCustom('home');
+}
+function saveLoginPageThemeChoice(){
+  closeSaveThemeAs();
+  saveCustom('login');
+}
+
 function erpSaveCurrentTheme(){
   const name=prompt('Enter a name for your theme');if(!name)return;
   const list=erpCustomThemes();
@@ -1561,7 +1629,12 @@ function bind(){
   $('#ccLoginSave').addEventListener('click',ccSaveLoginPage);$('#ccLoginPreviewOpen').addEventListener('click',ccOpenLoginPreview);
   $('#ccHomeSave').addEventListener('click',ccSaveHomeScreen);
   $('#homeScreenMainBtn').addEventListener('click',()=>openStudioPanel('control','home-screen'));
-  $('#erpSaveCustomTheme').addEventListener('click',erpSaveCurrentTheme);
+  $('#erpSaveCustomTheme').addEventListener('click',openSaveThemeAs);
+  $('#closeSaveThemeAs').addEventListener('click',closeSaveThemeAs);
+  $('#saveThemeAsModal').addEventListener('click',e=>{if(e.target===$('#saveThemeAsModal'))closeSaveThemeAs()});
+  $('#saveCompleteErpTheme').addEventListener('click',saveCompleteErpThemeChoice);
+  $('#saveHomeScreenTheme').addEventListener('click',saveHomeScreenThemeChoice);
+  $('#saveLoginPageTheme').addEventListener('click',saveLoginPageThemeChoice);
   $('#erpExportThemes').addEventListener('click',erpExportThemes);
   $('#erpImportThemes').addEventListener('change',e=>erpImportThemes(e.target.files[0]));
   $('#hsReset').addEventListener('click',hsReset);
