@@ -958,6 +958,13 @@
 .board-autocomplete-option strong{display:block}.board-autocomplete-option small{display:block;color:var(--muted);margin-top:2px}
 .board-autocomplete-empty{padding:12px;color:var(--muted);text-align:center}
 
+
+.board-register-control{display:flex;align-items:center;gap:8px;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.board-register-control span{font-size:10px;font-weight:900;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.board-register-control select{height:30px;min-width:120px;border:0;outline:none;background:transparent;color:var(--text);font-weight:800}
+.board-table{min-width:2450px}
+.board-table .board-col-item,.board-table td:nth-child(2){min-width:300px}
+.board-table .board-col-supplier,.board-table td:nth-child(14){min-width:270px}
 </style>
 
 <script>
@@ -1429,6 +1436,14 @@
         <p>Enter Board, Paper and Board III purchases directly in the table.</p>
       </div>
       <div class="board-purchase-actions">
+        <label class="board-register-control">
+          <span>Register Type</span>
+          <select id="boardRegisterType">
+            <option>Board</option>
+            <option>Paper</option>
+            <option>Board III</option>
+          </select>
+        </label>
         <button class="btn" id="boardAddRow">+ Add Row</button>
         <button class="btn" id="boardClear">Clear</button>
         <button class="btn" id="boardSaveDraft">Save Draft</button>
@@ -1439,7 +1454,7 @@
     <div class="board-table-wrap">
       <table class="board-table">
         <thead><tr>
-          <th>Date</th><th>Register Type</th><th class="board-col-item">Item</th><th>Size</th>
+          <th>Date</th><th class="board-col-item">Item</th><th>Size</th>
           <th># of Item</th><th>Package</th><th>Weight / Item</th><th>Gross Weight</th>
           <th>Deduction %</th><th>Ded. Weight</th><th>Net Weight</th><th>Unit</th>
           <th>Unit Price</th><th>Total Price</th><th class="board-col-supplier">Supplier</th>
@@ -4269,10 +4284,10 @@ const BOARD_PURCHASE_KEY='erpBoardPurchasesV1';
 const BOARD_DRAFT_KEY='erpBoardPurchaseDraftV1';
 function boardPurchaseRecords(){try{return JSON.parse(localStorage.getItem(BOARD_PURCHASE_KEY)||'[]')}catch(e){return []}}
 function boardMoney(v){return `PKR ${Number(v||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}`}
-function boardBlankRow(){return {date:'',registerType:'Board',item:'',size:'',itemCount:'',packageType:'Carton',weightPerItem:'',grossWeight:'',deductionPct:'',deductionWeight:'',netWeight:'',unit:'',rate:'',amount:'',supplier:'',bill:'',vehicle:''}}
+function boardSelectedRegisterType(){return $('#boardRegisterType')?.value||'Board'}
+function boardBlankRow(){return {date:'',item:'',size:'',itemCount:'',packageType:'Carton',weightPerItem:'',grossWeight:'',deductionPct:'',deductionWeight:'',netWeight:'',unit:'',rate:'',amount:'',supplier:'',bill:'',vehicle:''}}
 function boardRowHtml(r,i){return `<tr data-board-row="${i}">
 <td><input data-board-cell="date" value="${masterEsc(r.date)}" placeholder="25-6"></td>
-<td><select data-board-cell="registerType"><option ${r.registerType==='Board'?'selected':''}>Board</option><option ${r.registerType==='Paper'?'selected':''}>Paper</option><option ${r.registerType==='Board III'?'selected':''}>Board III</option></select></td>
 <td><input data-board-cell="item" value="${masterEsc(r.item)}"></td>
 <td><input data-board-cell="size" value="${masterEsc(r.size)}"></td>
 <td><input data-board-cell="itemCount" type="number" min="0" step="any" value="${masterEsc(r.itemCount)}"></td>
@@ -4297,16 +4312,35 @@ function boardAutocompleteOptions(type,q){const d=loadMasterData(),active=x=>(x.
 function boardOpenAutocomplete(input,type){boardAutocompleteState={input,type,options:boardAutocompleteOptions(type,input.value),activeIndex:-1};boardRenderAutocomplete()}
 function boardRenderAutocomplete(){const m=$('#boardAutocompleteMenu'),o=boardAutocompleteState.options;if(!m||!boardAutocompleteState.input)return;const r=boardAutocompleteState.input.getBoundingClientRect();m.style.left=`${r.left}px`;m.style.top=`${r.bottom+4}px`;m.style.width=`${Math.max(r.width,320)}px`;m.innerHTML=o.length?o.map((x,i)=>`<div class="board-autocomplete-option ${i===boardAutocompleteState.activeIndex?'active':''}" data-board-option="${i}"><strong>${masterEsc(x.label)}</strong>${x.sub?`<small>${masterEsc(x.sub)}</small>`:''}</div>`).join(''):'<div class="board-autocomplete-empty">No matching Master record</div>';m.classList.add('open');m.querySelectorAll('[data-board-option]').forEach(el=>el.onmousedown=e=>{e.preventDefault();boardSelectAutocomplete(+el.dataset.boardOption)})}
 function boardCloseAutocomplete(){$('#boardAutocompleteMenu')?.classList.remove('open');boardAutocompleteState={input:null,type:null,options:[],activeIndex:-1}}
-function boardSelectAutocomplete(i){const s=boardAutocompleteState,o=s.options[i];if(!s.input||!o)return;s.input.value=o.value;if(s.type==='item'){const tr=s.input.closest('tr');tr.querySelector('[data-board-cell="size"]').value=o.record.size||'';tr.querySelector('[data-board-cell="unit"]').value=o.record.unit||''}boardCloseAutocomplete();boardCalculate()}
+function boardSelectAutocomplete(i){const s=boardAutocompleteState,o=s.options[i];if(!s.input||!o)return;s.input.value=s.type==='vehicle'?String(o.value||'').toUpperCase():o.value;if(s.type==='item'){const tr=s.input.closest('tr');tr.querySelector('[data-board-cell="size"]').value=o.record.size||'';tr.querySelector('[data-board-cell="unit"]').value=o.record.unit||''}boardCloseAutocomplete();boardCalculate()}
 function boardCellMatrix(){return [...$('#boardPurchaseBody').querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('[data-board-cell]')])}
 function boardFocusCell(r,c){const m=boardCellMatrix();if(r<0||r>=m.length)return;m[r][Math.max(0,Math.min(c,m[r].length-1))]?.focus()}
 function boardMoveGrid(el,move){const m=boardCellMatrix(),r=m.findIndex(x=>x.includes(el)),c=m[r]?.indexOf(el)??-1;if(r<0||c<0)return;if(move==='right')c<m[r].length-1?boardFocusCell(r,c+1):r<m.length-1&&boardFocusCell(r+1,0);if(move==='left')c>0?boardFocusCell(r,c-1):r>0&&boardFocusCell(r-1,m[r-1].length-1);if(move==='down'){if(r<m.length-1)boardFocusCell(r+1,c);else{boardAddRow();setTimeout(()=>boardFocusCell(boardCellMatrix().length-1,c),0)}}if(move==='up'&&r>0)boardFocusCell(r-1,c)}
-function boardBindRows(){const b=$('#boardPurchaseBody');b.querySelectorAll('[data-board-cell]').forEach(el=>{const f=el.dataset.boardCell,dt={item:'item',unit:'unit',supplier:'supplier',vehicle:'vehicle'}[f];el.addEventListener('input',()=>{if(dt)boardOpenAutocomplete(el,dt);boardCalculate()});el.addEventListener('change',boardCalculate);if(dt)el.addEventListener('focus',()=>boardOpenAutocomplete(el,dt));if(f==='date')el.addEventListener('blur',()=>el.value=localFormatDate(el.value));if(f==='bill')el.addEventListener('blur',()=>el.value=el.value.toUpperCase());el.addEventListener('keydown',e=>{const open=$('#boardAutocompleteMenu').classList.contains('open')&&boardAutocompleteState.input===el;if(open&&e.key==='ArrowDown'){e.preventDefault();boardAutocompleteState.activeIndex=Math.min(boardAutocompleteState.options.length-1,boardAutocompleteState.activeIndex+1);boardRenderAutocomplete();return}if(open&&e.key==='ArrowUp'){e.preventDefault();boardAutocompleteState.activeIndex=Math.max(0,boardAutocompleteState.activeIndex-1);boardRenderAutocomplete();return}if(open&&e.key==='Enter'&&boardAutocompleteState.activeIndex>=0){e.preventDefault();boardSelectAutocomplete(boardAutocompleteState.activeIndex);return}if(e.ctrlKey&&e.key.toLowerCase()==='s'){e.preventDefault();boardSaveAll();return}if(e.key==='Enter'){e.preventDefault();boardCloseAutocomplete();boardMoveGrid(el,e.shiftKey?'up':'down');return}if(e.key==='ArrowRight'){e.preventDefault();boardMoveGrid(el,'right')}if(e.key==='ArrowLeft'){e.preventDefault();boardMoveGrid(el,'left')}if(e.key==='ArrowDown'&&!open){e.preventDefault();boardMoveGrid(el,'down')}if(e.key==='ArrowUp'&&!open){e.preventDefault();boardMoveGrid(el,'up')}})});b.querySelectorAll('[data-board-remove]').forEach(btn=>btn.onclick=()=>{const rows=boardReadRows(),i=[...b.querySelectorAll('tr')].indexOf(btn.closest('tr'));rows.splice(i,1);boardRenderRows(rows)})}
+function boardBindRows(){const b=$('#boardPurchaseBody');b.querySelectorAll('[data-board-cell]').forEach(el=>{const f=el.dataset.boardCell,dt={item:'item',unit:'unit',supplier:'supplier',vehicle:'vehicle'}[f];el.addEventListener('input',()=>{if(dt)boardOpenAutocomplete(el,dt);boardCalculate()});el.addEventListener('change',boardCalculate);if(dt)el.addEventListener('focus',()=>boardOpenAutocomplete(el,dt));if(f==='date')el.addEventListener('blur',()=>el.value=localFormatDate(el.value));if(f==='bill')el.addEventListener('blur',()=>el.value=el.value.toUpperCase());if(f==='vehicle')el.addEventListener('blur',()=>el.value=el.value.toUpperCase());el.addEventListener('keydown',e=>{const open=$('#boardAutocompleteMenu').classList.contains('open')&&boardAutocompleteState.input===el;if(open&&e.key==='ArrowDown'){e.preventDefault();boardAutocompleteState.activeIndex=Math.min(boardAutocompleteState.options.length-1,boardAutocompleteState.activeIndex+1);boardRenderAutocomplete();return}if(open&&e.key==='ArrowUp'){e.preventDefault();boardAutocompleteState.activeIndex=Math.max(0,boardAutocompleteState.activeIndex-1);boardRenderAutocomplete();return}if(open&&e.key==='Enter'&&boardAutocompleteState.activeIndex>=0){e.preventDefault();boardSelectAutocomplete(boardAutocompleteState.activeIndex);return}if(e.ctrlKey&&e.key.toLowerCase()==='s'){e.preventDefault();boardSaveAll();return}if(e.key==='Enter'){e.preventDefault();boardCloseAutocomplete();boardMoveGrid(el,e.shiftKey?'up':'down');return}if(e.key==='ArrowRight'){e.preventDefault();boardMoveGrid(el,'right')}if(e.key==='ArrowLeft'){e.preventDefault();boardMoveGrid(el,'left')}if(e.key==='ArrowDown'&&!open){e.preventDefault();boardMoveGrid(el,'down')}if(e.key==='ArrowUp'&&!open){e.preventDefault();boardMoveGrid(el,'up')}})});b.querySelectorAll('[data-board-remove]').forEach(btn=>btn.onclick=()=>{const rows=boardReadRows(),i=[...b.querySelectorAll('tr')].indexOf(btn.closest('tr'));rows.splice(i,1);boardRenderRows(rows)})}
 function boardAddRow(){const r=boardReadRows();r.push(boardBlankRow());boardRenderRows(r)}
 function boardClearForm(){boardRenderRows([boardBlankRow()])}
-function boardSaveDraft(){localStorage.setItem(BOARD_DRAFT_KEY,JSON.stringify({rows:boardReadRows(),savedAt:new Date().toISOString()}));toast('Board Purchase draft saved')}
-function boardLoadDraft(){try{const d=JSON.parse(localStorage.getItem(BOARD_DRAFT_KEY)||'null');boardRenderRows(d?.rows?.length?d.rows:[boardBlankRow()])}catch(e){boardRenderRows([boardBlankRow()])}}
-function boardSaveAll(){const rows=boardReadRows().filter(r=>r.date||r.item||r.itemCount||r.supplier||r.bill);if(!rows.length)return toast('Add at least one Board Purchase row');rows.forEach(r=>{r.date=localFormatDate(r.date);r.bill=String(r.bill||'').toUpperCase()});const bad=rows.find(r=>!r.date||!r.registerType||!r.item||!r.size||+r.itemCount<=0||!r.packageType||+r.weightPerItem<=0||!r.unit||+r.rate<=0||!r.supplier||!r.bill);if(bad)return toast('Complete all required Board Purchase fields');const rec=boardPurchaseRecords();rec.unshift({id:'board-'+Date.now(),type:'board',rows,createdAt:new Date().toISOString()});localStorage.setItem(BOARD_PURCHASE_KEY,JSON.stringify(rec));localStorage.removeItem(BOARD_DRAFT_KEY);boardClearForm();toast('Board Purchase saved')}
+function boardSaveDraft(){
+  localStorage.setItem(BOARD_DRAFT_KEY,JSON.stringify({
+    registerType:boardSelectedRegisterType(),
+    rows:boardReadRows(),
+    savedAt:new Date().toISOString()
+  }));
+  toast('Board Purchase draft saved')
+}
+function boardLoadDraft(){
+  try{
+    const d=JSON.parse(localStorage.getItem(BOARD_DRAFT_KEY)||'null');
+    if(d?.registerType&&$('#boardRegisterType'))$('#boardRegisterType').value=d.registerType;
+    boardRenderRows(d?.rows?.length?d.rows:[boardBlankRow()])
+  }catch(e){boardRenderRows([boardBlankRow()])}
+}
+function boardSaveAll(){const rows=boardReadRows().filter(r=>r.date||r.item||r.itemCount||r.supplier||r.bill);if(!rows.length)return toast('Add at least one Board Purchase row');const registerType=boardSelectedRegisterType();
+  rows.forEach(r=>{
+    r.date=localFormatDate(r.date);
+    r.bill=String(r.bill||'').toUpperCase();
+    r.vehicle=String(r.vehicle||'').toUpperCase();
+    r.registerType=registerType;
+  });const bad=rows.find(r=>!r.date||!r.item||!r.size||+r.itemCount<=0||!r.packageType||+r.weightPerItem<=0||!r.unit||+r.rate<=0||!r.supplier||!r.bill);if(bad)return toast('Complete all required Board Purchase fields');const rec=boardPurchaseRecords();rec.unshift({id:'board-'+Date.now(),type:'board',registerType,rows,createdAt:new Date().toISOString()});localStorage.setItem(BOARD_PURCHASE_KEY,JSON.stringify(rec));localStorage.removeItem(BOARD_DRAFT_KEY);boardClearForm();toast('Board Purchase saved')}
 function boardInitialise(){boardLoadDraft();$('#boardAddRow').onclick=boardAddRow;$('#boardClear').onclick=boardClearForm;$('#boardSaveDraft').onclick=boardSaveDraft;$('#boardSaveAll').onclick=boardSaveAll;$('#boardHistory').onclick=()=>openPurchase('history')}
 
 function openStudioPanel(name,section){
