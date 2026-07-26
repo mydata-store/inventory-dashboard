@@ -822,6 +822,16 @@
   text-transform:uppercase;letter-spacing:.04em
 }
 .erp-keyboard-badge::before{content:'⌨'}
+
+.local-history-toolbar{display:flex;gap:9px;margin-bottom:12px}
+.local-history-toolbar input{flex:1;min-width:260px;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)}
+.local-history-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:13px;max-height:590px}
+.local-history-table{width:100%;min-width:1500px;border-collapse:collapse}
+.local-history-table th,.local-history-table td{padding:10px 9px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.local-history-table th:last-child,.local-history-table td:last-child{border-right:0}
+.local-history-table th{position:sticky;top:0;z-index:2;background:var(--accent);color:#111;font-size:10px;text-transform:uppercase;letter-spacing:.03em}
+.local-history-table td.number{text-align:right}
+.local-history-empty{padding:32px;text-align:center;color:var(--muted)}
 </style>
 
 <script>
@@ -1250,14 +1260,80 @@
 </div>
 
 <div class="purchase-workspace" id="purchase-zafar">
-      <div class="purchase-section-box">
-        <h3>Zafar Purchase</h3>
-        <p class="sub">This tab is ready for the working Zafar Purchase Entry page.</p>
-        <div class="purchase-empty"><div><div style="font-size:46px">🚚</div><h2>Zafar Purchase Entry</h2><p>The form will be moved here without creating another sidebar page.</p></div></div>
+  <div class="purchase-section-box local-purchase-shell">
+    <div class="local-purchase-heading">
+      <div style="width:100%;display:flex;justify-content:flex-end;margin-bottom:6px">
+        <span class="erp-keyboard-badge">Excel Keyboard Mode Active</span>
+      </div>
+      <div>
+        <h3>Zafar Purchase Entry</h3>
+        <p>Enter Zafar purchases using the existing Design Studio header, sidebar and profile.</p>
+      </div>
+      <div class="local-purchase-actions">
+        <button class="btn" id="zafarAddRow">+ Add Row</button>
+        <button class="btn" id="zafarClear">Clear</button>
+        <button class="btn" id="zafarSaveDraft">Save Draft</button>
+        <button class="btn" id="zafarHistory">Purchase History</button>
+        <button class="btn primary" id="zafarSaveAll">Save All Rows</button>
       </div>
     </div>
+<div class="local-meta-grid">
+      <div class="local-field">
+        <label>Purchase Date</label>
+        <input id="zafarPurchaseDate" placeholder="25-6" autocomplete="off">
+      </div>
+      <div class="local-field">
+        <label>Purchase By</label>
+        <input id="zafarPurchaseBy" list="zafarEmployeeList" autocomplete="off">
+        <small class="local-master-note">Linked with Employee Master</small>
+      </div>
+      <div class="local-field">
+        <label>Vehicle #</label>
+        <input id="zafarVehicle" list="zafarVehicleList" autocomplete="off">
+        <small class="local-master-note">Linked with Vehicle Master</small>
+      </div>
+      <div class="local-field"><label>Bill #</label><input id="zafarBill" autocomplete="off"></div>
+      <div class="local-field"><label>IGP #</label><input id="zafarIgp" autocomplete="off"></div>
+      <div class="local-field"><label>GRN</label><input id="zafarGrn" autocomplete="off"></div>
+    </div>
 
-    <div class="purchase-workspace" id="purchase-board">
+    <div class="local-table-wrap">
+      <table class="local-table">
+        <thead>
+          <tr>
+            <th class="local-col-item">Item Name</th>
+            <th>Size</th>
+            <th>Quantity</th>
+            <th>Unit</th>
+            <th>Last Purchase Rate</th>
+            <th>Unit Rate</th>
+            <th>Amount</th>
+            <th class="local-col-supplier">Supplier</th>
+            <th>Gross Total</th>
+            <th>Remarks</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="zafarPurchaseBody"></tbody>
+      </table>
+    </div>
+
+    <div class="local-totals">
+      <div class="local-total-card"><small>Net Amount</small><strong id="zafarNetTotal">PKR 0.00</strong></div>
+      
+      <div class="local-total-card"><small>Gross Total</small><strong id="zafarGrossTotal">PKR 0.00</strong></div>
+    </div>
+
+    <datalist id="zafarItemList"></datalist>
+    <datalist id="zafarUnitList"></datalist>
+    <datalist id="zafarSupplierList"></datalist>
+    <datalist id="zafarEmployeeList"></datalist>
+    <datalist id="zafarVehicleList"></datalist>
+    <div id="zafarAutocompleteMenu" class="local-autocomplete-menu"></div>
+  </div>
+</div>
+
+<div class="purchase-workspace" id="purchase-board">
       <div class="purchase-section-box">
         <h3>Board Purchase</h3>
         <p class="sub">This tab is ready for the working Board Purchase Entry page.</p>
@@ -1265,15 +1341,28 @@
       </div>
     </div>
 
-    <div class="purchase-workspace" id="purchase-history">
-      <div class="purchase-section-box">
-        <h3>Purchase History</h3>
-        <p class="sub">Search, filter and review all purchase records.</p>
-        <div class="purchase-empty"><div><div style="font-size:46px">🕘</div><h2>Purchase History</h2><p>History tables and filters will be connected here.</p></div></div>
-      </div>
+    
+<div class="purchase-workspace" id="purchase-history">
+  <div class="purchase-section-box">
+    <div class="local-history-toolbar">
+      <input id="localHistorySearch" placeholder="Search by date, bill, IGP, GRN, item, size, supplier, vehicle or purchaser">
+      <button class="btn" id="localHistoryClear">Clear</button>
     </div>
+    <div class="local-history-table-wrap">
+      <table class="local-history-table">
+        <thead><tr>
+          <th>Date</th><th>Bill #</th><th>IGP #</th><th>GRN</th>
+          <th>Item Name</th><th>Size</th><th>Quantity</th><th>Unit</th>
+          <th>Unit Rate</th><th>Amount</th><th>Supplier</th><th>Gross Total</th>
+          <th>Purchase By</th><th>Vehicle #</th><th>Remarks</th>
+        </tr></thead>
+        <tbody id="localHistoryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    <div class="purchase-workspace" id="purchase-reports">
+<div class="purchase-workspace" id="purchase-reports">
       <div class="purchase-section-box">
         <h3>Purchase Reports</h3>
         <p class="sub">Purchase PDF, print and management reports.</p>
@@ -2584,6 +2673,8 @@ const PURCHASE_TITLES={
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
   if(currentPurchaseTab==='local'&&typeof localLoadMasterOptions==='function')localLoadMasterOptions();
+  if(currentPurchaseTab==='history'&&typeof renderLocalHistory==='function')renderLocalHistory();
+  if(currentPurchaseTab==='zafar'&&typeof zafarLoadMasterOptions==='function')zafarLoadMasterOptions();
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-purchase'));
   $$('.purchase-tab').forEach(b=>b.classList.toggle('active',b.dataset.purchaseTab===currentPurchaseTab));
   $$('.purchase-workspace').forEach(w=>w.classList.toggle('active',w.id==='purchase-'+currentPurchaseTab));
@@ -3130,6 +3221,8 @@ function localSaveAll(){
   localStorage.setItem(LOCAL_PURCHASE_KEY,JSON.stringify(records));
   localStorage.removeItem(LOCAL_DRAFT_KEY);
   localClearForm();
+  renderLocalHistory();
+  zafarInitialise();
   toast('Local Purchase saved');
 }
 function localInitialise(){
@@ -3175,6 +3268,615 @@ function localInitialise(){
   $('#localSaveAll').addEventListener('click',localSaveAll);
   $('#localHistory').addEventListener('click',()=>openPurchase('history'));
 }
+
+
+function localHistoryRows(){
+  const rows=[];
+  localPurchaseRecords().forEach(record=>{
+    (record.rows||[]).forEach(row=>rows.push({
+      date:record.meta?.date||'',bill:record.meta?.bill||'',igp:record.meta?.igp||'',
+      grn:record.meta?.grn||'',item:row.item||'',size:row.size||'',qty:row.qty||'',
+      unit:row.unit||'',rate:row.rate||'',amount:row.amount||'',supplier:row.supplier||'',
+      grossTotal:row.grossTotal||row.amount||'',purchaseBy:record.meta?.purchaseBy||'',
+      vehicle:record.meta?.vehicle||'',remarks:row.remarks||'',createdAt:record.createdAt||''
+    }));
+  });
+  return rows.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+}
+function renderLocalHistory(){
+  const q=String($('#localHistorySearch')?.value||'').trim().toLowerCase();
+  const rows=localHistoryRows().filter(r=>!q||Object.values(r).some(v=>String(v||'').toLowerCase().includes(q)));
+  $('#localHistoryBody').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td>${masterEsc(r.date||'—')}</td><td>${masterEsc(r.bill||'—')}</td>
+    <td>${masterEsc(r.igp||'—')}</td><td>${masterEsc(r.grn||'—')}</td>
+    <td>${masterEsc(r.item||'—')}</td><td>${masterEsc(r.size||'—')}</td>
+    <td class="number">${masterEsc(r.qty||'0')}</td><td>${masterEsc(r.unit||'—')}</td>
+    <td class="number">${r.rate?localMoney(r.rate):'—'}</td>
+    <td class="number">${r.amount?localMoney(r.amount):'—'}</td>
+    <td>${masterEsc(r.supplier||'—')}</td>
+    <td class="number">${r.grossTotal?localMoney(r.grossTotal):'—'}</td>
+    <td>${masterEsc(r.purchaseBy||'—')}</td><td>${masterEsc(r.vehicle||'—')}</td>
+    <td>${masterEsc(r.remarks||'—')}</td>
+  </tr>`).join(''):'<tr><td colspan="15"><div class="local-history-empty">No Local Purchase data found.</div></td></tr>';
+}
+
+const ZAFAR_PURCHASE_KEY='erpZafarPurchasesV1';
+const ZAFAR_DRAFT_KEY='erpZafarPurchaseDraftV1';
+
+function zafarPurchaseRecords(){
+  try{return JSON.parse(localStorage.getItem(ZAFAR_PURCHASE_KEY)||'[]')}catch(e){return []}
+}
+function zafarMoney(value){
+  return `PKR ${Number(value||0).toLocaleString('en-GB',{
+    minimumFractionDigits:2,maximumFractionDigits:2
+  })}`;
+}
+function localFormatDate(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  if(/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(raw))return raw;
+  const m=raw.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/);
+  if(!m)return raw;
+  const day=Math.min(31,+m[1]);
+  const month=Math.min(12,+m[2]);
+  const suppliedYear=m[3]?+m[3]:new Date().getFullYear();
+  const year=suppliedYear<100?2000+suppliedYear:suppliedYear;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${String(day).padStart(2,'0')}-${months[month-1]}-${String(year).slice(-2)}`;
+}
+function localTitleCase(value){
+  return String(value||'').replace(/\b\w/g,c=>c.toUpperCase());
+}
+function zafarBlankRow(){
+  return {
+    item:'',size:'',qty:'',unit:'',lastRate:'',
+    rate:'',amount:'',supplier:'',grossTotal:'',remarks:''
+  };
+}
+function zafarLoadMasterOptions(){
+  const data=loadMasterData();
+  const active=x=>(x.status||'Active')==='Active';
+
+  $('#zafarItemList').innerHTML=data.items.filter(active).map(x=>
+    `<option value="${masterEsc(x.name)}">${masterEsc(x.size||'')} | ${masterEsc(x.unit||'')}</option>`
+  ).join('');
+
+  $('#zafarUnitList').innerHTML=data.units.filter(active)
+    .flatMap(x=>[x.symbol,x.name]).filter(Boolean)
+    .map(x=>`<option value="${masterEsc(x)}"></option>`).join('');
+
+  $('#zafarSupplierList').innerHTML=data.suppliers.filter(active)
+    .map(x=>`<option value="${masterEsc(x.name)}"></option>`).join('');
+
+  $('#zafarEmployeeList').innerHTML=data.employees.filter(active)
+    .map(x=>`<option value="${masterEsc(x.name)}"></option>`).join('');
+
+  $('#zafarVehicleList').innerHTML=data.vehicles.filter(active)
+    .map(x=>`<option value="${masterEsc(x.number)}"></option>`).join('');
+}
+function zafarRowHtml(row,index){
+  return `<tr data-zafar-row="${index}">
+    <td><input data-zafar-cell="item" value="${masterEsc(row.item)}" autocomplete="off"></td>
+    <td><input data-zafar-cell="size" value="${masterEsc(row.size)}"></td>
+    <td><input class="number" data-zafar-cell="qty" type="number" min="0" step="any" value="${masterEsc(row.qty)}"></td>
+    <td><input data-zafar-cell="unit" list="zafarUnitList" value="${masterEsc(row.unit)}" autocomplete="off"></td>
+    <td><input class="number" data-zafar-cell="lastRate" value="${masterEsc(row.lastRate)}" readonly></td>
+    <td><input class="number" data-zafar-cell="rate" type="number" min="0" step="any" value="${masterEsc(row.rate)}"></td>
+    <td><input class="number" data-zafar-cell="amount" value="${masterEsc(row.amount)}" readonly></td>
+    <td><input data-zafar-cell="supplier" value="${masterEsc(row.supplier)}" autocomplete="off"></td>
+    <td><input class="number" data-zafar-cell="grossTotal" value="${masterEsc(row.grossTotal)}" readonly></td>
+    <td><input data-zafar-cell="remarks" value="${masterEsc(row.remarks)}"></td>
+    <td class="local-row-action"><button data-zafar-remove>Delete</button></td>
+  </tr>`;
+}
+function zafarReadRows(){
+  return [...$('#zafarPurchaseBody').querySelectorAll('tr')].map(tr=>{
+    const row={};
+    tr.querySelectorAll('[data-zafar-cell]').forEach(el=>row[el.dataset.localCell]=el.value);
+    return row;
+  });
+}
+function zafarRenderRows(rows){
+  const list=rows?.length?rows:[zafarBlankRow()];
+  $('#zafarPurchaseBody').innerHTML=list.map(zafarRowHtml).join('');
+  zafarBindRows();
+  zafarCalculate();
+}
+function zafarLastRate(itemName,size){
+  const name=String(itemName||'').trim().toLowerCase();
+  const itemSize=String(size||'').trim().toLowerCase();
+  for(const purchase of [...zafarPurchaseRecords(),...localPurchaseRecords()]){
+    for(const row of purchase.rows||[]){
+      if(
+        String(row.item||'').trim().toLowerCase()===name &&
+        String(row.size||'').trim().toLowerCase()===itemSize &&
+        Number(row.rate)>0
+      ) return Number(row.rate);
+    }
+  }
+  return '';
+}
+function localAutofillItem(input){
+  const tr=input.closest('tr');
+  const data=loadMasterData();
+  const name=String(input.value||'').trim().toLowerCase();
+  const existingSize=String(tr.querySelector('[data-zafar-cell="size"]').value||'').trim().toLowerCase();
+
+  const candidates=data.items.filter(x=>
+    String(x.name||'').trim().toLowerCase()===name &&
+    (x.status||'Active')==='Active'
+  );
+  if(!candidates.length)return;
+
+  const item=candidates.find(x=>String(x.size||'').trim().toLowerCase()===existingSize) || candidates[0];
+  tr.querySelector('[data-zafar-cell="size"]').value=item.size||'';
+  tr.querySelector('[data-zafar-cell="unit"]').value=item.unit||'';
+  tr.querySelector('[data-zafar-cell="lastRate"]').value=zafarLastRate(item.name,item.size);
+}
+function zafarCalculate(){
+  let net=0,gross=0;
+
+  $('#zafarPurchaseBody').querySelectorAll('tr').forEach(tr=>{
+    const qty=Number(tr.querySelector('[data-zafar-cell="qty"]').value||0);
+    const rate=Number(tr.querySelector('[data-zafar-cell="rate"]').value||0);
+
+    const amount=qty*rate;
+    const grossTotal=amount;
+
+    tr.querySelector('[data-zafar-cell="amount"]').value=amount?amount.toFixed(2):'';
+    tr.querySelector('[data-zafar-cell="grossTotal"]').value=grossTotal?grossTotal.toFixed(2):'';
+
+    net+=amount;
+    gross+=grossTotal;
+  });
+
+  $('#zafarNetTotal').textContent=zafarMoney(net);
+  $('#zafarGrossTotal').textContent=zafarMoney(gross);
+}
+let zafarAutocompleteState={input:null,type:null,options:[],activeIndex:-1};
+
+function zafarAutocompleteOptions(type,query){
+  const data=loadMasterData();
+  const active=x=>(x.status||'Active')==='Active';
+  const q=String(query||'').trim().toLowerCase();
+
+  if(type==='item'){
+    return data.items.filter(active)
+      .filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.size||'').toLowerCase().includes(q))
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))||String(a.size||'').localeCompare(String(b.size||'')))
+      .slice(0,50)
+      .map(x=>({value:x.name,label:x.name,sub:[x.size,x.unit].filter(Boolean).join(' | '),record:x}));
+  }
+
+  if(type==='supplier'){
+    return data.suppliers.filter(active)
+      .filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.proprietor||'').toLowerCase().includes(q))
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
+      .slice(0,50)
+      .map(x=>({value:x.name,label:x.name,sub:x.proprietor||x.phone||'',record:x}));
+  }
+
+  return [];
+}
+
+function zafarPositionAutocomplete(input){
+  const menu=$('#zafarAutocompleteMenu');
+  const rect=input.getBoundingClientRect();
+  menu.style.left=`${rect.left}px`;
+  menu.style.top=`${rect.bottom+4}px`;
+  menu.style.width=`${Math.max(rect.width,300)}px`;
+}
+
+function zafarRenderAutocomplete(){
+  const menu=$('#zafarAutocompleteMenu');
+  const options=zafarAutocompleteState.options;
+
+  menu.innerHTML=options.length
+    ?options.map((o,i)=>`<div class="local-autocomplete-option ${i===zafarAutocompleteState.activeIndex?'active':''}" data-zafar-option="${i}"><strong>${masterEsc(o.label)}</strong>${o.sub?`<small>${masterEsc(o.sub)}</small>`:''}</div>`).join('')
+    :'<div class="local-autocomplete-empty">No matching records</div>';
+
+  menu.classList.add('open');
+  zafarPositionAutocomplete(zafarAutocompleteState.input);
+
+  menu.querySelectorAll('[data-zafar-option]').forEach(el=>{
+    el.onmousedown=e=>{
+      e.preventDefault();
+      zafarSelectAutocomplete(+el.dataset.localOption);
+    };
+  });
+}
+
+function zafarOpenAutocomplete(input,type){
+  zafarAutocompleteState={
+    input,
+    type,
+    options:zafarAutocompleteOptions(type,input.value),
+    activeIndex:-1
+  };
+  zafarRenderAutocomplete();
+}
+
+function zafarCloseAutocomplete(){
+  $('#zafarAutocompleteMenu').classList.remove('open');
+  zafarAutocompleteState={input:null,type:null,options:[],activeIndex:-1};
+}
+
+function zafarSelectAutocomplete(index){
+  const state=zafarAutocompleteState;
+  const option=state.options[index];
+  if(!state.input||!option)return;
+
+  state.input.value=option.value;
+
+  if(state.type==='item'){
+    const tr=state.input.closest('tr');
+    tr.querySelector('[data-zafar-cell="size"]').value=option.record.size||'';
+    tr.querySelector('[data-zafar-cell="unit"]').value=option.record.unit||'';
+    tr.querySelector('[data-zafar-cell="lastRate"]').value=zafarLastRate(option.record.name,option.record.size);
+  }
+
+  zafarCloseAutocomplete();
+  zafarCalculate();
+  state.input.dispatchEvent(new Event('change',{bubbles:true}));
+}
+
+function localMoveFocus(current,direction){
+  const body=$('#zafarPurchaseBody');
+  const rows=[...body.querySelectorAll('tr')];
+  const row=current.closest('tr');
+  const rowIndex=rows.indexOf(row);
+  const cells=[...row.querySelectorAll('[data-zafar-cell]')];
+  const colIndex=cells.indexOf(current);
+
+  let nextRow=rowIndex,nextCol=colIndex;
+
+  if(direction==='right')nextCol++;
+  if(direction==='left')nextCol--;
+  if(direction==='down')nextRow++;
+  if(direction==='up')nextRow--;
+
+  if(nextCol>=cells.length){nextRow++;nextCol=0}
+  if(nextCol<0){nextRow--;nextCol=cells.length-1}
+
+  if(nextRow>=rows.length){
+    zafarAddRow();
+    setTimeout(()=>{
+      const newRows=[...body.querySelectorAll('tr')];
+      newRows[newRows.length-1].querySelectorAll('[data-zafar-cell]')[Math.max(0,nextCol)]?.focus();
+    },0);
+    return;
+  }
+
+  if(nextRow<0)return;
+  rows[nextRow].querySelectorAll('[data-zafar-cell]')[Math.max(0,nextCol)]?.focus();
+}
+
+function zafarCellMatrix(){
+  return [...$('#zafarPurchaseBody').querySelectorAll('tr')].map(
+    tr=>[...tr.querySelectorAll('[data-zafar-cell]')]
+  );
+}
+function zafarFocusCell(rowIndex,colIndex){
+  const matrix=zafarCellMatrix();
+  if(rowIndex<0||rowIndex>=matrix.length)return;
+  const row=matrix[rowIndex];
+  if(!row.length)return;
+  const safeCol=Math.max(0,Math.min(colIndex,row.length-1));
+  row[safeCol]?.focus();
+  row[safeCol]?.select?.();
+}
+function zafarMoveGrid(current,move){
+  const matrix=zafarCellMatrix();
+  const row=current.closest('tr');
+  const rowIndex=matrix.findIndex(r=>r.includes(current));
+  const colIndex=matrix[rowIndex]?.indexOf(current)??-1;
+  if(rowIndex<0||colIndex<0)return;
+
+  if(move==='right'){
+    if(colIndex<matrix[rowIndex].length-1)zafarFocusCell(rowIndex,colIndex+1);
+    else if(rowIndex<matrix.length-1)zafarFocusCell(rowIndex+1,0);
+    return;
+  }
+  if(move==='left'){
+    if(colIndex>0)zafarFocusCell(rowIndex,colIndex-1);
+    else if(rowIndex>0)zafarFocusCell(rowIndex-1,matrix[rowIndex-1].length-1);
+    return;
+  }
+  if(move==='down'){
+    if(rowIndex<matrix.length-1)zafarFocusCell(rowIndex+1,colIndex);
+    else{
+      zafarAddRow();
+      setTimeout(()=>zafarFocusCell(zafarCellMatrix().length-1,colIndex),0);
+    }
+    return;
+  }
+  if(move==='up'){
+    if(rowIndex>0)zafarFocusCell(rowIndex-1,colIndex);
+  }
+}
+function zafarCopyAbove(current){
+  const matrix=zafarCellMatrix();
+  const rowIndex=matrix.findIndex(r=>r.includes(current));
+  const colIndex=matrix[rowIndex]?.indexOf(current)??-1;
+  if(rowIndex<=0||colIndex<0)return;
+  const above=matrix[rowIndex-1][colIndex];
+  if(!above)return;
+  current.value=above.value;
+  current.dispatchEvent(new Event('input',{bubbles:true}));
+  current.dispatchEvent(new Event('change',{bubbles:true}));
+}
+function zafarToday(){
+  const d=new Date();
+  return `${String(d.getDate()).padStart(2,'0')}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+}
+function zafarBindRows(){
+  const body=$('#zafarPurchaseBody');
+
+  body.querySelectorAll('[data-zafar-cell]').forEach(el=>{
+    el.addEventListener('input',()=>{
+      if(['item','supplier'].includes(el.dataset.localCell)){
+        zafarOpenAutocomplete(el,el.dataset.localCell);
+      }
+      zafarCalculate();
+    });
+
+    if(el.dataset.localCell==='item'){
+      el.addEventListener('focus',()=>zafarOpenAutocomplete(el,'item'));
+      el.addEventListener('blur',()=>setTimeout(()=>{
+        if(zafarAutocompleteState.input===el)zafarCloseAutocomplete();
+        localAutofillItem(el);
+        zafarCalculate();
+      },120));
+    }
+
+    if(el.dataset.localCell==='supplier'){
+      el.addEventListener('focus',()=>zafarOpenAutocomplete(el,'supplier'));
+      el.addEventListener('blur',()=>setTimeout(()=>{
+        if(zafarAutocompleteState.input===el)zafarCloseAutocomplete();
+        el.value=localTitleCase(el.value);
+      },120));
+    }
+
+    if(el.dataset.localCell==='remarks'){
+      el.addEventListener('blur',()=>el.value=localTitleCase(el.value));
+    }
+
+    el.addEventListener('keydown',event=>{
+      const menuOpen=$('#zafarAutocompleteMenu').classList.contains('open') &&
+        zafarAutocompleteState.input===el;
+
+      // Dropdown navigation
+      if(menuOpen&&['ArrowDown','ArrowUp'].includes(event.key)){
+        event.preventDefault();
+        const max=zafarAutocompleteState.options.length-1;
+        if(event.key==='ArrowDown')zafarAutocompleteState.activeIndex=Math.min(max,zafarAutocompleteState.activeIndex+1);
+        if(event.key==='ArrowUp')zafarAutocompleteState.activeIndex=Math.max(0,zafarAutocompleteState.activeIndex-1);
+        zafarRenderAutocomplete();
+        return;
+      }
+      if(menuOpen&&event.key==='Enter'&&zafarAutocompleteState.activeIndex>=0){
+        event.preventDefault();
+        zafarSelectAutocomplete(zafarAutocompleteState.activeIndex);
+        return;
+      }
+      if(menuOpen&&event.key===' '&&zafarAutocompleteState.activeIndex>=0){
+        event.preventDefault();
+        zafarSelectAutocomplete(zafarAutocompleteState.activeIndex);
+        return;
+      }
+      if(menuOpen&&event.key==='Escape'){
+        event.preventDefault();
+        zafarCloseAutocomplete();
+        return;
+      }
+      if(event.altKey&&event.key==='ArrowDown'){
+        event.preventDefault();
+        if(['item','supplier'].includes(el.dataset.localCell)){
+          zafarOpenAutocomplete(el,el.dataset.localCell);
+        }
+        return;
+      }
+
+      // Universal shortcuts
+      if(event.ctrlKey&&event.key.toLowerCase()==='d'){
+        event.preventDefault();
+        zafarCopyAbove(el);
+        return;
+      }
+      if(event.ctrlKey&&event.key===';'){
+        event.preventDefault();
+        if(el===document.activeElement)el.value=zafarToday();
+        return;
+      }
+      if(event.ctrlKey&&event.key.toLowerCase()==='s'){
+        event.preventDefault();
+        zafarSaveAll();
+        return;
+      }
+      if(event.key==='Delete'){
+        event.preventDefault();
+        el.value='';
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+        return;
+      }
+      if(event.key==='F2'){
+        event.preventDefault();
+        el.focus();
+        el.select?.();
+        return;
+      }
+
+      // Grid movement
+      if(event.key==='Enter'){
+        event.preventDefault();
+        zafarCloseAutocomplete();
+        zafarMoveGrid(el,event.shiftKey?'up':'down');
+        return;
+      }
+      if(event.key==='Tab'){
+        // Browser Tab behavior already moves right; preserve it.
+        // If a dropdown option is highlighted, select it first.
+        if(menuOpen&&zafarAutocompleteState.activeIndex>=0){
+          event.preventDefault();
+          zafarSelectAutocomplete(zafarAutocompleteState.activeIndex);
+          zafarMoveGrid(el,event.shiftKey?'left':'right');
+        }
+        return;
+      }
+      if(event.key==='ArrowRight'){
+        event.preventDefault();
+        zafarMoveGrid(el,'right');
+        return;
+      }
+      if(event.key==='ArrowLeft'){
+        event.preventDefault();
+        zafarMoveGrid(el,'left');
+        return;
+      }
+      if(event.key==='ArrowDown'&&!menuOpen){
+        event.preventDefault();
+        zafarMoveGrid(el,'down');
+        return;
+      }
+      if(event.key==='ArrowUp'&&!menuOpen){
+        event.preventDefault();
+        zafarMoveGrid(el,'up');
+        return;
+      }
+    });
+  });
+
+  body.querySelectorAll('[data-zafar-remove]').forEach(button=>{
+    button.onclick=()=>{
+      const rows=zafarReadRows();
+      const index=[...body.querySelectorAll('tr')].indexOf(button.closest('tr'));
+      rows.splice(index,1);
+      zafarRenderRows(rows);
+    };
+  });
+}
+function zafarAddRow(){
+  const rows=zafarReadRows();
+  rows.push(zafarBlankRow());
+  zafarRenderRows(rows);
+}
+function zafarMeta(){
+  return {
+    date:localFormatDate($('#zafarPurchaseDate').value),
+    purchaseBy:$('#zafarPurchaseBy').value.trim(),
+    vehicle:$('#zafarVehicle').value.trim(),
+    bill:$('#zafarBill').value.trim().toUpperCase(),
+    igp:$('#zafarIgp').value.trim().toUpperCase(),
+    grn:$('#zafarGrn').value.trim().toUpperCase()
+  };
+}
+function zafarSetMeta(meta={}){
+  $('#zafarPurchaseDate').value=meta.date||'';
+  $('#zafarPurchaseBy').value=meta.purchaseBy||'';
+  $('#zafarVehicle').value=meta.vehicle||'';
+  $('#zafarBill').value=meta.bill||'';
+  $('#zafarIgp').value=meta.igp||'';
+  $('#zafarGrn').value=meta.grn||'';
+}
+function zafarClearForm(){
+  zafarSetMeta({});
+  zafarRenderRows([zafarBlankRow()]);
+}
+function zafarSaveDraft(){
+  localStorage.setItem(ZAFAR_DRAFT_KEY,JSON.stringify({
+    meta:zafarMeta(),rows:zafarReadRows(),savedAt:new Date().toISOString()
+  }));
+  toast('Zafar Purchase draft saved');
+}
+function zafarLoadDraft(){
+  try{
+    const draft=JSON.parse(localStorage.getItem(ZAFAR_DRAFT_KEY)||'null');
+    if(!draft){zafarRenderRows([zafarBlankRow()]);return}
+    zafarSetMeta(draft.meta||{});
+    zafarRenderRows(draft.rows||[]);
+  }catch(e){
+    zafarRenderRows([zafarBlankRow()]);
+  }
+}
+function zafarDuplicateBill(meta){
+  if(!meta.bill)return false;
+  return zafarPurchaseRecords().some(x=>
+    String(x.meta?.bill||'').trim().toLowerCase()===meta.bill.toLowerCase()
+  );
+}
+function zafarSaveAll(){
+  const meta=zafarMeta();
+  $('#zafarPurchaseDate').value=meta.date;
+
+  if(!meta.date)return toast('Purchase Date is required');
+  if(zafarDuplicateBill(meta))return toast('Duplicate Bill Number is not allowed');
+
+  const rows=zafarReadRows().filter(row=>row.item && Number(row.qty)>0);
+  if(!rows.length)return toast('Add at least one valid item row');
+
+  const invalid=rows.find(row=>!row.size || !row.unit || Number(row.rate)<=0 || !row.supplier);
+  if(invalid)return toast('Size, Unit, Rate and Supplier are required for every row');
+
+  const records=zafarPurchaseRecords();
+  records.unshift({
+    id:'zafar-'+Date.now(),
+    type:'zafar',
+    meta,
+    rows,
+    createdAt:new Date().toISOString()
+  });
+
+  localStorage.setItem(ZAFAR_PURCHASE_KEY,JSON.stringify(records));
+  localStorage.removeItem(ZAFAR_DRAFT_KEY);
+  zafarClearForm();
+  renderLocalHistory();
+  toast('Zafar Purchase saved');
+}
+function zafarInitialise(){
+  zafarLoadMasterOptions();
+  zafarLoadDraft();
+
+
+  [$('#zafarPurchaseDate'),$('#zafarPurchaseBy'),$('#zafarVehicle'),$('#zafarBill'),$('#zafarIgp'),$('#zafarGrn')].forEach((el,index,arr)=>{
+    el.addEventListener('keydown',event=>{
+      if(event.ctrlKey&&event.key.toLowerCase()==='s'){
+        event.preventDefault();zafarSaveAll();return;
+      }
+      if(event.key==='Enter'){
+        event.preventDefault();
+        if(event.shiftKey){
+          arr[Math.max(0,index-1)]?.focus();
+        }else{
+          arr[Math.min(arr.length-1,index+1)]?.focus();
+        }
+      }
+      if(event.key==='ArrowRight'){event.preventDefault();arr[Math.min(arr.length-1,index+1)]?.focus()}
+      if(event.key==='ArrowLeft'){event.preventDefault();arr[Math.max(0,index-1)]?.focus()}
+      if(event.key==='Delete'){event.preventDefault();el.value=''}
+      if(event.key==='F2'){event.preventDefault();el.focus();el.select?.()}
+      if(event.altKey&&event.key==='ArrowDown'){
+        event.preventDefault();
+        const list=el.getAttribute('list');
+        if(list)el.showPicker?.();
+      }
+    });
+  });
+
+    $('#zafarPurchaseDate').addEventListener('blur',event=>{
+    event.target.value=localFormatDate(event.target.value);
+  });
+  $('#zafarBill').addEventListener('blur',event=>event.target.value=event.target.value.toUpperCase());
+  $('#zafarIgp').addEventListener('blur',event=>event.target.value=event.target.value.toUpperCase());
+  $('#zafarGrn').addEventListener('blur',event=>event.target.value=event.target.value.toUpperCase());
+
+  $('#zafarAddRow').addEventListener('click',zafarAddRow);
+  $('#localClear').addEventListener('click',zafarClearForm);
+  $('#zafarSaveDraft').addEventListener('click',zafarSaveDraft);
+  $('#zafarSaveAll').addEventListener('click',zafarSaveAll);
+  $('#localHistory').addEventListener('click',()=>openPurchase('history'));
+}
+
+
 
 function openStudioPanel(name,section){
   if(name==='theme')setTimeout(()=>{renderLoginThemeControls();renderHomeThemeControls();renderLibraries()},0);
@@ -3240,6 +3942,9 @@ function bind(){
   $('#purchasePrintBtn').addEventListener('click',()=>window.print());
   $('#purchaseExportBtn').addEventListener('click',()=>toast('Purchase export will activate after purchase data is connected'));
   localInitialise();
+  $('#localHistorySearch').addEventListener('input',renderLocalHistory);
+  $('#localHistoryClear').addEventListener('click',()=>{$('#localHistorySearch').value='';renderLocalHistory()});
+  renderLocalHistory();
   $('#masterDetailBack').addEventListener('click',closeMasterDetail);
   $('#masterDetailPrint').addEventListener('click',()=>window.print());
 
