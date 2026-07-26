@@ -834,6 +834,22 @@
 .local-table th:nth-child(12),.local-table td:nth-child(12){min-width:145px}
 .local-table th:nth-child(13),.local-table td:nth-child(13){min-width:220px}
 
+
+/* Local Purchase Master-linked dropdown restoration V4.4 */
+.local-autocomplete-menu{
+  max-height:340px;
+  min-width:310px;
+}
+.local-autocomplete-option{
+  min-height:48px;
+}
+.local-autocomplete-option strong{
+  font-size:13px;
+}
+.local-autocomplete-option small{
+  font-size:11px;
+}
+
 </style>
 
 <script>
@@ -2579,6 +2595,9 @@ const PURCHASE_TITLES={
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
   if(currentPurchaseTab==='local'&&typeof localLoadMasterOptions==='function')localLoadMasterOptions();
+  if(currentPurchaseTab==='local'&&typeof localCloseAutocomplete==='function'){
+    localCloseAutocomplete();
+  }
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-purchase'));
   $$('.purchase-tab').forEach(b=>b.classList.toggle('active',b.dataset.purchaseTab===currentPurchaseTab));
   $$('.purchase-workspace').forEach(w=>w.classList.toggle('active',w.id==='purchase-'+currentPurchaseTab));
@@ -2726,6 +2745,272 @@ function localCalculate(){
   $('#localNetTotal').textContent=localMoney(net);
   $('#localGrossTotal').textContent=localMoney(net);
 }
+
+let localAutocompleteState={
+  input:null,
+  type:null,
+  options:[],
+  activeIndex:-1
+};
+
+function localAutocompleteOptions(type,query){
+  const data=loadMasterData();
+  const active=row=>(row.status||'Active')==='Active';
+  const q=String(query||'').trim().toLowerCase();
+
+  if(type==='item'){
+    return (data.items||[])
+      .filter(active)
+      .filter(row=>
+        !q ||
+        String(row.name||'').toLowerCase().includes(q) ||
+        String(row.size||'').toLowerCase().includes(q) ||
+        String(row.unit||'').toLowerCase().includes(q)
+      )
+      .sort((a,b)=>
+        String(a.name||'').localeCompare(String(b.name||'')) ||
+        String(a.size||'').localeCompare(String(b.size||''))
+      )
+      .slice(0,50)
+      .map(row=>({
+        value:row.name||'',
+        label:row.name||'',
+        sub:[row.size,row.unit].filter(Boolean).join(' | '),
+        record:row
+      }));
+  }
+
+  if(type==='supplier'){
+    return (data.suppliers||[])
+      .filter(active)
+      .filter(row=>
+        !q ||
+        String(row.name||'').toLowerCase().includes(q) ||
+        String(row.proprietor||'').toLowerCase().includes(q) ||
+        String(row.phone||'').toLowerCase().includes(q)
+      )
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
+      .slice(0,50)
+      .map(row=>({
+        value:row.name||'',
+        label:row.name||'',
+        sub:[row.proprietor,row.phone].filter(Boolean).join(' | '),
+        record:row
+      }));
+  }
+
+  if(type==='purchaseBy'){
+    return (data.employees||[])
+      .filter(active)
+      .filter(row=>
+        !q ||
+        String(row.name||'').toLowerCase().includes(q) ||
+        String(row.department||'').toLowerCase().includes(q) ||
+        String(row.designation||'').toLowerCase().includes(q)
+      )
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
+      .slice(0,50)
+      .map(row=>({
+        value:row.name||'',
+        label:row.name||'',
+        sub:[row.department,row.designation].filter(Boolean).join(' | '),
+        record:row
+      }));
+  }
+
+  if(type==='vehicle'){
+    return (data.vehicles||[])
+      .filter(active)
+      .filter(row=>
+        !q ||
+        String(row.number||'').toLowerCase().includes(q) ||
+        String(row.owner||'').toLowerCase().includes(q)
+      )
+      .sort((a,b)=>String(a.number||'').localeCompare(String(b.number||'')))
+      .slice(0,50)
+      .map(row=>({
+        value:row.number||'',
+        label:row.number||'',
+        sub:row.owner||'',
+        record:row
+      }));
+  }
+
+  if(type==='unit'){
+    const values=(data.units||[])
+      .filter(active)
+      .flatMap(row=>[
+        {value:row.symbol||'',label:row.symbol||'',sub:row.name||'',record:row},
+        {value:row.name||'',label:row.name||'',sub:row.symbol||'',record:row}
+      ])
+      .filter(row=>row.value)
+      .filter(row=>
+        !q ||
+        row.value.toLowerCase().includes(q) ||
+        row.sub.toLowerCase().includes(q)
+      );
+
+    const unique=[];
+    const seen=new Set();
+
+    values.forEach(row=>{
+      const key=row.value.toLowerCase();
+      if(!seen.has(key)){
+        seen.add(key);
+        unique.push(row);
+      }
+    });
+
+    return unique.slice(0,50);
+  }
+
+  return [];
+}
+
+function localPositionAutocomplete(input){
+  const menu=$('#localAutocompleteMenu');
+  const rect=input.getBoundingClientRect();
+
+  menu.style.left=`${Math.max(8,rect.left)}px`;
+  menu.style.top=`${rect.bottom+4}px`;
+  menu.style.width=`${Math.max(rect.width,310)}px`;
+
+  const menuHeight=310;
+  if(rect.bottom+menuHeight>window.innerHeight){
+    menu.style.top='auto';
+    menu.style.bottom=`${window.innerHeight-rect.top+4}px`;
+  }else{
+    menu.style.bottom='auto';
+  }
+}
+
+function localRenderAutocomplete(){
+  const menu=$('#localAutocompleteMenu');
+  const options=localAutocompleteState.options;
+
+  if(!localAutocompleteState.input){
+    menu.classList.remove('open');
+    return;
+  }
+
+  menu.innerHTML=options.length
+    ?options.map((option,index)=>`
+      <div class="local-autocomplete-option ${index===localAutocompleteState.activeIndex?'active':''}"
+           data-local-option="${index}">
+        <strong>${masterEsc(option.label)}</strong>
+        ${option.sub?`<small>${masterEsc(option.sub)}</small>`:''}
+      </div>
+    `).join('')
+    :'<div class="local-autocomplete-empty">No matching Master record</div>';
+
+  menu.classList.add('open');
+  localPositionAutocomplete(localAutocompleteState.input);
+
+  menu.querySelectorAll('[data-local-option]').forEach(optionElement=>{
+    optionElement.addEventListener('mousedown',event=>{
+      event.preventDefault();
+      localSelectAutocomplete(Number(optionElement.dataset.localOption));
+    });
+  });
+
+  const activeOption=menu.querySelector('.local-autocomplete-option.active');
+  activeOption?.scrollIntoView({block:'nearest'});
+}
+
+function localOpenAutocomplete(input,type){
+  localAutocompleteState={
+    input,
+    type,
+    options:localAutocompleteOptions(type,input.value),
+    activeIndex:-1
+  };
+
+  localRenderAutocomplete();
+}
+
+function localRefreshAutocomplete(){
+  if(!localAutocompleteState.input)return;
+
+  localAutocompleteState.options=localAutocompleteOptions(
+    localAutocompleteState.type,
+    localAutocompleteState.input.value
+  );
+
+  if(localAutocompleteState.activeIndex>=localAutocompleteState.options.length){
+    localAutocompleteState.activeIndex=localAutocompleteState.options.length-1;
+  }
+
+  localRenderAutocomplete();
+}
+
+function localCloseAutocomplete(){
+  const menu=$('#localAutocompleteMenu');
+  menu.classList.remove('open');
+  menu.style.bottom='auto';
+
+  localAutocompleteState={
+    input:null,
+    type:null,
+    options:[],
+    activeIndex:-1
+  };
+}
+
+function localSelectAutocomplete(index){
+  const state=localAutocompleteState;
+  const option=state.options[index];
+
+  if(!state.input||!option)return;
+
+  const input=state.input;
+  input.value=option.value;
+
+  if(state.type==='item'){
+    const row=input.closest('tr');
+
+    row.querySelector('[data-local-cell="size"]').value=option.record.size||'';
+    row.querySelector('[data-local-cell="unit"]').value=option.record.unit||'';
+  }
+
+  if(state.type==='purchaseBy'){
+    input.value=localTitleCase(option.value);
+  }
+
+  localCloseAutocomplete();
+  localCalculate();
+
+  input.dispatchEvent(new Event('change',{bubbles:true}));
+}
+
+function localAutofillTypedItem(input){
+  const row=input.closest('tr');
+  if(!row)return;
+
+  const data=loadMasterData();
+  const name=String(input.value||'').trim().toLowerCase();
+  const typedSize=String(
+    row.querySelector('[data-local-cell="size"]')?.value||''
+  ).trim().toLowerCase();
+
+  if(!name)return;
+
+  const matches=(data.items||[]).filter(item=>
+    (item.status||'Active')==='Active' &&
+    String(item.name||'').trim().toLowerCase()===name
+  );
+
+  if(!matches.length)return;
+
+  const selected=
+    matches.find(item=>String(item.size||'').trim().toLowerCase()===typedSize) ||
+    matches[0];
+
+  row.querySelector('[data-local-cell="size"]').value=selected.size||'';
+  row.querySelector('[data-local-cell="unit"]').value=selected.unit||'';
+
+  localCalculate();
+}
+
 function localCellMatrix(){
   return [...$('#localPurchaseBody').querySelectorAll('tr')].map(
     tr=>[...tr.querySelectorAll('[data-local-cell]')]
@@ -2787,155 +3072,223 @@ function localToday(){
 function localBindRows(){
   const body=$('#localPurchaseBody');
 
-  body.querySelectorAll('[data-local-cell]').forEach(el=>{
-    el.addEventListener('input',()=>{
-      if(['item','supplier'].includes(el.dataset.localCell)){
-        localOpenAutocomplete(el,el.dataset.localCell);
+  body.querySelectorAll('[data-local-cell]').forEach(input=>{
+    const field=input.dataset.localCell;
+    const dropdownType={
+      item:'item',
+      supplier:'supplier',
+      purchaseBy:'purchaseBy',
+      vehicle:'vehicle',
+      unit:'unit'
+    }[field];
+
+    input.addEventListener('input',()=>{
+      if(dropdownType){
+        if(
+          localAutocompleteState.input!==input ||
+          localAutocompleteState.type!==dropdownType
+        ){
+          localOpenAutocomplete(input,dropdownType);
+        }else{
+          localRefreshAutocomplete();
+        }
       }
+
       localCalculate();
     });
 
-    if(el.dataset.localCell==='item'){
-      el.addEventListener('focus',()=>localOpenAutocomplete(el,'item'));
-      el.addEventListener('blur',()=>setTimeout(()=>{
-        if(localAutocompleteState.input===el)localCloseAutocomplete();
-        localAutofillItem(el);
-        localCalculate();
-      },120));
+    if(dropdownType){
+      input.addEventListener('focus',()=>{
+        localOpenAutocomplete(input,dropdownType);
+      });
+
+      input.addEventListener('blur',()=>{
+        setTimeout(()=>{
+          if(localAutocompleteState.input===input){
+            localCloseAutocomplete();
+          }
+
+          if(field==='item'){
+            localAutofillTypedItem(input);
+          }
+
+          if(field==='purchaseBy'){
+            input.value=localTitleCase(input.value);
+          }
+        },150);
+      });
     }
 
-    if(el.dataset.localCell==='supplier'){
-      el.addEventListener('focus',()=>localOpenAutocomplete(el,'supplier'));
-      el.addEventListener('blur',()=>setTimeout(()=>{
-        if(localAutocompleteState.input===el)localCloseAutocomplete();
-        el.value=localTitleCase(el.value);
-      },120));
+    if(field==='date'){
+      input.addEventListener('blur',()=>{
+        input.value=localFormatDate(input.value);
+      });
     }
 
-    if(el.dataset.localCell==='date'){
-      el.addEventListener('blur',()=>el.value=localFormatDate(el.value));
+    if(['bill','igp'].includes(field)){
+      input.addEventListener('blur',()=>{
+        input.value=input.value.toUpperCase();
+      });
     }
 
-    if(['bill','igp'].includes(el.dataset.localCell)){
-      el.addEventListener('blur',()=>el.value=el.value.toUpperCase());
+    if(field==='remarks'){
+      input.addEventListener('blur',()=>{
+        input.value=localTitleCase(input.value);
+      });
     }
 
-    if(['purchaseBy','remarks'].includes(el.dataset.localCell)){
-      el.addEventListener('blur',()=>el.value=localTitleCase(el.value));
-    }
+    input.addEventListener('keydown',event=>{
+      const menuOpen=
+        $('#localAutocompleteMenu').classList.contains('open') &&
+        localAutocompleteState.input===input;
 
-    el.addEventListener('keydown',event=>{
-      const menuOpen=$('#localAutocompleteMenu').classList.contains('open') &&
-        localAutocompleteState.input===el;
-
-      // Dropdown navigation
-      if(menuOpen&&['ArrowDown','ArrowUp'].includes(event.key)){
+      if(menuOpen&&event.key==='ArrowDown'){
         event.preventDefault();
-        const max=localAutocompleteState.options.length-1;
-        if(event.key==='ArrowDown')localAutocompleteState.activeIndex=Math.min(max,localAutocompleteState.activeIndex+1);
-        if(event.key==='ArrowUp')localAutocompleteState.activeIndex=Math.max(0,localAutocompleteState.activeIndex-1);
+
+        const lastIndex=localAutocompleteState.options.length-1;
+        localAutocompleteState.activeIndex=Math.min(
+          lastIndex,
+          localAutocompleteState.activeIndex+1
+        );
+
         localRenderAutocomplete();
         return;
       }
-      if(menuOpen&&event.key==='Enter'&&localAutocompleteState.activeIndex>=0){
+
+      if(menuOpen&&event.key==='ArrowUp'){
+        event.preventDefault();
+
+        localAutocompleteState.activeIndex=Math.max(
+          0,
+          localAutocompleteState.activeIndex-1
+        );
+
+        localRenderAutocomplete();
+        return;
+      }
+
+      if(
+        menuOpen &&
+        ['Enter',' '].includes(event.key) &&
+        localAutocompleteState.activeIndex>=0
+      ){
         event.preventDefault();
         localSelectAutocomplete(localAutocompleteState.activeIndex);
         return;
       }
-      if(menuOpen&&event.key===' '&&localAutocompleteState.activeIndex>=0){
-        event.preventDefault();
-        localSelectAutocomplete(localAutocompleteState.activeIndex);
+
+      if(menuOpen&&event.key==='Tab'){
+        if(localAutocompleteState.activeIndex>=0){
+          event.preventDefault();
+          localSelectAutocomplete(localAutocompleteState.activeIndex);
+          localMoveGrid(input,event.shiftKey?'left':'right');
+        }else{
+          localCloseAutocomplete();
+        }
         return;
       }
+
       if(menuOpen&&event.key==='Escape'){
         event.preventDefault();
         localCloseAutocomplete();
         return;
       }
-      if(event.altKey&&event.key==='ArrowDown'){
+
+      if(event.altKey&&event.key==='ArrowDown'&&dropdownType){
         event.preventDefault();
-        if(['item','supplier'].includes(el.dataset.localCell)){
-          localOpenAutocomplete(el,el.dataset.localCell);
-        }
+        localOpenAutocomplete(input,dropdownType);
         return;
       }
 
-      // Universal shortcuts
       if(event.ctrlKey&&event.key.toLowerCase()==='d'){
         event.preventDefault();
-        localCopyAbove(el);
+        localCopyAbove(input);
         return;
       }
+
       if(event.ctrlKey&&event.key===';'){
         event.preventDefault();
-        if(el===document.activeElement)el.value=localToday();
+
+        if(field==='date'){
+          input.value=localToday();
+        }
+
         return;
       }
+
       if(event.ctrlKey&&event.key.toLowerCase()==='s'){
         event.preventDefault();
         localSaveAll();
         return;
       }
+
       if(event.key==='Delete'){
         event.preventDefault();
-        el.value='';
-        el.dispatchEvent(new Event('input',{bubbles:true}));
-        return;
-      }
-      if(event.key==='F2'){
-        event.preventDefault();
-        el.focus();
-        el.select?.();
+        input.value='';
+        input.dispatchEvent(new Event('input',{bubbles:true}));
         return;
       }
 
-      // Grid movement
+      if(event.key==='F2'){
+        event.preventDefault();
+        input.focus();
+        input.select?.();
+        return;
+      }
+
       if(event.key==='Enter'){
         event.preventDefault();
-        localCloseAutocomplete();
-        localMoveGrid(el,event.shiftKey?'up':'down');
-        return;
-      }
-      if(event.key==='Tab'){
-        // Browser Tab behavior already moves right; preserve it.
-        // If a dropdown option is highlighted, select it first.
-        if(menuOpen&&localAutocompleteState.activeIndex>=0){
-          event.preventDefault();
-          localSelectAutocomplete(localAutocompleteState.activeIndex);
-          localMoveGrid(el,event.shiftKey?'left':'right');
+
+        if(menuOpen&&localAutocompleteState.options.length){
+          const optionIndex=
+            localAutocompleteState.activeIndex>=0
+              ?localAutocompleteState.activeIndex
+              :0;
+
+          localSelectAutocomplete(optionIndex);
+          return;
         }
+
+        localCloseAutocomplete();
+        localMoveGrid(input,event.shiftKey?'up':'down');
         return;
       }
+
       if(event.key==='ArrowRight'){
         event.preventDefault();
-        localMoveGrid(el,'right');
+        localMoveGrid(input,'right');
         return;
       }
+
       if(event.key==='ArrowLeft'){
         event.preventDefault();
-        localMoveGrid(el,'left');
+        localMoveGrid(input,'left');
         return;
       }
+
       if(event.key==='ArrowDown'&&!menuOpen){
         event.preventDefault();
-        localMoveGrid(el,'down');
+        localMoveGrid(input,'down');
         return;
       }
+
       if(event.key==='ArrowUp'&&!menuOpen){
         event.preventDefault();
-        localMoveGrid(el,'up');
-        return;
+        localMoveGrid(input,'up');
       }
     });
   });
 
   body.querySelectorAll('[data-local-remove]').forEach(button=>{
-    button.onclick=()=>{
+    button.addEventListener('click',()=>{
       const rows=localReadRows();
-      const index=[...body.querySelectorAll('tr')].indexOf(button.closest('tr'));
-      rows.splice(index,1);
+      const rowIndex=[
+        ...body.querySelectorAll('tr')
+      ].indexOf(button.closest('tr'));
+
+      rows.splice(rowIndex,1);
       localRenderRows(rows);
-    };
+    });
   });
 }
 function localAddRow(){
