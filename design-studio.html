@@ -822,6 +822,16 @@
   text-transform:uppercase;letter-spacing:.04em
 }
 .erp-keyboard-badge::before{content:'⌨'}
+
+.local-history-toolbar{display:flex;gap:9px;margin-bottom:12px}
+.local-history-toolbar input{flex:1;min-width:260px;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)}
+.local-history-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:13px;max-height:590px}
+.local-history-table{width:100%;min-width:1500px;border-collapse:collapse}
+.local-history-table th,.local-history-table td{padding:10px 9px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.local-history-table th:last-child,.local-history-table td:last-child{border-right:0}
+.local-history-table th{position:sticky;top:0;z-index:2;background:var(--accent);color:#111;font-size:10px;text-transform:uppercase;letter-spacing:.03em}
+.local-history-table td.number{text-align:right}
+.local-history-empty{padding:32px;text-align:center;color:var(--muted)}
 </style>
 
 <script>
@@ -1265,15 +1275,28 @@
       </div>
     </div>
 
-    <div class="purchase-workspace" id="purchase-history">
-      <div class="purchase-section-box">
-        <h3>Purchase History</h3>
-        <p class="sub">Search, filter and review all purchase records.</p>
-        <div class="purchase-empty"><div><div style="font-size:46px">🕘</div><h2>Purchase History</h2><p>History tables and filters will be connected here.</p></div></div>
-      </div>
+    
+<div class="purchase-workspace" id="purchase-history">
+  <div class="purchase-section-box">
+    <div class="local-history-toolbar">
+      <input id="localHistorySearch" placeholder="Search by date, bill, IGP, GRN, item, size, supplier, vehicle or purchaser">
+      <button class="btn" id="localHistoryClear">Clear</button>
     </div>
+    <div class="local-history-table-wrap">
+      <table class="local-history-table">
+        <thead><tr>
+          <th>Date</th><th>Bill #</th><th>IGP #</th><th>GRN</th>
+          <th>Item Name</th><th>Size</th><th>Quantity</th><th>Unit</th>
+          <th>Unit Rate</th><th>Amount</th><th>Supplier</th><th>Gross Total</th>
+          <th>Purchase By</th><th>Vehicle #</th><th>Remarks</th>
+        </tr></thead>
+        <tbody id="localHistoryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    <div class="purchase-workspace" id="purchase-reports">
+<div class="purchase-workspace" id="purchase-reports">
       <div class="purchase-section-box">
         <h3>Purchase Reports</h3>
         <p class="sub">Purchase PDF, print and management reports.</p>
@@ -2584,6 +2607,7 @@ const PURCHASE_TITLES={
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
   if(currentPurchaseTab==='local'&&typeof localLoadMasterOptions==='function')localLoadMasterOptions();
+  if(currentPurchaseTab==='history'&&typeof renderLocalHistory==='function')renderLocalHistory();
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-purchase'));
   $$('.purchase-tab').forEach(b=>b.classList.toggle('active',b.dataset.purchaseTab===currentPurchaseTab));
   $$('.purchase-workspace').forEach(w=>w.classList.toggle('active',w.id==='purchase-'+currentPurchaseTab));
@@ -3130,6 +3154,7 @@ function localSaveAll(){
   localStorage.setItem(LOCAL_PURCHASE_KEY,JSON.stringify(records));
   localStorage.removeItem(LOCAL_DRAFT_KEY);
   localClearForm();
+  renderLocalHistory();
   toast('Local Purchase saved');
 }
 function localInitialise(){
@@ -3174,6 +3199,37 @@ function localInitialise(){
   $('#localSaveDraft').addEventListener('click',localSaveDraft);
   $('#localSaveAll').addEventListener('click',localSaveAll);
   $('#localHistory').addEventListener('click',()=>openPurchase('history'));
+}
+
+
+function localHistoryRows(){
+  const rows=[];
+  localPurchaseRecords().forEach(record=>{
+    (record.rows||[]).forEach(row=>rows.push({
+      date:record.meta?.date||'',bill:record.meta?.bill||'',igp:record.meta?.igp||'',
+      grn:record.meta?.grn||'',item:row.item||'',size:row.size||'',qty:row.qty||'',
+      unit:row.unit||'',rate:row.rate||'',amount:row.amount||'',supplier:row.supplier||'',
+      grossTotal:row.grossTotal||row.amount||'',purchaseBy:record.meta?.purchaseBy||'',
+      vehicle:record.meta?.vehicle||'',remarks:row.remarks||'',createdAt:record.createdAt||''
+    }));
+  });
+  return rows.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+}
+function renderLocalHistory(){
+  const q=String($('#localHistorySearch')?.value||'').trim().toLowerCase();
+  const rows=localHistoryRows().filter(r=>!q||Object.values(r).some(v=>String(v||'').toLowerCase().includes(q)));
+  $('#localHistoryBody').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td>${masterEsc(r.date||'—')}</td><td>${masterEsc(r.bill||'—')}</td>
+    <td>${masterEsc(r.igp||'—')}</td><td>${masterEsc(r.grn||'—')}</td>
+    <td>${masterEsc(r.item||'—')}</td><td>${masterEsc(r.size||'—')}</td>
+    <td class="number">${masterEsc(r.qty||'0')}</td><td>${masterEsc(r.unit||'—')}</td>
+    <td class="number">${r.rate?localMoney(r.rate):'—'}</td>
+    <td class="number">${r.amount?localMoney(r.amount):'—'}</td>
+    <td>${masterEsc(r.supplier||'—')}</td>
+    <td class="number">${r.grossTotal?localMoney(r.grossTotal):'—'}</td>
+    <td>${masterEsc(r.purchaseBy||'—')}</td><td>${masterEsc(r.vehicle||'—')}</td>
+    <td>${masterEsc(r.remarks||'—')}</td>
+  </tr>`).join(''):'<tr><td colspan="15"><div class="local-history-empty">No Local Purchase data found.</div></td></tr>';
 }
 
 function openStudioPanel(name,section){
@@ -3240,6 +3296,9 @@ function bind(){
   $('#purchasePrintBtn').addEventListener('click',()=>window.print());
   $('#purchaseExportBtn').addEventListener('click',()=>toast('Purchase export will activate after purchase data is connected'));
   localInitialise();
+  $('#localHistorySearch').addEventListener('input',renderLocalHistory);
+  $('#localHistoryClear').addEventListener('click',()=>{$('#localHistorySearch').value='';renderLocalHistory()});
+  renderLocalHistory();
   $('#masterDetailBack').addEventListener('click',closeMasterDetail);
   $('#masterDetailPrint').addEventListener('click',()=>window.print());
 
