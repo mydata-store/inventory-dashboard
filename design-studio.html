@@ -2665,9 +2665,14 @@ function openPurchase(tab='dashboard'){
   $('#workspaceSubtitle').textContent=meta[0]+' — '+meta[1];
   $('#purchasePageTitle').textContent=meta[0];
   $('#purchasePageSubtitle').textContent=meta[1];
+  document.title=`${meta[0]} · Design Studio`;
+  document.body.dataset.activeStudio='purchase';
   const u=new URL(location.href);
   u.searchParams.set('studio','purchase');
   u.searchParams.set('section',currentPurchaseTab);
+  u.searchParams.delete('type');
+  u.searchParams.delete('id');
+  u.searchParams.delete('master');
   history.replaceState(null,'',u);
   $$('.side-group').forEach(g=>g.classList.remove('open'));
   setTimeout(ccApplyPageDesign,0);
@@ -3715,5 +3720,16 @@ clearInterval(clockTimer);clockTimer=setInterval(updateClock,1000);
 document.addEventListener('DOMContentLoaded',()=>{const st=ccControlState();ccEnsureLoginUsers(st);ccSaveState(st);if(!erpCurrentSession())erpShowLogin();else erpHideLogin()});
 </script>
 <script src="public/erp-security-bridge.js"></script>
-<script>window.ERP_USER_ROLE='administrator';</script>
+<script>window.ERP_USER_ROLE='administrator';
+window.addEventListener('popstate',()=>{
+  const u=new URL(location.href);
+  const studio=u.searchParams.get('studio');
+  if(studio==='purchase'){
+    openPurchase((u.searchParams.get('section')||'dashboard').trim().toLowerCase());
+  }else if(studio==='masters'){
+    openMasters((u.searchParams.get('section')||'items').trim().toLowerCase());
+  }
+});
+
+</script>
 </body></html>
