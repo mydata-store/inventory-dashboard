@@ -896,6 +896,40 @@
 .zafar-table th:nth-child(1),.zafar-table td:nth-child(1){min-width:120px}
 .zafar-table th:nth-child(2),.zafar-table td:nth-child(2){min-width:145px}
 .zafar-table th:nth-child(10),.zafar-table td:nth-child(10){min-width:130px}
+
+/* Zafar Purchase dropdown and width improvements V4.7 */
+.zafar-table{min-width:1580px}
+.zafar-table th:nth-child(5),.zafar-table td:nth-child(5){min-width:130px}
+.zafar-table th:nth-child(7),.zafar-table td:nth-child(7){min-width:145px}
+.zafar-table th:nth-child(8),.zafar-table td:nth-child(8){min-width:155px}
+.zafar-autocomplete-menu{
+  position:fixed;
+  z-index:9999;
+  display:none;
+  min-width:320px;
+  max-height:340px;
+  overflow-y:auto;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  box-shadow:0 14px 34px rgba(15,23,42,.18);
+}
+.zafar-autocomplete-menu.open{display:block}
+.zafar-autocomplete-option{
+  min-height:48px;
+  padding:9px 11px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  color:var(--text);
+}
+.zafar-autocomplete-option:last-child{border-bottom:0}
+.zafar-autocomplete-option:hover,.zafar-autocomplete-option.active{
+  background:color-mix(in srgb,var(--primary) 14%,var(--surface));
+}
+.zafar-autocomplete-option strong{display:block;font-size:13px}
+.zafar-autocomplete-option small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
+.zafar-autocomplete-empty{padding:12px;color:var(--muted);text-align:center}
+
 </style>
 
 <script>
@@ -2686,6 +2720,7 @@ function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
   if(currentPurchaseTab==='local'&&typeof localLoadMasterOptions==='function')localLoadMasterOptions();
   if(currentPurchaseTab==='zafar'&&typeof zafarLoadMasterOptions==='function')zafarLoadMasterOptions();
+  if(currentPurchaseTab==='zafar'&&typeof zafarCloseAutocomplete==='function')zafarCloseAutocomplete();
   if(currentPurchaseTab==='local'&&typeof localCloseAutocomplete==='function'){
     localCloseAutocomplete();
   }
@@ -3604,6 +3639,220 @@ function zafarCalculate(){
   });
   $('#zafarNetTotal').textContent=zafarMoney(net);
 }
+
+let zafarAutocompleteState={
+  input:null,
+  type:null,
+  options:[],
+  activeIndex:-1
+};
+
+function zafarAutocompleteOptions(type,query){
+  const data=loadMasterData();
+  const active=row=>(row.status||'Active')==='Active';
+  const q=String(query||'').trim().toLowerCase();
+
+  if(type==='item'){
+    return (data.items||[])
+      .filter(active)
+      .filter(row=>
+        !q ||
+        String(row.name||'').toLowerCase().includes(q) ||
+        String(row.size||'').toLowerCase().includes(q) ||
+        String(row.unit||'').toLowerCase().includes(q)
+      )
+      .sort((a,b)=>
+        String(a.name||'').localeCompare(String(b.name||'')) ||
+        String(a.size||'').localeCompare(String(b.size||''))
+      )
+      .slice(0,50)
+      .map(row=>({
+        value:row.name||'',
+        label:row.name||'',
+        sub:[row.size,row.unit].filter(Boolean).join(' | '),
+        record:row
+      }));
+  }
+
+  if(type==='supplier'){
+    return (data.suppliers||[])
+      .filter(active)
+      .filter(row=>
+        !q ||
+        String(row.name||'').toLowerCase().includes(q) ||
+        String(row.proprietor||'').toLowerCase().includes(q) ||
+        String(row.phone||'').toLowerCase().includes(q)
+      )
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
+      .slice(0,50)
+      .map(row=>({
+        value:row.name||'',
+        label:row.name||'',
+        sub:[row.proprietor,row.phone].filter(Boolean).join(' | '),
+        record:row
+      }));
+  }
+
+  if(type==='unit'){
+    const values=(data.units||[])
+      .filter(active)
+      .flatMap(row=>[
+        {value:row.symbol||'',label:row.symbol||'',sub:row.name||'',record:row},
+        {value:row.name||'',label:row.name||'',sub:row.symbol||'',record:row}
+      ])
+      .filter(row=>row.value)
+      .filter(row=>
+        !q ||
+        row.value.toLowerCase().includes(q) ||
+        row.sub.toLowerCase().includes(q)
+      );
+
+    const seen=new Set();
+    return values.filter(row=>{
+      const key=row.value.toLowerCase();
+      if(seen.has(key))return false;
+      seen.add(key);
+      return true;
+    }).slice(0,50);
+  }
+
+  return [];
+}
+
+function zafarPositionAutocomplete(input){
+  const menu=$('#zafarAutocompleteMenu');
+  const rect=input.getBoundingClientRect();
+
+  menu.style.left=`${Math.max(8,rect.left)}px`;
+  menu.style.top=`${rect.bottom+4}px`;
+  menu.style.width=`${Math.max(rect.width,320)}px`;
+
+  if(rect.bottom+340>window.innerHeight){
+    menu.style.top='auto';
+    menu.style.bottom=`${window.innerHeight-rect.top+4}px`;
+  }else{
+    menu.style.bottom='auto';
+  }
+}
+
+function zafarRenderAutocomplete(){
+  const menu=$('#zafarAutocompleteMenu');
+  if(!menu || !zafarAutocompleteState.input)return;
+
+  const options=zafarAutocompleteState.options;
+
+  menu.innerHTML=options.length
+    ?options.map((option,index)=>`
+      <div class="zafar-autocomplete-option ${index===zafarAutocompleteState.activeIndex?'active':''}"
+           data-zafar-option="${index}">
+        <strong>${masterEsc(option.label)}</strong>
+        ${option.sub?`<small>${masterEsc(option.sub)}</small>`:''}
+      </div>
+    `).join('')
+    :'<div class="zafar-autocomplete-empty">No matching Master record</div>';
+
+  menu.classList.add('open');
+  zafarPositionAutocomplete(zafarAutocompleteState.input);
+
+  menu.querySelectorAll('[data-zafar-option]').forEach(element=>{
+    element.addEventListener('mousedown',event=>{
+      event.preventDefault();
+      zafarSelectAutocomplete(Number(element.dataset.zafarOption));
+    });
+  });
+
+  menu.querySelector('.zafar-autocomplete-option.active')?.scrollIntoView({block:'nearest'});
+}
+
+function zafarOpenAutocomplete(input,type){
+  zafarAutocompleteState={
+    input,
+    type,
+    options:zafarAutocompleteOptions(type,input.value),
+    activeIndex:-1
+  };
+  zafarRenderAutocomplete();
+}
+
+function zafarRefreshAutocomplete(){
+  if(!zafarAutocompleteState.input)return;
+
+  zafarAutocompleteState.options=zafarAutocompleteOptions(
+    zafarAutocompleteState.type,
+    zafarAutocompleteState.input.value
+  );
+
+  if(zafarAutocompleteState.activeIndex>=zafarAutocompleteState.options.length){
+    zafarAutocompleteState.activeIndex=zafarAutocompleteState.options.length-1;
+  }
+
+  zafarRenderAutocomplete();
+}
+
+function zafarCloseAutocomplete(){
+  const menu=$('#zafarAutocompleteMenu');
+  menu?.classList.remove('open');
+
+  if(menu){
+    menu.style.bottom='auto';
+  }
+
+  zafarAutocompleteState={
+    input:null,
+    type:null,
+    options:[],
+    activeIndex:-1
+  };
+}
+
+function zafarSelectAutocomplete(index){
+  const state=zafarAutocompleteState;
+  const option=state.options[index];
+
+  if(!state.input||!option)return;
+
+  const input=state.input;
+  input.value=option.value;
+
+  if(state.type==='item'){
+    const row=input.closest('tr');
+    row.querySelector('[data-zafar-cell="size"]').value=option.record.size||'';
+    row.querySelector('[data-zafar-cell="unit"]').value=option.record.unit||'';
+  }
+
+  zafarCloseAutocomplete();
+  zafarCalculate();
+  input.dispatchEvent(new Event('change',{bubbles:true}));
+}
+
+function zafarAutofillTypedItem(input){
+  const row=input.closest('tr');
+  if(!row)return;
+
+  const data=loadMasterData();
+  const itemName=String(input.value||'').trim().toLowerCase();
+  const currentSize=String(
+    row.querySelector('[data-zafar-cell="size"]')?.value||''
+  ).trim().toLowerCase();
+
+  if(!itemName)return;
+
+  const matches=(data.items||[]).filter(item=>
+    (item.status||'Active')==='Active' &&
+    String(item.name||'').trim().toLowerCase()===itemName
+  );
+
+  if(!matches.length)return;
+
+  const selected=
+    matches.find(item=>String(item.size||'').trim().toLowerCase()===currentSize) ||
+    matches[0];
+
+  row.querySelector('[data-zafar-cell="size"]').value=selected.size||'';
+  row.querySelector('[data-zafar-cell="unit"]').value=selected.unit||'';
+  zafarCalculate();
+}
+
 function zafarCellMatrix(){
   return [...$('#zafarPurchaseBody').querySelectorAll('tr')].map(
     tr=>[...tr.querySelectorAll('[data-zafar-cell]')]
@@ -3666,13 +3915,11 @@ function zafarBindRows(){
   const body=$('#zafarPurchaseBody');
 
   body.querySelectorAll('[data-zafar-cell]').forEach(input=>{
-    const field=input.dataset.localCell;
+    const field=input.dataset.zafarCell;
     const dropdownType={
       item:'item',
-      supplier:'supplier',
-      purchaseBy:'purchaseBy',
-      vehicle:'vehicle',
-      unit:'unit'
+      unit:'unit',
+      supplier:'supplier'
     }[field];
 
     input.addEventListener('input',()=>{
@@ -3703,10 +3950,6 @@ function zafarBindRows(){
 
           if(field==='item'){
             zafarAutofillTypedItem(input);
-          }
-
-          if(field==='purchaseBy'){
-            input.value=localTitleCase(input.value);
           }
         },150);
       });
