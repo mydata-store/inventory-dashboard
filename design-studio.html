@@ -781,11 +781,11 @@
 @media(max-width:700px){.local-meta-grid{grid-template-columns:1fr}}
 
 /* Local Purchase improvements V3.6 */
-.local-table{min-width:1350px}
-.local-table .local-col-item{min-width:270px}
-.local-table .local-col-supplier{min-width:250px}
-.local-table td:nth-child(1){min-width:270px}
-.local-table td:nth-child(8){min-width:250px}
+.local-table{min-width:1850px}
+.local-table .local-col-item{min-width:280px}
+.local-table .local-col-supplier{min-width:260px}
+.local-table td:nth-child(4){min-width:280px}
+.local-table td:nth-child(10){min-width:260px}
 .local-autocomplete-wrap{position:relative}
 .local-autocomplete-menu{
   position:fixed;
@@ -822,6 +822,18 @@
   text-transform:uppercase;letter-spacing:.04em
 }
 .erp-keyboard-badge::before{content:'⌨'}
+
+/* Local Purchase row-entry layout V4.3 */
+.local-table{min-width:1850px}
+.local-table .local-col-item,.local-table td:nth-child(4){min-width:280px}
+.local-table .local-col-supplier,.local-table td:nth-child(10){min-width:260px}
+.local-table th:nth-child(1),.local-table td:nth-child(1){min-width:120px}
+.local-table th:nth-child(2),.local-table td:nth-child(2){min-width:120px}
+.local-table th:nth-child(3),.local-table td:nth-child(3){min-width:120px}
+.local-table th:nth-child(11),.local-table td:nth-child(11){min-width:170px}
+.local-table th:nth-child(12),.local-table td:nth-child(12){min-width:145px}
+.local-table th:nth-child(13),.local-table td:nth-child(13){min-width:220px}
+
 </style>
 
 <script>
@@ -1183,7 +1195,7 @@
       </div>
       <div>
         <h3>Local Purchase Entry</h3>
-        <p>Enter local purchases using the existing Design Studio header, sidebar and profile.</p>
+        <p>Enter Local Purchase data directly in the table.</p>
       </div>
       <div class="local-purchase-actions">
         <button class="btn" id="localAddRow">+ Add Row</button>
@@ -1193,39 +1205,22 @@
         <button class="btn primary" id="localSaveAll">Save All Rows</button>
       </div>
     </div>
-<div class="local-meta-grid">
-      <div class="local-field">
-        <label>Purchase Date</label>
-        <input id="localPurchaseDate" placeholder="25-6" autocomplete="off">
-      </div>
-      <div class="local-field">
-        <label>Purchase By</label>
-        <input id="localPurchaseBy" list="localEmployeeList" autocomplete="off">
-        <small class="local-master-note">Linked with Employee Master</small>
-      </div>
-      <div class="local-field">
-        <label>Vehicle #</label>
-        <input id="localVehicle" list="localVehicleList" autocomplete="off">
-        <small class="local-master-note">Linked with Vehicle Master</small>
-      </div>
-      <div class="local-field"><label>Bill #</label><input id="localBill" autocomplete="off"></div>
-      <div class="local-field"><label>IGP #</label><input id="localIgp" autocomplete="off"></div>
-      <div class="local-field"><label>GRN</label><input id="localGrn" autocomplete="off"></div>
-    </div>
-
-    <div class="local-table-wrap">
+<div class="local-table-wrap">
       <table class="local-table">
         <thead>
           <tr>
-            <th class="local-col-item">Item Name</th>
+            <th>Date</th>
+            <th>Bill #</th>
+            <th>IGP #</th>
+            <th class="local-col-item">Item</th>
             <th>Size</th>
             <th>Quantity</th>
             <th>Unit</th>
-            <th>Last Purchase Rate</th>
-            <th>Unit Rate</th>
-            <th>Amount</th>
+            <th>Unit Price</th>
+            <th>Total Price</th>
             <th class="local-col-supplier">Supplier</th>
-            <th>Gross Total</th>
+            <th>Purchased By</th>
+            <th>Veh #</th>
             <th>Remarks</th>
             <th>Action</th>
           </tr>
@@ -2630,8 +2625,8 @@ function localTitleCase(value){
 }
 function localBlankRow(){
   return {
-    item:'',size:'',qty:'',unit:'',lastRate:'',
-    rate:'',amount:'',supplier:'',grossTotal:'',remarks:''
+    date:'',bill:'',igp:'',item:'',size:'',qty:'',unit:'',
+    rate:'',amount:'',supplier:'',purchaseBy:'',vehicle:'',remarks:''
   };
 }
 function localLoadMasterOptions(){
@@ -2657,15 +2652,18 @@ function localLoadMasterOptions(){
 }
 function localRowHtml(row,index){
   return `<tr data-local-row="${index}">
+    <td><input data-local-cell="date" value="${masterEsc(row.date)}" placeholder="25-6" autocomplete="off"></td>
+    <td><input data-local-cell="bill" value="${masterEsc(row.bill)}" autocomplete="off"></td>
+    <td><input data-local-cell="igp" value="${masterEsc(row.igp)}" autocomplete="off"></td>
     <td><input data-local-cell="item" value="${masterEsc(row.item)}" autocomplete="off"></td>
     <td><input data-local-cell="size" value="${masterEsc(row.size)}"></td>
     <td><input class="number" data-local-cell="qty" type="number" min="0" step="any" value="${masterEsc(row.qty)}"></td>
     <td><input data-local-cell="unit" list="localUnitList" value="${masterEsc(row.unit)}" autocomplete="off"></td>
-    <td><input class="number" data-local-cell="lastRate" value="${masterEsc(row.lastRate)}" readonly></td>
     <td><input class="number" data-local-cell="rate" type="number" min="0" step="any" value="${masterEsc(row.rate)}"></td>
     <td><input class="number" data-local-cell="amount" value="${masterEsc(row.amount)}" readonly></td>
     <td><input data-local-cell="supplier" value="${masterEsc(row.supplier)}" autocomplete="off"></td>
-    <td><input class="number" data-local-cell="grossTotal" value="${masterEsc(row.grossTotal)}" readonly></td>
+    <td><input data-local-cell="purchaseBy" list="localEmployeeList" value="${masterEsc(row.purchaseBy)}" autocomplete="off"></td>
+    <td><input data-local-cell="vehicle" list="localVehicleList" value="${masterEsc(row.vehicle)}" autocomplete="off"></td>
     <td><input data-local-cell="remarks" value="${masterEsc(row.remarks)}"></td>
     <td class="local-row-action"><button data-local-remove>Delete</button></td>
   </tr>`;
@@ -2712,146 +2710,22 @@ function localAutofillItem(input){
   const item=candidates.find(x=>String(x.size||'').trim().toLowerCase()===existingSize) || candidates[0];
   tr.querySelector('[data-local-cell="size"]').value=item.size||'';
   tr.querySelector('[data-local-cell="unit"]').value=item.unit||'';
-  tr.querySelector('[data-local-cell="lastRate"]').value=localLastRate(item.name,item.size);
 }
 function localCalculate(){
-  let net=0,gross=0;
+  let net=0;
 
   $('#localPurchaseBody').querySelectorAll('tr').forEach(tr=>{
     const qty=Number(tr.querySelector('[data-local-cell="qty"]').value||0);
     const rate=Number(tr.querySelector('[data-local-cell="rate"]').value||0);
-
     const amount=qty*rate;
-    const grossTotal=amount;
 
     tr.querySelector('[data-local-cell="amount"]').value=amount?amount.toFixed(2):'';
-    tr.querySelector('[data-local-cell="grossTotal"]').value=grossTotal?grossTotal.toFixed(2):'';
-
     net+=amount;
-    gross+=grossTotal;
   });
 
   $('#localNetTotal').textContent=localMoney(net);
-  $('#localGrossTotal').textContent=localMoney(gross);
+  $('#localGrossTotal').textContent=localMoney(net);
 }
-let localAutocompleteState={input:null,type:null,options:[],activeIndex:-1};
-
-function localAutocompleteOptions(type,query){
-  const data=loadMasterData();
-  const active=x=>(x.status||'Active')==='Active';
-  const q=String(query||'').trim().toLowerCase();
-
-  if(type==='item'){
-    return data.items.filter(active)
-      .filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.size||'').toLowerCase().includes(q))
-      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))||String(a.size||'').localeCompare(String(b.size||'')))
-      .slice(0,50)
-      .map(x=>({value:x.name,label:x.name,sub:[x.size,x.unit].filter(Boolean).join(' | '),record:x}));
-  }
-
-  if(type==='supplier'){
-    return data.suppliers.filter(active)
-      .filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.proprietor||'').toLowerCase().includes(q))
-      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
-      .slice(0,50)
-      .map(x=>({value:x.name,label:x.name,sub:x.proprietor||x.phone||'',record:x}));
-  }
-
-  return [];
-}
-
-function localPositionAutocomplete(input){
-  const menu=$('#localAutocompleteMenu');
-  const rect=input.getBoundingClientRect();
-  menu.style.left=`${rect.left}px`;
-  menu.style.top=`${rect.bottom+4}px`;
-  menu.style.width=`${Math.max(rect.width,300)}px`;
-}
-
-function localRenderAutocomplete(){
-  const menu=$('#localAutocompleteMenu');
-  const options=localAutocompleteState.options;
-
-  menu.innerHTML=options.length
-    ?options.map((o,i)=>`<div class="local-autocomplete-option ${i===localAutocompleteState.activeIndex?'active':''}" data-local-option="${i}"><strong>${masterEsc(o.label)}</strong>${o.sub?`<small>${masterEsc(o.sub)}</small>`:''}</div>`).join('')
-    :'<div class="local-autocomplete-empty">No matching records</div>';
-
-  menu.classList.add('open');
-  localPositionAutocomplete(localAutocompleteState.input);
-
-  menu.querySelectorAll('[data-local-option]').forEach(el=>{
-    el.onmousedown=e=>{
-      e.preventDefault();
-      localSelectAutocomplete(+el.dataset.localOption);
-    };
-  });
-}
-
-function localOpenAutocomplete(input,type){
-  localAutocompleteState={
-    input,
-    type,
-    options:localAutocompleteOptions(type,input.value),
-    activeIndex:-1
-  };
-  localRenderAutocomplete();
-}
-
-function localCloseAutocomplete(){
-  $('#localAutocompleteMenu').classList.remove('open');
-  localAutocompleteState={input:null,type:null,options:[],activeIndex:-1};
-}
-
-function localSelectAutocomplete(index){
-  const state=localAutocompleteState;
-  const option=state.options[index];
-  if(!state.input||!option)return;
-
-  state.input.value=option.value;
-
-  if(state.type==='item'){
-    const tr=state.input.closest('tr');
-    tr.querySelector('[data-local-cell="size"]').value=option.record.size||'';
-    tr.querySelector('[data-local-cell="unit"]').value=option.record.unit||'';
-    tr.querySelector('[data-local-cell="lastRate"]').value=localLastRate(option.record.name,option.record.size);
-  }
-
-  localCloseAutocomplete();
-  localCalculate();
-  state.input.dispatchEvent(new Event('change',{bubbles:true}));
-}
-
-function localMoveFocus(current,direction){
-  const body=$('#localPurchaseBody');
-  const rows=[...body.querySelectorAll('tr')];
-  const row=current.closest('tr');
-  const rowIndex=rows.indexOf(row);
-  const cells=[...row.querySelectorAll('[data-local-cell]')];
-  const colIndex=cells.indexOf(current);
-
-  let nextRow=rowIndex,nextCol=colIndex;
-
-  if(direction==='right')nextCol++;
-  if(direction==='left')nextCol--;
-  if(direction==='down')nextRow++;
-  if(direction==='up')nextRow--;
-
-  if(nextCol>=cells.length){nextRow++;nextCol=0}
-  if(nextCol<0){nextRow--;nextCol=cells.length-1}
-
-  if(nextRow>=rows.length){
-    localAddRow();
-    setTimeout(()=>{
-      const newRows=[...body.querySelectorAll('tr')];
-      newRows[newRows.length-1].querySelectorAll('[data-local-cell]')[Math.max(0,nextCol)]?.focus();
-    },0);
-    return;
-  }
-
-  if(nextRow<0)return;
-  rows[nextRow].querySelectorAll('[data-local-cell]')[Math.max(0,nextCol)]?.focus();
-}
-
 function localCellMatrix(){
   return [...$('#localPurchaseBody').querySelectorAll('tr')].map(
     tr=>[...tr.querySelectorAll('[data-local-cell]')]
@@ -2938,7 +2812,15 @@ function localBindRows(){
       },120));
     }
 
-    if(el.dataset.localCell==='remarks'){
+    if(el.dataset.localCell==='date'){
+      el.addEventListener('blur',()=>el.value=localFormatDate(el.value));
+    }
+
+    if(['bill','igp'].includes(el.dataset.localCell)){
+      el.addEventListener('blur',()=>el.value=el.value.toUpperCase());
+    }
+
+    if(['purchaseBy','remarks'].includes(el.dataset.localCell)){
       el.addEventListener('blur',()=>el.value=localTitleCase(el.value));
     }
 
@@ -3061,68 +2943,75 @@ function localAddRow(){
   rows.push(localBlankRow());
   localRenderRows(rows);
 }
-function localMeta(){
-  return {
-    date:localFormatDate($('#localPurchaseDate').value),
-    purchaseBy:$('#localPurchaseBy').value.trim(),
-    vehicle:$('#localVehicle').value.trim(),
-    bill:$('#localBill').value.trim().toUpperCase(),
-    igp:$('#localIgp').value.trim().toUpperCase(),
-    grn:$('#localGrn').value.trim().toUpperCase()
-  };
-}
-function localSetMeta(meta={}){
-  $('#localPurchaseDate').value=meta.date||'';
-  $('#localPurchaseBy').value=meta.purchaseBy||'';
-  $('#localVehicle').value=meta.vehicle||'';
-  $('#localBill').value=meta.bill||'';
-  $('#localIgp').value=meta.igp||'';
-  $('#localGrn').value=meta.grn||'';
-}
 function localClearForm(){
-  localSetMeta({});
   localRenderRows([localBlankRow()]);
 }
 function localSaveDraft(){
   localStorage.setItem(LOCAL_DRAFT_KEY,JSON.stringify({
-    meta:localMeta(),rows:localReadRows(),savedAt:new Date().toISOString()
+    rows:localReadRows(),
+    savedAt:new Date().toISOString()
   }));
   toast('Local Purchase draft saved');
 }
 function localLoadDraft(){
   try{
     const draft=JSON.parse(localStorage.getItem(LOCAL_DRAFT_KEY)||'null');
-    if(!draft){localRenderRows([localBlankRow()]);return}
-    localSetMeta(draft.meta||{});
-    localRenderRows(draft.rows||[]);
+    localRenderRows(draft?.rows?.length?draft.rows:[localBlankRow()]);
   }catch(e){
     localRenderRows([localBlankRow()]);
   }
 }
-function localDuplicateBill(meta){
-  if(!meta.bill)return false;
-  return localPurchaseRecords().some(x=>
-    String(x.meta?.bill||'').trim().toLowerCase()===meta.bill.toLowerCase()
+function localDuplicateBill(rows){
+  const existingBills=new Set(
+    localPurchaseRecords().flatMap(record=>
+      (record.rows||[]).map(row=>
+        String(row.bill||record.meta?.bill||'').trim().toLowerCase()
+      )
+    ).filter(Boolean)
+  );
+
+  return rows.find(row=>
+    row.bill && existingBills.has(String(row.bill).trim().toLowerCase())
   );
 }
 function localSaveAll(){
-  const meta=localMeta();
-  $('#localPurchaseDate').value=meta.date;
+  const rows=localReadRows().filter(row=>
+    row.date||row.bill||row.igp||row.item||row.qty||row.supplier
+  );
 
-  if(!meta.date)return toast('Purchase Date is required');
-  if(localDuplicateBill(meta))return toast('Duplicate Bill Number is not allowed');
+  if(!rows.length)return toast('Add at least one Local Purchase row');
 
-  const rows=localReadRows().filter(row=>row.item && Number(row.qty)>0);
-  if(!rows.length)return toast('Add at least one valid item row');
+  rows.forEach(row=>{
+    row.date=localFormatDate(row.date);
+    row.bill=String(row.bill||'').trim().toUpperCase();
+    row.igp=String(row.igp||'').trim().toUpperCase();
+    row.purchaseBy=localTitleCase(row.purchaseBy);
+    row.remarks=localTitleCase(row.remarks);
+  });
 
-  const invalid=rows.find(row=>!row.size || !row.unit || Number(row.rate)<=0 || !row.supplier);
-  if(invalid)return toast('Size, Unit, Rate and Supplier are required for every row');
+  const invalid=rows.find(row=>
+    !row.date ||
+    !row.item ||
+    !row.size ||
+    Number(row.qty)<=0 ||
+    !row.unit ||
+    Number(row.rate)<=0 ||
+    !row.supplier
+  );
+
+  if(invalid){
+    return toast('Date, Item, Size, Quantity, Unit, Unit Price and Supplier are required');
+  }
+
+  const duplicate=localDuplicateBill(rows);
+  if(duplicate){
+    return toast(`Duplicate Bill Number is not allowed: ${duplicate.bill}`);
+  }
 
   const records=localPurchaseRecords();
   records.unshift({
     id:'local-'+Date.now(),
     type:'local',
-    meta,
     rows,
     createdAt:new Date().toISOString()
   });
@@ -3130,44 +3019,16 @@ function localSaveAll(){
   localStorage.setItem(LOCAL_PURCHASE_KEY,JSON.stringify(records));
   localStorage.removeItem(LOCAL_DRAFT_KEY);
   localClearForm();
+
+  if(typeof renderLocalHistory==='function'){
+    renderLocalHistory();
+  }
+
   toast('Local Purchase saved');
 }
 function localInitialise(){
   localLoadMasterOptions();
   localLoadDraft();
-
-
-  [$('#localPurchaseDate'),$('#localPurchaseBy'),$('#localVehicle'),$('#localBill'),$('#localIgp'),$('#localGrn')].forEach((el,index,arr)=>{
-    el.addEventListener('keydown',event=>{
-      if(event.ctrlKey&&event.key.toLowerCase()==='s'){
-        event.preventDefault();localSaveAll();return;
-      }
-      if(event.key==='Enter'){
-        event.preventDefault();
-        if(event.shiftKey){
-          arr[Math.max(0,index-1)]?.focus();
-        }else{
-          arr[Math.min(arr.length-1,index+1)]?.focus();
-        }
-      }
-      if(event.key==='ArrowRight'){event.preventDefault();arr[Math.min(arr.length-1,index+1)]?.focus()}
-      if(event.key==='ArrowLeft'){event.preventDefault();arr[Math.max(0,index-1)]?.focus()}
-      if(event.key==='Delete'){event.preventDefault();el.value=''}
-      if(event.key==='F2'){event.preventDefault();el.focus();el.select?.()}
-      if(event.altKey&&event.key==='ArrowDown'){
-        event.preventDefault();
-        const list=el.getAttribute('list');
-        if(list)el.showPicker?.();
-      }
-    });
-  });
-
-    $('#localPurchaseDate').addEventListener('blur',event=>{
-    event.target.value=localFormatDate(event.target.value);
-  });
-  $('#localBill').addEventListener('blur',event=>event.target.value=event.target.value.toUpperCase());
-  $('#localIgp').addEventListener('blur',event=>event.target.value=event.target.value.toUpperCase());
-  $('#localGrn').addEventListener('blur',event=>event.target.value=event.target.value.toUpperCase());
 
   $('#localAddRow').addEventListener('click',localAddRow);
   $('#localClear').addEventListener('click',localClearForm);
