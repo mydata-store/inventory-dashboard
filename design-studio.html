@@ -965,6 +965,11 @@
 .board-table{min-width:2450px}
 .board-table .board-col-item,.board-table td:nth-child(2){min-width:300px}
 .board-table .board-col-supplier,.board-table td:nth-child(14){min-width:270px}
+
+/* V6.6 Purchase workspace isolation */
+body.purchase-mode .top .actions,
+body.purchase-mode .content > .notice{display:none !important}
+
 </style>
 
 <script>
@@ -2120,6 +2125,14 @@ function ccSetAllPermissions(value){
 
 const CC_PAGE_DESIGN_KEY='erpPageDesignSettingsV1';
 let ccCurrentStudio='theme',ccCurrentSection='';
+function setWorkspaceChrome(mode){
+  const isPurchase=mode==='purchase';
+  document.body.classList.toggle('purchase-mode',isPurchase);
+  const actions=$('.top .actions');
+  if(actions)actions.style.display=isPurchase?'none':'';
+  const notice=$('.content > .notice');
+  if(notice)notice.style.display=isPurchase?'none':'';
+}
 function ccPageKey(){
   return ccCurrentStudio==='control'?`control-${ccCurrentSection||'dashboard'}`:`studio-${ccCurrentStudio}`;
 }
@@ -2137,9 +2150,13 @@ function ccApplyPageDesign(){
   document.documentElement.style.setProperty('--page-card-radius',`${Number(d.radius??16)}px`);
   $$('.card').forEach(c=>c.style.borderRadius=`${Number(d.radius??16)}px`);
   content.style.padding=d.density==='compact'?'12px':d.density==='spacious'?'28px':'20px';
-  const notice=$('.notice');if(notice)notice.style.display=d.notice==='hide'?'none':'block';
-  if(d.title)$('#workspaceTitle').textContent=d.title;
-  if(d.subtitle)$('#workspaceSubtitle').textContent=d.subtitle;
+  const notice=$('.content > .notice');
+  if(notice)notice.style.display=ccCurrentStudio==='purchase'?'none':(d.notice==='hide'?'none':'block');
+  if(ccCurrentStudio!=='purchase'){
+    if(d.title)$('#workspaceTitle').textContent=d.title;
+    if(d.subtitle)$('#workspaceSubtitle').textContent=d.subtitle;
+  }
+  setWorkspaceChrome(ccCurrentStudio);
 }
 function ccOpenPageDesign(){
   const d=ccGetPageDesign();
@@ -2504,6 +2521,8 @@ function masterCode(tab,data){
 function masterEsc(v){return ccEsc(String(v??''))}
 function openMasters(tab='items'){
   currentMasterTab=MASTER_CONFIG[tab]?tab:'items';editingMasterId=null;
+  ccCurrentStudio='masters';ccCurrentSection=currentMasterTab;
+  setWorkspaceChrome('masters');
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-masters'));
   $$('.master-tab').forEach(b=>b.classList.toggle('active',b.dataset.masterPageTab===currentMasterTab));
   const cfg=MASTER_CONFIG[currentMasterTab];
@@ -2789,6 +2808,8 @@ const PURCHASE_TITLES={
 };
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
+  ccCurrentStudio='purchase';ccCurrentSection=currentPurchaseTab;
+  setWorkspaceChrome('purchase');
   if(currentPurchaseTab==='local'&&typeof localLoadMasterOptions==='function')localLoadMasterOptions();
   if(currentPurchaseTab==='zafar'&&typeof zafarLoadMasterOptions==='function')zafarLoadMasterOptions();
   if(currentPurchaseTab==='zafar'&&typeof zafarCloseAutocomplete==='function')zafarCloseAutocomplete();
@@ -2808,7 +2829,13 @@ function openPurchase(tab='dashboard'){
   u.searchParams.set('section',currentPurchaseTab);
   history.replaceState(null,'',u);
   $$('.side-group').forEach(g=>g.classList.remove('open'));
-  setTimeout(ccApplyPageDesign,0);
+  setTimeout(()=>{
+    ccApplyPageDesign();
+    const currentMeta=PURCHASE_TITLES[currentPurchaseTab];
+    $('#workspaceTitle').textContent='Purchase';
+    $('#workspaceSubtitle').textContent=currentMeta[0]+' — '+currentMeta[1];
+    setWorkspaceChrome('purchase');
+  },0);
 }
 
 
@@ -4346,6 +4373,7 @@ function boardInitialise(){boardLoadDraft();$('#boardAddRow').onclick=boardAddRo
 function openStudioPanel(name,section){
   if(name==='theme')setTimeout(()=>{renderLoginThemeControls();renderHomeThemeControls();renderLibraries()},0);
   ccCurrentStudio=name;ccCurrentSection=section||'';
+  setWorkspaceChrome(name);
   $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
   $$('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
   $$('.panel').forEach(p=>p.classList.remove('active'));
@@ -4495,7 +4523,9 @@ localStorage.removeItem('ds:lastGroup');
 // Final route enforcement after all rendering so Users can never fall back to the placeholder.
 setTimeout(()=>{
   const params=new URLSearchParams(location.search);
-  if(params.get('studio')==='control-center'){
+  if(params.get('studio')==='purchase'){
+    openPurchase((params.get('section')||'dashboard').trim().toLowerCase());
+  }else if(params.get('studio')==='control-center'){
     const requested=(params.get('section')||'dashboard').trim().toLowerCase();
     openStudioPanel('control',requested);
   }
