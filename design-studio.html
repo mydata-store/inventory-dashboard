@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Design Studio V6.7</title>
+<title>Design Studio V6.8</title>
 <style>
 :root{--bg:#eef8f3;--surface:#fff;--text:#0e2b22;--muted:#58756c;--primary:#117a55;--accent:#f5a400;--border:#b9d9cd;--shadow:0 12px 30px rgba(16,60,47,.10);--font:'Segoe UI',Arial,sans-serif;--side-w:230px;--side-cw:58px;--side-row:42px;--side-subrow:30px;--side-icon:15px;--side-radius:9px;--side-gap:3px;--side-subindent:32px;--side-main:13px;--side-sub:11px;--side-line:1.2;--side-letter:0px;--side-anim:220ms;--side-bg:#0d5b42;--side-text:#fff;--side-active:#159b6a;--side-active-text:#fff;--clock-bg:#ffffff14;--clock-border:#ffffff30}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}button,input,select{font:inherit}.app{min-height:100vh}.page-shell{min-width:0}.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 24px;background:color-mix(in srgb,var(--bg) 92%,white);border-bottom:1px solid var(--border)}.title h1{margin:0;font-size:27px}.title p{margin:5px 0 0;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn.warn{background:#fff7df;border-color:#ffd36a}.btn:hover{filter:brightness(.98)}.content{padding:20px;max-width:1550px;margin:auto}.notice{padding:12px 14px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px}.card h2{margin:0 0 4px;font-size:21px}.sub{color:var(--muted);margin:0 0 16px}.grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px}.field{min-width:0}.field label{display:block;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;color:#405f55}.field input,.field select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 10px;background:white;color:var(--text)}.field input[type=color]{padding:3px}.field input[type=range]{padding:0}.value{font-size:12px;color:var(--muted);margin-top:4px}.switch{display:flex;align-items:center;gap:8px;height:40px}.switch input{width:auto;height:auto}.section-title{margin:20px 0 10px;font-size:15px;border-bottom:1px solid var(--border);padding-bottom:8px}.themes{display:grid;grid-template-columns:repeat(4,minmax(165px,1fr));gap:12px}.theme{border:2px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;background:white}.theme.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}.swatches{height:30px;border-radius:8px;display:flex;overflow:hidden;margin-bottom:8px}.swatches i{flex:1}.panel{display:none}.panel.active{display:block}.studio-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.studio-tabs button{border:1px solid var(--border);background:white;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.studio-tabs button.active{background:var(--primary);color:white;border-color:var(--primary)}
@@ -2963,6 +2963,9 @@ function openPurchase(tab='dashboard'){
     if(purchaseTabs.parentElement!==headerNav)headerNav.appendChild(purchaseTabs);
     if(purchaseToolbar.parentElement!==headerNav)headerNav.appendChild(purchaseToolbar);
     headerNav.classList.toggle('active',!isDashboard);
+    headerNav.style.display=isDashboard?'none':'flex';
+    purchaseTabs.style.display=isDashboard?'none':'flex';
+    purchaseToolbar.style.display=isDashboard?'none':'flex';
     $('.top')?.classList.toggle('purchase-nav-active',!isDashboard);
   }
   if(isDashboard)renderPurchaseDashboard();
@@ -3011,7 +3014,9 @@ function localFormatDate(value){
   return `${String(day).padStart(2,'0')}-${months[month-1]}-${String(year).slice(-2)}`;
 }
 function localTitleCase(value){
-  return String(value||'').replace(/\b\w/g,c=>c.toUpperCase());
+  return String(value||'')
+    .toLowerCase()
+    .replace(/\b([a-z])/g,c=>c.toUpperCase());
 }
 function localBlankRow(){
   return {
@@ -3052,7 +3057,7 @@ function localRowHtml(row,index){
     <td><input class="number" data-local-cell="rate" type="number" min="0" step="any" value="${masterEsc(row.rate)}"></td>
     <td><input class="number" data-local-cell="amount" value="${masterEsc(row.amount)}" readonly></td>
     <td><input data-local-cell="supplier" value="${masterEsc(row.supplier)}" autocomplete="off"></td>
-    <td><input data-local-cell="purchaseBy" list="localEmployeeList" value="${masterEsc(row.purchaseBy)}" autocomplete="off"></td>
+    <td><input data-local-cell="purchaseBy" list="localEmployeeList" value="${masterEsc(localTitleCase(row.purchaseBy))}" autocomplete="off"></td>
     <td><input data-local-cell="vehicle" list="localVehicleList" value="${masterEsc(String(row.vehicle||'').toUpperCase())}" autocomplete="off" style="text-transform:uppercase"></td>
     <td><input data-local-cell="remarks" value="${masterEsc(row.remarks)}"></td>
     <td class="local-row-action"><button data-local-remove>Delete</button></td>
@@ -3064,7 +3069,9 @@ function localReadRows(){
     tr.querySelectorAll('[data-local-cell]').forEach(el=>{
       row[el.dataset.localCell]=el.dataset.localCell==='vehicle'
         ? String(el.value||'').toUpperCase()
-        : el.value;
+        : el.dataset.localCell==='purchaseBy'
+          ? localTitleCase(el.value)
+          : el.value;
     });
     return row;
   });
@@ -3491,6 +3498,14 @@ function localBindRows(){
           input.setSelectionRange(start,end);
         }
       }
+      if(field==='purchaseBy'){
+        const start=input.selectionStart;
+        const end=input.selectionEnd;
+        input.value=localTitleCase(input.value);
+        if(start!==null&&end!==null){
+          input.setSelectionRange(start,end);
+        }
+      }
 
       if(dropdownType){
         const hasQuery=String(input.value||'').trim().length>0;
@@ -3833,7 +3848,9 @@ function localFormatDate(value){
   return `${String(day).padStart(2,'0')}-${months[month-1]}-${String(year).slice(-2)}`;
 }
 function localTitleCase(value){
-  return String(value||'').replace(/\b\w/g,c=>c.toUpperCase());
+  return String(value||'')
+    .toLowerCase()
+    .replace(/\b([a-z])/g,c=>c.toUpperCase());
 }
 function zafarBlankRow(){
   return {
