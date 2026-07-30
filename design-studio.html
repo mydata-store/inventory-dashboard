@@ -3053,7 +3053,7 @@ function localRowHtml(row,index){
     <td><input class="number" data-local-cell="amount" value="${masterEsc(row.amount)}" readonly></td>
     <td><input data-local-cell="supplier" value="${masterEsc(row.supplier)}" autocomplete="off"></td>
     <td><input data-local-cell="purchaseBy" list="localEmployeeList" value="${masterEsc(row.purchaseBy)}" autocomplete="off"></td>
-    <td><input data-local-cell="vehicle" list="localVehicleList" value="${masterEsc(row.vehicle)}" autocomplete="off"></td>
+    <td><input data-local-cell="vehicle" list="localVehicleList" value="${masterEsc(String(row.vehicle||'').toUpperCase())}" autocomplete="off" style="text-transform:uppercase"></td>
     <td><input data-local-cell="remarks" value="${masterEsc(row.remarks)}"></td>
     <td class="local-row-action"><button data-local-remove>Delete</button></td>
   </tr>`;
@@ -3061,7 +3061,11 @@ function localRowHtml(row,index){
 function localReadRows(){
   return [...$('#localPurchaseBody').querySelectorAll('tr')].map(tr=>{
     const row={};
-    tr.querySelectorAll('[data-local-cell]').forEach(el=>row[el.dataset.localCell]=el.value);
+    tr.querySelectorAll('[data-local-cell]').forEach(el=>{
+      row[el.dataset.localCell]=el.dataset.localCell==='vehicle'
+        ? String(el.value||'').toUpperCase()
+        : el.value;
+    });
     return row;
   });
 }
@@ -3479,6 +3483,15 @@ function localBindRows(){
     }[field];
 
     input.addEventListener('input',()=>{
+      if(field==='vehicle'){
+        const start=input.selectionStart;
+        const end=input.selectionEnd;
+        input.value=String(input.value||'').toUpperCase();
+        if(start!==null&&end!==null){
+          input.setSelectionRange(start,end);
+        }
+      }
+
       if(dropdownType){
         const hasQuery=String(input.value||'').trim().length>0;
         if(!hasQuery){
@@ -3520,7 +3533,7 @@ function localBindRows(){
       });
     }
 
-    if(['bill','igp'].includes(field)){
+    if(['bill','igp','vehicle'].includes(field)){
       input.addEventListener('blur',()=>{
         input.value=input.value.toUpperCase();
       });
