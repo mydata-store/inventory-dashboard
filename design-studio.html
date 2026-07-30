@@ -1041,9 +1041,9 @@
   </div>
 </aside>
 <div class="page-shell">
-<header class="top"><div class="title"><h1 id="workspaceTitle">Design Studio</h1><p id="workspaceSubtitle">Theme, sidebar and profile design for the complete ERP.</p></div><div class="actions"><a class="btn" href="costing.html">← Costing Dashboard</a><button class="btn" id="designPageBtn">✎ Design Page</button><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
+<header class="top"><div class="title"><h1 id="workspaceTitle">Design Studio</h1><p id="workspaceSubtitle">Theme, sidebar and profile design for the complete ERP.</p></div><div class="actions" id="workspaceActions"><a class="btn" href="costing.html">← Costing Dashboard</a><button class="btn" id="designPageBtn">✎ Design Page</button><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
 <main class="content">
-<div class="notice">Changes preview instantly. Use <b>Save & Apply</b> to store them for connected ERP pages.</div>
+<div class="notice" id="workspaceNotice">Changes preview instantly. Use <b>Save & Apply</b> to store them for connected ERP pages.</div>
 <section class="panel active" id="panel-theme">
   <div class="card"><h2>Theme Studio</h2><p class="sub">Control the complete ERP palette and global typography.</p>
   <div class="notice" style="margin:12px 0"><b>Linked Theme Mode:</b> Selecting any ERP theme now automatically matches the Home Screen and Login Page themes. Use <b>Save Theme As</b> to choose what to save.</div>
@@ -4291,7 +4291,7 @@ function boardRowHtml(r,i){return `<tr data-board-row="${i}">
 <td><input data-board-cell="item" value="${masterEsc(r.item)}"></td>
 <td><input data-board-cell="size" value="${masterEsc(r.size)}"></td>
 <td><input data-board-cell="itemCount" type="number" min="0" step="any" value="${masterEsc(r.itemCount)}"></td>
-<td><select data-board-cell="packageType"><option ${r.packageType==='Carton'?'selected':''}>Carton</option><option ${r.packageType==='Bag'?'selected':''}>Bag</option><option ${r.packageType==='Tin'?'selected':''}>Tin</option><option ${r.packageType==='Drum'?'selected':''}>Drum</option><option ${r.packageType==='Open'?'selected':''}>Open</option></select></td>
+<td><select data-board-cell="packageType"><option ${r.packageType==='Open'?'selected':''}>Open</option><option ${r.packageType==='Carton'?'selected':''}>Carton</option><option ${r.packageType==='Bag'?'selected':''}>Bag</option><option ${r.packageType==='Tin'?'selected':''}>Tin</option><option ${r.packageType==='Drum'?'selected':''}>Drum</option></select></td>
 <td><input data-board-cell="weightPerItem" type="number" min="0" step="any" value="${masterEsc(r.weightPerItem)}"></td>
 <td><input data-board-cell="grossWeight" readonly value="${masterEsc(r.grossWeight)}"></td>
 <td><input data-board-cell="deductionPct" type="number" min="0" step="any" value="${masterEsc(r.deductionPct)}"></td>
@@ -4511,4 +4511,43 @@ document.addEventListener('DOMContentLoaded',()=>{const st=ccControlState();ccEn
 </script>
 <script src="public/erp-security-bridge.js"></script>
 <script>window.ERP_USER_ROLE='administrator';</script>
+
+<script>
+(function(){
+  const purchaseMeta={
+    dashboard:['Purchase','Manage all purchase activities from one page.'],
+    local:['Local Purchase','General local purchase entry and transaction sheet.'],
+    zafar:['Zafar Purchase','Zafar purchase entry and register.'],
+    board:['Board Purchase','Board, paper and package-weight purchase entry.'],
+    history:['Purchase History','Search and review all purchase records.'],
+    reports:['Purchase Reports','Purchase reporting and PDF controls.'],
+    suppliers:['Supplier Analysis','Supplier-wise purchase values and activity.'],
+    settings:['Purchase Settings','Purchase module configuration.']
+  };
+  function forcePurchaseWorkspace(){
+    const p=new URLSearchParams(location.search);
+    if(p.get('studio')!=='purchase') return;
+    const section=(p.get('section')||'dashboard').toLowerCase();
+    const meta=purchaseMeta[section]||purchaseMeta.dashboard;
+    const title=document.getElementById('workspaceTitle');
+    const sub=document.getElementById('workspaceSubtitle');
+    const actions=document.getElementById('workspaceActions')||document.querySelector('header.top .actions');
+    const notice=document.getElementById('workspaceNotice')||document.querySelector('main.content > .notice');
+    if(title) title.textContent='Purchase';
+    if(sub) sub.textContent=meta[0]+' — '+meta[1];
+    if(actions) actions.style.setProperty('display','none','important');
+    if(notice) notice.style.setProperty('display','none','important');
+    document.body.setAttribute('data-workspace-mode','purchase');
+  }
+  function start(){
+    forcePurchaseWorkspace();
+    let count=0;
+    const timer=setInterval(()=>{forcePurchaseWorkspace();if(++count>=30)clearInterval(timer)},100);
+    const observer=new MutationObserver(forcePurchaseWorkspace);
+    observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['style','class']});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start);
+  else start();
+})();
+</script>
 </body></html>
