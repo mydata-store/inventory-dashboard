@@ -5750,9 +5750,65 @@ function save(x){localStorage.setItem(KEY,JSON.stringify(x))}
 function money(v){return 'PKR '+Number(v||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fmtDate(v){if(typeof localFormatDate==='function')return localFormatDate(v);return v}
 function nextNo(){const n=load().reduce((m,x)=>Math.max(m,+(String(x.no||'').match(/\d+/)||[0])[0]),0)+1;return 'PI-'+String(n).padStart(5,'0')}
-function purchaseRows(){return typeof purchaseDashboardRows==='function'?purchaseDashboardRows():[]}
-function lastPurchase(item,size){const rows=purchaseRows().filter(r=>String(r.item||'').toLowerCase()===String(item||'').toLowerCase()&&(!size||String(r.size||'').toLowerCase()===String(size||'').toLowerCase())).sort((a,b)=>(purchaseDashboardParseDate(b.date)||0)-(purchaseDashboardParseDate(a.date)||0));return rows[0]||{}}
-function indentMasters(){try{return loadMasterData()}catch(e){return {items:[],suppliers:[],departments:[],employees:[],units:[]}}}
+function indentArray(value){
+  if(Array.isArray(value))return value;
+  if(value&&Array.isArray(value.data))return value.data;
+  if(value&&Array.isArray(value.rows))return value.rows;
+  if(value&&Array.isArray(value.items))return value.items;
+  return [];
+}
+function indentText(row,keys){for(const key of keys){const v=row?.[key];if(v!==undefined&&v!==null&&String(v).trim()!=='')return String(v).trim()}return ''}
+function indentNormalItem(row){
+  if(!row||typeof row!=='object')return null;
+  const name=indentText(row,['name','itemName','item_name','item','description','productName','product_name']);
+  if(!name)return null;
+  return {...row,name,size:indentText(row,['size','itemSize','item_size','specification','variant']),unit:indentText(row,['unit','unitName','unit_name','uom','symbol']),status:indentText(row,['status'])||'Active'};
+}
+function indentNormalPurchase(row,record={}){
+  if(!row||typeof row!=='object')return null;
+  const item=indentText(row,['item','itemName','item_name','name','productName','product_name']);
+  if(!item)return null;
+  return {...row,item,size:indentText(row,['size','itemSize','item_size','specification','variant']),rate:indentText(row,['rate','unitRate','unit_rate','unitPrice','unit_price','price','lastRate','last_rate']),supplier:indentText(row,['supplier','supplierName','supplier_name','vendor','vendorName','party']),date:indentText(row,['date','purchaseDate','purchase_date','billDate','bill_date'])||record.createdAt||record.date||'',createdAt:record.createdAt||row.createdAt||''};
+}
+function purchaseRows(){
+  const output=[];
+  const add=value=>indentArray(value).forEach(record=>{
+    const rows=Array.isArray(record?.rows)?record.rows:Array.isArray(record?.items)?record.items:[record];
+    rows.forEach(row=>{const normal=indentNormalPurchase(row,record||{});if(normal)output.push(normal)});
+  });
+  if(typeof purchaseDashboardRows==='function')purchaseDashboardRows().forEach(r=>{const normal=indentNormalPurchase(r,r);if(normal)output.push(normal)});
+  const preferred=['erpLocalPurchasesV1','erpZafarPurchasesV1','erpBoardPurchasesV1','purchases_local','purchases_zafar','purchases_board','purchaseHistory','purchases','erpPurchases','purchaseEntries'];
+  preferred.forEach(key=>{try{add(JSON.parse(localStorage.getItem(key)||'null'))}catch(e){}});
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i)||'';
+    if(!/purchase|grn|receipt/i.test(key)||preferred.includes(key)||key==='erpPurchaseIndentsV1')continue;
+    try{add(JSON.parse(localStorage.getItem(key)||'null'))}catch(e){}
+  }
+  const seen=new Set();
+  return output.filter(r=>{const id=[r.item,r.size,r.date,r.rate,r.supplier,r.bill||r.billNo||''].join('|').toLowerCase();if(seen.has(id))return false;seen.add(id);return true});
+}
+function lastPurchase(item,size){
+  const n=String(item||'').trim().toLowerCase(),z=String(size||'').trim().toLowerCase();
+  const rows=purchaseRows().filter(r=>String(r.item||'').trim().toLowerCase()===n&&(!z||!r.size||String(r.size).trim().toLowerCase()===z));
+  rows.sort((a,b)=>{const bd=typeof purchaseDashboardParseDate==='function'?purchaseDashboardParseDate(b.date):new Date(b.date||b.createdAt||0);const ad=typeof purchaseDashboardParseDate==='function'?purchaseDashboardParseDate(a.date):new Date(a.date||a.createdAt||0);return (+bd||0)-(+ad||0)});
+  return rows[0]||{};
+}
+function indentMasters(){
+  const base={items:[],suppliers:[],departments:[],employees:[],units:[]};
+  try{Object.assign(base,loadMasterData()||{})}catch(e){}
+  const addUnique=(key,rows,normalizer=x=>x)=>{
+    const seen=new Set((base[key]||[]).map(x=>JSON.stringify([x.name||x.number||x.symbol||'',x.size||'']).toLowerCase()));
+    indentArray(rows).forEach(raw=>{const x=normalizer(raw);if(!x)return;const id=JSON.stringify([x.name||x.number||x.symbol||'',x.size||'']).toLowerCase();if(!id||seen.has(id))return;seen.add(id);base[key].push(x)});
+  };
+  const itemKeys=['items','erpItems','itemMaster','item_master','itemsMaster','inventoryItems','storeItems','erpItemMasterV1'];
+  itemKeys.forEach(key=>{try{addUnique('items',JSON.parse(localStorage.getItem(key)||'null'),indentNormalItem)}catch(e){}});
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i)||'';
+    if(!/item/i.test(key)||/theme|indent|purchase/i.test(key)||itemKeys.includes(key))continue;
+    try{addUnique('items',JSON.parse(localStorage.getItem(key)||'null'),indentNormalItem)}catch(e){}
+  }
+  return base;
+}
 function masterItem(name,size=''){const d=indentMasters(),n=String(name||'').trim().toLowerCase(),z=String(size||'').trim().toLowerCase();return (d.items||[]).find(x=>String(x.name||'').trim().toLowerCase()===n&&(!z||String(x.size||'').trim().toLowerCase()===z))||(d.items||[]).find(x=>String(x.name||'').trim().toLowerCase()===n)||{}}
 function activeMasterRows(key){return (indentMasters()[key]||[]).filter(x=>String(x.status||'Active')!=='Disabled')}
 function uniqOptions(rows,key='name',detail=()=>'',valueFn=null){const out=[],seen=new Set();rows.forEach(x=>{const value=String(valueFn?valueFn(x):(x[key]||'')).trim();if(!value)return;const id=value.toLowerCase()+'|'+String(detail(x)||'').toLowerCase();if(seen.has(id))return;seen.add(id);out.push({value,label:value,detail:String(detail(x)||''),record:x})});return out}
