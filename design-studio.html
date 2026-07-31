@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Design Studio V9.5</title>
+<title>Design Studio V9.6</title>
 <style>
 :root{--bg:#eef8f3;--surface:#fff;--text:#0e2b22;--muted:#58756c;--primary:#117a55;--accent:#f5a400;--border:#b9d9cd;--shadow:0 12px 30px rgba(16,60,47,.10);--font:'Segoe UI',Arial,sans-serif;--side-w:230px;--side-cw:58px;--side-row:42px;--side-subrow:30px;--side-icon:15px;--side-radius:9px;--side-gap:3px;--side-subindent:32px;--side-main:13px;--side-sub:11px;--side-line:1.2;--side-letter:0px;--side-anim:220ms;--side-bg:#0d5b42;--side-text:#fff;--side-active:#159b6a;--side-active-text:#fff;--clock-bg:#ffffff14;--clock-border:#ffffff30}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}button,input,select{font:inherit}.app{min-height:100vh}.page-shell{min-width:0}.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 24px;background:color-mix(in srgb,var(--bg) 92%,white);border-bottom:1px solid var(--border)}.title h1{margin:0;font-size:27px}.title p{margin:5px 0 0;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn.warn{background:#fff7df;border-color:#ffd36a}.btn:hover{filter:brightness(.98)}.content{padding:20px;max-width:1550px;margin:auto}.notice{padding:12px 14px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px}.card h2{margin:0 0 4px;font-size:21px}.sub{color:var(--muted);margin:0 0 16px}.grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px}.field{min-width:0}.field label{display:block;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;color:#405f55}.field input,.field select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 10px;background:white;color:var(--text)}.field input[type=color]{padding:3px}.field input[type=range]{padding:0}.value{font-size:12px;color:var(--muted);margin-top:4px}.switch{display:flex;align-items:center;gap:8px;height:40px}.switch input{width:auto;height:auto}.section-title{margin:20px 0 10px;font-size:15px;border-bottom:1px solid var(--border);padding-bottom:8px}.themes{display:grid;grid-template-columns:repeat(4,minmax(165px,1fr));gap:12px}.theme{border:2px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;background:white}.theme.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}.swatches{height:30px;border-radius:8px;display:flex;overflow:hidden;margin-bottom:8px}.swatches i{flex:1}.panel{display:none}.panel.active{display:block}.studio-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.studio-tabs button{border:1px solid var(--border);background:white;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.studio-tabs button.active{background:var(--primary);color:white;border-color:var(--primary)}
@@ -5758,10 +5758,10 @@ function indentArray(value){
   return [];
 }
 
-/* Purchase Indent V9.5 — direct verified Supabase connection plus local fallback */
+/* Purchase Indent V9.6 — live stock, automatic value and Excel-style navigation */
 const INDENT_SUPABASE_URL='https://lzsxtvkluqvcaetnnydu.supabase.co';
 const INDENT_SUPABASE_KEY='sb_publishable_QfemUy-S0bO7fy6-uL_jBA_ZzGXKgma';
-const indentRemoteData={items:[],suppliers:[],purchases:[],loaded:false,loading:null,error:''};
+const indentRemoteData={items:[],suppliers:[],purchases:[],stockTransactions:[],loaded:false,loading:null,error:''};
 function indentMergeUnique(target,rows,normalizer,keyFn){
   const seen=new Set(target.map(x=>keyFn(x)));
   indentArray(rows).forEach(raw=>{const x=normalizer(raw);if(!x)return;const key=keyFn(x);if(!key||seen.has(key))return;seen.add(key);target.push(x)});
@@ -5805,12 +5805,13 @@ async function indentLoadRemoteData(force=false){
     try{
       const creds=await indentFindSupabaseCredentials();
       if(!creds.url||!creds.key)throw new Error('Supabase connection was not found in the deployed ERP pages.');
-      const [items,suppliers,local,zafar,board,purchases]=await Promise.all([
+      const [items,suppliers,local,zafar,board,purchases,stockTransactions]=await Promise.all([
         indentSupabaseRows(creds,'items'),indentSupabaseRows(creds,'suppliers'),
         indentSupabaseRows(creds,'purchases_local'),indentSupabaseRows(creds,'purchases_zafar'),
-        indentSupabaseRows(creds,'purchases_board'),indentSupabaseRows(creds,'purchases')
+        indentSupabaseRows(creds,'purchases_board'),indentSupabaseRows(creds,'purchases'),
+        indentSupabaseRows(creds,'stock_transactions')
       ]);
-      indentRemoteData.items=[];indentRemoteData.suppliers=[];indentRemoteData.purchases=[];
+      indentRemoteData.items=[];indentRemoteData.suppliers=[];indentRemoteData.purchases=[];indentRemoteData.stockTransactions=indentArray(stockTransactions);
       indentMergeUnique(indentRemoteData.items,items,indentNormalItem,x=>[x.name,x.size].join('|').toLowerCase());
       indentArray(suppliers).forEach(x=>{if(x&&typeof x==='object')indentRemoteData.suppliers.push({...x,name:indentText(x,['name','supplier_name','supplierName','company_name','companyName'])})});
       [local,zafar,board,purchases].forEach(set=>indentArray(set).forEach(record=>{
@@ -5862,6 +5863,41 @@ function lastPurchase(item,size){
   rows.sort((a,b)=>{const bd=typeof purchaseDashboardParseDate==='function'?purchaseDashboardParseDate(b.date):new Date(b.date||b.createdAt||0);const ad=typeof purchaseDashboardParseDate==='function'?purchaseDashboardParseDate(a.date):new Date(a.date||a.createdAt||0);return (+bd||0)-(+ad||0)});
   return rows[0]||{};
 }
+function indentNumber(row,keys){for(const key of keys){const value=row?.[key];if(value!==undefined&&value!==null&&value!==''&&!Number.isNaN(Number(value)))return Number(value)}return 0}
+function indentStockBalance(item,size='',record={}){
+  const name=String(item||'').trim().toLowerCase(),itemSize=String(size||'').trim().toLowerCase();
+  const code=String(record?.item_code||record?.itemCode||record?.code||'').trim().toLowerCase();
+  let matched=0,balance=0;
+  indentArray(indentRemoteData.stockTransactions).forEach(row=>{
+    const rowName=indentText(row,['item_name','itemName','item','name']).toLowerCase();
+    const rowSize=indentText(row,['size','item_size','itemSize']).toLowerCase();
+    const rowCode=indentText(row,['item_code','itemCode','code']).toLowerCase();
+    const sameItem=(code&&rowCode&&code===rowCode)||(!code&&rowName===name)||(rowName===name);
+    if(!sameItem)return;if(itemSize&&rowSize&&rowSize!==itemSize)return;
+    matched++;
+    balance+=indentNumber(row,['quantity_in','qty_in','quantityIn','received_qty','receivedQty','qty_received']);
+    balance-=indentNumber(row,['quantity_out','qty_out','quantityOut','issued_qty','issuedQty','qty_issued']);
+  });
+  if(matched)return Number(balance.toFixed(3));
+  return indentNumber(record,['current_stock','currentStock','stock','balance','available_stock','availableStock']);
+}
+function indentApplyItemToRow(tr,itemRecord){
+  if(!tr||!itemRecord)return;
+  const itemName=itemRecord.name||indentText(itemRecord,['item_name','itemName','item']);
+  const size=itemRecord.size||indentText(itemRecord,['item_size','itemSize']);
+  tr.querySelector('[data-f=size]').value=size||'';
+  tr.querySelector('[data-f=unit]').value=itemRecord.unit||indentText(itemRecord,['unit_name','unitName','uom'])||'';
+  tr.querySelector('[data-f=stock]').value=indentStockBalance(itemName,size,itemRecord);
+  const lp=lastPurchase(itemName,size);
+  if(lp.rate!==undefined&&lp.rate!=='')tr.querySelector('[data-f=rate]').value=lp.rate;
+  if(lp.supplier)tr.querySelector('[data-f=supplier]').value=lp.supplier;
+  calc();
+}
+function indentFocusNext(input){
+  const cells=[...document.querySelectorAll('#indentItemsBody input:not([readonly])')];
+  const index=cells.indexOf(input);
+  if(index>=0&&cells[index+1]){cells[index+1].focus();cells[index+1].select?.()}
+}
 function indentMasters(){
   const base={items:[],suppliers:[],departments:[],employees:[],units:[]};
   try{Object.assign(base,loadMasterData()||{})}catch(e){}
@@ -5889,11 +5925,11 @@ function indentCloseDD(){const m=$i('indentDropdownMenu');if(m)m.classList.remov
 function indentPositionDD(input){const m=$i('indentDropdownMenu'),r=input.getBoundingClientRect();m.style.left=r.left+'px';m.style.top=(r.bottom+3)+'px';m.style.width=Math.max(r.width,230)+'px'}
 function indentRenderDD(){const m=$i('indentDropdownMenu');if(!m||!indentDD.input)return;indentPositionDD(indentDD.input);const emptyText=indentRemoteData.loading?'Loading Item Master…':indentRemoteData.error?indentRemoteData.error:'No matching record found';m.innerHTML=indentDD.options.length?indentDD.options.map((o,i)=>`<div class="indent-dd-option ${i===indentDD.active?'active':''}" data-indent-opt="${i}"><span>${esc(o.label)}</span><small>${esc(o.detail)}</small></div>`).join(''):`<div class="indent-dd-empty">${esc(emptyText)}</div>`;m.classList.add('open');m.querySelectorAll('[data-indent-opt]').forEach(el=>{el.onmousedown=e=>e.preventDefault();el.onclick=()=>indentSelectDD(+el.dataset.indentOpt)})}
 function indentOpenDD(input,type,showAll=false){const q=showAll?'':String(input.value||'').trim().toLowerCase();const all=indentOptions(type);indentDD={input,type,options:all.filter(o=>!q||`${o.label} ${o.detail}`.toLowerCase().includes(q)).slice(0,60),active:0};indentRenderDD();if(type==='item'&&!indentRemoteData.loaded&&!indentRemoteData.loading){indentLoadRemoteData().then(()=>{if(indentDD.input===input)indentOpenDD(input,type,showAll);renderIndent()})}}
-function indentSelectDD(i=0){const o=indentDD.options[i],input=indentDD.input,type=indentDD.type;if(!o||!input)return;input.value=o.value;input.dispatchEvent(new Event('change',{bubbles:true}));indentCloseDD();if(type==='item'){const tr=input.closest('tr'),m=o.record||masterItem(o.value);if(tr){tr.querySelector('[data-f=size]').value=m.size||'';tr.querySelector('[data-f=unit]').value=m.unit||'';tr.querySelector('[data-f=stock]').value=m.currentStock??m.stock??m.balance??0;const lp=lastPurchase(o.value,m.size||'');if(lp.rate!==undefined&&lp.rate!=='')tr.querySelector('[data-f=rate]').value=lp.rate;if(lp.supplier)tr.querySelector('[data-f=supplier]').value=lp.supplier;calc()}}}
-function bindIndentDD(input,type){if(!input||input.dataset.indentDdBound)return;input.dataset.indentDdBound='1';input.setAttribute('autocomplete','off');input.addEventListener('focus',()=>indentOpenDD(input,type,true));input.addEventListener('input',()=>indentOpenDD(input,type));input.addEventListener('click',()=>indentOpenDD(input,type,true));input.addEventListener('keydown',e=>{const open=$i('indentDropdownMenu')?.classList.contains('open')&&indentDD.input===input;if((e.altKey&&e.key==='ArrowDown')||(!open&&e.key==='ArrowDown')){e.preventDefault();indentOpenDD(input,type,true);return}if(open&&e.key==='ArrowDown'){e.preventDefault();indentDD.active=Math.min(indentDD.options.length-1,indentDD.active+1);indentRenderDD();return}if(open&&e.key==='ArrowUp'){e.preventDefault();indentDD.active=Math.max(0,indentDD.active-1);indentRenderDD();return}if(open&&(e.key==='Enter'||e.key==='Tab')){if(indentDD.options.length){e.preventDefault();indentSelectDD(indentDD.active)}return}if(open&&e.key==='Escape'){e.preventDefault();indentCloseDD()}});input.addEventListener('blur',()=>setTimeout(()=>{if(indentDD.input===input)indentCloseDD()},140))}
+function indentSelectDD(i=0){const o=indentDD.options[i],input=indentDD.input,type=indentDD.type;if(!o||!input)return;input.value=o.value;input.dispatchEvent(new Event('change',{bubbles:true}));indentCloseDD();if(type==='item')indentApplyItemToRow(input.closest('tr'),o.record||masterItem(o.value));}
+function bindIndentDD(input,type){if(!input||input.dataset.indentDdBound)return;input.dataset.indentDdBound='1';input.setAttribute('autocomplete','off');input.addEventListener('focus',()=>indentOpenDD(input,type,true));input.addEventListener('input',()=>indentOpenDD(input,type));input.addEventListener('click',()=>indentOpenDD(input,type,true));input.addEventListener('keydown',e=>{const open=$i('indentDropdownMenu')?.classList.contains('open')&&indentDD.input===input;if((e.altKey&&e.key==='ArrowDown')||(!open&&e.key==='ArrowDown')){e.preventDefault();indentOpenDD(input,type,true);return}if(open&&e.key==='ArrowDown'){e.preventDefault();indentDD.active=Math.min(indentDD.options.length-1,indentDD.active+1);indentRenderDD();return}if(open&&e.key==='ArrowUp'){e.preventDefault();indentDD.active=Math.max(0,indentDD.active-1);indentRenderDD();return}if(open&&(e.key==='Enter'||e.key==='Tab')){if(indentDD.options.length){e.preventDefault();const selectedInput=input;indentSelectDD(indentDD.active);setTimeout(()=>indentFocusNext(selectedInput),0)}return}if(open&&e.key==='Escape'){e.preventDefault();indentCloseDD()}});input.addEventListener('blur',()=>setTimeout(()=>{if(indentDD.input===input)indentCloseDD()},140))}
 function blank(){return {item:'',size:'',stock:'0',qty:'',unit:'',rate:'',supplier:'',remarks:''}}
-function rowHtml(r=blank(),idx=0){return `<tr><td>${idx+1}</td><td><input class="item-input" data-indent-dd="item" autocomplete="off" data-f="item" value="${esc(r.item)}"></td><td><input data-f="size" value="${esc(r.size)}"></td><td><input data-f="stock" readonly value="${esc(r.stock||0)}"></td><td><input data-f="qty" type="number" min="0" step="any" value="${esc(r.qty)}"></td><td><input data-indent-dd="unit" autocomplete="off" data-f="unit" value="${esc(r.unit)}"></td><td><input data-f="rate" type="number" min="0" step="any" value="${esc(r.rate)}"></td><td><input class="supplier-input" data-indent-dd="supplier" autocomplete="off" data-f="supplier" value="${esc(r.supplier)}"></td><td data-est>${money((+r.qty||0)*(+r.rate||0))}</td><td><input data-f="remarks" value="${esc(r.remarks)}"></td><td><button class="indent-remove">×</button></td></tr>`}
-function applyTypedItem(inp,tr){const m=masterItem(inp.value,tr.querySelector('[data-f=size]').value);if(!m.name)return;if(m.size)tr.querySelector('[data-f=size]').value=m.size;if(m.unit)tr.querySelector('[data-f=unit]').value=m.unit;tr.querySelector('[data-f=stock]').value=m.currentStock??m.stock??m.balance??0;const lp=lastPurchase(inp.value,tr.querySelector('[data-f=size]').value);if(lp.rate!==undefined&&lp.rate!=='')tr.querySelector('[data-f=rate]').value=lp.rate;if(lp.supplier)tr.querySelector('[data-f=supplier]').value=lp.supplier}
+function rowHtml(r=blank(),idx=0){return `<tr><td>${idx+1}</td><td><input class="item-input" data-indent-dd="item" autocomplete="off" data-f="item" value="${esc(r.item)}"></td><td><input data-f="size" value="${esc(r.size)}"></td><td><input data-f="stock" readonly title="Live balance from Stock Ledger" value="${esc(r.stock||0)}"></td><td><input data-f="qty" type="number" min="0" step="any" value="${esc(r.qty)}"></td><td><input data-indent-dd="unit" autocomplete="off" data-f="unit" value="${esc(r.unit)}"></td><td><input data-f="rate" type="number" min="0" step="any" value="${esc(r.rate)}"></td><td><input class="supplier-input" data-indent-dd="supplier" autocomplete="off" data-f="supplier" value="${esc(r.supplier)}"></td><td data-est>${money((+r.qty||0)*(+r.rate||0))}</td><td><input data-f="remarks" value="${esc(r.remarks)}"></td><td><button class="indent-remove">×</button></td></tr>`}
+function applyTypedItem(inp,tr){const m=masterItem(inp.value,tr.querySelector('[data-f=size]').value);if(!m.name)return;indentApplyItemToRow(tr,m)}
 function bindRows(){document.querySelectorAll('#indentItemsBody tr').forEach(tr=>{tr.querySelectorAll('[data-indent-dd]').forEach(inp=>bindIndentDD(inp,inp.dataset.indentDd));tr.querySelectorAll('input').forEach(inp=>{inp.oninput=()=>{if(inp.dataset.f==='item')applyTypedItem(inp,tr);calc()};if(inp.dataset.f==='item')inp.addEventListener('change',()=>{applyTypedItem(inp,tr);calc()})});tr.querySelector('.indent-remove').onclick=()=>{tr.remove();renumber();calc()}})}
 function renumber(){document.querySelectorAll('#indentItemsBody tr').forEach((tr,i)=>tr.cells[0].textContent=i+1)}
 function calc(){let total=0;document.querySelectorAll('#indentItemsBody tr').forEach(tr=>{const q=+tr.querySelector('[data-f=qty]').value||0,r=+tr.querySelector('[data-f=rate]').value||0,v=q*r;tr.querySelector('[data-est]').textContent=money(v);total+=v});if($i('indentEstimatedTotal'))$i('indentEstimatedTotal').textContent=money(total)}
