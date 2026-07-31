@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Design Studio V10.1</title>
+<title>Design Studio V10.2</title>
 <style>
 :root{--bg:#eef8f3;--surface:#fff;--text:#0e2b22;--muted:#58756c;--primary:#117a55;--accent:#f5a400;--border:#b9d9cd;--shadow:0 12px 30px rgba(16,60,47,.10);--font:'Segoe UI',Arial,sans-serif;--side-w:230px;--side-cw:58px;--side-row:42px;--side-subrow:30px;--side-icon:15px;--side-radius:9px;--side-gap:3px;--side-subindent:32px;--side-main:13px;--side-sub:11px;--side-line:1.2;--side-letter:0px;--side-anim:220ms;--side-bg:#0d5b42;--side-text:#fff;--side-active:#159b6a;--side-active-text:#fff;--clock-bg:#ffffff14;--clock-border:#ffffff30}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}button,input,select{font:inherit}.app{min-height:100vh}.page-shell{min-width:0}.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 24px;background:color-mix(in srgb,var(--bg) 92%,white);border-bottom:1px solid var(--border)}.title h1{margin:0;font-size:27px}.title p{margin:5px 0 0;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn.warn{background:#fff7df;border-color:#ffd36a}.btn:hover{filter:brightness(.98)}.content{padding:20px;max-width:1550px;margin:auto}.notice{padding:12px 14px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px}.card h2{margin:0 0 4px;font-size:21px}.sub{color:var(--muted);margin:0 0 16px}.grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px}.field{min-width:0}.field label{display:block;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;color:#405f55}.field input,.field select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 10px;background:white;color:var(--text)}.field input[type=color]{padding:3px}.field input[type=range]{padding:0}.value{font-size:12px;color:var(--muted);margin-top:4px}.switch{display:flex;align-items:center;gap:8px;height:40px}.switch input{width:auto;height:auto}.section-title{margin:20px 0 10px;font-size:15px;border-bottom:1px solid var(--border);padding-bottom:8px}.themes{display:grid;grid-template-columns:repeat(4,minmax(165px,1fr));gap:12px}.theme{border:2px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;background:white}.theme.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}.swatches{height:30px;border-radius:8px;display:flex;overflow:hidden;margin-bottom:8px}.swatches i{flex:1}.panel{display:none}.panel.active{display:block}.studio-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.studio-tabs button{border:1px solid var(--border);background:white;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.studio-tabs button.active{background:var(--primary);color:white;border-color:var(--primary)}
@@ -1792,11 +1792,11 @@ body:not(.purchase-mode):not(.issue-mode) #universalEditPageFloatingBtn{display:
     <div class="board-table-wrap">
       <table class="board-table">
         <thead><tr>
-          <th>Date</th><th class="board-col-item">Item</th>
-          <th># of Item</th><th>Package</th><th>Weight / Item</th><th>Gross Weight</th>
-          <th>Deduction %</th><th>Ded. Weight</th><th>Net Weight</th><th>Unit</th>
-          <th>Unit Price</th><th>Total Price</th><th class="board-col-supplier">Supplier</th>
-          <th>GRN #</th><th>IGP #</th><th>Bill # <small style="display:block;font-weight:600">Optional</small></th><th>Vehicle #</th><th>Action</th>
+          <th>Date</th><th>GRN #</th><th>IGP #</th><th class="board-col-item">Material</th>
+          <th class="board-col-supplier">Supplier</th><th>Brand</th><th># Item</th><th>Package</th>
+          <th>Weight / Item</th><th>Gross Wt</th><th>Ded %</th><th>Ded Wt</th><th>Net Wt</th>
+          <th>Unit</th><th>Unit Price</th><th>Total Price</th>
+          <th>Bill # <small style="display:block;font-weight:600">Optional</small></th><th>Veh #</th><th>Remarks</th><th>Action</th>
         </tr></thead>
         <tbody id="boardPurchaseBody"></tbody>
       </table>
@@ -5231,14 +5231,18 @@ const BOARD_DRAFT_KEY='erpBoardPurchaseDraftV1';
 function boardPurchaseRecords(){try{return JSON.parse(localStorage.getItem(BOARD_PURCHASE_KEY)||'[]')}catch(e){return []}}
 function boardMoney(v){return `PKR ${Number(v||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}`}
 function boardSelectedRegisterType(){return $('#boardRegisterType')?.value||'Board'}
-function boardBlankRow(){return {date:'',item:'',itemCount:'',packageType:'Open',weightPerItem:'',grossWeight:'',deductionPct:'',deductionWeight:'',netWeight:'',unit:'',rate:'',amount:'',supplier:'',grn:'',igp:'',bill:'',vehicle:''}}
+function boardBlankRow(){return {date:'',grn:'',igp:'',item:'',supplier:'',brand:'',itemCount:'',packageType:'Open',weightPerItem:'',grossWeight:'',deductionPct:'',deductionWeight:'',netWeight:'',unit:'',rate:'',amount:'',bill:'',vehicle:'',remarks:''}}
 function boardFiveRows(rows=[]){const list=(Array.isArray(rows)?rows:[]).map(r=>({...boardBlankRow(),...r}));while(list.length<5)list.push(boardBlankRow());return list}
 let boardUndoStack=[];
 function boardPushUndo(){const snapshot=JSON.stringify(boardReadRows());if(boardUndoStack[boardUndoStack.length-1]!==snapshot){boardUndoStack.push(snapshot);if(boardUndoStack.length>50)boardUndoStack.shift()}}
 function boardUndo(){const snapshot=boardUndoStack.pop();if(!snapshot)return toast('Nothing to undo');try{boardRenderRows(boardFiveRows(JSON.parse(snapshot)))}catch(e){toast('Unable to undo last change')}}
 function boardRowHtml(r,i){return `<tr data-board-row="${i}">
 <td><input data-board-cell="date" value="${masterEsc(r.date)}"></td>
+<td><input data-board-cell="grn" value="${masterEsc(r.grn)}"></td>
+<td><input data-board-cell="igp" value="${masterEsc(r.igp)}"></td>
 <td><input data-board-cell="item" value="${masterEsc(r.item)}"></td>
+<td><input data-board-cell="supplier" value="${masterEsc(r.supplier)}"></td>
+<td><input data-board-cell="brand" value="${masterEsc(r.brand)}"></td>
 <td><input data-board-cell="itemCount" type="number" min="0" step="any" value="${masterEsc(r.itemCount)}"></td>
 <td><select data-board-cell="packageType"><option ${r.packageType==='Open'?'selected':''}>Open</option><option ${r.packageType==='Carton'?'selected':''}>Carton</option><option ${r.packageType==='Bag'?'selected':''}>Bag</option><option ${r.packageType==='Tin'?'selected':''}>Tin</option><option ${r.packageType==='Drum'?'selected':''}>Drum</option></select></td>
 <td><input data-board-cell="weightPerItem" type="number" min="0" step="any" value="${masterEsc(r.weightPerItem)}"></td>
@@ -5249,11 +5253,9 @@ function boardRowHtml(r,i){return `<tr data-board-row="${i}">
 <td><input data-board-cell="unit" value="${masterEsc(r.unit)}"></td>
 <td><input data-board-cell="rate" type="number" min="0" step="any" value="${masterEsc(r.rate)}"></td>
 <td><input data-board-cell="amount" readonly value="${masterEsc(r.amount)}"></td>
-<td><input data-board-cell="supplier" value="${masterEsc(r.supplier)}"></td>
-<td><input data-board-cell="grn" value="${masterEsc(r.grn)}"></td>
-<td><input data-board-cell="igp" value="${masterEsc(r.igp)}"></td>
 <td><input data-board-cell="bill" value="${masterEsc(r.bill)}"></td>
 <td><input data-board-cell="vehicle" value="${masterEsc(r.vehicle)}"></td>
+<td><input data-board-cell="remarks" value="${masterEsc(r.remarks)}"></td>
 <td class="board-row-action"><button data-board-remove>Delete</button></td></tr>`}
 function boardReadRows(){return [...$('#boardPurchaseBody').querySelectorAll('tr')].map(tr=>{const r={};tr.querySelectorAll('[data-board-cell]').forEach(el=>r[el.dataset.boardCell]=el.value);return r})}
 function boardRenderRows(rows){$('#boardPurchaseBody').innerHTML=boardFiveRows(rows).map(boardRowHtml).join('');boardBindRows();boardCalculate()}
@@ -5263,7 +5265,7 @@ function boardAutocompleteOptions(type,q){const d=loadMasterData(),active=x=>(x.
 function boardOpenAutocomplete(input,type){const q=String(input.value||'').trim();if(!q){boardCloseAutocomplete();return}boardAutocompleteState={input,type,options:boardAutocompleteOptions(type,q),activeIndex:-1};boardRenderAutocomplete()}
 function boardRenderAutocomplete(){const m=$('#boardAutocompleteMenu'),o=boardAutocompleteState.options;if(!m||!boardAutocompleteState.input)return;const r=boardAutocompleteState.input.getBoundingClientRect();m.style.left=`${r.left}px`;m.style.top=`${r.bottom+4}px`;m.style.width=`${Math.max(r.width,320)}px`;m.innerHTML=o.length?o.map((x,i)=>`<div class="board-autocomplete-option ${i===boardAutocompleteState.activeIndex?'active':''}" data-board-option="${i}"><strong>${masterEsc(x.label)}</strong>${x.sub?`<small>${masterEsc(x.sub)}</small>`:''}</div>`).join(''):'<div class="board-autocomplete-empty">No matching Master record</div>';m.classList.add('open');m.querySelectorAll('[data-board-option]').forEach(el=>el.onmousedown=e=>{e.preventDefault();boardSelectAutocomplete(+el.dataset.boardOption)})}
 function boardCloseAutocomplete(){$('#boardAutocompleteMenu')?.classList.remove('open');boardAutocompleteState={input:null,type:null,options:[],activeIndex:-1}}
-function boardSelectAutocomplete(i){const s=boardAutocompleteState,o=s.options[i];if(!s.input||!o)return;boardPushUndo();s.input.value=s.type==='vehicle'?String(o.value||'').toUpperCase():o.value;if(s.type==='item'){const tr=s.input.closest('tr');tr.querySelector('[data-board-cell="unit"]').value=o.record.unit||''}boardCloseAutocomplete();boardCalculate()}
+function boardSelectAutocomplete(i){const s=boardAutocompleteState,o=s.options[i];if(!s.input||!o)return;boardPushUndo();s.input.value=s.type==='vehicle'?String(o.value||'').toUpperCase():o.value;if(s.type==='item'){const tr=s.input.closest('tr');tr.querySelector('[data-board-cell="unit"]').value=o.record.unit||'';const brand=tr.querySelector('[data-board-cell="brand"]');if(brand&&!brand.value)brand.value=o.record.brand||o.record.make||''}boardCloseAutocomplete();boardCalculate()}
 function boardCellMatrix(){return [...$('#boardPurchaseBody').querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('[data-board-cell]')])}
 function boardFocusCell(r,c){const m=boardCellMatrix();if(r<0||r>=m.length)return;m[r][Math.max(0,Math.min(c,m[r].length-1))]?.focus()}
 function boardMoveGrid(el,move){const m=boardCellMatrix(),r=m.findIndex(x=>x.includes(el)),c=m[r]?.indexOf(el)??-1;if(r<0||c<0)return;if(move==='right')c<m[r].length-1?boardFocusCell(r,c+1):r<m.length-1&&boardFocusCell(r+1,0);if(move==='left')c>0?boardFocusCell(r,c-1):r>0&&boardFocusCell(r-1,m[r-1].length-1);if(move==='down'){if(r<m.length-1)boardFocusCell(r+1,c);else{boardAddRow();setTimeout(()=>boardFocusCell(boardCellMatrix().length-1,c),0)}}if(move==='up'&&r>0)boardFocusCell(r-1,c)}
@@ -5287,20 +5289,20 @@ function boardLoadDraft(){
 }
 function boardSaveAll(){
   const allRows=boardReadRows();
-  const rows=allRows.filter(r=>r.date||r.item||r.itemCount||r.supplier||r.grn||r.igp||r.bill||r.vehicle);
+  const rows=allRows.filter(r=>r.date||r.grn||r.igp||r.item||r.supplier||r.brand||r.itemCount||r.bill||r.vehicle||r.remarks);
   if(!rows.length)return toast('Add at least one Board Purchase row');
   document.querySelectorAll('#boardPurchaseBody .board-required-error').forEach(el=>el.classList.remove('board-required-error'));
   const required=[
-    ['date','Date'],['item','Item'],['itemCount','# of Item'],['packageType','Package'],
-    ['weightPerItem','Weight / Item'],['unit','Unit'],['rate','Unit Price'],['supplier','Supplier'],
-    ['grn','GRN #'],['igp','IGP #'],['vehicle','Vehicle #']
+    ['date','Date'],['grn','GRN #'],['igp','IGP #'],['item','Material'],['supplier','Supplier'],
+    ['brand','Brand'],['itemCount','# Item'],['packageType','Package'],['weightPerItem','Weight / Item'],
+    ['unit','Unit'],['rate','Unit Price'],['vehicle','Veh #'],['remarks','Remarks']
   ];
   for(let i=0;i<rows.length;i++){
     const r=rows[i];
     for(const [key,label] of required){
       const missing=['itemCount','weightPerItem','rate'].includes(key)?Number(r[key]||0)<=0:!String(r[key]||'').trim();
       if(missing){
-        const activeIndexes=allRows.map((x,idx)=>({x,idx})).filter(o=>o.x.date||o.x.item||o.x.itemCount||o.x.supplier||o.x.grn||o.x.igp||o.x.bill||o.x.vehicle).map(o=>o.idx);const tr=document.querySelectorAll('#boardPurchaseBody tr')[activeIndexes[i]];
+        const activeIndexes=allRows.map((x,idx)=>({x,idx})).filter(o=>o.x.date||o.x.grn||o.x.igp||o.x.item||o.x.supplier||o.x.brand||o.x.itemCount||o.x.bill||o.x.vehicle||o.x.remarks).map(o=>o.idx);const tr=document.querySelectorAll('#boardPurchaseBody tr')[activeIndexes[i]];
         const field=tr?.querySelector(`[data-board-cell="${key}"]`);field?.classList.add('board-required-error');field?.focus();
         return toast(`${label} is required in Row ${i+1}`);
       }
@@ -6168,14 +6170,14 @@ document.addEventListener('DOMContentLoaded',()=>{const b=iq('issueMainBtn');if(
 <script>
 /* Universal Super Admin Page Editor V9.9 */
 (function(){
-const PE_KEY='erpUniversalPageEditorV1';
+const PE_KEY='erpUniversalPageEditorV2';
 const q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];
 function peState(){try{return JSON.parse(localStorage.getItem(PE_KEY)||'{}')}catch(e){return {}}}
 function peSaveState(x){localStorage.setItem(PE_KEY,JSON.stringify(x))}
 function peCurrentUser(){try{const st=typeof ccControlState==='function'?ccControlState():loadControlState();const users=Array.isArray(st.users)?st.users:[];const id=localStorage.getItem('erpCurrentUserId');return users.find(x=>x.id===id)||users[0]||{role:'Super Administrator'}}catch(e){return {role:'Super Administrator'}}}
 function peIsSuper(){return String(peCurrentUser().role||'').trim().toLowerCase()==='super administrator'}
 const PAGES={
- board:{key:'board-purchase',name:'Board Purchase Entry',subtitle:'Enter Board, Paper and Board III purchases directly in the table.',title:'#purchase-board .board-purchase-heading h3',subtitleEl:'#purchase-board .board-purchase-heading p',table:'#purchase-board .board-table',wrap:'#purchase-board .board-table-wrap',form:null,sections:[['Actions','#purchase-board .board-purchase-actions'],['Totals','#purchase-board .board-totals'],['Register Type','#purchase-board .board-register-control']],headerDefaults:['Date','Item','# of Item','Package','Weight / Item','Gross Weight','Deduction %','Ded. Weight','Net Weight','Unit','Unit Price','Total Price','Supplier','GRN #','IGP #','Bill #','Vehicle #','Action']},
+ board:{key:'board-purchase',name:'Board Purchase Entry',subtitle:'Enter Board, Paper and Board III purchases directly in the table.',title:'#purchase-board .board-purchase-heading h3',subtitleEl:'#purchase-board .board-purchase-heading p',table:'#purchase-board .board-table',wrap:'#purchase-board .board-table-wrap',form:null,sections:[['Actions','#purchase-board .board-purchase-actions'],['Totals','#purchase-board .board-totals'],['Register Type','#purchase-board .board-register-control']],headerDefaults:['Date','GRN #','IGP #','Material','Supplier','Brand','# Item','Package','Weight / Item','Gross Wt','Ded %','Ded Wt','Net Wt','Unit','Unit Price','Total Price','Bill #','Veh #','Remarks','Action']},
  issue:{key:'issue-entry',name:'Issue Entry',subtitle:'Issue store items to departments with live stock checking and Item Master autofill.',title:'#panel-issue .issue-head h2',subtitleEl:'#panel-issue .issue-head p',table:'#panel-issue .issue-table',wrap:'#panel-issue .issue-table-wrap',form:'#panel-issue .issue-meta',sections:[['Actions','#panel-issue .issue-toolbar'],['Entry Information','#panel-issue .issue-meta'],['Summary','#panel-issue .issue-summary'],['Status Message','#panel-issue .issue-status']],headerDefaults:['#','Item','Size','Available Stock','Issue Qty','Unit','Issued To','Used For','Remarks','Action']}
 };
 function pePageId(){if(q('#panel-issue.active'))return 'issue';if(q('#purchase-board.active'))return 'board';return null}
