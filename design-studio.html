@@ -5411,7 +5411,90 @@ function openPrintSettings(){if(!reportDesignSelected)return toast('Please selec
 function closePrintSettings(){$('#printSettingsModal').classList.remove('open');$('#printSettingsModal').setAttribute('aria-hidden','true')}
 function savePrintSettings(){const c=currentPrintSettings();c.marginMode=$('#psMargins').value;localStorage.setItem(`erpPrintSettings:${purchaseReportType}`,JSON.stringify(c));toast('Print settings saved for this report tab')}
 function printSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');openPrintSettings()}
-function printNowWithSettings(){if(!reportDesignSelected)return;const c=currentPrintSettings(),html=buildDesignedReportHtml({...reportDesignSelected,paper:c.orientation,showPage:c.pageNumbers});const margin=c.margins.map(x=>x+'mm').join(' '),scaleCss=c.scale==='actual'?'':c.scale==='width'?'width:100%;':'max-width:100%;';const w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(reportDesignSelected.designName||'Purchase Report')}</title><style>@page{size:${c.paper} ${c.orientation};margin:${margin}}html,body{margin:0;background:white;-webkit-print-color-adjust:${c.background?'exact':'economy'};print-color-adjust:${c.background?'exact':'economy'}}.generated-report{padding:0!important;${scaleCss}}thead{display:${c.repeatHeader?'table-header-group':'table-row-group'}}tr{page-break-inside:avoid}.generated-page-number{display:${c.pageNumbers?'inline':'none'}}@media print{body{margin:0}}</style></head><body>${html}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script></body></html>`);w.document.close();w.focus();savePrintSettings();closePrintSettings()}
+function printNowWithSettings(){if(!reportDesignSelected)return;const c=currentPrintSettings(),html=buildDesignedReportHtml({...reportDesignSelected,paper:c.orientation,showPage:c.pageNumbers});const margin=c.margins.map(x=>x+'mm').join(' '),scaleCss=c.scale==='actual'?'':c.scale==='width'?'width:100%;':'max-width:100%;';const w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(reportDesignSelected.designName||'Purchase Report')}</title><style>@page{size:${c.paper} ${c.orientation};margin:${margin}}html,body{margin:0;background:white;-webkit-print-color-adjust:${c.background?'exact':'economy'};print-color-adjust:${c.background?'exact':'economy'}}.generated-report{padding:0!important;${scaleCss}}thead{display:${c.repeatHeader?'table-header-group':'table-row-group'}}tr{page-break-inside:avoid}.generated-page-number{display:${c.pageNumbers?'inline':'none'}}@media print{body{margin:0}}</style></head><body>${html}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script>
+<style id="v88DragResizeStyles">
+/* V8.8 — direct column resizing in live report preview */
+#rePreviewPaper .generated-report table{table-layout:fixed!important}
+#rePreviewPaper .generated-report th,#rePreviewPaper .generated-report td{overflow:hidden;word-break:break-word}
+#rePreviewPaper .generated-report th{position:relative}
+.re-col-resizer{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:8;touch-action:none}
+.re-col-resizer::after{content:"";position:absolute;top:15%;bottom:15%;left:4px;width:1px;background:transparent;transition:.12s}
+.re-col-resizer:hover::after,.re-col-resizer.dragging::after{background:#2563eb;width:2px}
+#rePreviewPaper.resizing-columns{user-select:none;cursor:col-resize}
+.re-resize-help{margin:0 0 12px;padding:10px 12px;border:1px solid #f4cc73;border-radius:10px;background:#fff8df;color:#795300;font-size:11px;line-height:1.45}
+.re-resize-help b{color:#4b3500}
+.re-width-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 0;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--surface) 94%,var(--bg));font-size:11px}
+.re-width-summary strong{color:var(--primary)}
+.re-width-over{color:#b91c1c!important}
+</style>
+<script>
+(()=>{
+  const baseRender=renderReportEditorPreview;
+  let resizeHistory=[],redoHistory=[],isApplyingHistory=false;
+  const snapshot=()=>JSON.stringify({serialWidth:reportEditorWorking?.serialWidth,fields:(reportEditorWorking?.fields||[]).map(f=>({width:f.width}))});
+  const applySnapshot=s=>{if(!reportEditorWorking||!s)return;const x=JSON.parse(s);reportEditorWorking.serialWidth=x.serialWidth;(x.fields||[]).forEach((v,i)=>{if(reportEditorWorking.fields[i])reportEditorWorking.fields[i].width=v.width});reSet('reSerialWidth',reportEditorWorking.serialWidth);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0)};
+  const pushHistory=()=>{if(isApplyingHistory)return;const s=snapshot();if(resizeHistory.at(-1)!==s){resizeHistory.push(s);if(resizeHistory.length>60)resizeHistory.shift()}redoHistory=[]};
+  const visibleFields=()=> (reportEditorWorking?.fields||[]).map((f,i)=>({f,i})).filter(x=>!x.f.hidden);
+  function updateSummary(){
+    const box=document.getElementById('reWidthSummary');if(!box||!reportEditorWorking)return;
+    const total=(+reportEditorWorking.serialWidth||0)+visibleFields().reduce((n,x)=>n+(+x.f.width||0),0);
+    box.innerHTML=`<span>Total assigned width</span><strong class="${total>100?'re-width-over':''}">${total.toFixed(0)}%</strong>`;
+  }
+  function ensureResizeHelp(){
+    const panel=document.querySelector('[data-re-panel="columns"] .re-section');if(!panel||document.getElementById('reResizeHelp'))return;
+    const help=document.createElement('div');help.id='reResizeHelp';help.className='re-resize-help';help.innerHTML='<b>Direct resize:</b> drag a column border in the preview. Double-click a border to Auto Fit that column. Manual − / + controls remain available.';
+    const list=document.getElementById('reColumnList');panel.insertBefore(help,list);
+    const sum=document.createElement('div');sum.id='reWidthSummary';sum.className='re-width-summary';list.after(sum);updateSummary();
+  }
+  function setColumnWidth(kind,index,width){
+    width=Math.max(kind==='serial'?2:3,Math.min(kind==='serial'?20:60,Math.round(width*10)/10));
+    if(kind==='serial'){reportEditorWorking.serialWidth=width;reSet('reSerialWidth',width)}
+    else if(reportEditorWorking.fields[index])reportEditorWorking.fields[index].width=width;
+  }
+  function autoFit(kind,index,th,table){
+    pushHistory();
+    const cells=[th,...Array.from(table.tBodies[0]?.rows||[]).map(r=>r.cells[th.cellIndex]).filter(Boolean)];
+    const longest=Math.max(...cells.map(c=>(c.textContent||'').trim().length),3);
+    const width=Math.max(kind==='serial'?3:5,Math.min(kind==='serial'?10:35,2.4+longest*0.72));
+    setColumnWidth(kind,index,width);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0);updateSummary();toast('Column auto-fitted');
+  }
+  function attachPreviewResizers(){
+    ensureResizeHelp();updateSummary();
+    const paper=document.getElementById('rePreviewPaper');const table=paper?.querySelector('.generated-report table');if(!table)return;
+    table.style.tableLayout='fixed';
+    const heads=Array.from(table.querySelectorAll('thead th'));const vis=visibleFields();
+    heads.forEach((th,pos)=>{
+      th.querySelector('.re-col-resizer')?.remove();
+      const kind=pos===0?'serial':'field', index=pos===0?-1:vis[pos-1]?.i;
+      if(kind==='field'&&index==null)return;
+      th.dataset.resizeKind=kind;th.dataset.resizeIndex=index;
+      const h=document.createElement('span');h.className='re-col-resizer';h.title='Drag to resize · Double-click to Auto Fit';th.appendChild(h);
+      h.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();autoFit(kind,index,th,table)});
+      h.addEventListener('pointerdown',e=>{
+        e.preventDefault();e.stopPropagation();pushHistory();
+        const startX=e.clientX,startWidth=kind==='serial'?(+reportEditorWorking.serialWidth||5):(+reportEditorWorking.fields[index].width||12),tableWidth=table.getBoundingClientRect().width||1;
+        h.setPointerCapture?.(e.pointerId);h.classList.add('dragging');paper.classList.add('resizing-columns');
+        const move=ev=>{const deltaPct=(ev.clientX-startX)/tableWidth*100;setColumnWidth(kind,index,startWidth+deltaPct);const v=kind==='serial'?reportEditorWorking.serialWidth:reportEditorWorking.fields[index].width;th.style.width=v+'%';Array.from(table.rows).forEach(r=>{if(r.cells[pos])r.cells[pos].style.width=v+'%'});updateSummary()};
+        const up=()=>{h.classList.remove('dragging');paper.classList.remove('resizing-columns');window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0)};
+        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});
+      });
+    });
+  }
+  renderReportEditorPreview=function(){baseRender();setTimeout(attachPreviewResizers,0)};
+  document.addEventListener('keydown',e=>{
+    if(!document.getElementById('reportEditorModal')?.classList.contains('open'))return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){
+      e.preventDefault();if(resizeHistory.length<2)return;const current=resizeHistory.pop();redoHistory.push(current);isApplyingHistory=true;applySnapshot(resizeHistory.at(-1));isApplyingHistory=false;toast('Column resize undone');
+    }else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){
+      e.preventDefault();const next=redoHistory.pop();if(!next)return;resizeHistory.push(next);isApplyingHistory=true;applySnapshot(next);isApplyingHistory=false;toast('Column resize redone');
+    }
+  });
+  const oldOpen=openReportEditor;openReportEditor=function(){oldOpen();resizeHistory=[snapshot()];redoHistory=[];setTimeout(attachPreviewResizers,0)};
+  document.addEventListener('input',e=>{if(e.target.matches('#reSerialWidth,.re-col-width'))setTimeout(updateSummary,0)});
+})();
+</script>
+
+</body></html>`);w.document.close();w.focus();savePrintSettings();closePrintSettings()}
 async function pdfSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');const host=document.createElement('div');host.style.position='fixed';host.style.left='-100000px';host.style.top='0';host.innerHTML=buildDesignedReportHtml(reportDesignSelected);document.body.appendChild(host);if(window.html2pdf){try{const blob=await html2pdf().set({margin:0,filename:(reportDesignSelected.designName||'purchase-report')+'.pdf',html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:reportDesignSelected.paper||'landscape'},pagebreak:{mode:['css','legacy']}}).from(host.firstElementChild).outputPdf('blob');await purchaseReportSaveBlob(blob,(reportDesignSelected.designName||'purchase-report')+'.pdf');host.remove();closeReportDesignChooser();return}catch(e){console.error(e)}}host.remove();openPrintSettings()}
 
 function purchaseReportsInitialise(){
@@ -5480,7 +5563,90 @@ function rcDownload(name,type,content){const b=new Blob([content],{type}),a=docu
 function rcCsv(){const c=rcConfig(),rows=rcRowsData(),head=['SR #',...c.fields.map(f=>f.label)],data=rows.map((r,i)=>[i+1,...c.fields.map(f=>rcCell(r,f.key))]);rcDownload((c.name||'report')+'.csv','text/csv;charset=utf-8',[head,...data].map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n'))}
 function rcJson(){const c=rcConfig();rcDownload((c.name||'report-template')+'.json','application/json',JSON.stringify(c,null,2))}
 function rcExcel(){rcCsv();toast('Excel-compatible CSV exported')}
-function rcPrint(){const c=rcConfig(),html=$('#rcPreview').outerHTML,w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(c.name)}</title><style>@page{size:A4 ${c.paper};margin:8mm}body{font-family:Arial;margin:0}.report-paper{box-shadow:none;padding:0}.report-paper-title{text-align:center;border-bottom:2px solid #111}.report-paper table{width:100%;border-collapse:collapse;font-size:9px}.report-paper th,.report-paper td{border:1px solid #222;padding:4px}.report-paper th{text-align:center}.report-paper-meta,.report-paper-footer,.report-paper-total{display:flex;justify-content:space-between;font-size:9px;margin:7px 0}.report-paper-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:35px;margin-top:35px;font-size:9px}.report-paper-signatures div{border-top:1px solid #111;text-align:center;padding-top:4px}</style></head><body>${html}</body></html>`);w.document.close();w.focus();setTimeout(()=>w.print(),300)}
+function rcPrint(){const c=rcConfig(),html=$('#rcPreview').outerHTML,w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(c.name)}</title><style>@page{size:A4 ${c.paper};margin:8mm}body{font-family:Arial;margin:0}.report-paper{box-shadow:none;padding:0}.report-paper-title{text-align:center;border-bottom:2px solid #111}.report-paper table{width:100%;border-collapse:collapse;font-size:9px}.report-paper th,.report-paper td{border:1px solid #222;padding:4px}.report-paper th{text-align:center}.report-paper-meta,.report-paper-footer,.report-paper-total{display:flex;justify-content:space-between;font-size:9px;margin:7px 0}.report-paper-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:35px;margin-top:35px;font-size:9px}.report-paper-signatures div{border-top:1px solid #111;text-align:center;padding-top:4px}</style></head><body>${html}
+<style id="v88DragResizeStyles">
+/* V8.8 — direct column resizing in live report preview */
+#rePreviewPaper .generated-report table{table-layout:fixed!important}
+#rePreviewPaper .generated-report th,#rePreviewPaper .generated-report td{overflow:hidden;word-break:break-word}
+#rePreviewPaper .generated-report th{position:relative}
+.re-col-resizer{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:8;touch-action:none}
+.re-col-resizer::after{content:"";position:absolute;top:15%;bottom:15%;left:4px;width:1px;background:transparent;transition:.12s}
+.re-col-resizer:hover::after,.re-col-resizer.dragging::after{background:#2563eb;width:2px}
+#rePreviewPaper.resizing-columns{user-select:none;cursor:col-resize}
+.re-resize-help{margin:0 0 12px;padding:10px 12px;border:1px solid #f4cc73;border-radius:10px;background:#fff8df;color:#795300;font-size:11px;line-height:1.45}
+.re-resize-help b{color:#4b3500}
+.re-width-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 0;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--surface) 94%,var(--bg));font-size:11px}
+.re-width-summary strong{color:var(--primary)}
+.re-width-over{color:#b91c1c!important}
+</style>
+<script>
+(()=>{
+  const baseRender=renderReportEditorPreview;
+  let resizeHistory=[],redoHistory=[],isApplyingHistory=false;
+  const snapshot=()=>JSON.stringify({serialWidth:reportEditorWorking?.serialWidth,fields:(reportEditorWorking?.fields||[]).map(f=>({width:f.width}))});
+  const applySnapshot=s=>{if(!reportEditorWorking||!s)return;const x=JSON.parse(s);reportEditorWorking.serialWidth=x.serialWidth;(x.fields||[]).forEach((v,i)=>{if(reportEditorWorking.fields[i])reportEditorWorking.fields[i].width=v.width});reSet('reSerialWidth',reportEditorWorking.serialWidth);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0)};
+  const pushHistory=()=>{if(isApplyingHistory)return;const s=snapshot();if(resizeHistory.at(-1)!==s){resizeHistory.push(s);if(resizeHistory.length>60)resizeHistory.shift()}redoHistory=[]};
+  const visibleFields=()=> (reportEditorWorking?.fields||[]).map((f,i)=>({f,i})).filter(x=>!x.f.hidden);
+  function updateSummary(){
+    const box=document.getElementById('reWidthSummary');if(!box||!reportEditorWorking)return;
+    const total=(+reportEditorWorking.serialWidth||0)+visibleFields().reduce((n,x)=>n+(+x.f.width||0),0);
+    box.innerHTML=`<span>Total assigned width</span><strong class="${total>100?'re-width-over':''}">${total.toFixed(0)}%</strong>`;
+  }
+  function ensureResizeHelp(){
+    const panel=document.querySelector('[data-re-panel="columns"] .re-section');if(!panel||document.getElementById('reResizeHelp'))return;
+    const help=document.createElement('div');help.id='reResizeHelp';help.className='re-resize-help';help.innerHTML='<b>Direct resize:</b> drag a column border in the preview. Double-click a border to Auto Fit that column. Manual − / + controls remain available.';
+    const list=document.getElementById('reColumnList');panel.insertBefore(help,list);
+    const sum=document.createElement('div');sum.id='reWidthSummary';sum.className='re-width-summary';list.after(sum);updateSummary();
+  }
+  function setColumnWidth(kind,index,width){
+    width=Math.max(kind==='serial'?2:3,Math.min(kind==='serial'?20:60,Math.round(width*10)/10));
+    if(kind==='serial'){reportEditorWorking.serialWidth=width;reSet('reSerialWidth',width)}
+    else if(reportEditorWorking.fields[index])reportEditorWorking.fields[index].width=width;
+  }
+  function autoFit(kind,index,th,table){
+    pushHistory();
+    const cells=[th,...Array.from(table.tBodies[0]?.rows||[]).map(r=>r.cells[th.cellIndex]).filter(Boolean)];
+    const longest=Math.max(...cells.map(c=>(c.textContent||'').trim().length),3);
+    const width=Math.max(kind==='serial'?3:5,Math.min(kind==='serial'?10:35,2.4+longest*0.72));
+    setColumnWidth(kind,index,width);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0);updateSummary();toast('Column auto-fitted');
+  }
+  function attachPreviewResizers(){
+    ensureResizeHelp();updateSummary();
+    const paper=document.getElementById('rePreviewPaper');const table=paper?.querySelector('.generated-report table');if(!table)return;
+    table.style.tableLayout='fixed';
+    const heads=Array.from(table.querySelectorAll('thead th'));const vis=visibleFields();
+    heads.forEach((th,pos)=>{
+      th.querySelector('.re-col-resizer')?.remove();
+      const kind=pos===0?'serial':'field', index=pos===0?-1:vis[pos-1]?.i;
+      if(kind==='field'&&index==null)return;
+      th.dataset.resizeKind=kind;th.dataset.resizeIndex=index;
+      const h=document.createElement('span');h.className='re-col-resizer';h.title='Drag to resize · Double-click to Auto Fit';th.appendChild(h);
+      h.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();autoFit(kind,index,th,table)});
+      h.addEventListener('pointerdown',e=>{
+        e.preventDefault();e.stopPropagation();pushHistory();
+        const startX=e.clientX,startWidth=kind==='serial'?(+reportEditorWorking.serialWidth||5):(+reportEditorWorking.fields[index].width||12),tableWidth=table.getBoundingClientRect().width||1;
+        h.setPointerCapture?.(e.pointerId);h.classList.add('dragging');paper.classList.add('resizing-columns');
+        const move=ev=>{const deltaPct=(ev.clientX-startX)/tableWidth*100;setColumnWidth(kind,index,startWidth+deltaPct);const v=kind==='serial'?reportEditorWorking.serialWidth:reportEditorWorking.fields[index].width;th.style.width=v+'%';Array.from(table.rows).forEach(r=>{if(r.cells[pos])r.cells[pos].style.width=v+'%'});updateSummary()};
+        const up=()=>{h.classList.remove('dragging');paper.classList.remove('resizing-columns');window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0)};
+        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});
+      });
+    });
+  }
+  renderReportEditorPreview=function(){baseRender();setTimeout(attachPreviewResizers,0)};
+  document.addEventListener('keydown',e=>{
+    if(!document.getElementById('reportEditorModal')?.classList.contains('open'))return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){
+      e.preventDefault();if(resizeHistory.length<2)return;const current=resizeHistory.pop();redoHistory.push(current);isApplyingHistory=true;applySnapshot(resizeHistory.at(-1));isApplyingHistory=false;toast('Column resize undone');
+    }else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){
+      e.preventDefault();const next=redoHistory.pop();if(!next)return;resizeHistory.push(next);isApplyingHistory=true;applySnapshot(next);isApplyingHistory=false;toast('Column resize redone');
+    }
+  });
+  const oldOpen=openReportEditor;openReportEditor=function(){oldOpen();resizeHistory=[snapshot()];redoHistory=[];setTimeout(attachPreviewResizers,0)};
+  document.addEventListener('input',e=>{if(e.target.matches('#reSerialWidth,.re-col-width'))setTimeout(updateSummary,0)});
+})();
+</script>
+
+</body></html>`);w.document.close();w.focus();setTimeout(()=>w.print(),300)}
 function reportCenterInitialise(){ensureReportDesignSeeds();const filters=['Date','Month','Supplier','Item','Purchase Type','Record Type','Bill #','Vehicle #'],totals=[['qty','Quantity Total'],['amount','Amount Total'],['bills','Total Bills'],['challans','Total Challans'],['suppliers','Total Suppliers'],['avg','Average Rate']];$('#rcFilterChecks').innerHTML=filters.map(x=>`<label class="report-check"><input type="checkbox" value="${x.toLowerCase().replaceAll(' ','-')}"> ${x}</label>`).join('');$('#rcTotalChecks').innerHTML=totals.map(([v,l])=>`<label class="report-check"><input type="checkbox" value="${v}" ${['qty','amount'].includes(v)?'checked':''}> ${l}</label>`).join('');rcRenderFieldLists();rcRenderTemplates();$$('#purchase-report-center input,#purchase-report-center select,#purchase-report-center textarea').forEach(x=>x.addEventListener('input',rcRenderPreview));$('#rcAddField').onclick=()=>{if(rcActiveAvailable&&!rcSelected.includes(rcActiveAvailable)){rcSelected.push(rcActiveAvailable);rcActiveAvailable='';rcRenderFieldLists();rcRenderPreview()}};$('#rcRemoveField').onclick=()=>{if(rcActiveSelected){rcSelected=rcSelected.filter(x=>x!==rcActiveSelected);rcActiveSelected='';rcRenderFieldLists();rcRenderPreview()}};$('#rcAddAll').onclick=()=>{rcSelected=RC_FIELDS.map(x=>x.key);rcRenderFieldLists();rcRenderPreview()};$('#rcRemoveAll').onclick=()=>{rcSelected=[];rcRenderFieldLists();rcRenderPreview()};$('#rcFieldHeading').oninput=()=>{const f=RC_FIELDS.find(x=>x.key===rcActiveSelected);if(f)f.customLabel=$('#rcFieldHeading').value;rcRenderFieldLists();rcRenderPreview()};$('#rcFieldAlign').onchange=()=>{const f=RC_FIELDS.find(x=>x.key===rcActiveSelected);if(f)f.align=$('#rcFieldAlign').value;rcRenderPreview()};$('#rcNew').onclick=rcNew;$('#rcLoadSample').onclick=rcSample;$('#rcSaveTemplate').onclick=rcSaveTemplate;$('#rcRefresh').onclick=rcRenderPreview;$('#rcExportJson').onclick=rcJson;$('#rcExportCsv').onclick=rcCsv;$('#rcExportExcel').onclick=rcExcel;$('#rcExportPdf').onclick=rcPrint;$('#rcPrint').onclick=rcPrint;const help=$('#rcHelpModal');$('#rcHowTo').onclick=()=>{help.classList.add('open');help.setAttribute('aria-hidden','false')};$('#rcHelpClose').onclick=()=>{help.classList.remove('open');help.setAttribute('aria-hidden','true')};help.onclick=e=>{if(e.target===help)$('#rcHelpClose').click()};$('#rcRunReport').onclick=()=>{$('#rcFullScreen').click();rcRenderPreview();toast('Report opened in full preview')};$$('[data-rc-tool]').forEach(btn=>btn.onclick=()=>{const tool=btn.dataset.rcTool;const go=name=>document.querySelector(`[data-rc-tab="${name}"]`)?.click();if(tool==='logo'){$('#rcShowLogo').checked=true;go('header')}if(tool==='company'){$('#rcShowCompany').checked=true;go('header')}if(tool==='title'){go('header');setTimeout(()=>$('#rcHeading').focus(),0)}if(tool==='subtitle'){go('header');setTimeout(()=>$('#rcSubheading').focus(),0)}if(tool==='table')go('columns');if(tool==='line')go('design');if(tool==='signatures'){$('#rcShowSignatures').checked=true;go('footer')}if(tool==='page'){$('#rcShowPage').checked=true;go('footer')}if(tool==='print-time'){$('#rcShowPrintTime').checked=true;go('footer')}if(tool==='totals')go('totals');btn.classList.add('active');rcRenderPreview()});$('#rcDataMode').onchange=()=>{$('#rcDataStatus').textContent=$('#rcDataMode').value==='sample'?'Sample purchase records are shown only in the preview.':'Actual saved ERP purchase records will be used.';rcRenderPreview()};rcRenderPreview()}
 
 function bind(){
@@ -5669,4 +5835,87 @@ document.addEventListener('DOMContentLoaded',()=>{const st=ccControlState();ccEn
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
+<style id="v88DragResizeStyles">
+/* V8.8 — direct column resizing in live report preview */
+#rePreviewPaper .generated-report table{table-layout:fixed!important}
+#rePreviewPaper .generated-report th,#rePreviewPaper .generated-report td{overflow:hidden;word-break:break-word}
+#rePreviewPaper .generated-report th{position:relative}
+.re-col-resizer{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:8;touch-action:none}
+.re-col-resizer::after{content:"";position:absolute;top:15%;bottom:15%;left:4px;width:1px;background:transparent;transition:.12s}
+.re-col-resizer:hover::after,.re-col-resizer.dragging::after{background:#2563eb;width:2px}
+#rePreviewPaper.resizing-columns{user-select:none;cursor:col-resize}
+.re-resize-help{margin:0 0 12px;padding:10px 12px;border:1px solid #f4cc73;border-radius:10px;background:#fff8df;color:#795300;font-size:11px;line-height:1.45}
+.re-resize-help b{color:#4b3500}
+.re-width-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 0;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--surface) 94%,var(--bg));font-size:11px}
+.re-width-summary strong{color:var(--primary)}
+.re-width-over{color:#b91c1c!important}
+</style>
+<script>
+(()=>{
+  const baseRender=renderReportEditorPreview;
+  let resizeHistory=[],redoHistory=[],isApplyingHistory=false;
+  const snapshot=()=>JSON.stringify({serialWidth:reportEditorWorking?.serialWidth,fields:(reportEditorWorking?.fields||[]).map(f=>({width:f.width}))});
+  const applySnapshot=s=>{if(!reportEditorWorking||!s)return;const x=JSON.parse(s);reportEditorWorking.serialWidth=x.serialWidth;(x.fields||[]).forEach((v,i)=>{if(reportEditorWorking.fields[i])reportEditorWorking.fields[i].width=v.width});reSet('reSerialWidth',reportEditorWorking.serialWidth);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0)};
+  const pushHistory=()=>{if(isApplyingHistory)return;const s=snapshot();if(resizeHistory.at(-1)!==s){resizeHistory.push(s);if(resizeHistory.length>60)resizeHistory.shift()}redoHistory=[]};
+  const visibleFields=()=> (reportEditorWorking?.fields||[]).map((f,i)=>({f,i})).filter(x=>!x.f.hidden);
+  function updateSummary(){
+    const box=document.getElementById('reWidthSummary');if(!box||!reportEditorWorking)return;
+    const total=(+reportEditorWorking.serialWidth||0)+visibleFields().reduce((n,x)=>n+(+x.f.width||0),0);
+    box.innerHTML=`<span>Total assigned width</span><strong class="${total>100?'re-width-over':''}">${total.toFixed(0)}%</strong>`;
+  }
+  function ensureResizeHelp(){
+    const panel=document.querySelector('[data-re-panel="columns"] .re-section');if(!panel||document.getElementById('reResizeHelp'))return;
+    const help=document.createElement('div');help.id='reResizeHelp';help.className='re-resize-help';help.innerHTML='<b>Direct resize:</b> drag a column border in the preview. Double-click a border to Auto Fit that column. Manual − / + controls remain available.';
+    const list=document.getElementById('reColumnList');panel.insertBefore(help,list);
+    const sum=document.createElement('div');sum.id='reWidthSummary';sum.className='re-width-summary';list.after(sum);updateSummary();
+  }
+  function setColumnWidth(kind,index,width){
+    width=Math.max(kind==='serial'?2:3,Math.min(kind==='serial'?20:60,Math.round(width*10)/10));
+    if(kind==='serial'){reportEditorWorking.serialWidth=width;reSet('reSerialWidth',width)}
+    else if(reportEditorWorking.fields[index])reportEditorWorking.fields[index].width=width;
+  }
+  function autoFit(kind,index,th,table){
+    pushHistory();
+    const cells=[th,...Array.from(table.tBodies[0]?.rows||[]).map(r=>r.cells[th.cellIndex]).filter(Boolean)];
+    const longest=Math.max(...cells.map(c=>(c.textContent||'').trim().length),3);
+    const width=Math.max(kind==='serial'?3:5,Math.min(kind==='serial'?10:35,2.4+longest*0.72));
+    setColumnWidth(kind,index,width);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0);updateSummary();toast('Column auto-fitted');
+  }
+  function attachPreviewResizers(){
+    ensureResizeHelp();updateSummary();
+    const paper=document.getElementById('rePreviewPaper');const table=paper?.querySelector('.generated-report table');if(!table)return;
+    table.style.tableLayout='fixed';
+    const heads=Array.from(table.querySelectorAll('thead th'));const vis=visibleFields();
+    heads.forEach((th,pos)=>{
+      th.querySelector('.re-col-resizer')?.remove();
+      const kind=pos===0?'serial':'field', index=pos===0?-1:vis[pos-1]?.i;
+      if(kind==='field'&&index==null)return;
+      th.dataset.resizeKind=kind;th.dataset.resizeIndex=index;
+      const h=document.createElement('span');h.className='re-col-resizer';h.title='Drag to resize · Double-click to Auto Fit';th.appendChild(h);
+      h.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();autoFit(kind,index,th,table)});
+      h.addEventListener('pointerdown',e=>{
+        e.preventDefault();e.stopPropagation();pushHistory();
+        const startX=e.clientX,startWidth=kind==='serial'?(+reportEditorWorking.serialWidth||5):(+reportEditorWorking.fields[index].width||12),tableWidth=table.getBoundingClientRect().width||1;
+        h.setPointerCapture?.(e.pointerId);h.classList.add('dragging');paper.classList.add('resizing-columns');
+        const move=ev=>{const deltaPct=(ev.clientX-startX)/tableWidth*100;setColumnWidth(kind,index,startWidth+deltaPct);const v=kind==='serial'?reportEditorWorking.serialWidth:reportEditorWorking.fields[index].width;th.style.width=v+'%';Array.from(table.rows).forEach(r=>{if(r.cells[pos])r.cells[pos].style.width=v+'%'});updateSummary()};
+        const up=()=>{h.classList.remove('dragging');paper.classList.remove('resizing-columns');window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);reRenderColumns();baseRender();setTimeout(attachPreviewResizers,0)};
+        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});
+      });
+    });
+  }
+  renderReportEditorPreview=function(){baseRender();setTimeout(attachPreviewResizers,0)};
+  document.addEventListener('keydown',e=>{
+    if(!document.getElementById('reportEditorModal')?.classList.contains('open'))return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){
+      e.preventDefault();if(resizeHistory.length<2)return;const current=resizeHistory.pop();redoHistory.push(current);isApplyingHistory=true;applySnapshot(resizeHistory.at(-1));isApplyingHistory=false;toast('Column resize undone');
+    }else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){
+      e.preventDefault();const next=redoHistory.pop();if(!next)return;resizeHistory.push(next);isApplyingHistory=true;applySnapshot(next);isApplyingHistory=false;toast('Column resize redone');
+    }
+  });
+  const oldOpen=openReportEditor;openReportEditor=function(){oldOpen();resizeHistory=[snapshot()];redoHistory=[];setTimeout(attachPreviewResizers,0)};
+  document.addEventListener('input',e=>{if(e.target.matches('#reSerialWidth,.re-col-width'))setTimeout(updateSummary,0)});
+})();
+</script>
+
 </body></html>
