@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Design Studio V6.9</title>
+<title>Design Studio V7.0</title>
 <style>
 :root{--bg:#eef8f3;--surface:#fff;--text:#0e2b22;--muted:#58756c;--primary:#117a55;--accent:#f5a400;--border:#b9d9cd;--shadow:0 12px 30px rgba(16,60,47,.10);--font:'Segoe UI',Arial,sans-serif;--side-w:230px;--side-cw:58px;--side-row:42px;--side-subrow:30px;--side-icon:15px;--side-radius:9px;--side-gap:3px;--side-subindent:32px;--side-main:13px;--side-sub:11px;--side-line:1.2;--side-letter:0px;--side-anim:220ms;--side-bg:#0d5b42;--side-text:#fff;--side-active:#159b6a;--side-active-text:#fff;--clock-bg:#ffffff14;--clock-border:#ffffff30}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}button,input,select{font:inherit}.app{min-height:100vh}.page-shell{min-width:0}.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 24px;background:color-mix(in srgb,var(--bg) 92%,white);border-bottom:1px solid var(--border)}.title h1{margin:0;font-size:27px}.title p{margin:5px 0 0;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn.warn{background:#fff7df;border-color:#ffd36a}.btn:hover{filter:brightness(.98)}.content{padding:20px;max-width:1550px;margin:auto}.notice{padding:12px 14px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px}.card h2{margin:0 0 4px;font-size:21px}.sub{color:var(--muted);margin:0 0 16px}.grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px}.field{min-width:0}.field label{display:block;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;color:#405f55}.field input,.field select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 10px;background:white;color:var(--text)}.field input[type=color]{padding:3px}.field input[type=range]{padding:0}.value{font-size:12px;color:var(--muted);margin-top:4px}.switch{display:flex;align-items:center;gap:8px;height:40px}.switch input{width:auto;height:auto}.section-title{margin:20px 0 10px;font-size:15px;border-bottom:1px solid var(--border);padding-bottom:8px}.themes{display:grid;grid-template-columns:repeat(4,minmax(165px,1fr));gap:12px}.theme{border:2px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;background:white}.theme.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}.swatches{height:30px;border-radius:8px;display:flex;overflow:hidden;margin-bottom:8px}.swatches i{flex:1}.panel{display:none}.panel.active{display:block}.studio-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.studio-tabs button{border:1px solid var(--border);background:white;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.studio-tabs button.active{background:var(--primary);color:white;border-color:var(--primary)}
@@ -1484,9 +1484,6 @@ body.purchase-mode .content > .notice{display:none !important}
 <div class="purchase-workspace" id="purchase-zafar">
   <div class="purchase-section-box zafar-purchase-shell">
     <div class="zafar-purchase-heading">
-      <div style="width:100%;display:flex;justify-content:flex-end;margin-bottom:6px">
-        <span class="erp-keyboard-badge">Excel Keyboard Mode Active</span>
-      </div>
       <div>
         <h3>Zafar Purchase Entry</h3>
         <p>Enter Zafar Purchase data directly in the table.</p>
@@ -1521,7 +1518,10 @@ body.purchase-mode .content > .notice{display:none !important}
     </div>
 
     <div class="zafar-totals">
+      <div class="zafar-total-card"><small>Total Rows</small><strong id="zafarRowTotal">5</strong></div>
+      <div class="zafar-total-card"><small>Total Quantity</small><strong id="zafarQtyTotal">0.00</strong></div>
       <div class="zafar-total-card"><small>Net Amount</small><strong id="zafarNetTotal">PKR 0.00</strong></div>
+      <div class="zafar-total-card"><small>Gross Total</small><strong id="zafarGrossTotal">PKR 0.00</strong></div>
     </div>
 
     <datalist id="localItemList"></datalist>
@@ -3824,7 +3824,7 @@ function localInitialise(){
   $('#localClear').addEventListener('click',localClearForm);
   $('#localSaveDraft').addEventListener('click',localSaveDraft);
   $('#localSaveAll').addEventListener('click',localSaveAll);
-  $('#localHistory').addEventListener('click',()=>openPurchase('history'));
+  $('#zafarHistory').addEventListener('click',()=>openPurchase('history'));
 }
 
 const ZAFAR_PURCHASE_KEY='erpZafarPurchasesV1';
@@ -3862,6 +3862,24 @@ function zafarBlankRow(){
     rate:'',amount:'',supplier:'',bill:''
   };
 }
+function zafarFiveRows(rows=[]){
+  const list=(Array.isArray(rows)?rows:[]).slice();
+  while(list.length<5)list.push(zafarBlankRow());
+  return list;
+}
+let zafarUndoStack=[];
+function zafarRememberUndo(){
+  const snapshot=JSON.stringify(zafarReadRows());
+  if(zafarUndoStack[zafarUndoStack.length-1]!==snapshot){
+    zafarUndoStack.push(snapshot);
+    if(zafarUndoStack.length>50)zafarUndoStack.shift();
+  }
+}
+function zafarUndo(){
+  const snapshot=zafarUndoStack.pop();
+  if(!snapshot)return toast('Nothing to undo');
+  try{zafarRenderRows(zafarFiveRows(JSON.parse(snapshot)))}catch(e){toast('Unable to undo last change')}
+}
 function zafarLoadMasterOptions(){
   const data=loadMasterData();
   const active=x=>(x.status||'Active')==='Active';
@@ -3885,7 +3903,7 @@ function zafarLoadMasterOptions(){
 }
 function zafarRowHtml(row,index){
   return `<tr data-zafar-row="${index}">
-    <td><input data-zafar-cell="date" value="${masterEsc(row.date)}" placeholder="25-6" autocomplete="off"></td>
+    <td><input data-zafar-cell="date" value="${masterEsc(row.date)}" autocomplete="off"></td>
     <td><input data-zafar-cell="controlNo" value="${masterEsc(row.controlNo)}" autocomplete="off"></td>
     <td><input data-zafar-cell="item" value="${masterEsc(row.item)}" autocomplete="off"></td>
     <td><input data-zafar-cell="size" value="${masterEsc(row.size)}"></td>
@@ -3901,12 +3919,12 @@ function zafarRowHtml(row,index){
 function zafarReadRows(){
   return [...$('#zafarPurchaseBody').querySelectorAll('tr')].map(tr=>{
     const row={};
-    tr.querySelectorAll('[data-zafar-cell]').forEach(el=>row[el.dataset.localCell]=el.value);
+    tr.querySelectorAll('[data-zafar-cell]').forEach(el=>row[el.dataset.zafarCell]=el.value);
     return row;
   });
 }
 function zafarRenderRows(rows){
-  const list=rows?.length?rows:[zafarBlankRow()];
+  const list=zafarFiveRows(rows?.length?rows:[]);
   $('#zafarPurchaseBody').innerHTML=list.map(zafarRowHtml).join('');
   zafarBindRows();
   zafarCalculate();
@@ -3942,15 +3960,20 @@ function localAutofillItem(input){
   tr.querySelector('[data-zafar-cell="unit"]').value=item.unit||'';
 }
 function zafarCalculate(){
-  let net=0;
-  $('#zafarPurchaseBody').querySelectorAll('tr').forEach(tr=>{
+  let net=0,totalQty=0;
+  const rows=$('#zafarPurchaseBody').querySelectorAll('tr');
+  rows.forEach(tr=>{
     const qty=Number(tr.querySelector('[data-zafar-cell="qty"]').value||0);
     const rate=Number(tr.querySelector('[data-zafar-cell="rate"]').value||0);
     const amount=qty*rate;
     tr.querySelector('[data-zafar-cell="amount"]').value=amount?amount.toFixed(2):'';
+    totalQty+=qty;
     net+=amount;
   });
+  $('#zafarRowTotal').textContent=rows.length;
+  $('#zafarQtyTotal').textContent=totalQty.toFixed(2);
   $('#zafarNetTotal').textContent=zafarMoney(net);
+  $('#zafarGrossTotal').textContent=zafarMoney(net);
 }
 
 let zafarAutocompleteState={
@@ -4235,15 +4258,25 @@ function zafarBindRows(){
       supplier:'supplier'
     }[field];
 
+    input.addEventListener('beforeinput',()=>zafarRememberUndo());
     input.addEventListener('input',()=>{
+      if(['controlNo','bill'].includes(field)){
+        const pos=input.selectionStart;
+        input.value=input.value.toUpperCase();
+        try{input.setSelectionRange(pos,pos)}catch(e){}
+      }
       if(dropdownType){
-        if(
-          zafarAutocompleteState.input!==input ||
-          zafarAutocompleteState.type!==dropdownType
-        ){
-          zafarOpenAutocomplete(input,dropdownType);
+        if(String(input.value||'').trim()){
+          if(
+            zafarAutocompleteState.input!==input ||
+            zafarAutocompleteState.type!==dropdownType
+          ){
+            zafarOpenAutocomplete(input,dropdownType);
+          }else{
+            zafarRefreshAutocomplete();
+          }
         }else{
-          zafarRefreshAutocomplete();
+          zafarCloseAutocomplete();
         }
       }
 
@@ -4251,10 +4284,6 @@ function zafarBindRows(){
     });
 
     if(dropdownType){
-      input.addEventListener('focus',()=>{
-        zafarOpenAutocomplete(input,dropdownType);
-      });
-
       input.addEventListener('blur',()=>{
         setTimeout(()=>{
           if(zafarAutocompleteState.input===input){
@@ -4343,6 +4372,12 @@ function zafarBindRows(){
         return;
       }
 
+      if(event.ctrlKey&&event.key.toLowerCase()==='z'){
+        event.preventDefault();
+        zafarUndo();
+        return;
+      }
+
       if(event.ctrlKey&&event.key.toLowerCase()==='d'){
         event.preventDefault();
         zafarCopyAbove(input);
@@ -4424,6 +4459,7 @@ function zafarBindRows(){
 
   body.querySelectorAll('[data-zafar-remove]').forEach(button=>{
     button.addEventListener('click',()=>{
+      zafarRememberUndo();
       const rows=zafarReadRows();
       const rowIndex=[
         ...body.querySelectorAll('tr')
@@ -4435,12 +4471,14 @@ function zafarBindRows(){
   });
 }
 function zafarAddRow(){
+  zafarRememberUndo();
   const rows=zafarReadRows();
   rows.push(zafarBlankRow());
   zafarRenderRows(rows);
 }
 function zafarClearForm(){
-  zafarRenderRows([zafarBlankRow()]);
+  zafarRememberUndo();
+  zafarRenderRows(zafarFiveRows());
 }
 function zafarSaveDraft(){
   localStorage.setItem(ZAFAR_DRAFT_KEY,JSON.stringify({
@@ -4452,9 +4490,9 @@ function zafarSaveDraft(){
 function zafarLoadDraft(){
   try{
     const draft=JSON.parse(localStorage.getItem(ZAFAR_DRAFT_KEY)||'null');
-    zafarRenderRows(draft?.rows?.length?draft.rows:[zafarBlankRow()]);
+    zafarRenderRows(zafarFiveRows(draft?.rows||[]));
   }catch(e){
-    zafarRenderRows([zafarBlankRow()]);
+    zafarRenderRows(zafarFiveRows());
   }
 }
 function zafarDuplicateBill(rows){
@@ -4514,10 +4552,10 @@ function zafarInitialise(){
   zafarLoadDraft();
 
   $('#zafarAddRow').addEventListener('click',zafarAddRow);
-  $('#localClear').addEventListener('click',zafarClearForm);
+  $('#zafarClear').addEventListener('click',zafarClearForm);
   $('#zafarSaveDraft').addEventListener('click',zafarSaveDraft);
   $('#zafarSaveAll').addEventListener('click',zafarSaveAll);
-  $('#localHistory').addEventListener('click',()=>openPurchase('history'));
+  $('#zafarHistory').addEventListener('click',()=>openPurchase('history'));
 }
 
 
