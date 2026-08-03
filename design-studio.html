@@ -5624,15 +5624,89 @@ async function purchaseReportSaveBlob(blob,fileName){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Saved to browser Downloads')
 }
 async function purchaseReportCsv(){const rows=purchaseReportDataRows();const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');await purchaseReportSaveBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),purchaseReportFileBase()+'.csv')}
+function purchaseReportVisibleExcelRows(){
+  const headers=[...document.querySelectorAll('#prTableHead th')].map(x=>x.textContent.trim());
+  const body=[...document.querySelectorAll('#prTableBody tr')].map(tr=>[...tr.querySelectorAll('td')].map(td=>td.textContent.trim()));
+  const title=$('#prReportTitle')?.textContent?.trim()||'Purchase Report';
+  const subtitle=$('#prReportSubtitle')?.textContent?.trim()||'';
+  const info=$('#prGeneratedOn')?.textContent?.trim()||'';
+  return {title,subtitle,info,headers,body};
+}
+async function purchaseReportWriteChosenFile(blob,suggestedName){
+  if(window.showSaveFilePicker){
+    try{
+      const remembered=purchaseReportDirectoryHandle||await purchaseReportLoadRememberedFolder();
+      const options={
+        suggestedName,
+        types:[{description:'Excel Workbook',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]
+      };
+      if(remembered)options.startIn=remembered;
+      const fileHandle=await window.showSaveFilePicker(options);
+      const writable=await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      localStorage.setItem('erpLastPurchaseExcelFileName',fileHandle.name||suggestedName);
+      toast(`Excel file saved: ${fileHandle.name||suggestedName}`);
+      return true;
+    }catch(e){
+      if(e?.name==='AbortError'){toast('Excel export cancelled');return false}
+      console.warn('Save As failed; using folder/download fallback',e);
+    }
+  }
+  await purchaseReportSaveBlob(blob,suggestedName);
+  return true;
+}
 async function purchaseReportExcel(){
   purchaseReportRender();
-  if(window.showDirectoryPicker){
-    const handle=await purchaseReportPickExportFolder();
-    if(!handle){toast('Excel export cancelled');return}
+  const view=purchaseReportVisibleExcelRows();
+  if(!view.headers.length){toast('There is no report table to export');return}
+  const lastName=localStorage.getItem('erpLastPurchaseExcelFileName')||purchaseReportFileBase()+'.xlsx';
+  const suggestedName=lastName.toLowerCase().endsWith('.xlsx')?lastName:lastName+'.xlsx';
+  const width=Math.max(1,view.headers.length);
+  const rows=[
+    [view.title],
+    [view.subtitle],
+    [view.info],
+    [],
+    view.headers,
+    ...view.body,
+    [],
+    ['This is computer generated report.']
+  ];
+  if(window.XLSX){
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!merges']=[
+      {s:{r:0,c:0},e:{r:0,c:width-1}},
+      {s:{r:1,c:0},e:{r:1,c:width-1}},
+      {s:{r:2,c:0},e:{r:2,c:width-1}},
+      {s:{r:rows.length-1,c:0},e:{r:rows.length-1,c:width-1}}
+    ];
+    ws['!freeze']={xSplit:0,ySplit:5};
+    ws['!autofilter']={ref:`A5:${XLSX.utils.encode_col(width-1)}${Math.max(5,5+view.body.length)}`};
+    ws['!cols']=view.headers.map((h,i)=>({wch:Math.min(45,Math.max(10,String(h).length+3,...view.body.map(r=>String(r[i]??'').length+2)))}));
+    ws['!rows']=[{hpt:24},{hpt:18},{hpt:16},{hpt:7},{hpt:22}];
+    const border={top:{style:'thin',color:{rgb:'D6A23A'}},bottom:{style:'thin',color:{rgb:'D6A23A'}},left:{style:'thin',color:{rgb:'D6A23A'}},right:{style:'thin',color:{rgb:'D6A23A'}}};
+    for(let c=0;c<width;c++){
+      const hc=ws[XLSX.utils.encode_cell({r:4,c})];
+      if(hc)hc.s={font:{bold:true,color:{rgb:'111111'}},fill:{fgColor:{rgb:'FFB000'}},alignment:{horizontal:'center',vertical:'center'},border};
+    }
+    for(let r=5;r<5+view.body.length;r++)for(let c=0;c<width;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})];
+      if(cell)cell.s={alignment:{vertical:'center',horizontal:c===1||c===2||c===3?'left':'center',wrapText:false},border};
+    }
+    const a1=ws.A1;if(a1)a1.s={font:{bold:true,sz:16},alignment:{horizontal:'center'}};
+    const a2=ws.A2;if(a2)a2.s={font:{italic:true,sz:10},alignment:{horizontal:'center'}};
+    const a3=ws.A3;if(a3)a3.s={font:{sz:9},alignment:{horizontal:'right'}};
+    const footer=ws[XLSX.utils.encode_cell({r:rows.length-1,c:0})];if(footer)footer.s={font:{italic:true,sz:9},alignment:{horizontal:'center'}};
+    const wb=XLSX.utils.book_new();
+    wb.Props={Title:view.title,Subject:view.subtitle,Author:'Inventory Management System'};
+    XLSX.utils.book_append_sheet(wb,ws,(purchaseReportTypeLabel(purchaseReportType)||'Purchase').slice(0,31));
+    const data=XLSX.write(wb,{bookType:'xlsx',type:'array',cellStyles:true});
+    await purchaseReportWriteChosenFile(new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),suggestedName);
+    return;
   }
-  const rows=purchaseReportDataRows();
-  if(window.XLSX){const ws=XLSX.utils.aoa_to_sheet(rows);ws['!freeze']={xSplit:0,ySplit:1};ws['!cols']=rows[0].map((_,i)=>({wch:Math.min(42,Math.max(12,...rows.map(r=>String(r[i]??'').length+2)))}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Purchase Report');const data=XLSX.write(wb,{bookType:'xlsx',type:'array'});await purchaseReportSaveBlob(new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),purchaseReportFileBase()+'.xlsx');return}
-  const html=`<table>${rows.map((r,i)=>`<tr>${r.map(v=>`<${i?'td':'th'}>${masterEsc(v)}</${i?'td':'th'}>`).join('')}</tr>`).join('')}</table>`;await purchaseReportSaveBlob(new Blob(['\ufeff',html],{type:'application/vnd.ms-excel'}),purchaseReportFileBase()+'.xls')
+  const html=`<table><tr><th colspan="${width}">${masterEsc(view.title)}</th></tr><tr><td colspan="${width}">${masterEsc(view.subtitle)}</td></tr><tr><td colspan="${width}">${masterEsc(view.info)}</td></tr><tr>${view.headers.map(v=>`<th style="background:#ffb000;border:1px solid #d6a23a">${masterEsc(v)}</th>`).join('')}</tr>${view.body.map(r=>`<tr>${r.map(v=>`<td style="border:1px solid #d6a23a">${masterEsc(v)}</td>`).join('')}</tr>`).join('')}</table>`;
+  await purchaseReportWriteChosenFile(new Blob(['\ufeff',html],{type:'application/vnd.ms-excel'}),suggestedName.replace(/\.xlsx$/i,'.xls'));
 }
 async function purchaseReportPdf(){
   purchaseReportRender();const element=$('#purchaseReportPreview');if(!element)return;
@@ -5718,7 +5792,7 @@ function purchaseReportsInitialise(){
   $$('[data-re-tab]').forEach(b=>b.addEventListener('click',()=>{$$('[data-re-tab]').forEach(x=>x.classList.toggle('active',x===b));$$('[data-re-panel]').forEach(x=>x.classList.toggle('active',x.dataset.rePanel===b.dataset.reTab))}));
   $$('#reportEditorModal [data-step-target]').forEach(b=>b.addEventListener('click',()=>{const inp=$('#'+b.dataset.stepTarget);if(!inp)return;const min=Number(inp.min||-Infinity),max=Number(inp.max||Infinity);inp.value=Math.min(max,Math.max(min,(+inp.value||0)+(+b.dataset.step||1)));inp.dispatchEvent(new Event('input',{bubbles:true}))}));
   $('#reClose')?.addEventListener('click',closeReportEditor);$('#reCancel')?.addEventListener('click',closeReportEditor);$('#reportEditorModal')?.addEventListener('click',e=>{if(e.target===$('#reportEditorModal'))closeReportEditor()});$('#reReset')?.addEventListener('click',reReset);$('#reSave')?.addEventListener('click',()=>reSave(false));$('#reSaveAs')?.addEventListener('click',()=>reSave(true));$('#rePrintPreview')?.addEventListener('click',rePrintPreview);$('#reRemoveLogo')?.addEventListener('click',()=>{reportEditorWorking.logoData='';rePopulate();renderReportEditorPreview()});$('#reLogoFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{reportEditorWorking.logoData=r.result;$('#reLogoPreview').src=r.result;reSet('reShowLogo',true,true);renderReportEditorPreview()};r.readAsDataURL(f)});$$('#reportEditorModal input,#reportEditorModal select,#reportEditorModal textarea').forEach(e=>{if(e.id==='reLogoFile'||e.closest('#reColumnList'))return;e.addEventListener(e.type==='checkbox'?'change':'input',renderReportEditorPreview)});
-$$('[data-report-type]').forEach(b=>b.addEventListener('click',()=>{purchaseReportType=b.dataset.reportType;$$('[data-report-type]').forEach(x=>x.classList.toggle('active',x===b));purchaseReportRender()}));['prFromDate','prToDate','prMonth','prYear','prPurchaseType','prRecordType','prSupplier','prItem','prBill','prReference','prVehicle','prPurchasedBy'].forEach(id=>$('#'+id)?.addEventListener(id==='prMonth'||id==='prYear'||id==='prPurchaseType'||id==='prRecordType'?'change':'input',purchaseReportRender));$('#prGenerate')?.addEventListener('click',purchaseReportRender);$('#prClear')?.addEventListener('click',purchaseReportClear);$('#prChooseFolder')?.addEventListener('click',purchaseReportChooseFolder);$('#prExportCsv')?.addEventListener('click',purchaseReportCsv);$('#prExportExcel')?.addEventListener('click',()=>openReportDesignChooser('excel'));$('#prExportPdf')?.addEventListener('click',()=>openReportDesignChooser('pdf'));$('#prPrintPdf')?.addEventListener('click',()=>openReportDesignChooser('print'));$('#reportDesignClose')?.addEventListener('click',closeReportDesignChooser);$('#reportDesignModal')?.addEventListener('click',e=>{if(e.target===$('#reportDesignModal'))closeReportDesignChooser()});$('#reportDesignPrint')?.addEventListener('click',printSelectedDesign);$('#reportDesignEdit')?.addEventListener('click',editSelectedDesign);$('#reportDesignPdf')?.addEventListener('click',pdfSelectedDesign);$('#reportDesignExcel')?.addEventListener('click',async()=>{if(!reportDesignSelected)return toast('Please select a report design');await purchaseReportExcel();closeReportDesignChooser()});$('#printSettingsClose')?.addEventListener('click',closePrintSettings);$('#printSettingsModal')?.addEventListener('click',e=>{if(e.target===$('#printSettingsModal'))closePrintSettings()});$('#psBackToDesigns')?.addEventListener('click',()=>{closePrintSettings();openReportDesignChooser('print')});$('#psSaveDefault')?.addEventListener('click',savePrintSettings);$('#psPrintNow')?.addEventListener('click',printNowWithSettings);['psPaperSize','psOrientation','psMargins','psScale','psScalePercent','psFitWide','psFitTall','psQuality','psFirstPage','psHeaderMargin','psFooterMargin','psCustomHeader','psCustomFooter','psRepeatHeader','psBackground','psPageNumbers','psCenterHorizontal','psCenterVertical','psGridlines','psBlackWhite','psDraft','psHeadings','psPageOrder','psMarginTop','psMarginRight','psMarginBottom','psMarginLeft'].forEach(id=>$('#'+id)?.addEventListener(['psRepeatHeader','psBackground','psPageNumbers','psCenterHorizontal','psCenterVertical','psGridlines','psBlackWhite','psDraft','psHeadings'].includes(id)?'change':'input',renderPrintPreview));purchaseReportLoadRememberedFolder().then(handle=>{if(!handle)return;purchaseReportDirectoryHandle=handle;const folderBtn=$('#prChooseFolder');if(folderBtn){folderBtn.textContent=`Folder: ${handle.name}`;folderBtn.title=`Last export folder: ${handle.name}`}})}
+$$('[data-report-type]').forEach(b=>b.addEventListener('click',()=>{purchaseReportType=b.dataset.reportType;$$('[data-report-type]').forEach(x=>x.classList.toggle('active',x===b));purchaseReportRender()}));['prFromDate','prToDate','prMonth','prYear','prPurchaseType','prRecordType','prSupplier','prItem','prBill','prReference','prVehicle','prPurchasedBy'].forEach(id=>$('#'+id)?.addEventListener(id==='prMonth'||id==='prYear'||id==='prPurchaseType'||id==='prRecordType'?'change':'input',purchaseReportRender));$('#prGenerate')?.addEventListener('click',purchaseReportRender);$('#prClear')?.addEventListener('click',purchaseReportClear);$('#prChooseFolder')?.addEventListener('click',purchaseReportChooseFolder);$('#prExportCsv')?.addEventListener('click',purchaseReportCsv);$('#prExportExcel')?.addEventListener('click',purchaseReportExcel);$('#prExportPdf')?.addEventListener('click',()=>openReportDesignChooser('pdf'));$('#prPrintPdf')?.addEventListener('click',()=>openReportDesignChooser('print'));$('#reportDesignClose')?.addEventListener('click',closeReportDesignChooser);$('#reportDesignModal')?.addEventListener('click',e=>{if(e.target===$('#reportDesignModal'))closeReportDesignChooser()});$('#reportDesignPrint')?.addEventListener('click',printSelectedDesign);$('#reportDesignEdit')?.addEventListener('click',editSelectedDesign);$('#reportDesignPdf')?.addEventListener('click',pdfSelectedDesign);$('#reportDesignExcel')?.addEventListener('click',async()=>{if(!reportDesignSelected)return toast('Please select a report design');await purchaseReportExcel();closeReportDesignChooser()});$('#printSettingsClose')?.addEventListener('click',closePrintSettings);$('#printSettingsModal')?.addEventListener('click',e=>{if(e.target===$('#printSettingsModal'))closePrintSettings()});$('#psBackToDesigns')?.addEventListener('click',()=>{closePrintSettings();openReportDesignChooser('print')});$('#psSaveDefault')?.addEventListener('click',savePrintSettings);$('#psPrintNow')?.addEventListener('click',printNowWithSettings);['psPaperSize','psOrientation','psMargins','psScale','psScalePercent','psFitWide','psFitTall','psQuality','psFirstPage','psHeaderMargin','psFooterMargin','psCustomHeader','psCustomFooter','psRepeatHeader','psBackground','psPageNumbers','psCenterHorizontal','psCenterVertical','psGridlines','psBlackWhite','psDraft','psHeadings','psPageOrder','psMarginTop','psMarginRight','psMarginBottom','psMarginLeft'].forEach(id=>$('#'+id)?.addEventListener(['psRepeatHeader','psBackground','psPageNumbers','psCenterHorizontal','psCenterVertical','psGridlines','psBlackWhite','psDraft','psHeadings'].includes(id)?'change':'input',renderPrintPreview));purchaseReportLoadRememberedFolder().then(handle=>{if(!handle)return;purchaseReportDirectoryHandle=handle;const folderBtn=$('#prChooseFolder');if(folderBtn){folderBtn.textContent=`Folder: ${handle.name}`;folderBtn.title=`Last export folder: ${handle.name}`}})}
 
 function openStudioPanel(name,section){
   if(name==='theme')setTimeout(()=>{renderLoginThemeControls();renderHomeThemeControls();renderLibraries()},0);
