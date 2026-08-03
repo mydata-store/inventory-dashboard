@@ -2225,7 +2225,7 @@ body:not(.purchase-mode):not(.issue-mode) #universalEditPageFloatingBtn{display:
       <div class="indent-shell">
         <div class="indent-topbar">
           <div><h3>Purchase Indent</h3><p class="sub">Create department demands, verify stock, approve quantities and follow purchase progress.</p></div>
-          <div class="cc-toolbar"><button class="btn" id="indentPrintBtn">Print List</button><button class="btn primary" id="indentNewBtn">+ New Indent</button></div>
+          <div class="cc-toolbar"><button class="btn" id="indentPrintBtn">Export Excel</button><button class="btn primary" id="indentNewBtn">+ New Indent</button></div>
         </div>
         <div class="indent-nav">
           <button class="active" data-indent-view="dashboard">Dashboard</button>
@@ -6243,12 +6243,48 @@ function renderDash(){const a=load(),pending=a.filter(x=>x.status==='Pending App
 function edit(id){const x=load().find(y=>y.id===id);if(!x)return;editingId=id;$i('indentNo').value=x.no;$i('indentNoBadge').textContent=x.no;$i('indentDate').value=x.date||'';$i('indentRequiredDate').value=x.requiredDate||'';$i('indentType').value=x.type||'Department Demand';$i('indentDepartment').value=x.department||'';$i('indentRequestedBy').value=x.requestedBy||'';$i('indentPriority').value=x.priority||'Normal';$i('indentCostCentre').value=x.costCentre||'';$i('indentPurpose').value=x.purpose||'';$i('indentRemarks').value=x.remarks||'';$i('indentItemsBody').innerHTML=(x.items||[blank()]).map(rowHtml).join('');bindRows();calc();$i('indentFormTitle').textContent='Edit '+x.no;show('entry')}
 function setStatus(id,status){const a=load(),x=a.find(y=>y.id===id);if(!x)return;x.status=status;x.approvedAt=new Date().toISOString();save(a);renderIndent()}
 function printOne(id){const x=load().find(y=>y.id===id);if(!x)return;const w=window.open('','_blank');w.document.write(`<html><head><title>${esc(x.no)}</title><style>body{font-family:Arial;padding:28px;color:#222}h1{text-align:center}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}.meta div{border:1px solid #bbb;padding:9px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:8px;font-size:12px}th{background:#ffcc00}.sign{display:flex;justify-content:space-between;margin-top:70px}.sign span{border-top:1px solid #333;padding-top:6px;width:22%;text-align:center}footer{text-align:center;margin-top:40px;font-size:11px}</style></head><body><h1>PURCHASE INDENT</h1><h3 style="text-align:center">${esc(x.no)}</h3><div class="meta"><div><b>Date</b><br>${esc(x.date)}</div><div><b>Required Date</b><br>${esc(x.requiredDate||'—')}</div><div><b>Status</b><br>${esc(x.status)}</div><div><b>Department</b><br>${esc(x.department||'—')}</div><div><b>Requested By</b><br>${esc(x.requestedBy||'—')}</div><div><b>Priority</b><br>${esc(x.priority)}</div></div><p><b>Purpose:</b> ${esc(x.purpose||'—')}</p><table><thead><tr><th>#</th><th>Item</th><th>Size</th><th>Qty</th><th>Unit</th><th>Last Rate</th><th>Supplier</th><th>Est. Value</th></tr></thead><tbody>${(x.items||[]).map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.item)}</td><td>${esc(r.size)}</td><td>${esc(r.qty)}</td><td>${esc(r.unit)}</td><td>${money(r.rate)}</td><td>${esc(r.supplier)}</td><td>${money((+r.qty||0)*(+r.rate||0))}</td></tr>`).join('')}</tbody></table><h3 style="text-align:right">Total: ${money(x.value)}</h3><div class="sign"><span>Prepared By</span><span>Store Checked By</span><span>Department Head</span><span>Approved By</span></div><footer>This is computer generated report.</footer><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()}
+async function indentExportExcel(){
+  const rows=readRows();
+  if(!rows.length){toast('Please add at least one item before exporting.');return}
+  const indentNo=($i('indentNo').value||nextNo()).trim();
+  const safeNo=indentNo.replace(/[^a-z0-9-_]+/gi,'-');
+  const suggested=`Purchase-Indent-${safeNo}.xlsx`;
+  const aoa=[
+    ['PURCHASE INDENT'],
+    [`Indent No: ${indentNo}`,`Date: ${fmtDate($i('indentDate').value)||''}`,`Department: ${$i('indentDepartment').value||''}`],
+    [],
+    ['Sr #','Item','Size','Current Stock','Req Qty','Unit','Last Rate','Est Value','Remarks'],
+    ...rows.map((r,i)=>[i+1,r.item,r.size,+r.stock||0,+r.qty||0,r.unit,+r.rate||0,(+r.qty||0)*(+r.rate||0),r.remarks||''])
+  ];
+  if(!window.XLSX){toast('Excel library is not available.');return}
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[XLSX.utils.decode_range('A1:I1')];
+  ws['!freeze']={xSplit:0,ySplit:4};
+  ws['!cols']=[{wch:7},{wch:28},{wch:12},{wch:14},{wch:12},{wch:10},{wch:12},{wch:15},{wch:28}];
+  ws['!autofilter']={ref:`A4:I${aoa.length}`};
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Purchase Indent');
+  const data=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  const blob=new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  try{
+    if(window.showSaveFilePicker){
+      const handle=await window.showSaveFilePicker({
+        suggestedName:suggested,
+        types:[{description:'Excel Workbook',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]
+      });
+      const writable=await handle.createWritable();
+      await writable.write(blob);await writable.close();
+      toast(`Excel saved as ${handle.name}`);return;
+    }
+  }catch(e){if(e?.name==='AbortError')return;console.warn(e)}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=suggested;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Excel file saved to Downloads.');
+}
 function bindActions(){document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(b.dataset.edit));document.querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>printOne(b.dataset.print));document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{if(confirm('Delete this indent?')){save(load().filter(x=>x.id!==b.dataset.delete));renderIndent()}});document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>setStatus(b.dataset.id,b.dataset.status))}
 function show(v){document.querySelectorAll('.indent-nav button').forEach(b=>b.classList.toggle('active',b.dataset.indentView===v));document.querySelectorAll('.indent-view').forEach(x=>x.classList.toggle('active',x.id==='indent-view-'+v));if(v==='list')renderList();if(v==='approval')renderApproval();if(v==='dashboard')renderDash()}
 window.renderIndent=function(){if(!$i('purchase-indent'))return;try{const d=indentMasters();$i('indentDepartmentList').innerHTML=(d.departments||[]).map(x=>`<option value="${esc(x.name)}"></option>`).join('');$i('indentItemList').innerHTML=(d.items||[]).map(x=>`<option value="${esc(x.name)}">${esc(x.size||'')} | ${esc(x.unit||'')}</option>`).join('')}catch(e){}document.querySelectorAll('[data-indent-dd]').forEach(inp=>bindIndentDD(inp,inp.dataset.indentDd));renderDash();renderList();renderApproval();if(!$i('indentNo').value)resetForm()}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-indent-view]');if(b)show(b.dataset.indentView);if(e.target.closest('[data-indent-open-list]'))show('list')});
 document.addEventListener('mousedown',e=>{if(!e.target.closest('#indentDropdownMenu')&&!e.target.closest('[data-indent-dd]'))indentCloseDD()});window.addEventListener('resize',()=>{if(indentDD.input)indentPositionDD(indentDD.input)});window.addEventListener('scroll',()=>{if(indentDD.input)indentPositionDD(indentDD.input)},true);
-document.addEventListener('DOMContentLoaded',()=>{if(!$i('purchase-indent'))return;indentLoadRemoteData().then(()=>renderIndent());$i('indentNewBtn').onclick=()=>{resetForm();show('entry')};$i('indentAddRow').onclick=()=>{$i('indentItemsBody').insertAdjacentHTML('beforeend',rowHtml(blank(),document.querySelectorAll('#indentItemsBody tr').length));bindRows()};$i('indentClearBtn').onclick=resetForm;$i('indentDraftBtn').onclick=()=>persist('Draft');$i('indentSubmitBtn').onclick=()=>persist('Pending Approval');$i('indentSearch').oninput=renderList;$i('indentStatusFilter').onchange=renderList;$i('indentPrintBtn').onclick=()=>window.print();['indentDate','indentRequiredDate'].forEach(id=>$i(id).addEventListener('blur',e=>e.target.value=fmtDate(e.target.value)));renderIndent()});
+document.addEventListener('DOMContentLoaded',()=>{if(!$i('purchase-indent'))return;indentLoadRemoteData().then(()=>renderIndent());$i('indentNewBtn').onclick=()=>{resetForm();show('entry')};$i('indentAddRow').onclick=()=>{$i('indentItemsBody').insertAdjacentHTML('beforeend',rowHtml(blank(),document.querySelectorAll('#indentItemsBody tr').length));bindRows()};$i('indentClearBtn').onclick=resetForm;$i('indentDraftBtn').onclick=()=>persist('Draft');$i('indentSubmitBtn').onclick=()=>persist('Pending Approval');$i('indentSearch').oninput=renderList;$i('indentStatusFilter').onchange=renderList;$i('indentPrintBtn').onclick=indentExportExcel;['indentDate','indentRequiredDate'].forEach(id=>$i(id).addEventListener('blur',e=>e.target.value=fmtDate(e.target.value)));renderIndent()});
 })();
 </script>
 
