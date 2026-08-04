@@ -1274,6 +1274,21 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
 @media(max-width:620px){.rgp-action-grid,.rgp-summary{grid-template-columns:1fr}}
 
 
+
+/* RGP Excel-style keyboard controls */
+.rgp-items-table input.rgp-cell-selected,
+.rgp-items-table select.rgp-cell-selected{
+  outline:2px solid var(--primary);
+  outline-offset:-2px;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 15%,transparent);
+}
+.rgp-keyboard-help{
+  margin-top:10px;
+  color:var(--muted);
+  font-size:10.5px;
+  line-height:1.5;
+}
+
 /* RGP Entry Form V1.0 */
 .rgp-entry-shell{display:grid;gap:14px}
 .rgp-entry-top{border:1px solid var(--border);border-radius:15px;background:var(--surface);padding:16px}
@@ -1861,6 +1876,11 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
                 </thead>
                 <tbody id="rgpItemsBody"></tbody>
               </table>
+            </div>
+            <div class="rgp-keyboard-help">
+              Keyboard: Arrow keys move between cells, Enter moves forward, Ctrl+D copies the cell above,
+              Ctrl+C/Ctrl+V copy and paste, Ctrl+A selects the current cell, Delete or Backspace clears it,
+              Esc leaves the cell, Ctrl+P prints, and Ctrl+S saves the RGP.
             </div>
           </div>
 
@@ -3627,6 +3647,7 @@ function openMasters(tab='items'){
   ccCurrentStudio='masters';ccCurrentSection=currentMasterTab;
   setWorkspaceChrome('masters');
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-masters'));
+  $$('.side-item').forEach(x=>x.classList.toggle('active',x.id==='mastersMainBtn'));
   $$('.master-tab').forEach(b=>b.classList.toggle('active',b.dataset.masterPageTab===currentMasterTab));
   const cfg=MASTER_CONFIG[currentMasterTab];
   $('#workspaceTitle').textContent='Masters';
@@ -4326,6 +4347,7 @@ function addRgpItemRow(data={}){
   body.appendChild(tr);
 
   tr.querySelectorAll('input').forEach(input=>input.addEventListener('input',updateRgpItemTotals));
+  tr.querySelectorAll('input:not([readonly]),select').forEach(bindRgpGridCell);
   tr.querySelector('.rgp-row-remove').addEventListener('click',()=>{
     tr.remove();
     if(document.querySelectorAll('#rgpItemsBody tr').length===0) addRgpItemRow();
@@ -4363,6 +4385,187 @@ function saveRgpEntry(asDraft=false){
   }
   toast(asDraft?'RGP draft saved':'RGP saved successfully');
 }
+
+
+
+let rgpSelectedCell=null;
+
+function rgpGridCells(){
+  return [...document.querySelectorAll(
+    '#rgpItemsBody tr input:not([readonly]), #rgpItemsBody tr select'
+  )].filter(el=>el.offsetParent!==null);
+}
+
+function rgpSelectCell(cell,selectText=false){
+  if(rgpSelectedCell && rgpSelectedCell!==cell){
+    rgpSelectedCell.classList.remove('rgp-cell-selected');
+  }
+  rgpSelectedCell=cell||null;
+  if(!cell) return;
+  cell.classList.add('rgp-cell-selected');
+  cell.focus();
+  if(selectText && typeof cell.select==='function') cell.select();
+}
+
+function rgpCellPosition(cell){
+  const row=cell?.closest('tr');
+  if(!row) return null;
+  const rows=[...document.querySelectorAll('#rgpItemsBody tr')];
+  const rowIndex=rows.indexOf(row);
+  const rowCells=[...row.querySelectorAll('input:not([readonly]),select')];
+  return {rows,row,rowIndex,colIndex:rowCells.indexOf(cell),rowCells};
+}
+
+function rgpMoveCell(cell,rowDelta,colDelta){
+  const pos=rgpCellPosition(cell);
+  if(!pos) return;
+  let targetRowIndex=pos.rowIndex+rowDelta;
+  let targetColIndex=pos.colIndex+colDelta;
+
+  if(colDelta!==0){
+    if(targetColIndex<0){
+      targetRowIndex--;
+      targetColIndex=999;
+    }else if(targetColIndex>=pos.rowCells.length){
+      targetRowIndex++;
+      targetColIndex=0;
+    }
+  }
+
+  if(targetRowIndex<0) targetRowIndex=0;
+  if(targetRowIndex>=pos.rows.length){
+    addRgpItemRow();
+    pos.rows=[...document.querySelectorAll('#rgpItemsBody tr')];
+    targetRowIndex=pos.rows.length-1;
+  }
+
+  const targetCells=[...pos.rows[targetRowIndex].querySelectorAll('input:not([readonly]),select')];
+  if(targetColIndex===999) targetColIndex=targetCells.length-1;
+  targetColIndex=Math.max(0,Math.min(targetCells.length-1,targetColIndex));
+  rgpSelectCell(targetCells[targetColIndex],true);
+}
+
+function rgpCopyFromAbove(cell){
+  const pos=rgpCellPosition(cell);
+  if(!pos || pos.rowIndex<=0) return;
+  const aboveCells=[...pos.rows[pos.rowIndex-1].querySelectorAll('input:not([readonly]),select')];
+  const source=aboveCells[pos.colIndex];
+  if(!source) return;
+  cell.value=source.value;
+  cell.dispatchEvent(new Event('input',{bubbles:true}));
+  cell.dispatchEvent(new Event('change',{bubbles:true}));
+  rgpSelectCell(cell,true);
+}
+
+function bindRgpGridCell(cell){
+  if(!cell || cell.dataset.rgpKeysBound==='1') return;
+  cell.dataset.rgpKeysBound='1';
+
+  cell.addEventListener('focus',()=>rgpSelectCell(cell));
+  cell.addEventListener('click',()=>rgpSelectCell(cell));
+
+  cell.addEventListener('keydown',e=>{
+    const key=e.key;
+    const ctrl=e.ctrlKey||e.metaKey;
+
+    if(ctrl && key.toLowerCase()==='a'){
+      e.preventDefault();
+      if(typeof cell.select==='function') cell.select();
+      return;
+    }
+
+    if(ctrl && key.toLowerCase()==='d'){
+      e.preventDefault();
+      rgpCopyFromAbove(cell);
+      return;
+    }
+
+    if(ctrl && key.toLowerCase()==='p'){
+      e.preventDefault();
+      window.print();
+      return;
+    }
+
+    if(ctrl && key.toLowerCase()==='s'){
+      e.preventDefault();
+      saveRgpEntry(false);
+      return;
+    }
+
+    if(key==='Escape'){
+      e.preventDefault();
+      cell.blur();
+      cell.classList.remove('rgp-cell-selected');
+      rgpSelectedCell=null;
+      return;
+    }
+
+    if(key==='Enter'){
+      e.preventDefault();
+      rgpMoveCell(cell,0,1);
+      return;
+    }
+
+    if(key==='ArrowUp'){
+      e.preventDefault();
+      rgpMoveCell(cell,-1,0);
+      return;
+    }
+
+    if(key==='ArrowDown'){
+      e.preventDefault();
+      rgpMoveCell(cell,1,0);
+      return;
+    }
+
+    if(key==='ArrowLeft' && (cell.selectionStart===0 || cell.tagName==='SELECT')){
+      e.preventDefault();
+      rgpMoveCell(cell,0,-1);
+      return;
+    }
+
+    if(key==='ArrowRight' &&
+       (cell.tagName==='SELECT' ||
+        (typeof cell.selectionStart==='number' && cell.selectionStart===cell.value.length))){
+      e.preventDefault();
+      rgpMoveCell(cell,0,1);
+      return;
+    }
+
+    if((key==='Delete' || key==='Backspace') &&
+       !cell.readOnly &&
+       (cell.selectionStart===0 && cell.selectionEnd===cell.value.length)){
+      e.preventDefault();
+      cell.value='';
+      cell.dispatchEvent(new Event('input',{bubbles:true}));
+      return;
+    }
+  });
+}
+
+function bindRgpGridKeyboard(){
+  document.querySelectorAll('#rgpItemsBody tr input:not([readonly]),#rgpItemsBody tr select')
+    .forEach(bindRgpGridCell);
+}
+
+document.addEventListener('keydown',e=>{
+  const active=document.activeElement;
+  const entryVisible=document.getElementById('rgpEntryContent')?.offsetParent!==null;
+  if(!entryVisible) return;
+
+  const ctrl=e.ctrlKey||e.metaKey;
+  if(ctrl && e.key.toLowerCase()==='p'){
+    e.preventDefault();
+    window.print();
+  }else if(ctrl && e.key.toLowerCase()==='s'){
+    e.preventDefault();
+    saveRgpEntry(false);
+  }else if(e.key==='Escape' && active && active.closest?.('#rgpEntryContent')){
+    active.blur();
+    if(rgpSelectedCell) rgpSelectedCell.classList.remove('rgp-cell-selected');
+    rgpSelectedCell=null;
+  }
+});
 
 
 function openPurchase(tab='dashboard'){
@@ -6638,6 +6841,7 @@ function bind(){
     });
   });
   ensureRgpMasterLists();
+  bindRgpGridKeyboard();
   $('#purchaseMainBtn').addEventListener('click',()=>openPurchase(currentPurchaseTab||'dashboard'));
   $$('[data-purchase-tab]').forEach(b=>b.addEventListener('click',()=>openPurchase(b.dataset.purchaseTab)));
   $$('[data-purchase-header-tab]').forEach(b=>b.addEventListener('click',()=>openPurchase(b.dataset.purchaseHeaderTab)));
