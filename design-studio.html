@@ -1815,23 +1815,23 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
 
             <div class="rgp-entry-grid">
               <div><label>RGP Number</label><input id="rgpNo" placeholder="RGP-00001"></div>
-              <div><label>RGP Date</label><input id="rgpDate" placeholder="25-6"></div>
-              <div><label>Due Date</label><input id="rgpDueDate" placeholder="30-6"></div>
+              <div><label>RGP Date</label><input id="rgpDate" placeholder="Date"></div>
+              <div><label>Due Date</label><input id="rgpDueDate" placeholder="Date"></div>
               <div><label>Department</label><input id="rgpDepartment" list="rgpDepartmentList" placeholder="Type department..."></div>
               <div><label>Workshop</label><input id="rgpWorkshop" list="rgpWorkshopList" placeholder="Type workshop..."></div>
 
               <div><label>Courier Name</label><input id="rgpCourier" list="rgpCourierList" placeholder="Type courier name..."></div>
               <div><label>Authorized By</label><input id="rgpAuthorized" list="rgpAuthorizedList" placeholder="Type authorized person..."></div>
               <div class="span-2"><label>Bill Detail</label><input id="rgpBillDetail" placeholder="Bill number / repair estimate / invoice detail"></div>
-              <div><label>Purpose</label><input id="rgpPurpose" placeholder="Repair, service, inspection..."></div>
+              <div><label>Remarks</label><input id="rgpRemarks" placeholder="Additional instructions or remarks"></div>
 
-              <div class="span-3"><label>Remarks</label><textarea id="rgpRemarks" placeholder="Additional instructions or remarks"></textarea></div>
+              <div class="span-3"><label>Purpose</label><textarea id="rgpPurpose" placeholder="Repair, service, inspection..."></textarea></div>
               <div><label>Vehicle Number</label><input id="rgpVehicle" placeholder="Optional vehicle number"></div>
               <div><label>Contact Number</label><input id="rgpContact" placeholder="Optional courier/workshop contact"></div>
             </div>
 
             <datalist id="rgpDepartmentList"><option>Mechanical</option><option>Electrical</option><option>Production</option><option>Maintenance</option></datalist>
-            <datalist id="rgpWorkshopList"><option>Workshop A</option><option>Electric Workshop</option><option>Lathe Workshop</option></datalist>
+            <datalist id="rgpWorkshopList"></datalist>
             <datalist id="rgpCourierList"><option>Muhammad Aslam</option><option>Ali Raza</option></datalist>
             <datalist id="rgpAuthorizedList"><option>Muhammad Waqas</option><option>Store Manager</option></datalist>
           </div>
@@ -4003,8 +4003,9 @@ function setRgpPage(page='dashboard'){
     if(note) note.textContent=notes[currentRgpPage];
   }
 
-  if(currentRgpPage==='entry' && document.querySelectorAll('#rgpItemsBody tr').length===0){
-    addRgpItemRow();
+  if(currentRgpPage==='entry'){
+    ensureRgpMasterLists();
+    if(document.querySelectorAll('#rgpItemsBody tr').length===0) addRgpItemRow();
   }
   const u=new URL(location.href);
   u.searchParams.set('studio','gatepass');
@@ -4036,6 +4037,85 @@ function openGatePassDashboard(type='dashboard'){
 
 
 let rgpRowCounter=0;
+
+
+function rgpMasterData(){
+  try{
+    if(typeof loadMasterData==='function') return loadMasterData()||{};
+    return JSON.parse(localStorage.getItem('erpUnifiedMastersV1')||'{}');
+  }catch(e){ return {}; }
+}
+
+function rgpItemDisplay(item){
+  const name=String(item?.name||item?.item_name||item?.itemName||'').trim();
+  const size=String(item?.size||item?.item_size||item?.itemSize||'').trim();
+  return [name,size].filter(Boolean).join(' - ');
+}
+
+function rgpItemCode(item){
+  return String(item?.code||item?.item_code||item?.itemCode||'').trim();
+}
+
+function rgpItemUnit(item){
+  return String(item?.unit||item?.unit_name||item?.unitName||item?.uom||'').trim();
+}
+
+function ensureRgpMasterLists(){
+  const data=rgpMasterData();
+
+  let itemList=document.getElementById('rgpItemList');
+  if(!itemList){
+    itemList=document.createElement('datalist');
+    itemList.id='rgpItemList';
+    document.body.appendChild(itemList);
+  }
+  const items=Array.isArray(data.items)?data.items:[];
+  itemList.innerHTML=items
+    .filter(x=>String(x.status||'Active').toLowerCase()!=='disabled')
+    .map(x=>`<option value="${rgpItemDisplay(x).replace(/"/g,'&quot;')}"></option>`)
+    .join('');
+
+  const workshopList=document.getElementById('rgpWorkshopList');
+  if(workshopList){
+    const workshops=Array.isArray(data.workshops)?data.workshops:[];
+    workshopList.innerHTML=workshops
+      .filter(x=>String(x.status||'Active').toLowerCase()!=='disabled')
+      .map(x=>`<option value="${String(x.name||x.workshop_name||x.workshopName||'').replace(/"/g,'&quot;')}"></option>`)
+      .join('');
+  }
+}
+
+function findRgpMasterItem(value){
+  const q=String(value||'').trim().toLowerCase();
+  if(!q) return null;
+  const items=Array.isArray(rgpMasterData().items)?rgpMasterData().items:[];
+  return items.find(x=>rgpItemDisplay(x).toLowerCase()===q)
+      || items.find(x=>String(x.name||x.item_name||x.itemName||'').trim().toLowerCase()===q)
+      || null;
+}
+
+function applyRgpMasterItem(tr){
+  if(!tr) return;
+  const input=tr.querySelector('.rgp-item');
+  const item=findRgpMasterItem(input?.value);
+  if(!item) return;
+  input.value=rgpItemDisplay(item);
+  const code=tr.querySelector('.rgp-code');
+  const unit=tr.querySelector('.rgp-unit');
+  if(code) code.value=rgpItemCode(item);
+  if(unit) unit.value=rgpItemUnit(item);
+  updateRgpItemTotals();
+}
+
+function formatRgpNumberField(){
+  const input=document.getElementById('rgpNo');
+  if(!input) return;
+  const raw=String(input.value||'').trim();
+  if(!raw) return;
+  const digits=(raw.match(/\d+/g)||[]).join('');
+  if(!digits) return;
+  input.value='RGP-'+String(parseInt(digits,10)||0).padStart(5,'0');
+}
 
 function formatRgpMoney(value){
   return 'PKR '+Number(value||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -4087,13 +4167,10 @@ function addRgpItemRow(data={}){
     updateRgpItemTotals();
   });
 
-  const list=document.getElementById('rgpItemList');
-  if(!list){
-    const dl=document.createElement('datalist');
-    dl.id='rgpItemList';
-    dl.innerHTML='<option value="M.S Welding Rod 6013 - 10 No."><option value="Bearing 6205"><option value="V-Belt A-32"><option value="Motor 15 HP">';
-    document.body.appendChild(dl);
-  }
+  ensureRgpMasterLists();
+  const itemInput=tr.querySelector('.rgp-item');
+  itemInput.addEventListener('change',()=>applyRgpMasterItem(tr));
+  itemInput.addEventListener('blur',()=>applyRgpMasterItem(tr));
   updateRgpItemTotals();
 }
 
@@ -6382,6 +6459,9 @@ function bind(){
   $('#rgpEntryClearTop')?.addEventListener('click',clearRgpEntryForm);
   $('#rgpSaveDraftBtn')?.addEventListener('click',()=>saveRgpEntry(true));
   $('#rgpSaveBtn')?.addEventListener('click',()=>saveRgpEntry(false));
+  $('#rgpNo')?.addEventListener('blur',formatRgpNumberField);
+  $('#rgpNo')?.addEventListener('change',formatRgpNumberField);
+  ensureRgpMasterLists();
   $('#purchaseMainBtn').addEventListener('click',()=>openPurchase(currentPurchaseTab||'dashboard'));
   $$('[data-purchase-tab]').forEach(b=>b.addEventListener('click',()=>openPurchase(b.dataset.purchaseTab)));
   $$('[data-purchase-header-tab]').forEach(b=>b.addEventListener('click',()=>openPurchase(b.dataset.purchaseHeaderTab)));
