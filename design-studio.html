@@ -1834,7 +1834,7 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
         </div>
         <div class="cc-toolbar">
           <button class="btn" id="backToGatePassBtn">← Gate Pass Dashboard</button>
-          <button class="btn" id="gatePassPageControllerBtn">⚙ Page Controller</button>
+          <button class="btn" id="gatePassPageControllerBtn" type="button" onclick="gpcOpen()">⚙ Page Controller</button>
           <button class="btn" id="rgpPrintBtn">Print</button>
         </div>
       </div>
@@ -4815,7 +4815,7 @@ function bindRgpListActions(){
 }
 
 
-const GPC_STORAGE_KEY='erpGatePassPageControllerV1';
+const GPC_STORAGE_KEY='erpGatePassPageControllerV2';
 
 const gpcDefaults={
   dashTitle:'RGP Management',
@@ -4860,21 +4860,32 @@ function gpcSetHidden(el,hidden){
 function gpcApplyColumns(tableSelector,configs){
   const table=document.querySelector(tableSelector);
   if(!table||!Array.isArray(configs)||!configs.length) return;
-  const rows=[...table.rows];
 
-  configs.forEach((cfg,newPosition)=>{
-    rows.forEach(row=>{
-      const cells=[...row.children];
-      const target=cells.find(cell=>Number(cell.dataset.gpcOriginalIndex)===Number(cfg.index))
-        || cells[cfg.index];
-      if(target){
-        target.dataset.gpcOriginalIndex=cfg.index;
-        target.style.display=cfg.visible===false?'none':'';
-        target.style.width=(cfg.width||120)+'px';
-        target.style.minWidth=(cfg.width||120)+'px';
-        if(row.parentElement?.tagName==='THEAD') target.textContent=cfg.title;
-        row.appendChild(target);
+  const rows=[...table.rows];
+  rows.forEach(row=>{
+    const current=[...row.children];
+
+    // Give every original cell a permanent index once.
+    current.forEach((cell,index)=>{
+      if(cell.dataset.gpcOriginalIndex===undefined || cell.dataset.gpcOriginalIndex===''){
+        cell.dataset.gpcOriginalIndex=String(index);
       }
+    });
+
+    const byOriginal=new Map(
+      [...row.children].map(cell=>[Number(cell.dataset.gpcOriginalIndex),cell])
+    );
+
+    configs.forEach(cfg=>{
+      const cell=byOriginal.get(Number(cfg.index));
+      if(!cell) return;
+      cell.style.display=cfg.visible===false?'none':'';
+      cell.style.width=(Number(cfg.width)||120)+'px';
+      cell.style.minWidth=(Number(cfg.width)||120)+'px';
+      if(row.parentElement?.tagName==='THEAD'){
+        cell.textContent=cfg.title||cell.textContent;
+      }
+      row.appendChild(cell);
     });
   });
 }
@@ -7344,122 +7355,6 @@ function closePrintSettings(){$('#printSettingsModal').classList.remove('open');
 function savePrintSettings(){const c=currentPrintSettings();c.marginMode=$('#psMargins').value;localStorage.setItem(`erpPrintSettings:${purchaseReportType}`,JSON.stringify(c));toast('Print settings saved for this report tab')}
 function printSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');openPrintSettings()}
 function printNowWithSettings(){if(!reportDesignSelected)return;const c=currentPrintSettings();let html=buildDesignedReportHtml({...reportDesignSelected,paper:c.orientation,showPage:c.pageNumbers,showGrid:c.gridlines});if(c.customHeader)html=`<div class="ps-custom-header">${rcEsc(c.customHeader)}</div>`+html;if(c.customFooter)html+=`<div class="ps-custom-footer">${rcEsc(c.customFooter)}</div>`;const margin=c.margins.map(x=>x+'mm').join(' ');const transform=c.scale==='adjust'?`transform:scale(${c.scalePercent/100});transform-origin:top left;width:${10000/c.scalePercent}%`:c.scale==='actual'?'':`width:100%;max-width:100%`;const justify=c.centerHorizontal?'center':'flex-start',align=c.centerVertical?'center':'flex-start';const bw=c.blackWhite?'filter:grayscale(1);':'';const w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(reportDesignSelected.designName||'Purchase Report')}</title><style>@page{size:${c.paper} ${c.orientation};margin:${margin}}html,body{margin:0;background:white;-webkit-print-color-adjust:${c.background?'exact':'economy'};print-color-adjust:${c.background?'exact':'economy'}}body{display:flex;justify-content:${justify};align-items:${align};min-height:100vh;${bw}}.generated-report{padding:0!important;${transform}}thead{display:${c.repeatHeader?'table-header-group':'table-row-group'}}tr{page-break-inside:avoid}.generated-page-number{display:${c.pageNumbers?'inline':'none'}}.ps-custom-header{position:fixed;top:${c.headerMargin}mm;left:0;right:0;text-align:center;font-size:9pt}.ps-custom-footer{position:fixed;bottom:${c.footerMargin}mm;left:0;right:0;text-align:center;font-size:8pt}${c.draft?'*{box-shadow:none!important;text-shadow:none!important}':''}@media print{body{margin:0}}</style></head><body>${html}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script>
-<div class="gpc-modal" id="gatePassPageControllerModal" aria-hidden="true">
-  <div class="gpc-box">
-    <div class="gpc-head">
-      <div>
-        <h2>Gate Pass Page Controller</h2>
-        <p>Control RGP Dashboard, RGP List and RGP Entry Form without changing the locked universal shell.</p>
-      </div>
-      <button class="gpc-close" id="gpcCloseBtn" type="button">×</button>
-    </div>
-
-    <div class="gpc-note">Settings are saved in this browser and applied instantly to all Gate Pass pages.</div>
-
-    <div class="gpc-tabs">
-      <button class="gpc-tab active" data-gpc-tab="dashboard">RGP Dashboard</button>
-      <button class="gpc-tab" data-gpc-tab="list">RGP List</button>
-      <button class="gpc-tab" data-gpc-tab="entry">RGP Entry Form</button>
-      <button class="gpc-tab" data-gpc-tab="global">Global Controls</button>
-    </div>
-
-    <div class="gpc-panel active" data-gpc-panel="dashboard">
-      <div class="gpc-grid">
-        <div class="gpc-field wide"><label>Page Title</label><input id="gpcDashTitle" value="RGP Management"></div>
-        <div class="gpc-field wide"><label>Page Subtitle</label><input id="gpcDashSubtitle" value="Returnable Gate Pass dashboard and entry controls."></div>
-      </div>
-      <div class="gpc-switches">
-        <label class="gpc-switch"><span>Show Navigation Cards</span><input type="checkbox" id="gpcShowNavCards" checked></label>
-        <label class="gpc-switch"><span>Show Summary Boxes</span><input type="checkbox" id="gpcShowDashSummary" checked></label>
-        <label class="gpc-switch"><span>Show Recent RGP Table</span><input type="checkbox" id="gpcShowRecentRgp" checked></label>
-        <label class="gpc-switch"><span>Show Return Status Box</span><input type="checkbox" id="gpcShowReturnStatus" checked></label>
-        <label class="gpc-switch"><span>Show Print Button</span><input type="checkbox" id="gpcShowPrintBtn" checked></label>
-        <label class="gpc-switch"><span>Show Back Button</span><input type="checkbox" id="gpcShowBackBtn" checked></label>
-      </div>
-    </div>
-
-    <div class="gpc-panel" data-gpc-panel="list">
-      <div class="gpc-grid">
-        <div class="gpc-field wide"><label>List Title</label><input id="gpcListTitle" value="RGP List"></div>
-        <div class="gpc-field wide"><label>List Subtitle</label><input id="gpcListSubtitle" value="Search, review, return, print and open complete RGP details."></div>
-        <div class="gpc-field"><label>Table Minimum Width (px)</label><input type="number" id="gpcTableWidth" min="900" max="3000" value="1500"></div>
-        <div class="gpc-field"><label>Table Maximum Height (px)</label><input type="number" id="gpcTableHeight" min="250" max="1000" value="540"></div>
-        <div class="gpc-field"><label>Header Position</label><select id="gpcHeaderSticky"><option value="sticky">Sticky</option><option value="normal">Normal</option></select></div>
-        <div class="gpc-field"><label>Row Density</label><select id="gpcRowDensity"><option value="compact">Compact</option><option value="normal" selected>Normal</option><option value="comfortable">Comfortable</option></select></div>
-      </div>
-      <div class="gpc-switches">
-        <label class="gpc-switch"><span>Show Search Filters</span><input type="checkbox" id="gpcShowListFilters" checked></label>
-        <label class="gpc-switch"><span>Show Summary Boxes</span><input type="checkbox" id="gpcShowListSummary" checked></label>
-        <label class="gpc-switch"><span>Show Export Excel</span><input type="checkbox" id="gpcShowExcel" checked></label>
-        <label class="gpc-switch"><span>Show Export PDF</span><input type="checkbox" id="gpcShowPdf" checked></label>
-        <label class="gpc-switch"><span>Show Action Column</span><input type="checkbox" id="gpcShowActions" checked></label>
-        <label class="gpc-switch"><span>Show Pending Value</span><input type="checkbox" id="gpcShowPendingValue" checked></label>
-      </div>
-      <div class="gpc-section">
-        <h3>RGP List Columns</h3>
-        <p>Rename, resize, show/hide and change the order of table columns.</p>
-        <div class="gpc-columns" id="gpcListColumns"></div>
-      </div>
-    </div>
-
-    <div class="gpc-panel" data-gpc-panel="entry">
-      <div class="gpc-grid">
-        <div class="gpc-field wide"><label>Entry Title</label><input id="gpcEntryTitle" value="RGP Entry Form"></div>
-        <div class="gpc-field wide"><label>Entry Subtitle</label><input id="gpcEntrySubtitle" value="Create one RGP with multiple returnable items."></div>
-        <div class="gpc-field"><label>Form Columns</label><select id="gpcEntryColumns"><option value="5" selected>5 Columns</option><option value="4">4 Columns</option><option value="3">3 Columns</option><option value="2">2 Columns</option><option value="1">1 Column</option></select></div>
-        <div class="gpc-field"><label>Item Table Minimum Width</label><input type="number" id="gpcEntryTableWidth" min="700" max="2200" value="980"></div>
-      </div>
-      <div class="gpc-switches">
-        <label class="gpc-switch"><span>Show Vehicle Number</span><input type="checkbox" id="gpcShowVehicle" checked></label>
-        <label class="gpc-switch"><span>Show Contact Number</span><input type="checkbox" id="gpcShowContact" checked></label>
-        <label class="gpc-switch"><span>Show Bill Detail</span><input type="checkbox" id="gpcShowBill" checked></label>
-        <label class="gpc-switch"><span>Show Remarks</span><input type="checkbox" id="gpcShowRemarks" checked></label>
-        <label class="gpc-switch"><span>Show Purpose</span><input type="checkbox" id="gpcShowPurpose" checked></label>
-        <label class="gpc-switch"><span>Show Summary Totals</span><input type="checkbox" id="gpcShowEntrySummary" checked></label>
-        <label class="gpc-switch"><span>Show Save Draft</span><input type="checkbox" id="gpcShowSaveDraft" checked></label>
-        <label class="gpc-switch"><span>Show Clear Buttons</span><input type="checkbox" id="gpcShowClearButtons" checked></label>
-      </div>
-      <div class="gpc-section">
-        <h3>Entry Item Table Columns</h3>
-        <p>Rename, resize and show/hide item entry columns.</p>
-        <div class="gpc-columns" id="gpcEntryColumnsBox"></div>
-      </div>
-    </div>
-
-    <div class="gpc-panel" data-gpc-panel="global">
-      <div class="gpc-grid">
-        <div class="gpc-field"><label>Card Radius</label><input type="number" id="gpcCardRadius" min="0" max="30" value="15"></div>
-        <div class="gpc-field"><label>Card Gap</label><input type="number" id="gpcCardGap" min="4" max="30" value="14"></div>
-        <div class="gpc-field"><label>Page Padding</label><input type="number" id="gpcPagePadding" min="6" max="40" value="18"></div>
-        <div class="gpc-field"><label>Table Font Size</label><input type="number" id="gpcTableFont" min="9" max="16" value="11"></div>
-      </div>
-      <div class="gpc-switches">
-        <label class="gpc-switch"><span>Freeze Table Headers</span><input type="checkbox" id="gpcFreezeHeaders" checked></label>
-        <label class="gpc-switch"><span>Show Page Controller Button</span><input type="checkbox" id="gpcShowControllerBtn" checked></label>
-        <label class="gpc-switch"><span>Remember Last RGP Page</span><input type="checkbox" id="gpcRememberPage" checked></label>
-      </div>
-    </div>
-
-    <div class="gpc-actions">
-      <button class="btn" id="gpcRestoreBtn" type="button">Restore Defaults</button>
-      <button class="btn" id="gpcPreviewBtn" type="button">Preview</button>
-      <button class="btn primary" id="gpcSaveBtn" type="button">Save & Apply</button>
-    </div>
-  </div>
-</div>
-
-
-<div class="rgp-confirm" id="rgpDeleteConfirm">
-  <div class="rgp-confirm-box">
-    <h3>Delete RGP Record</h3>
-    <p id="rgpDeleteText">Delete this RGP?</p>
-    <div class="rgp-confirm-actions">
-      <button class="btn" id="rgpDeleteCancelBtn" type="button">Cancel</button>
-      <button class="btn rgp-delete-btn" id="rgpDeleteConfirmBtn" type="button">Delete</button>
-    </div>
-  </div>
-</div>
-
 </body></html>`);w.document.close();w.focus();savePrintSettings();closePrintSettings()}
 async function pdfSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');const host=document.createElement('div');host.style.position='fixed';host.style.left='-100000px';host.style.top='0';host.innerHTML=buildDesignedReportHtml(reportDesignSelected);document.body.appendChild(host);if(window.html2pdf){try{const blob=await html2pdf().set({margin:0,filename:(reportDesignSelected.designName||'purchase-report')+'.pdf',html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:reportDesignSelected.paper||'landscape'},pagebreak:{mode:['css','legacy']}}).from(host.firstElementChild).outputPdf('blob');await purchaseReportSaveBlob(blob,(reportDesignSelected.designName||'purchase-report')+'.pdf');host.remove();closeReportDesignChooser();return}catch(e){console.error(e)}}host.remove();openPrintSettings()}
 
@@ -8192,4 +8087,133 @@ document.addEventListener('DOMContentLoaded',()=>{
 window.erpPageEditor={open:peOpen,apply:peApplyAll,isSuperAdmin:peIsSuper};
 })();
 </script>
+
+<div class="gpc-modal" id="gatePassPageControllerModal" aria-hidden="true">
+  <div class="gpc-box">
+    <div class="gpc-head">
+      <div>
+        <h2>Gate Pass Page Controller</h2>
+        <p>Control RGP Dashboard, RGP List and RGP Entry Form without changing the locked universal shell.</p>
+      </div>
+      <button class="gpc-close" id="gpcCloseBtn" type="button">×</button>
+    </div>
+    <div class="gpc-note">Settings are saved in this browser and applied instantly to all Gate Pass pages.</div>
+    <div class="gpc-tabs">
+      <button class="gpc-tab active" data-gpc-tab="dashboard">RGP Dashboard</button>
+      <button class="gpc-tab" data-gpc-tab="list">RGP List</button>
+      <button class="gpc-tab" data-gpc-tab="entry">RGP Entry Form</button>
+      <button class="gpc-tab" data-gpc-tab="global">Global Controls</button>
+    </div>
+    <div class="gpc-panel active" data-gpc-panel="dashboard">
+      <div class="gpc-grid">
+        <div class="gpc-field wide"><label>Page Title</label><input id="gpcDashTitle" value="RGP Management"></div>
+        <div class="gpc-field wide"><label>Page Subtitle</label><input id="gpcDashSubtitle" value="Returnable Gate Pass dashboard and entry controls."></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Show Navigation Cards</span><input type="checkbox" id="gpcShowNavCards" checked></label>
+        <label class="gpc-switch"><span>Show Summary Boxes</span><input type="checkbox" id="gpcShowDashSummary" checked></label>
+        <label class="gpc-switch"><span>Show Recent RGP Table</span><input type="checkbox" id="gpcShowRecentRgp" checked></label>
+        <label class="gpc-switch"><span>Show Return Status Box</span><input type="checkbox" id="gpcShowReturnStatus" checked></label>
+        <label class="gpc-switch"><span>Show Print Button</span><input type="checkbox" id="gpcShowPrintBtn" checked></label>
+        <label class="gpc-switch"><span>Show Back Button</span><input type="checkbox" id="gpcShowBackBtn" checked></label>
+      </div>
+    </div>
+    <div class="gpc-panel" data-gpc-panel="list">
+      <div class="gpc-grid">
+        <div class="gpc-field wide"><label>List Title</label><input id="gpcListTitle" value="RGP List"></div>
+        <div class="gpc-field wide"><label>List Subtitle</label><input id="gpcListSubtitle" value="Search, review, return, print and open complete RGP details."></div>
+        <div class="gpc-field"><label>Table Minimum Width (px)</label><input type="number" id="gpcTableWidth" min="900" max="3000" value="1500"></div>
+        <div class="gpc-field"><label>Table Maximum Height (px)</label><input type="number" id="gpcTableHeight" min="250" max="1000" value="540"></div>
+        <div class="gpc-field"><label>Header Position</label><select id="gpcHeaderSticky"><option value="sticky">Sticky</option><option value="normal">Normal</option></select></div>
+        <div class="gpc-field"><label>Row Density</label><select id="gpcRowDensity"><option value="compact">Compact</option><option value="normal" selected>Normal</option><option value="comfortable">Comfortable</option></select></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Show Search Filters</span><input type="checkbox" id="gpcShowListFilters" checked></label>
+        <label class="gpc-switch"><span>Show Summary Boxes</span><input type="checkbox" id="gpcShowListSummary" checked></label>
+        <label class="gpc-switch"><span>Show Export Excel</span><input type="checkbox" id="gpcShowExcel" checked></label>
+        <label class="gpc-switch"><span>Show Export PDF</span><input type="checkbox" id="gpcShowPdf" checked></label>
+        <label class="gpc-switch"><span>Show Action Column</span><input type="checkbox" id="gpcShowActions" checked></label>
+        <label class="gpc-switch"><span>Show Pending Value</span><input type="checkbox" id="gpcShowPendingValue" checked></label>
+      </div>
+      <div class="gpc-section">
+        <h3>RGP List Columns</h3>
+        <p>Rename, resize, show/hide and change the order of table columns.</p>
+        <div class="gpc-columns" id="gpcListColumns"></div>
+      </div>
+    </div>
+    <div class="gpc-panel" data-gpc-panel="entry">
+      <div class="gpc-grid">
+        <div class="gpc-field wide"><label>Entry Title</label><input id="gpcEntryTitle" value="RGP Entry Form"></div>
+        <div class="gpc-field wide"><label>Entry Subtitle</label><input id="gpcEntrySubtitle" value="Create one RGP with multiple returnable items."></div>
+        <div class="gpc-field"><label>Form Columns</label><select id="gpcEntryColumns"><option value="5" selected>5 Columns</option><option value="4">4 Columns</option><option value="3">3 Columns</option><option value="2">2 Columns</option><option value="1">1 Column</option></select></div>
+        <div class="gpc-field"><label>Item Table Minimum Width</label><input type="number" id="gpcEntryTableWidth" min="700" max="2200" value="980"></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Show Vehicle Number</span><input type="checkbox" id="gpcShowVehicle" checked></label>
+        <label class="gpc-switch"><span>Show Contact Number</span><input type="checkbox" id="gpcShowContact" checked></label>
+        <label class="gpc-switch"><span>Show Bill Detail</span><input type="checkbox" id="gpcShowBill" checked></label>
+        <label class="gpc-switch"><span>Show Remarks</span><input type="checkbox" id="gpcShowRemarks" checked></label>
+        <label class="gpc-switch"><span>Show Purpose</span><input type="checkbox" id="gpcShowPurpose" checked></label>
+        <label class="gpc-switch"><span>Show Summary Totals</span><input type="checkbox" id="gpcShowEntrySummary" checked></label>
+        <label class="gpc-switch"><span>Show Save Draft</span><input type="checkbox" id="gpcShowSaveDraft" checked></label>
+        <label class="gpc-switch"><span>Show Clear Buttons</span><input type="checkbox" id="gpcShowClearButtons" checked></label>
+      </div>
+      <div class="gpc-section">
+        <h3>Entry Item Table Columns</h3>
+        <p>Rename, resize and show/hide item entry columns.</p>
+        <div class="gpc-columns" id="gpcEntryColumnsBox"></div>
+      </div>
+    </div>
+    <div class="gpc-panel" data-gpc-panel="global">
+      <div class="gpc-grid">
+        <div class="gpc-field"><label>Card Radius</label><input type="number" id="gpcCardRadius" min="0" max="30" value="15"></div>
+        <div class="gpc-field"><label>Card Gap</label><input type="number" id="gpcCardGap" min="4" max="30" value="14"></div>
+        <div class="gpc-field"><label>Page Padding</label><input type="number" id="gpcPagePadding" min="6" max="40" value="18"></div>
+        <div class="gpc-field"><label>Table Font Size</label><input type="number" id="gpcTableFont" min="9" max="16" value="11"></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Freeze Table Headers</span><input type="checkbox" id="gpcFreezeHeaders" checked></label>
+        <label class="gpc-switch"><span>Show Page Controller Button</span><input type="checkbox" id="gpcShowControllerBtn" checked></label>
+        <label class="gpc-switch"><span>Remember Last RGP Page</span><input type="checkbox" id="gpcRememberPage" checked></label>
+      </div>
+    </div>
+    <div class="gpc-actions">
+      <button class="btn" id="gpcRestoreBtn" type="button">Restore Defaults</button>
+      <button class="btn" id="gpcPreviewBtn" type="button">Preview</button>
+      <button class="btn primary" id="gpcSaveBtn" type="button">Save & Apply</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="rgp-confirm" id="rgpDeleteConfirm">
+  <div class="rgp-confirm-box">
+    <h3>Delete RGP Record</h3>
+    <p id="rgpDeleteText">Delete this RGP?</p>
+    <div class="rgp-confirm-actions">
+      <button class="btn" id="rgpDeleteCancelBtn" type="button">Cancel</button>
+      <button class="btn rgp-delete-btn" id="rgpDeleteConfirmBtn" type="button">Delete</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const controllerButton=document.getElementById('gatePassPageControllerBtn');
+  if(controllerButton && !controllerButton.dataset.gpcSafetyBound){
+    controllerButton.dataset.gpcSafetyBound='1';
+    controllerButton.addEventListener('click',function(event){
+      event.preventDefault();
+      if(typeof gpcOpen==='function') gpcOpen();
+    });
+  }
+
+  // Restore clean default table order on first run of the fixed controller.
+  if(!localStorage.getItem('erpGatePassPageControllerV2') && typeof gpcApplySettings==='function'){
+    gpcApplySettings({...gpcDefaults,listColumns:[],entryColumnsConfig:[]});
+  }
+});
+</script>
+
 </body></html>
