@@ -5066,11 +5066,44 @@ function gpcLoadForm(){
   gpcBuildColumnEditor('gpcEntryColumnsBox','#rgpItemsTable','entryColumnsConfig');
 }
 
+
+function gpcSwitchTab(tab,button){
+  document.querySelectorAll('[data-gpc-tab]').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.gpcTab===tab);
+  });
+  document.querySelectorAll('[data-gpc-panel]').forEach(panel=>{
+    panel.classList.toggle('active',panel.dataset.gpcPanel===tab);
+  });
+  if(button) button.focus();
+}
+
+function gpcPreview(){
+  try{
+    const settings=gpcReadForm();
+    gpcApplySettings(settings);
+    toast('Controller preview applied');
+  }catch(error){
+    console.error(error);
+    toast('Preview could not be applied');
+  }
+}
+
 function gpcOpen(){
-  gpcLoadForm();
-  const modal=document.getElementById('gatePassPageControllerModal');
-  modal?.classList.add('open');
-  modal?.setAttribute('aria-hidden','false');
+  try{
+    gpcLoadForm();
+    const modal=document.getElementById('gatePassPageControllerModal');
+    if(!modal) return;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden','false');
+    gpcSwitchTab('dashboard');
+  }catch(error){
+    console.error(error);
+    const modal=document.getElementById('gatePassPageControllerModal');
+    if(modal){
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden','false');
+    }
+  }
 }
 function gpcClose(){
   const modal=document.getElementById('gatePassPageControllerModal');
@@ -5207,6 +5240,14 @@ function confirmDeleteRgp(){
   closeDeleteRgp();
 }
 
+
+
+window.gpcOpen=gpcOpen;
+window.gpcClose=gpcClose;
+window.gpcSave=gpcSave;
+window.gpcRestore=gpcRestore;
+window.gpcPreview=gpcPreview;
+window.gpcSwitchTab=gpcSwitchTab;
 
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
@@ -7485,15 +7526,7 @@ function bind(){
   $('#rgpDeleteConfirmBtn')?.addEventListener('click',confirmDeleteRgp);
   bindRgpListActions();
   $('#gatePassPageControllerBtn')?.addEventListener('click',gpcOpen);
-  $('#gpcCloseBtn')?.addEventListener('click',gpcClose);
-  $('#gpcSaveBtn')?.addEventListener('click',gpcSave);
-  $('#gpcPreviewBtn')?.addEventListener('click',()=>gpcApplySettings(gpcReadForm()));
-  $('#gpcRestoreBtn')?.addEventListener('click',gpcRestore);
   $('#gatePassPageControllerModal')?.addEventListener('click',e=>{if(e.target.id==='gatePassPageControllerModal')gpcClose()});
-  $$('[data-gpc-tab]').forEach(btn=>btn.addEventListener('click',()=>{
-    $$('[data-gpc-tab]').forEach(x=>x.classList.toggle('active',x===btn));
-    $$('[data-gpc-panel]').forEach(x=>x.classList.toggle('active',x.dataset.gpcPanel===btn.dataset.gpcTab));
-  }));
   gpcApplySettings();
   $('#rgpNo')?.addEventListener('blur',formatRgpNumberField);
   $('#rgpNo')?.addEventListener('change',formatRgpNumberField);
@@ -8095,14 +8128,14 @@ window.erpPageEditor={open:peOpen,apply:peApplyAll,isSuperAdmin:peIsSuper};
         <h2>Gate Pass Page Controller</h2>
         <p>Control RGP Dashboard, RGP List and RGP Entry Form without changing the locked universal shell.</p>
       </div>
-      <button class="gpc-close" id="gpcCloseBtn" type="button">×</button>
+      <button class="gpc-close" id="gpcCloseBtn" type="button" onclick="gpcClose()">×</button>
     </div>
     <div class="gpc-note">Settings are saved in this browser and applied instantly to all Gate Pass pages.</div>
     <div class="gpc-tabs">
-      <button class="gpc-tab active" data-gpc-tab="dashboard">RGP Dashboard</button>
-      <button class="gpc-tab" data-gpc-tab="list">RGP List</button>
-      <button class="gpc-tab" data-gpc-tab="entry">RGP Entry Form</button>
-      <button class="gpc-tab" data-gpc-tab="global">Global Controls</button>
+      <button class="gpc-tab active" data-gpc-tab="dashboard" type="button" onclick="gpcSwitchTab('dashboard',this)">RGP Dashboard</button>
+      <button class="gpc-tab" data-gpc-tab="list" type="button" onclick="gpcSwitchTab('list',this)">RGP List</button>
+      <button class="gpc-tab" data-gpc-tab="entry" type="button" onclick="gpcSwitchTab('entry',this)">RGP Entry Form</button>
+      <button class="gpc-tab" data-gpc-tab="global" type="button" onclick="gpcSwitchTab('global',this)">Global Controls</button>
     </div>
     <div class="gpc-panel active" data-gpc-panel="dashboard">
       <div class="gpc-grid">
@@ -8178,9 +8211,9 @@ window.erpPageEditor={open:peOpen,apply:peApplyAll,isSuperAdmin:peIsSuper};
       </div>
     </div>
     <div class="gpc-actions">
-      <button class="btn" id="gpcRestoreBtn" type="button">Restore Defaults</button>
-      <button class="btn" id="gpcPreviewBtn" type="button">Preview</button>
-      <button class="btn primary" id="gpcSaveBtn" type="button">Save & Apply</button>
+      <button class="btn" id="gpcRestoreBtn" type="button" onclick="gpcRestore()">Restore Defaults</button>
+      <button class="btn" id="gpcPreviewBtn" type="button" onclick="gpcPreview()">Preview</button>
+      <button class="btn primary" id="gpcSaveBtn" type="button" onclick="gpcSave()">Save & Apply</button>
     </div>
   </div>
 </div>
@@ -8212,6 +8245,20 @@ document.addEventListener('DOMContentLoaded',function(){
   // Restore clean default table order on first run of the fixed controller.
   if(!localStorage.getItem('erpGatePassPageControllerV2') && typeof gpcApplySettings==='function'){
     gpcApplySettings({...gpcDefaults,listColumns:[],entryColumnsConfig:[]});
+  }
+});
+</script>
+
+
+<script>
+document.addEventListener('click',function(event){
+  const modal=document.getElementById('gatePassPageControllerModal');
+  if(modal && event.target===modal && typeof gpcClose==='function') gpcClose();
+});
+document.addEventListener('keydown',function(event){
+  if(event.key==='Escape'){
+    const modal=document.getElementById('gatePassPageControllerModal');
+    if(modal?.classList.contains('open') && typeof gpcClose==='function') gpcClose();
   }
 });
 </script>
