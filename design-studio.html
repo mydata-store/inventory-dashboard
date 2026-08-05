@@ -1665,7 +1665,7 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
     <button class="purchase-tab" data-purchase-header-tab="suppliers">Supplier Analysis</button>
     <button class="purchase-tab" data-purchase-header-tab="settings">Purchase Settings</button>
   </div>
-</div><div class="actions"><a class="btn" href="costing.html">← Costing Dashboard</a><button class="btn" id="designPageBtn">✎ Design Page</button><button class="btn" id="universalEditPageBtn">✎ Edit Page</button><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
+</div><div class="actions"><button class="btn" type="button" id="studioBackBtn" title="Previous Design Studio page">← Back</button><button class="btn" type="button" id="studioForwardBtn" title="Next Design Studio page">Forward →</button><button class="btn" id="designPageBtn">✎ Design Page</button><button class="btn" id="universalEditPageBtn">✎ Edit Page</button><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
 <main class="content">
 <div class="notice">Changes preview instantly. Use <b>Save & Apply</b> to store them for connected ERP pages.</div>
 <section class="panel" id="panel-print-studio">
@@ -7737,6 +7737,7 @@ function openStudioPanel(name,section){
     const u=new URL(location.href);u.searchParams.delete('studio');u.searchParams.delete('section');history.replaceState(null,'',u);
   }
   setTimeout(ccApplyPageDesign,0);
+  if(typeof window.dsRecordStudioRoute==='function') window.dsRecordStudioRoute(name,section||'');
 }
 
 /* Universal Report Center V7.8 */
@@ -8738,38 +8739,29 @@ function cleanTitle(v){return String(v||'').replace(/\s+/g,' ').trim()}
 function inferModule(el){const text=cleanTitle(el?.closest('.panel')?.querySelector('h1,h2')?.textContent||el?.closest('section')?.querySelector('h1,h2')?.textContent||'');const id=(el?.closest('.panel,section,div[id]')?.id||'').toLowerCase();if(/purchase|indent|grn|supplier/.test(id+' '+text))return 'Purchase';if(/rgp|ogp|cgp|gate pass/.test(id+' '+text))return 'Gate Pass';if(/master|item|department|workshop|unit|carrier|vehicle|rack|authorization|employee|category/.test(id+' '+text))return 'Masters';if(/issue/.test(id+' '+text))return 'Issue';if(/stock|ledger|inventory/.test(id+' '+text))return 'Stock & Ledger';if(/report|analysis/.test(id+' '+text))return 'Reports';if(/control|user|permission|role|session|security/.test(id+' '+text))return 'Control Center';if(/costing|consumption/.test(id+' '+text))return 'Costing & Consumption';return 'Other'}
 function uniquePageId(base){let id=base||'print-page',n=2;while(registry[id])id=(base||'print-page')+'-'+n++;return id}
 function discoverPages(){
-  /* Clean page discovery: only real report pages are listed. Entry grids,
-     designer previews and unnamed internal tables are intentionally ignored. */
   const known=[
-    ['local-purchase','Purchase','Local Purchase Register','#localPurchaseTable,#purchaseLocalTable,#lpTable'],
-    ['zafar-purchase','Purchase','Zafar Purchase Register','#zafarPurchaseTable,#purchaseZafarTable'],
-    ['board-purchase','Purchase','Board Purchase Register','#boardPurchaseTable,#purchaseBoardTable'],
+    ['local-purchase','Purchase','Local Purchase','#localPurchaseTable,#purchaseLocalTable,#lpTable'],
+    ['zafar-purchase','Purchase','Zafar Purchase','#zafarPurchaseTable,#purchaseZafarTable'],
+    ['board-purchase','Purchase','Board Purchase','#boardPurchaseTable,#purchaseBoardTable'],
     ['purchase-indent','Purchase','Purchase Indent','#purchaseIndentTable,#indentTable'],
     ['rgp-list','Gate Pass','Returnable Gate Pass Register','#rgpListTable'],
     ['ogp-list','Gate Pass','Out Gate Pass Register','#ogpListTable'],
     ['cgp-list','Gate Pass','Cash Gate Pass Register','#cgpListTable'],
-    ['issue-register','Issue','Issue Register','#issueListTable,#issueRegisterTable'],
+    ['issue-register','Issue','Issue Register','#issueTable,#issueListTable'],
     ['stock-ledger','Stock & Ledger','Stock Ledger','#stockLedgerTable'],
     ['item-ledger','Stock & Ledger','Item Ledger','#itemLedgerTable'],
     ['masters-register','Masters','Masters Register','#masterTable,.master-table']
   ];
-  known.forEach(([id,module,title,selector])=>{
-    const table=document.querySelector(selector);
-    if(table&&!registry[id])registerPage({id,module,title,selector,getData:()=>tableData(selector,title,module,id),auto:true});
-  });
-
-  /* Future pages join the manager without changing Print Designer code.
-     Add data-print-page, data-print-title and data-print-module to the page table. */
-  document.querySelectorAll('table[data-print-page]').forEach((table,index)=>{
+  known.forEach(([id,module,title,selector])=>{const table=document.querySelector(selector);if(table&&!registry[id])registerPage({id,module,title,selector,getData:()=>tableData(selector,title,module,id),auto:true})});
+  document.querySelectorAll('table').forEach((table,index)=>{
     if(table.closest('#erpPrintDesignerModal,#erpPrintDesignerStudio,.ups-layout'))return;
     if(!table.querySelector('thead th'))return;
-    const id=cleanTitle(table.dataset.printPage||'').replace(/[^a-zA-Z0-9_-]/g,'-').toLowerCase()||('registered-page-'+index);
-    if(registry[id])return;
-    if(!table.id)table.id='pdRegisteredTable'+index;
-    const module=cleanTitle(table.dataset.printModule)||inferModule(table);
-    const title=cleanTitle(table.dataset.printTitle)||cleanTitle(table.getAttribute('aria-label'))||'ERP Register';
-    const selector='#'+table.id;
-    registerPage({id,module,title,selector,getData:()=>tableData(selector,title,module,id),auto:true});
+    const already=Object.values(registry).some(p=>p.selector&&table.matches(p.selector));if(already)return;
+    const holder=table.closest('[data-rgp-page],.panel,section,.card,div[id]');
+    const raw=(table.id||holder?.id||('table-'+index)).replace(/[^a-zA-Z0-9_-]/g,'-').toLowerCase();
+    const id=uniquePageId('auto-'+raw);const heading=cleanTitle(holder?.querySelector(':scope > h1,:scope > h2,:scope > .gatepass-page-heading h2,:scope > .rgp-items-head h3,:scope > .master-list-head h3')?.textContent||table.getAttribute('aria-label')||table.id||'ERP Register');
+    const module=inferModule(holder||table);const title=heading||table.id||'ERP Register';
+    registerPage({id,module,title,selector:'#'+(table.id||(table.id='pdAutoTable'+index)),auto:true,getData:()=>tableData('#'+table.id,title,module,id)});
   });
   return Object.values(registry);
 }
@@ -8825,9 +8817,9 @@ function bindQuick(){
   $('#pdResetCols')?.addEventListener('click',()=>{list.querySelectorAll('[data-col-width]').forEach(x=>x.value='');list.querySelectorAll('[data-col-align]').forEach(x=>x.value='auto');rerender()});
 }
 function renderModalForm(){const d=designFor(currentPageId);currentDesignId=d.id;$('#pdQuickForm').innerHTML=quickForm(d);applyPaper($('#pdModalPaper'),d);bindQuick()}
-function open(pageId){currentPageId=pageId;const cfg=registry[pageId];currentData=cfg?.getData?cfg.getData():tableData('table',pageId,'Other',pageId);const assigned=designFor(pageId);if(assigned)currentDesignId=assigned.id;$('#pdModalTitle').textContent=`Print Designer — ${currentData.title||pageId}`;$('#pdModalSub').textContent=`Live data from ${currentData.module||'ERP'} • ${currentData.rows?.length||0} record(s) • Assigned design: ${assigned?.name||'Default'}`;renderModalForm();$('#erpPrintDesignerModal').classList.add('open');$('#erpPrintDesignerModal').setAttribute('aria-hidden','false')}
+function open(pageId){currentPageId=pageId;const cfg=registry[pageId];currentData=cfg?.getData?cfg.getData():tableData('table',pageId,'Other',pageId);$('#pdModalTitle').textContent=`Print Designer — ${currentData.title||pageId}`;$('#pdModalSub').textContent=`Live data from ${currentData.module||'ERP'} • ${currentData.rows?.length||0} record(s)`;renderModalForm();$('#erpPrintDesignerModal').classList.add('open');$('#erpPrintDesignerModal').setAttribute('aria-hidden','false')}
 function close(){$('#erpPrintDesignerModal').classList.remove('open');$('#erpPrintDesignerModal').setAttribute('aria-hidden','true')}
-function renderStudio(){const panel=$('#panel-print-studio');if(!panel)return;discoverPages();let host=$('#erpPrintDesignerStudio');if(!host){host=document.createElement('div');host.id='erpPrintDesignerStudio';panel.appendChild(host)}host.innerHTML=`<div class="pd-shell"><div class="card pd-head"><div><h2>ERP Print Designer</h2><p>Create a design once and assign it to any real ERP report page. Future pages appear automatically when marked as printable.</p><div class="pd-page-count" id="pdPageCount"></div></div><div class="pd-actions"><button class="btn" id="pdRefreshPages">Refresh Pages</button><button class="btn" id="pdNew">New Design</button><button class="btn" id="pdDuplicate">Duplicate</button><button class="btn primary" id="pdSaveStudio">Edit Selected Design</button></div></div><div class="card pd-tabs"><button class="pd-tab active" data-pdtab="designs">Designs</button><button class="pd-tab" data-pdtab="assign">Print Page Manager</button><button class="pd-tab" data-pdtab="help">How It Works</button></div><div class="pd-pane active" data-pdpane="designs"><div class="pd-grid"><div class="pd-card"><h3>Saved Designs</h3><p class="sub">Choose a design, duplicate it, or edit it.</p><div class="pd-template-list" id="pdTemplateList"></div></div><div class="pd-card"><h3>Live Design Preview</h3><p class="sub">The selected design is shown with sample data.</p><div class="pd-stage"><div class="pd-paper" id="pdStudioPaper"></div></div></div></div></div><div class="pd-pane" data-pdpane="assign"><div class="pd-card"><h3>Print Page Manager</h3><p class="sub">Only proper printable report pages appear here. Select a design for one page, a complete module, or all future pages.</p><div class="pd-default-note">Future pages automatically use the <b>Default Design</b> until you assign another design.</div><div class="pd-manager-toolbar"><div><label>Search Page</label><input id="pdPageSearch" placeholder="Type page or module name..."></div><div><label>Module</label><select id="pdModuleFilter"><option value="">All Modules</option></select></div><div><label>Default Design for New Pages</label><select id="pdDefaultDesign"></select></div><button class="btn" id="pdApplyModule">Apply to Module</button><button class="btn primary" id="pdApplyAll">Apply to All Pages</button></div><div style="overflow:auto"><table class="pd-assign-table"><thead><tr><th>Module</th><th>Page</th><th>Status</th><th>Assigned Design</th><th>Preview</th></tr></thead><tbody id="pdAssignBody"></tbody></table></div></div></div><div class="pd-pane" data-pdpane="help"><div class="pd-card"><h3>No coding needed</h3><div class="pd-help-grid"><div class="pd-help-step"><b>1. Create a design</b>Set the header, paper, table and footer once.</div><div class="pd-help-step"><b>2. Assign it</b>Choose one page, a complete module, or all pages.</div><div class="pd-help-step"><b>3. Press Print</b>The page sends its current visible and filtered data automatically.</div></div><p style="margin-top:14px">When a future report page is created, mark its report table as printable and it will appear here. Press <b>Refresh Pages</b> to detect it immediately.</p></div></div></div>`;bindStudio();renderTemplates();renderAssignments();const c=$('#pdPageCount');if(c)c.textContent=`${Object.keys(registry).length} printable page(s) detected`}
+function renderStudio(){const panel=$('#panel-print-studio');if(!panel)return;discoverPages();let host=$('#erpPrintDesignerStudio');if(!host){host=document.createElement('div');host.id='erpPrintDesignerStudio';panel.appendChild(host)}host.innerHTML=`<div class="pd-shell"><div class="card pd-head"><div><h2>ERP Print Designer</h2><p>Create a design once and use it on any current or future ERP page. New tables are detected automatically.</p><div class="pd-page-count" id="pdPageCount"></div></div><div class="pd-actions"><button class="btn" id="pdRefreshPages">Refresh Pages</button><button class="btn" id="pdNew">New Design</button><button class="btn" id="pdDuplicate">Duplicate</button><button class="btn primary" id="pdSaveStudio">Edit Selected Design</button></div></div><div class="card pd-tabs"><button class="pd-tab active" data-pdtab="designs">Designs</button><button class="pd-tab" data-pdtab="assign">Print Page Manager</button><button class="pd-tab" data-pdtab="help">How It Works</button></div><div class="pd-pane active" data-pdpane="designs"><div class="pd-grid"><div class="pd-card"><h3>Saved Designs</h3><p class="sub">Choose a design, duplicate it, or edit it.</p><div class="pd-template-list" id="pdTemplateList"></div></div><div class="pd-card"><h3>Live Design Preview</h3><p class="sub">The selected design is shown with sample data.</p><div class="pd-stage"><div class="pd-paper" id="pdStudioPaper"></div></div></div></div></div><div class="pd-pane" data-pdpane="assign"><div class="pd-card"><h3>Print Page Manager</h3><p class="sub">Every detected ERP table appears here. Select a design for a page, a whole module, or all future pages.</p><div class="pd-default-note">Future pages automatically use the <b>Default Design</b> until you assign another design.</div><div class="pd-manager-toolbar"><div><label>Search Page</label><input id="pdPageSearch" placeholder="Type page or module name..."></div><div><label>Module</label><select id="pdModuleFilter"><option value="">All Modules</option></select></div><div><label>Default Design for New Pages</label><select id="pdDefaultDesign"></select></div><button class="btn" id="pdApplyModule">Apply to Module</button><button class="btn primary" id="pdApplyAll">Apply to All Pages</button></div><div style="overflow:auto"><table class="pd-assign-table"><thead><tr><th>Module</th><th>Page</th><th>Status</th><th>Assigned Design</th><th>Preview</th></tr></thead><tbody id="pdAssignBody"></tbody></table></div></div></div><div class="pd-pane" data-pdpane="help"><div class="pd-card"><h3>No coding needed</h3><div class="pd-help-grid"><div class="pd-help-step"><b>1. Create a design</b>Set the header, paper, table and footer once.</div><div class="pd-help-step"><b>2. Assign it</b>Choose one page, a complete module, or all pages.</div><div class="pd-help-step"><b>3. Press Print</b>The page sends its current visible and filtered data automatically.</div></div><p style="margin-top:14px">When a new page with a table is added, Print Designer detects it automatically. Press <b>Refresh Pages</b> if it does not appear immediately.</p></div></div></div>`;bindStudio();renderTemplates();renderAssignments();const c=$('#pdPageCount');if(c)c.textContent=`${Object.keys(registry).length} printable page(s) detected`}
 function sample(){return {pageId:'sample',module:'Gate Pass',title:'Returnable Gate Pass Register',columns:['RGP No.','Date','Item Name with Size','Qty','Department','Workshop','Status'],rows:[['RGP-00005','05-Aug-26','Motor Bearing 6205','4','Mechanical','Prime Engineering','Pending'],['RGP-00004','04-Aug-26','Hydraulic Pump Seal','2','Production','Service Point','Partial'],['RGP-00003','03-Aug-26','V-Belt B-72','6','Mechanical','Bismillah Workshop','Closed']],filters:[['Status','All']]}}
 function renderTemplates(){const list=$('#pdTemplateList');if(!list)return;list.innerHTML=designs().map(d=>`<div class="pd-template ${d.id===currentDesignId?'active':''}" data-id="${d.id}"><div><b>${esc(d.name)}</b><small>${d.paper} • ${d.orientation} • ${d.fontSize}px table</small></div><button class="cc-mini danger" data-del="${d.id}" ${designs().length===1?'disabled':''}>Delete</button></div>`).join('');list.querySelectorAll('.pd-template').forEach(x=>x.onclick=e=>{if(e.target.dataset.del)return;currentDesignId=x.dataset.id;currentData=sample();renderTemplates();applyPaper($('#pdStudioPaper'),currentDesign())});list.querySelectorAll('[data-del]').forEach(b=>b.onclick=e=>{e.stopPropagation();let ds=designs().filter(x=>x.id!==b.dataset.del);saveDesigns(ds);if(currentDesignId===b.dataset.del)currentDesignId=ds[0].id;renderTemplates();renderAssignments();applyPaper($('#pdStudioPaper'),currentDesign())});currentData=sample();applyPaper($('#pdStudioPaper'),currentDesign())}
 function renderAssignments(){discoverPages();const body=$('#pdAssignBody');if(!body)return;const a=assignments(),ds=designs();const search=($('#pdPageSearch')?.value||'').toLowerCase(),filter=$('#pdModuleFilter')?.value||'';const pages=Object.values(registry).filter(p=>(!filter||p.module===filter)&&(!search||(p.module+' '+p.title).toLowerCase().includes(search))).sort((x,y)=>x.module.localeCompare(y.module)||x.title.localeCompare(y.title));let last='';body.innerHTML=pages.map(p=>{let h='';if(p.module!==last){last=p.module;h=`<tr class="pd-module-head"><td colspan="5">${esc(p.module)}</td></tr>`}const status=pageStatus(p);return h+`<tr><td>${esc(p.module)}</td><td><b>${esc(p.title)}</b><div style="font-size:10px;color:var(--muted)">${esc(p.id)}</div></td><td><span class="pd-status ${status}">${status==='ready'?'Connected':'Needs Data Mapping'}</span></td><td><select data-page="${p.id}"><option value="">Use Default Design</option>${ds.map(d=>`<option value="${d.id}" ${a[p.id]===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></td><td><button class="cc-mini primary" data-test="${p.id}">Preview</button></td></tr>`}).join('')||`<tr><td colspan="5" class="pd-empty">No pages match your search.</td></tr>`;body.querySelectorAll('select[data-page]').forEach(s=>s.onchange=()=>{const x=assignments();if(s.value)x[s.dataset.page]=s.value;else delete x[s.dataset.page];saveAssignments(x);if(typeof toast==='function')toast('Print design assignment saved')});body.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>open(b.dataset.test))}
@@ -8871,4 +8863,282 @@ window.ERPPrintDesigner={registerPage,open,refresh:discoverPages,getPages:()=>Ob
 /* ERP Print Designer V3.0 — Table and Column Designer */
 .pd-editor-tabs{grid-column:1/-1;display:flex;gap:6px;position:sticky;top:0;z-index:4;background:var(--surface);padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px}.pd-editor-tab{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 6px;font-size:10px;font-weight:900;cursor:pointer}.pd-editor-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}.pd-edit-pane{display:none;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.pd-edit-pane.active{display:grid}.pd-column-toolbar{display:flex;gap:6px;flex-wrap:wrap}.pd-column-toolbar .btn{padding:7px 9px;font-size:10px}.pd-column-head,.pd-col-row{display:grid;grid-template-columns:58px minmax(120px,1fr) 72px 92px 58px;gap:6px;align-items:center}.pd-column-head{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);padding:7px 5px;border-bottom:1px solid var(--border)}.pd-column-list{display:grid;gap:5px;max-height:360px;overflow:auto;padding-right:3px}.pd-col-row{padding:6px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}.pd-col-show{display:flex!important;align-items:center;gap:4px;margin:0!important;font-size:10px!important;text-transform:none!important}.pd-col-show input{width:auto!important;height:auto!important}.pd-col-name{font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pd-col-row input,.pd-col-row select{height:32px!important;padding:0 6px!important;font-size:10px}.pd-col-move{display:flex;gap:3px}.pd-col-move button{width:26px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:900}.pd-report-table{max-width:100%}.pd-report-table th,.pd-report-table td{overflow:hidden}.pd-quick{align-content:start}@media(max-width:650px){.pd-column-head{display:none}.pd-col-row{grid-template-columns:70px 1fr}.pd-col-row>*{min-width:0}.pd-col-move{grid-column:1/-1}.pd-edit-pane{grid-template-columns:1fr}}
 </style>
+
+<style>
+#studioBackBtn:disabled,#studioForwardBtn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+#studioBackBtn,#studioForwardBtn{min-width:82px}
+</style>
+<script>
+/* Design Studio V12.0 — internal Back/Forward navigation and exact refresh restore. */
+(function(){
+  const ROUTE_KEY='erpDesignStudio:lastRoute:v1';
+  const HISTORY_KEY='erpDesignStudio:routeHistory:v1';
+  const INDEX_KEY='erpDesignStudio:routeIndex:v1';
+  let restoring=false;
+
+  function readHistory(){
+    try{const v=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}
+  }
+  function readIndex(){const n=Number(sessionStorage.getItem(INDEX_KEY));return Number.isFinite(n)?n:-1}
+  function same(a,b){return !!a&&!!b&&a.panel===b.panel&&(a.section||'')===(b.section||'')&&(a.tab||'')===(b.tab||'')}
+  function currentTab(){return document.querySelector('#erpPrintDesignerStudio .pd-tab.active')?.dataset.pdtab||''}
+  function makeRoute(panel,section){return {panel:panel||'theme',section:section||'',tab:panel==='print-studio'?(currentTab()||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''}}
+  function updateButtons(){
+    const h=readHistory(),i=readIndex(),back=document.getElementById('studioBackBtn'),forward=document.getElementById('studioForwardBtn');
+    if(back)back.disabled=i<=0;
+    if(forward)forward.disabled=i<0||i>=h.length-1;
+  }
+  function writeUrl(route,replace){
+    const u=new URL(location.href);
+    u.searchParams.set('studio','design-studio');
+    u.searchParams.set('section',route.panel||'theme');
+    if(route.section)u.searchParams.set('subsection',route.section);else u.searchParams.delete('subsection');
+    if(route.tab)u.searchParams.set('tab',route.tab);else u.searchParams.delete('tab');
+    u.searchParams.delete('page');
+    const state={erpDesignStudioRoute:route};
+    try{history[replace?'replaceState':'pushState'](state,'',u)}catch(e){history.replaceState(state,'',u)}
+  }
+  function saveLast(route){localStorage.setItem(ROUTE_KEY,JSON.stringify(route))}
+  function activatePrintTab(tab){
+    tab=tab||'designs';
+    const host=document.getElementById('erpPrintDesignerStudio');
+    if(!host)return false;
+    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`);
+    if(!btn)return false;
+    host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
+    host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===tab));
+    localStorage.setItem('erpPrintDesigner:lastTab',tab);
+    return true;
+  }
+  function apply(route,fromHistory){
+    if(!route)return;
+    restoring=true;window.__dsRestoringRoute=true;
+    try{
+      if(typeof openStudioPanel==='function')openStudioPanel(route.panel||'theme',route.section||'');
+      if(route.panel==='print-studio'){
+        let tries=0;const timer=setInterval(()=>{tries++;if(activatePrintTab(route.tab)||tries>20)clearInterval(timer)},50);
+      }
+      saveLast(route);
+      if(!fromHistory)writeUrl(route,true);
+    }finally{setTimeout(()=>{restoring=false;window.__dsRestoringRoute=false;updateButtons()},0)}
+  }
+  window.dsRecordStudioRoute=function(panel,section){
+    const route=makeRoute(panel,section);
+    saveLast(route);
+    if(restoring||window.__dsRestoringRoute){writeUrl(route,true);updateButtons();return}
+    let h=readHistory(),i=readIndex();
+    if(i<0){h=[route];i=0;sessionStorage.setItem(HISTORY_KEY,JSON.stringify(h));sessionStorage.setItem(INDEX_KEY,String(i));writeUrl(route,true);updateButtons();return}
+    if(same(h[i],route)){writeUrl(route,true);updateButtons();return}
+    h=h.slice(0,i+1);h.push(route);i=h.length-1;
+    sessionStorage.setItem(HISTORY_KEY,JSON.stringify(h));sessionStorage.setItem(INDEX_KEY,String(i));
+    writeUrl(route,false);updateButtons();
+  };
+  function move(delta){
+    const h=readHistory();let i=readIndex()+delta;if(i<0||i>=h.length)return;
+    sessionStorage.setItem(INDEX_KEY,String(i));apply(h[i],true);writeUrl(h[i],true);updateButtons();
+  }
+  function routeFromUrl(){
+    const p=new URLSearchParams(location.search);
+    if(p.get('studio')==='design-studio')return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
+    try{return JSON.parse(localStorage.getItem(ROUTE_KEY)||'null')}catch(e){return null}
+  }
+  document.addEventListener('click',function(e){
+    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+    if(tab){
+      const name=tab.dataset.pdtab;localStorage.setItem('erpPrintDesigner:lastTab',name);
+      setTimeout(()=>window.dsRecordStudioRoute('print-studio',''),0);
+    }
+  },true);
+  window.addEventListener('popstate',function(e){
+    const route=e.state?.erpDesignStudioRoute||routeFromUrl();if(route)apply(route,true);
+  });
+  document.addEventListener('DOMContentLoaded',function(){
+    const back=document.getElementById('studioBackBtn'),forward=document.getElementById('studioForwardBtn');
+    if(back)back.onclick=()=>move(-1);
+    if(forward)forward.onclick=()=>move(1);
+    const route=routeFromUrl()||{panel:'theme',section:'',tab:''};
+    let h=readHistory(),i=readIndex();
+    if(!h.length){h=[route];i=0;sessionStorage.setItem(HISTORY_KEY,JSON.stringify(h));sessionStorage.setItem(INDEX_KEY,'0')}
+    setTimeout(()=>apply(route,false),120);
+    updateButtons();
+  });
+})();
+</script>
+
+<style>
+/* V12.1 final internal navigation fix */
+#studioBackBtn,#studioForwardBtn{display:inline-flex!important;align-items:center;justify-content:center}
+</style>
+<script>
+/* Design Studio V12.1 — keep all navigation inside Design Studio and restore the exact page after refresh. */
+(function(){
+  const LAST='erpDesignStudio:lastExactRoute:v2';
+  const STACK='erpDesignStudio:internalStack:v2';
+  const POS='erpDesignStudio:internalPos:v2';
+  let busy=false;
+  const read=(k,d)=>{try{const v=JSON.parse(sessionStorage.getItem(k)||'null');return v??d}catch(e){return d}};
+  const write=(k,v)=>sessionStorage.setItem(k,JSON.stringify(v));
+  const saved=()=>{try{return JSON.parse(localStorage.getItem(LAST)||'null')}catch(e){return null}};
+  const activePrintTab=()=>document.querySelector('#erpPrintDesignerStudio .pd-tab.active')?.dataset.pdtab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
+  const norm=r=>({panel:r?.panel||'theme',section:r?.section||'',tab:(r?.panel==='print-studio'?(r?.tab||activePrintTab()):'')});
+  const equal=(a,b)=>a&&b&&a.panel===b.panel&&(a.section||'')===(b.section||'')&&(a.tab||'')===(b.tab||'');
+  function urlRoute(){
+    const p=new URLSearchParams(location.search);
+    if(p.get('studio')!=='design-studio')return null;
+    return norm({panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''});
+  }
+  function setUrl(r){
+    const u=new URL(location.href);u.searchParams.set('studio','design-studio');u.searchParams.set('section',r.panel);
+    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
+    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');u.searchParams.delete('page');
+    history.replaceState({dsExact:r},'',u);
+  }
+  function buttons(){
+    const a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);
+    const b=document.getElementById('studioBackBtn'),f=document.getElementById('studioForwardBtn');
+    if(b)b.disabled=i<=0;if(f)f.disabled=i<0||i>=a.length-1;
+  }
+  function selectPrintTab(tab){
+    const host=document.getElementById('erpPrintDesignerStudio');if(!host)return;
+    const btn=[...host.querySelectorAll('.pd-tab')].find(x=>x.dataset.pdtab===tab);if(!btn)return;
+    host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
+    host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===tab));
+    localStorage.setItem('erpPrintDesigner:lastTab',tab);
+  }
+  function openRoute(route,record=true){
+    const r=norm(route);busy=true;
+    try{
+      if(typeof openStudioPanel==='function')openStudioPanel(r.panel,r.section);
+      if(r.panel==='print-studio')setTimeout(()=>selectPrintTab(r.tab),60);
+      localStorage.setItem(LAST,JSON.stringify(r));setUrl(r);
+      if(record){let a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);if(!equal(a[i],r)){a=a.slice(0,i+1);a.push(r);i=a.length-1;write(STACK,a);sessionStorage.setItem(POS,String(i));}}
+    }finally{setTimeout(()=>{busy=false;buttons()},90)}
+  }
+  function move(d){const a=read(STACK,[]);let i=Number(sessionStorage.getItem(POS)??-1)+d;if(i<0||i>=a.length)return;sessionStorage.setItem(POS,String(i));openRoute(a[i],false)}
+
+  // Stop the two external Costing links from ever leaving Design Studio.
+  document.addEventListener('click',function(e){
+    const ext=e.target.closest('a.side-item[href="costing.html"]');
+    if(ext){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:'control',section:'dashboard'});return;}
+    const p=e.target.closest('[data-panel]');
+    if(p){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:p.dataset.panel,section:''});return;}
+    const c=e.target.closest('[data-control-section]');
+    if(c){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:'control',section:c.dataset.controlSection});return;}
+    const t=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+    if(t){e.preventDefault();e.stopImmediatePropagation();selectPrintTab(t.dataset.pdtab);openRoute({panel:'print-studio',tab:t.dataset.pdtab});return;}
+  },true);
+
+  window.addEventListener('popstate',e=>{const r=e.state?.dsExact||urlRoute()||saved();if(r)openRoute(r,false)});
+  document.addEventListener('DOMContentLoaded',function(){
+    const b=document.getElementById('studioBackBtn'),f=document.getElementById('studioForwardBtn');
+    if(b)b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();move(-1)},true);
+    if(f)f.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();move(1)},true);
+    // On refresh, saved exact route wins over the old default theme URL.
+    const r=saved()||urlRoute()||{panel:'theme',section:'',tab:''};
+    let a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);
+    if(!a.length||i<0){a=[norm(r)];i=0;write(STACK,a);sessionStorage.setItem(POS,'0')}
+    setTimeout(()=>openRoute(r,false),180);buttons();
+  });
+})();
+</script>
+
+<style>
+/* Print Studio V4.0 — clean page manager and professional preview tools */
+.pd-clean-note{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:12px 14px;margin:0 0 12px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:11px;background:color-mix(in srgb,var(--accent) 9%,var(--surface));font-size:12px}
+.pd-clean-note b{display:block;margin-bottom:3px}.pd-clean-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.pd-clean-actions .btn{padding:8px 10px;font-size:11px}
+.pd-link-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}.pd-link-badge.linked{background:#dcfce7;color:#166534}.pd-link-badge.data{background:#dbeafe;color:#1d4ed8}.pd-link-badge.unlinked{background:#fef3c7;color:#92400e}
+.pd-friendly-id{font-size:10px;color:var(--muted);margin-top:2px}.pd-manager-summary{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.pd-manager-chip{padding:6px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:10px;font-weight:800}
+.pd-assign-table tr.pd-hidden-internal{display:none!important}.pd-assign-table .pd-page-actions{display:flex;gap:6px;flex-wrap:wrap}.pd-assign-table .pd-page-actions button{white-space:nowrap}
+.pd-preview-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto}.pd-preview-tools button{height:31px;padding:0 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:10px;font-weight:800;cursor:pointer}.pd-overflow-alert{display:none;padding:8px 10px;background:#fff7d6;color:#7c5200;border:1px solid #f1cf66;border-radius:9px;font-size:10px;font-weight:700}.pd-overflow-alert.show{display:block}.pd-modal-preview.fit .pd-paper{transform:scale(.82);transform-origin:top center;margin-bottom:-12%}.pd-modal-preview.zoom75 .pd-paper{transform:scale(.75);transform-origin:top center;margin-bottom:-25%}.pd-modal-preview.zoom100 .pd-paper{transform:none;margin-bottom:0}
+@media(max-width:900px){.pd-clean-note{flex-direction:column}.pd-manager-toolbar{grid-template-columns:1fr 1fr}.pd-clean-actions{width:100%}}
+</style>
+<script>
+/* Print Studio V4.0 — show only real printable pages, preserve future-page support, and improve usability. */
+(function(){
+  const AKEY='erpPrintDesigner:assignments:v2';
+  const DEFAULT_KEY='erpPrintDesigner:defaultDesign:v3';
+  const AUTO_KEY='erpPrintDesigner:autoRegisterFuture:v4';
+  const friendly={
+    'rgp-list':'RGP List / Returnable Gate Pass Register','purchase-reports':'Purchase Report','local-purchase':'Local Purchase Register','zafar-purchase':'Zafar Purchase Register','board-purchase':'Board Purchase Register','purchase-indent':'Purchase Indent','ogp-list':'OGP List / Out Gate Pass Register','cgp-list':'CGP List / Cash Gate Pass Register','issue-register':'Issue Register','stock-ledger':'Stock Ledger','item-ledger':'Item Ledger','masters-register':'Master Register'
+  };
+  const curated=new Set(Object.keys(friendly));
+  let cleaning=false,timer=null;
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const readAssign=()=>{try{return JSON.parse(localStorage.getItem(AKEY)||'{}')}catch(e){return {}}};
+  const saveAssign=x=>localStorage.setItem(AKEY,JSON.stringify(x));
+  function hasPrintButton(p){
+    if(curated.has(p.id))return true;
+    let table=null;try{table=p.selector?document.querySelector(p.selector):null}catch(e){}
+    const holder=table?.closest('[data-rgp-page],.panel,section,.card,div[id]');
+    return !!holder?.querySelector('button[id*="Print" i],button[class*="print" i],a[id*="Print" i],button[data-print-page],[data-print-designer]');
+  }
+  function useful(p){
+    if(curated.has(p.id))return true;
+    if(!p.id?.startsWith('auto-'))return !/^(erp register|table|register)$/i.test((p.title||'').trim());
+    if(localStorage.getItem(AUTO_KEY)==='0')return false;
+    const title=(p.title||'').trim();
+    if(!title||/^(erp register|table|register)$/i.test(title))return false;
+    if(/^(rgpitemsTable|rgplistTable|pdAutoTable|auto-table)/i.test(title))return false;
+    return hasPrintButton(p);
+  }
+  function cleanPages(){
+    const api=window.ERPPrintDesigner;if(!api?.getPages)return [];
+    const seen=new Set();
+    return api.getPages().filter(useful).sort((a,b)=>(a.module||'').localeCompare(b.module||'')||(friendly[a.id]||a.title||'').localeCompare(friendly[b.id]||b.title||'')).filter(p=>{
+      const key=(p.module+'|'+(friendly[p.id]||p.title)).toLowerCase();if(seen.has(key))return false;seen.add(key);return true;
+    });
+  }
+  function ensureEnhancements(){
+    const pane=document.querySelector('[data-pdpane="assign"] .pd-card');if(!pane)return;
+    if(!document.getElementById('pdCleanNote')){
+      const note=document.createElement('div');note.id='pdCleanNote';note.className='pd-clean-note';
+      note.innerHTML='<div><b>Only real printable pages are shown</b><span>Internal entry tables, preview tables and duplicate HTML tables are hidden. New pages appear automatically when they contain a table and a Print button.</span></div><div class="pd-clean-actions"><label class="pd-check" style="margin:0"><input type="checkbox" id="pdAutoFuture"> Auto-register future pages</label><button class="btn" id="pdScanRealPages">Refresh New Pages</button><button class="btn primary" id="pdSaveAllAssignments">Save All Assignments</button></div>';
+      const toolbar=pane.querySelector('.pd-manager-toolbar');pane.insertBefore(note,toolbar);
+      const auto=document.getElementById('pdAutoFuture');auto.checked=localStorage.getItem(AUTO_KEY)!=='0';auto.onchange=()=>{localStorage.setItem(AUTO_KEY,auto.checked?'1':'0');scheduleClean();window.toast?.(auto.checked?'Future page detection enabled':'Future page detection disabled')};
+      document.getElementById('pdScanRealPages').onclick=()=>{window.ERPPrintDesigner?.refresh?.();setTimeout(scheduleClean,80);window.toast?.('New printable pages scanned')};
+      document.getElementById('pdSaveAllAssignments').onclick=()=>{const x=readAssign();document.querySelectorAll('#pdAssignBody select[data-page]').forEach(s=>{if(s.value)x[s.dataset.page]=s.value;else delete x[s.dataset.page]});saveAssign(x);window.toast?.('All print design assignments saved')};
+    }
+    if(!document.getElementById('pdManagerSummary')){
+      const s=document.createElement('div');s.id='pdManagerSummary';s.className='pd-manager-summary';const wrap=pane.querySelector('div[style*="overflow:auto"]');pane.insertBefore(s,wrap);
+    }
+  }
+  function rebuildManager(){
+    if(cleaning)return;cleaning=true;
+    try{
+      ensureEnhancements();
+      const body=document.getElementById('pdAssignBody');if(!body)return;
+      const pages=cleanPages(),designs=window.ERPPrintDesigner.getDesigns?.()||[],a=readAssign();
+      const search=(document.getElementById('pdPageSearch')?.value||'').toLowerCase();const mod=document.getElementById('pdModuleFilter')?.value||'';
+      const filtered=pages.filter(p=>(!mod||p.module===mod)&&(!search||(p.module+' '+(friendly[p.id]||p.title)).toLowerCase().includes(search)));
+      let last='';body.innerHTML=filtered.map(p=>{
+        let group='';if(p.module!==last){last=p.module;group=`<tr class="pd-module-head"><td colspan="5">${esc(p.module)}</td></tr>`}
+        const title=friendly[p.id]||p.title||'Printable Page';const linked=hasPrintButton(p);let status=linked?'<span class="pd-link-badge linked">✓ Print Linked</span>':'<span class="pd-link-badge data">✓ Data Ready</span>';
+        return group+`<tr data-clean-page="${esc(p.id)}"><td>${esc(p.module)}</td><td><b>${esc(title)}</b><div class="pd-friendly-id">${p.id.startsWith('auto-')?'Future page detected':'Registered ERP page'}</div></td><td>${status}</td><td><select data-page="${esc(p.id)}"><option value="">Use Default Design</option>${designs.map(d=>`<option value="${esc(d.id)}" ${a[p.id]===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></td><td><div class="pd-page-actions"><button class="cc-mini primary" data-clean-preview="${esc(p.id)}">Preview</button></div></td></tr>`
+      }).join('')||'<tr><td colspan="5" class="pd-empty">No printable pages match this search.</td></tr>';
+      body.querySelectorAll('select[data-page]').forEach(s=>s.onchange=()=>{const x=readAssign();if(s.value)x[s.dataset.page]=s.value;else delete x[s.dataset.page];saveAssign(x)});
+      body.querySelectorAll('[data-clean-preview]').forEach(b=>b.onclick=()=>window.ERPPrintDesigner.open(b.dataset.cleanPreview));
+      const modules=new Set(pages.map(p=>p.module));const summary=document.getElementById('pdManagerSummary');if(summary)summary.innerHTML=`<span class="pd-manager-chip">${pages.length} printable pages</span><span class="pd-manager-chip">${modules.size} modules</span><span class="pd-manager-chip">${pages.filter(hasPrintButton).length} Print buttons linked</span><span class="pd-manager-chip">Future pages: ${localStorage.getItem(AUTO_KEY)==='0'?'Off':'On'}</span>`;
+      const count=document.getElementById('pdPageCount');if(count)count.textContent=`${pages.length} clean printable page(s) ready`;
+    }finally{cleaning=false}
+  }
+  function scheduleClean(){clearTimeout(timer);timer=setTimeout(rebuildManager,60)}
+  function enhanceModal(){
+    const modal=document.getElementById('erpPrintDesignerModal');if(!modal)return;
+    const actions=modal.querySelector('.pd-modal-actions');if(actions&&!document.getElementById('pdPreviewTools')){
+      const tools=document.createElement('div');tools.id='pdPreviewTools';tools.className='pd-preview-tools';tools.innerHTML='<button type="button" data-pdzoom="fit">Fit Screen</button><button type="button" data-pdzoom="75">75%</button><button type="button" data-pdzoom="100">100%</button>';
+      actions.insertBefore(tools,actions.firstChild);tools.onclick=e=>{const b=e.target.closest('[data-pdzoom]');if(!b)return;const p=modal.querySelector('.pd-modal-preview');p.classList.remove('fit','zoom75','zoom100');p.classList.add(b.dataset.pdzoom==='fit'?'fit':b.dataset.pdzoom==='75'?'zoom75':'zoom100')};
+    }
+    const controls=modal.querySelector('.pd-modal-controls');if(controls&&!document.getElementById('pdOverflowAlert')){const a=document.createElement('div');a.id='pdOverflowAlert';a.className='pd-overflow-alert';a.textContent='Wide table detected. Landscape orientation or Fit to Page Width is recommended.';controls.insertBefore(a,controls.firstChild)}
+    setTimeout(()=>{const paper=document.getElementById('pdModalPaper'),alert=document.getElementById('pdOverflowAlert');if(paper&&alert)alert.classList.toggle('show',paper.scrollWidth>paper.clientWidth+4)},120);
+  }
+  document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{ensureEnhancements();rebuildManager();enhanceModal()},400);new MutationObserver(muts=>{if(muts.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&!n.closest?.('#erpPrintDesignerStudio,#erpPrintDesignerModal')&&(n.matches?.('table')||n.querySelector?.('table')))))setTimeout(scheduleClean,250)}).observe(document.body,{childList:true,subtree:true})});
+  document.addEventListener('click',e=>{if(e.target.closest('#pdRefreshPages,.pd-tab[data-pdtab="assign"]'))setTimeout(scheduleClean,100);if(e.target.closest('[data-test],#pdSaveStudio,#pdNew,#pdDuplicate'))setTimeout(enhanceModal,120)},true);
+  document.addEventListener('input',e=>{if(e.target.matches('#pdPageSearch,#pdModuleFilter'))scheduleClean()});
+  // Public helper for every page created after this version.
+  window.registerERPPrintablePage=function(options){
+    if(!options||!options.id||!options.title||!options.module)return false;
+    window.ERPPrintDesigner?.registerPage(options);scheduleClean();return true;
+  };
+})();
+</script>
 </body></html>
