@@ -1397,6 +1397,170 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
 @media(max-width:1050px){.rgp-return-grid{grid-template-columns:repeat(3,1fr)}.rgp-return-summary{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.rgp-return-grid,.rgp-return-summary{grid-template-columns:1fr}.rgp-return-grid .span-2,.rgp-return-grid .span-3{grid-column:auto}}
 
+
+/* RGP List compact rows + professional print V1.0 */
+#rgpListTable th,
+#rgpListTable td{
+  padding:7px 8px !important;
+  line-height:1.25 !important;
+  height:auto !important;
+  min-height:0 !important;
+  vertical-align:middle !important;
+}
+#rgpListTable tbody tr{
+  height:38px !important;
+}
+#rgpListTable .rgp-list-row-actions{
+  align-items:center;
+}
+#rgpListTable .rgp-list-mini{
+  height:27px !important;
+  padding:0 7px !important;
+  font-size:9.5px !important;
+}
+
+.rgp-print-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(5,18,31,.65);
+  z-index:12000;
+}
+.rgp-print-modal.open{display:flex}
+.rgp-print-box{
+  width:min(1450px,98vw);
+  max-height:95vh;
+  overflow:auto;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 26px 80px rgba(0,0,0,.32);
+}
+.rgp-print-toolbar{
+  position:sticky;
+  top:0;
+  z-index:5;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px 15px;
+  background:#fff;
+  border-bottom:1px solid #d9e2ef;
+}
+.rgp-print-toolbar h3{margin:0}
+.rgp-print-actions{display:flex;gap:8px;flex-wrap:wrap}
+.rgp-print-sheet{
+  padding:22px;
+  color:#111;
+  background:#fff;
+  font-family:Arial,Helvetica,sans-serif;
+}
+.rgp-print-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:20px;
+  margin-bottom:14px;
+}
+.rgp-print-title h1{
+  margin:0;
+  font-size:22px;
+}
+.rgp-print-title p{
+  margin:5px 0 0;
+  font-size:12px;
+  color:#555;
+}
+.rgp-print-meta{
+  text-align:right;
+  font-size:12px;
+  line-height:1.55;
+}
+.rgp-print-summary{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  margin-bottom:14px;
+}
+.rgp-print-summary div{
+  border:1px solid #222;
+  padding:8px 10px;
+}
+.rgp-print-summary small{
+  display:block;
+  font-size:9px;
+  text-transform:uppercase;
+  font-weight:700;
+}
+.rgp-print-summary strong{
+  display:block;
+  margin-top:4px;
+  font-size:14px;
+}
+.rgp-print-table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:auto;
+  font-size:9px;
+}
+.rgp-print-table th,
+.rgp-print-table td{
+  border:1px solid #222;
+  padding:5px 6px;
+  vertical-align:middle;
+  line-height:1.25;
+}
+.rgp-print-table th{
+  background:#ffcc00;
+  color:#111;
+  text-transform:uppercase;
+  font-weight:800;
+}
+.rgp-print-footer{
+  margin-top:14px;
+  padding-top:8px;
+  border-top:1px solid #555;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-size:10px;
+}
+@media print{
+  body *{visibility:hidden!important}
+  #rgpPrintSheet,
+  #rgpPrintSheet *{visibility:visible!important}
+  #rgpPrintSheet{
+    position:absolute;
+    inset:0;
+    width:100%;
+    padding:0;
+  }
+  .rgp-print-toolbar{display:none!important}
+  .rgp-print-modal{
+    display:block!important;
+    position:static!important;
+    background:#fff!important;
+    padding:0!important;
+  }
+  .rgp-print-box{
+    width:100%!important;
+    max-height:none!important;
+    overflow:visible!important;
+    box-shadow:none!important;
+    border-radius:0!important;
+  }
+  .rgp-print-sheet{padding:10mm!important}
+  .rgp-print-table thead{display:table-header-group}
+  .rgp-print-table tr{page-break-inside:avoid}
+  @page{
+    size:landscape;
+    margin:8mm;
+  }
+}
+
 </style>
 
 <script>
@@ -4807,7 +4971,7 @@ function bindRgpListActions(){
       const a=btn.textContent.trim().toLowerCase();
       const row=btn.closest('tr');
       if(a==='return') openReturnFromRgpRow(row);
-      else if(a==='print') window.print();
+      else if(a==='print') openRgpPrintPreview();
       else if(a==='delete') askDeleteRgp(row);
       else toast('RGP Detail page will be made next');
     });
@@ -5248,6 +5412,78 @@ window.gpcSave=gpcSave;
 window.gpcRestore=gpcRestore;
 window.gpcPreview=gpcPreview;
 window.gpcSwitchTab=gpcSwitchTab;
+
+
+function rgpVisibleRowsForPrint(){
+  return [...document.querySelectorAll('#rgpListBody tr')]
+    .filter(row=>row.style.display!=='none');
+}
+
+function openRgpPrintPreview(){
+  const rows=rgpVisibleRowsForPrint();
+  const visibleHeaders=[...document.querySelectorAll('#rgpListTable thead th')]
+    .map((th,index)=>({th,index}))
+    .filter(x=>getComputedStyle(x.th).display!=='none' && x.th.textContent.trim().toLowerCase()!=='action');
+
+  const bodyHtml=rows.map(row=>{
+    const cells=[...row.children];
+    const tds=visibleHeaders.map(({index})=>{
+      const cell=cells[index];
+      const value=cell ? cell.innerText.trim() : '';
+      return `<td>${value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>`;
+    }).join('');
+    return `<tr>${tds}</tr>`;
+  }).join('');
+
+  const headHtml=visibleHeaders.map(({th})=>`<th>${th.textContent.trim()}</th>`).join('');
+
+  const generated=new Date();
+  const generatedDate=generated.toLocaleDateString('en-GB',{
+    day:'2-digit',month:'short',year:'2-digit'
+  }).replace(/ /g,'-');
+
+  const sheet=document.getElementById('rgpPrintSheet');
+  sheet.innerHTML=`
+    <div class="rgp-print-head">
+      <div class="rgp-print-title">
+        <h1>Returnable Gate Pass Report</h1>
+        <p>RGP List — latest records first</p>
+      </div>
+      <div class="rgp-print-meta">
+        <div><b>Date:</b> ${generatedDate}</div>
+        <div><b>Total Records:</b> ${rows.length}</div>
+      </div>
+    </div>
+
+    <div class="rgp-print-summary">
+      <div><small>Total RGP</small><strong>${document.querySelectorAll('#rgpListBody tr').length}</strong></div>
+      <div><small>Pending</small><strong>${document.querySelectorAll('#rgpListBody tr[data-status="pending"]').length}</strong></div>
+      <div><small>Partial</small><strong>${document.querySelectorAll('#rgpListBody tr[data-status="partial"]').length}</strong></div>
+      <div><small>Closed</small><strong>${document.querySelectorAll('#rgpListBody tr[data-status="closed"]').length}</strong></div>
+      <div><small>Printed Records</small><strong>${rows.length}</strong></div>
+    </div>
+
+    <table class="rgp-print-table">
+      <thead><tr>${headHtml}</tr></thead>
+      <tbody>${bodyHtml || `<tr><td colspan="${visibleHeaders.length}">No records available</td></tr>`}</tbody>
+    </table>
+
+    <div class="rgp-print-footer">
+      <span>This is computer generated report.</span>
+      <span>Inventory Management System</span>
+    </div>`;
+
+  const modal=document.getElementById('rgpPrintModal');
+  modal.classList.add('open');
+}
+
+function closeRgpPrintPreview(){
+  document.getElementById('rgpPrintModal')?.classList.remove('open');
+}
+
+window.openRgpPrintPreview=openRgpPrintPreview;
+window.closeRgpPrintPreview=closeRgpPrintPreview;
+
 
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
@@ -7511,7 +7747,7 @@ function bind(){
   $('#rgpSaveBtn')?.addEventListener('click',()=>saveRgpEntry(false));
   $('#rgpListSearchBtn')?.addEventListener('click',rgpListFilterRows);
   $('#rgpListClearBtn')?.addEventListener('click',rgpListClearFilters);
-  $('#rgpListPrintBtn')?.addEventListener('click',()=>window.print());
+  $('#rgpListPrintBtn')?.addEventListener('click',openRgpPrintPreview);
   $('#rgpListPdfBtn')?.addEventListener('click',()=>toast('RGP PDF export prepared'));
   $('#rgpListExportBtn')?.addEventListener('click',()=>toast('RGP Excel export prepared'));
   $('#rgpListNewBtn')?.addEventListener('click',()=>setRgpPage('entry'));
@@ -8259,6 +8495,34 @@ document.addEventListener('keydown',function(event){
   if(event.key==='Escape'){
     const modal=document.getElementById('gatePassPageControllerModal');
     if(modal?.classList.contains('open') && typeof gpcClose==='function') gpcClose();
+  }
+});
+</script>
+
+
+<div class="rgp-print-modal" id="rgpPrintModal">
+  <div class="rgp-print-box">
+    <div class="rgp-print-toolbar">
+      <h3>RGP List Print Preview</h3>
+      <div class="rgp-print-actions">
+        <button class="btn" type="button" onclick="closeRgpPrintPreview()">Close</button>
+        <button class="btn primary" type="button" onclick="window.print()">Print</button>
+      </div>
+    </div>
+    <div class="rgp-print-sheet" id="rgpPrintSheet"></div>
+  </div>
+</div>
+
+
+<script>
+document.addEventListener('click',function(event){
+  const modal=document.getElementById('rgpPrintModal');
+  if(modal && event.target===modal) closeRgpPrintPreview();
+});
+document.addEventListener('keydown',function(event){
+  if(event.key==='Escape'){
+    const modal=document.getElementById('rgpPrintModal');
+    if(modal?.classList.contains('open')) closeRgpPrintPreview();
   }
 });
 </script>
