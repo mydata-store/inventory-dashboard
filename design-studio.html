@@ -1340,6 +1340,38 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
 .rgp-list-pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:11px}
 @media(max-width:1150px){.rgp-list-filters{grid-template-columns:repeat(3,minmax(150px,1fr))}.rgp-list-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){.rgp-list-filters,.rgp-list-summary{grid-template-columns:1fr}}
 
+
+/* Gate Pass Page Controller V1.0 */
+.gpc-modal{position:fixed;inset:0;background:rgba(7,20,38,.62);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
+.gpc-modal.open{display:flex}
+.gpc-box{width:min(1180px,97vw);max-height:94vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.30);padding:18px}
+.gpc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+.gpc-head h2{margin:0 0 4px}.gpc-head p{margin:0;color:var(--muted)}
+.gpc-close{width:38px;height:38px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:20px;cursor:pointer}
+.gpc-tabs{display:flex;gap:8px;overflow:auto;padding:2px 0 12px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.gpc-tab{height:39px;padding:0 13px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font-weight:800;white-space:nowrap;cursor:pointer}
+.gpc-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.gpc-panel{display:none}.gpc-panel.active{display:block}
+.gpc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.gpc-grid .wide{grid-column:span 2}
+.gpc-field label{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px}
+.gpc-field input,.gpc-field select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:0 10px}
+.gpc-switches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.gpc-switch{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}
+.gpc-switch span{font-weight:700;font-size:12px}.gpc-switch input{width:18px;height:18px;accent-color:var(--primary)}
+.gpc-section{border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:14px}
+.gpc-section h3{margin:0 0 4px}.gpc-section p{margin:0 0 12px;color:var(--muted);font-size:12px}
+.gpc-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.gpc-column-row{display:grid;grid-template-columns:28px minmax(150px,1fr) 100px 85px 38px 38px;gap:7px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.gpc-column-row input[type=text],.gpc-column-row input[type=number]{width:100%;height:34px;border:1px solid var(--border);border-radius:7px;padding:0 8px}
+.gpc-column-row input[type=checkbox]{width:17px;height:17px}
+.gpc-move{height:30px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer}
+.gpc-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.gpc-note{padding:10px 12px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:12px;font-size:12px}
+.gpc-hidden{display:none!important}
+@media(max-width:980px){.gpc-grid{grid-template-columns:repeat(2,1fr)}.gpc-switches{grid-template-columns:repeat(2,1fr)}.gpc-columns{grid-template-columns:1fr}}
+@media(max-width:620px){.gpc-grid,.gpc-switches{grid-template-columns:1fr}.gpc-grid .wide{grid-column:auto}}
+
 </style>
 
 <script>
@@ -1777,6 +1809,7 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
         </div>
         <div class="cc-toolbar">
           <button class="btn" id="backToGatePassBtn">← Gate Pass Dashboard</button>
+          <button class="btn" id="gatePassPageControllerBtn">⚙ Page Controller</button>
           <button class="btn" id="rgpPrintBtn">Print</button>
         </div>
       </div>
@@ -4683,6 +4716,272 @@ function bindRgpListActions(){
   }));
 }
 
+
+const GPC_STORAGE_KEY='erpGatePassPageControllerV1';
+
+const gpcDefaults={
+  dashTitle:'RGP Management',
+  dashSubtitle:'Returnable Gate Pass dashboard and entry controls.',
+  showNavCards:true,showDashSummary:true,showRecentRgp:true,showReturnStatus:true,showPrintBtn:true,showBackBtn:true,
+  listTitle:'RGP List',listSubtitle:'Search, review, return, print and open complete RGP details.',
+  tableWidth:1500,tableHeight:540,headerSticky:'sticky',rowDensity:'normal',
+  showListFilters:true,showListSummary:true,showExcel:true,showPdf:true,showActions:true,showPendingValue:true,
+  entryTitle:'RGP Entry Form',entrySubtitle:'Create one RGP with multiple returnable items.',
+  entryColumns:5,entryTableWidth:980,showVehicle:true,showContact:true,showBill:true,showRemarks:true,showPurpose:true,
+  showEntrySummary:true,showSaveDraft:true,showClearButtons:true,
+  cardRadius:15,cardGap:14,pagePadding:18,tableFont:11,freezeHeaders:true,showControllerBtn:true,rememberPage:true,
+  listColumns:[],entryColumnsConfig:[]
+};
+
+function gpcGetSettings(){
+  try{return {...gpcDefaults,...JSON.parse(localStorage.getItem(GPC_STORAGE_KEY)||'{}')}}
+  catch(e){return {...gpcDefaults}}
+}
+
+function gpcColumnConfig(tableSelector){
+  const table=document.querySelector(tableSelector);
+  if(!table) return [];
+  return [...table.querySelectorAll('thead th')].map((th,index)=>({
+    index,
+    title:th.textContent.trim(),
+    width:parseInt(th.style.width)||parseInt(getComputedStyle(th).width)||120,
+    visible:true
+  }));
+}
+
+function gpcEnsureColumnDefaults(settings){
+  if(!settings.listColumns?.length) settings.listColumns=gpcColumnConfig('#rgpListTable');
+  if(!settings.entryColumnsConfig?.length) settings.entryColumnsConfig=gpcColumnConfig('#rgpItemsTable');
+  return settings;
+}
+
+function gpcSetHidden(el,hidden){
+  if(el) el.classList.toggle('gpc-hidden',!!hidden);
+}
+
+function gpcApplyColumns(tableSelector,configs){
+  const table=document.querySelector(tableSelector);
+  if(!table||!Array.isArray(configs)||!configs.length) return;
+  const rows=[...table.rows];
+
+  configs.forEach((cfg,newPosition)=>{
+    rows.forEach(row=>{
+      const cells=[...row.children];
+      const target=cells.find(cell=>Number(cell.dataset.gpcOriginalIndex)===Number(cfg.index))
+        || cells[cfg.index];
+      if(target){
+        target.dataset.gpcOriginalIndex=cfg.index;
+        target.style.display=cfg.visible===false?'none':'';
+        target.style.width=(cfg.width||120)+'px';
+        target.style.minWidth=(cfg.width||120)+'px';
+        if(row.parentElement?.tagName==='THEAD') target.textContent=cfg.title;
+        row.appendChild(target);
+      }
+    });
+  });
+}
+
+function gpcApplySettings(settings=gpcGetSettings()){
+  settings=gpcEnsureColumnDefaults(settings);
+
+  // Dashboard titles
+  const rgpHeading=document.querySelector('#rgpDashboardView .gatepass-page-heading h2');
+  const rgpSubtitle=document.querySelector('#rgpDashboardView .gatepass-page-heading p');
+  if(rgpHeading) rgpHeading.textContent=settings.dashTitle;
+  if(rgpSubtitle) rgpSubtitle.textContent=settings.dashSubtitle;
+
+  gpcSetHidden(document.querySelector('.rgp-action-grid'),!settings.showNavCards);
+  gpcSetHidden(document.querySelector('#rgpDashboardContent .rgp-summary'),!settings.showDashSummary);
+  const dashBoxes=document.querySelectorAll('#rgpDashboardContent .gatepass-box');
+  gpcSetHidden(dashBoxes[0],!settings.showRecentRgp);
+  gpcSetHidden(dashBoxes[1],!settings.showReturnStatus);
+  gpcSetHidden(document.getElementById('rgpPrintBtn'),!settings.showPrintBtn);
+  gpcSetHidden(document.getElementById('backToGatePassBtn'),!settings.showBackBtn);
+
+  // List
+  const listTitle=document.querySelector('#rgpListContent .rgp-entry-head h3');
+  const listSub=document.querySelector('#rgpListContent .rgp-entry-head p');
+  if(listTitle) listTitle.textContent=settings.listTitle;
+  if(listSub) listSub.textContent=settings.listSubtitle;
+  gpcSetHidden(document.querySelector('#rgpListContent .rgp-list-toolbar'),!settings.showListFilters);
+  gpcSetHidden(document.querySelector('#rgpListContent .rgp-list-summary'),!settings.showListSummary);
+  gpcSetHidden(document.getElementById('rgpListExportBtn'),!settings.showExcel);
+  gpcSetHidden(document.getElementById('rgpListPdfBtn'),!settings.showPdf);
+
+  const listWrap=document.querySelector('#rgpListContent .rgp-list-table-wrap');
+  const listTable=document.getElementById('rgpListTable');
+  if(listWrap) listWrap.style.maxHeight=settings.tableHeight+'px';
+  if(listTable){
+    listTable.style.minWidth=settings.tableWidth+'px';
+    listTable.style.fontSize=settings.tableFont+'px';
+  }
+  document.querySelectorAll('#rgpListTable th').forEach(th=>{
+    th.style.position=(settings.freezeHeaders&&settings.headerSticky==='sticky')?'sticky':'static';
+  });
+  const density={compact:7,normal:10,comfortable:14}[settings.rowDensity]||10;
+  document.querySelectorAll('#rgpListTable th,#rgpListTable td').forEach(c=>c.style.padding=density+'px 9px');
+
+  // specific columns
+  const listHeaders=[...document.querySelectorAll('#rgpListTable thead th')];
+  const actionIndex=listHeaders.findIndex(th=>th.textContent.trim().toLowerCase()==='action');
+  const pendingIndex=listHeaders.findIndex(th=>th.textContent.trim().toLowerCase()==='pending value');
+  if(actionIndex>=0) document.querySelectorAll(`#rgpListTable tr > *:nth-child(${actionIndex+1})`).forEach(c=>gpcSetHidden(c,!settings.showActions));
+  if(pendingIndex>=0) document.querySelectorAll(`#rgpListTable tr > *:nth-child(${pendingIndex+1})`).forEach(c=>gpcSetHidden(c,!settings.showPendingValue));
+  gpcApplyColumns('#rgpListTable',settings.listColumns);
+
+  // Entry
+  const entryTitle=document.querySelector('#rgpEntryContent .rgp-entry-head h3');
+  const entrySub=document.querySelector('#rgpEntryContent .rgp-entry-head p');
+  if(entryTitle) entryTitle.textContent=settings.entryTitle;
+  if(entrySub) entrySub.textContent=settings.entrySubtitle;
+  const entryGrid=document.querySelector('#rgpEntryContent .rgp-entry-grid');
+  if(entryGrid) entryGrid.style.gridTemplateColumns=`repeat(${settings.entryColumns},minmax(0,1fr))`;
+  const entryTable=document.getElementById('rgpItemsTable');
+  if(entryTable){entryTable.style.minWidth=settings.entryTableWidth+'px';entryTable.style.fontSize=settings.tableFont+'px'}
+
+  const fieldByLabel=(label)=>{
+    const labels=[...document.querySelectorAll('#rgpEntryContent .rgp-entry-grid label')];
+    const found=labels.find(x=>x.textContent.trim().toLowerCase()===label.toLowerCase());
+    return found?.parentElement||null;
+  };
+  gpcSetHidden(fieldByLabel('Vehicle Number'),!settings.showVehicle);
+  gpcSetHidden(fieldByLabel('Contact Number'),!settings.showContact);
+  gpcSetHidden(fieldByLabel('Bill Detail'),!settings.showBill);
+  gpcSetHidden(fieldByLabel('Remarks'),!settings.showRemarks);
+  gpcSetHidden(fieldByLabel('Purpose'),!settings.showPurpose);
+  gpcSetHidden(document.querySelector('#rgpEntryContent .rgp-entry-summary'),!settings.showEntrySummary);
+  gpcSetHidden(document.getElementById('rgpSaveDraftBtn'),!settings.showSaveDraft);
+  gpcSetHidden(document.getElementById('rgpClearBtn'),!settings.showClearButtons);
+  gpcSetHidden(document.getElementById('rgpEntryClearTop'),!settings.showClearButtons);
+  gpcApplyColumns('#rgpItemsTable',settings.entryColumnsConfig);
+
+  // Global
+  document.documentElement.style.setProperty('--gpc-card-radius',settings.cardRadius+'px');
+  document.querySelectorAll('#panel-gatepass .card,#panel-gatepass .gatepass-box,#panel-gatepass .rgp-entry-top,#panel-gatepass .rgp-items-card')
+    .forEach(el=>el.style.borderRadius=settings.cardRadius+'px');
+  document.querySelectorAll('#panel-gatepass .rgp-list-shell,#panel-gatepass .rgp-entry-shell')
+    .forEach(el=>el.style.gap=settings.cardGap+'px');
+  const pageCard=document.querySelector('#panel-gatepass .gatepass-page-card');
+  if(pageCard) pageCard.style.padding=settings.pagePadding+'px';
+  gpcSetHidden(document.getElementById('gatePassPageControllerBtn'),!settings.showControllerBtn);
+}
+
+function gpcBuildColumnEditor(containerId,tableSelector,key){
+  const container=document.getElementById(containerId);
+  if(!container) return;
+  const settings=gpcEnsureColumnDefaults(gpcGetSettings());
+  const configs=settings[key];
+  container.innerHTML='';
+  configs.forEach((cfg,pos)=>{
+    const row=document.createElement('div');
+    row.className='gpc-column-row';
+    row.innerHTML=`
+      <input type="checkbox" class="gpc-col-visible" ${cfg.visible!==false?'checked':''} title="Show column">
+      <input type="text" class="gpc-col-title" value="${String(cfg.title).replace(/"/g,'&quot;')}">
+      <input type="number" class="gpc-col-width" min="50" max="600" value="${cfg.width||120}">
+      <span style="font-size:10px;color:var(--muted)">px</span>
+      <button class="gpc-move" type="button" ${pos===0?'disabled':''}>↑</button>
+      <button class="gpc-move" type="button" ${pos===configs.length-1?'disabled':''}>↓</button>`;
+    row.dataset.index=cfg.index;
+    row.querySelectorAll('.gpc-move')[0].addEventListener('click',()=>gpcMoveColumn(key,pos,-1));
+    row.querySelectorAll('.gpc-move')[1].addEventListener('click',()=>gpcMoveColumn(key,pos,1));
+    container.appendChild(row);
+  });
+}
+
+function gpcMoveColumn(key,pos,delta){
+  const settings=gpcEnsureColumnDefaults(gpcGetSettings());
+  const list=settings[key];
+  const target=pos+delta;
+  if(target<0||target>=list.length) return;
+  [list[pos],list[target]]=[list[target],list[pos]];
+  localStorage.setItem(GPC_STORAGE_KEY,JSON.stringify(settings));
+  gpcBuildColumnEditor(key==='listColumns'?'gpcListColumns':'gpcEntryColumnsBox',key==='listColumns'?'#rgpListTable':'#rgpItemsTable',key);
+}
+
+function gpcReadColumnEditor(containerId,key,settings){
+  const rows=[...document.querySelectorAll(`#${containerId} .gpc-column-row`)];
+  const previous=settings[key]||[];
+  settings[key]=rows.map(row=>{
+    const idx=Number(row.dataset.index);
+    const old=previous.find(x=>Number(x.index)===idx)||{};
+    return {
+      index:idx,
+      title:row.querySelector('.gpc-col-title').value.trim()||old.title||'Column',
+      width:Number(row.querySelector('.gpc-col-width').value)||120,
+      visible:row.querySelector('.gpc-col-visible').checked
+    };
+  });
+}
+
+function gpcReadForm(){
+  const s=gpcEnsureColumnDefaults(gpcGetSettings());
+  const val=id=>document.getElementById(id)?.value;
+  const chk=id=>!!document.getElementById(id)?.checked;
+  Object.assign(s,{
+    dashTitle:val('gpcDashTitle'),dashSubtitle:val('gpcDashSubtitle'),
+    showNavCards:chk('gpcShowNavCards'),showDashSummary:chk('gpcShowDashSummary'),showRecentRgp:chk('gpcShowRecentRgp'),
+    showReturnStatus:chk('gpcShowReturnStatus'),showPrintBtn:chk('gpcShowPrintBtn'),showBackBtn:chk('gpcShowBackBtn'),
+    listTitle:val('gpcListTitle'),listSubtitle:val('gpcListSubtitle'),tableWidth:Number(val('gpcTableWidth'))||1500,
+    tableHeight:Number(val('gpcTableHeight'))||540,headerSticky:val('gpcHeaderSticky'),rowDensity:val('gpcRowDensity'),
+    showListFilters:chk('gpcShowListFilters'),showListSummary:chk('gpcShowListSummary'),showExcel:chk('gpcShowExcel'),
+    showPdf:chk('gpcShowPdf'),showActions:chk('gpcShowActions'),showPendingValue:chk('gpcShowPendingValue'),
+    entryTitle:val('gpcEntryTitle'),entrySubtitle:val('gpcEntrySubtitle'),entryColumns:Number(val('gpcEntryColumns'))||5,
+    entryTableWidth:Number(val('gpcEntryTableWidth'))||980,showVehicle:chk('gpcShowVehicle'),showContact:chk('gpcShowContact'),
+    showBill:chk('gpcShowBill'),showRemarks:chk('gpcShowRemarks'),showPurpose:chk('gpcShowPurpose'),
+    showEntrySummary:chk('gpcShowEntrySummary'),showSaveDraft:chk('gpcShowSaveDraft'),showClearButtons:chk('gpcShowClearButtons'),
+    cardRadius:Number(val('gpcCardRadius'))||15,cardGap:Number(val('gpcCardGap'))||14,pagePadding:Number(val('gpcPagePadding'))||18,
+    tableFont:Number(val('gpcTableFont'))||11,freezeHeaders:chk('gpcFreezeHeaders'),
+    showControllerBtn:chk('gpcShowControllerBtn'),rememberPage:chk('gpcRememberPage')
+  });
+  gpcReadColumnEditor('gpcListColumns','listColumns',s);
+  gpcReadColumnEditor('gpcEntryColumnsBox','entryColumnsConfig',s);
+  return s;
+}
+
+function gpcLoadForm(){
+  const s=gpcEnsureColumnDefaults(gpcGetSettings());
+  const setVal=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v};
+  const setChk=(id,v)=>{const el=document.getElementById(id);if(el)el.checked=!!v};
+  setVal('gpcDashTitle',s.dashTitle);setVal('gpcDashSubtitle',s.dashSubtitle);
+  ['showNavCards','showDashSummary','showRecentRgp','showReturnStatus','showPrintBtn','showBackBtn',
+   'showListFilters','showListSummary','showExcel','showPdf','showActions','showPendingValue',
+   'showVehicle','showContact','showBill','showRemarks','showPurpose','showEntrySummary','showSaveDraft','showClearButtons',
+   'freezeHeaders','showControllerBtn','rememberPage'].forEach(k=>setChk('gpc'+k[0].toUpperCase()+k.slice(1),s[k]));
+  setVal('gpcListTitle',s.listTitle);setVal('gpcListSubtitle',s.listSubtitle);setVal('gpcTableWidth',s.tableWidth);
+  setVal('gpcTableHeight',s.tableHeight);setVal('gpcHeaderSticky',s.headerSticky);setVal('gpcRowDensity',s.rowDensity);
+  setVal('gpcEntryTitle',s.entryTitle);setVal('gpcEntrySubtitle',s.entrySubtitle);setVal('gpcEntryColumns',s.entryColumns);
+  setVal('gpcEntryTableWidth',s.entryTableWidth);setVal('gpcCardRadius',s.cardRadius);setVal('gpcCardGap',s.cardGap);
+  setVal('gpcPagePadding',s.pagePadding);setVal('gpcTableFont',s.tableFont);
+  gpcBuildColumnEditor('gpcListColumns','#rgpListTable','listColumns');
+  gpcBuildColumnEditor('gpcEntryColumnsBox','#rgpItemsTable','entryColumnsConfig');
+}
+
+function gpcOpen(){
+  gpcLoadForm();
+  const modal=document.getElementById('gatePassPageControllerModal');
+  modal?.classList.add('open');
+  modal?.setAttribute('aria-hidden','false');
+}
+function gpcClose(){
+  const modal=document.getElementById('gatePassPageControllerModal');
+  modal?.classList.remove('open');
+  modal?.setAttribute('aria-hidden','true');
+}
+function gpcSave(){
+  const s=gpcReadForm();
+  localStorage.setItem(GPC_STORAGE_KEY,JSON.stringify(s));
+  gpcApplySettings(s);
+  gpcClose();
+  toast('Gate Pass page controller settings saved');
+}
+function gpcRestore(){
+  localStorage.removeItem(GPC_STORAGE_KEY);
+  gpcLoadForm();
+  gpcApplySettings(gpcDefaults);
+  toast('Gate Pass controller restored to defaults');
+}
+
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
   ccCurrentStudio='purchase';ccCurrentSection=currentPurchaseTab;
@@ -6829,7 +7128,112 @@ function openPrintSettings(){if(!reportDesignSelected)return toast('Please selec
 function closePrintSettings(){$('#printSettingsModal').classList.remove('open');$('#printSettingsModal').setAttribute('aria-hidden','true')}
 function savePrintSettings(){const c=currentPrintSettings();c.marginMode=$('#psMargins').value;localStorage.setItem(`erpPrintSettings:${purchaseReportType}`,JSON.stringify(c));toast('Print settings saved for this report tab')}
 function printSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');openPrintSettings()}
-function printNowWithSettings(){if(!reportDesignSelected)return;const c=currentPrintSettings();let html=buildDesignedReportHtml({...reportDesignSelected,paper:c.orientation,showPage:c.pageNumbers,showGrid:c.gridlines});if(c.customHeader)html=`<div class="ps-custom-header">${rcEsc(c.customHeader)}</div>`+html;if(c.customFooter)html+=`<div class="ps-custom-footer">${rcEsc(c.customFooter)}</div>`;const margin=c.margins.map(x=>x+'mm').join(' ');const transform=c.scale==='adjust'?`transform:scale(${c.scalePercent/100});transform-origin:top left;width:${10000/c.scalePercent}%`:c.scale==='actual'?'':`width:100%;max-width:100%`;const justify=c.centerHorizontal?'center':'flex-start',align=c.centerVertical?'center':'flex-start';const bw=c.blackWhite?'filter:grayscale(1);':'';const w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(reportDesignSelected.designName||'Purchase Report')}</title><style>@page{size:${c.paper} ${c.orientation};margin:${margin}}html,body{margin:0;background:white;-webkit-print-color-adjust:${c.background?'exact':'economy'};print-color-adjust:${c.background?'exact':'economy'}}body{display:flex;justify-content:${justify};align-items:${align};min-height:100vh;${bw}}.generated-report{padding:0!important;${transform}}thead{display:${c.repeatHeader?'table-header-group':'table-row-group'}}tr{page-break-inside:avoid}.generated-page-number{display:${c.pageNumbers?'inline':'none'}}.ps-custom-header{position:fixed;top:${c.headerMargin}mm;left:0;right:0;text-align:center;font-size:9pt}.ps-custom-footer{position:fixed;bottom:${c.footerMargin}mm;left:0;right:0;text-align:center;font-size:8pt}${c.draft?'*{box-shadow:none!important;text-shadow:none!important}':''}@media print{body{margin:0}}</style></head><body>${html}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script></body></html>`);w.document.close();w.focus();savePrintSettings();closePrintSettings()}
+function printNowWithSettings(){if(!reportDesignSelected)return;const c=currentPrintSettings();let html=buildDesignedReportHtml({...reportDesignSelected,paper:c.orientation,showPage:c.pageNumbers,showGrid:c.gridlines});if(c.customHeader)html=`<div class="ps-custom-header">${rcEsc(c.customHeader)}</div>`+html;if(c.customFooter)html+=`<div class="ps-custom-footer">${rcEsc(c.customFooter)}</div>`;const margin=c.margins.map(x=>x+'mm').join(' ');const transform=c.scale==='adjust'?`transform:scale(${c.scalePercent/100});transform-origin:top left;width:${10000/c.scalePercent}%`:c.scale==='actual'?'':`width:100%;max-width:100%`;const justify=c.centerHorizontal?'center':'flex-start',align=c.centerVertical?'center':'flex-start';const bw=c.blackWhite?'filter:grayscale(1);':'';const w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(reportDesignSelected.designName||'Purchase Report')}</title><style>@page{size:${c.paper} ${c.orientation};margin:${margin}}html,body{margin:0;background:white;-webkit-print-color-adjust:${c.background?'exact':'economy'};print-color-adjust:${c.background?'exact':'economy'}}body{display:flex;justify-content:${justify};align-items:${align};min-height:100vh;${bw}}.generated-report{padding:0!important;${transform}}thead{display:${c.repeatHeader?'table-header-group':'table-row-group'}}tr{page-break-inside:avoid}.generated-page-number{display:${c.pageNumbers?'inline':'none'}}.ps-custom-header{position:fixed;top:${c.headerMargin}mm;left:0;right:0;text-align:center;font-size:9pt}.ps-custom-footer{position:fixed;bottom:${c.footerMargin}mm;left:0;right:0;text-align:center;font-size:8pt}${c.draft?'*{box-shadow:none!important;text-shadow:none!important}':''}@media print{body{margin:0}}</style></head><body>${html}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script>
+<div class="gpc-modal" id="gatePassPageControllerModal" aria-hidden="true">
+  <div class="gpc-box">
+    <div class="gpc-head">
+      <div>
+        <h2>Gate Pass Page Controller</h2>
+        <p>Control RGP Dashboard, RGP List and RGP Entry Form without changing the locked universal shell.</p>
+      </div>
+      <button class="gpc-close" id="gpcCloseBtn" type="button">×</button>
+    </div>
+
+    <div class="gpc-note">Settings are saved in this browser and applied instantly to all Gate Pass pages.</div>
+
+    <div class="gpc-tabs">
+      <button class="gpc-tab active" data-gpc-tab="dashboard">RGP Dashboard</button>
+      <button class="gpc-tab" data-gpc-tab="list">RGP List</button>
+      <button class="gpc-tab" data-gpc-tab="entry">RGP Entry Form</button>
+      <button class="gpc-tab" data-gpc-tab="global">Global Controls</button>
+    </div>
+
+    <div class="gpc-panel active" data-gpc-panel="dashboard">
+      <div class="gpc-grid">
+        <div class="gpc-field wide"><label>Page Title</label><input id="gpcDashTitle" value="RGP Management"></div>
+        <div class="gpc-field wide"><label>Page Subtitle</label><input id="gpcDashSubtitle" value="Returnable Gate Pass dashboard and entry controls."></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Show Navigation Cards</span><input type="checkbox" id="gpcShowNavCards" checked></label>
+        <label class="gpc-switch"><span>Show Summary Boxes</span><input type="checkbox" id="gpcShowDashSummary" checked></label>
+        <label class="gpc-switch"><span>Show Recent RGP Table</span><input type="checkbox" id="gpcShowRecentRgp" checked></label>
+        <label class="gpc-switch"><span>Show Return Status Box</span><input type="checkbox" id="gpcShowReturnStatus" checked></label>
+        <label class="gpc-switch"><span>Show Print Button</span><input type="checkbox" id="gpcShowPrintBtn" checked></label>
+        <label class="gpc-switch"><span>Show Back Button</span><input type="checkbox" id="gpcShowBackBtn" checked></label>
+      </div>
+    </div>
+
+    <div class="gpc-panel" data-gpc-panel="list">
+      <div class="gpc-grid">
+        <div class="gpc-field wide"><label>List Title</label><input id="gpcListTitle" value="RGP List"></div>
+        <div class="gpc-field wide"><label>List Subtitle</label><input id="gpcListSubtitle" value="Search, review, return, print and open complete RGP details."></div>
+        <div class="gpc-field"><label>Table Minimum Width (px)</label><input type="number" id="gpcTableWidth" min="900" max="3000" value="1500"></div>
+        <div class="gpc-field"><label>Table Maximum Height (px)</label><input type="number" id="gpcTableHeight" min="250" max="1000" value="540"></div>
+        <div class="gpc-field"><label>Header Position</label><select id="gpcHeaderSticky"><option value="sticky">Sticky</option><option value="normal">Normal</option></select></div>
+        <div class="gpc-field"><label>Row Density</label><select id="gpcRowDensity"><option value="compact">Compact</option><option value="normal" selected>Normal</option><option value="comfortable">Comfortable</option></select></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Show Search Filters</span><input type="checkbox" id="gpcShowListFilters" checked></label>
+        <label class="gpc-switch"><span>Show Summary Boxes</span><input type="checkbox" id="gpcShowListSummary" checked></label>
+        <label class="gpc-switch"><span>Show Export Excel</span><input type="checkbox" id="gpcShowExcel" checked></label>
+        <label class="gpc-switch"><span>Show Export PDF</span><input type="checkbox" id="gpcShowPdf" checked></label>
+        <label class="gpc-switch"><span>Show Action Column</span><input type="checkbox" id="gpcShowActions" checked></label>
+        <label class="gpc-switch"><span>Show Pending Value</span><input type="checkbox" id="gpcShowPendingValue" checked></label>
+      </div>
+      <div class="gpc-section">
+        <h3>RGP List Columns</h3>
+        <p>Rename, resize, show/hide and change the order of table columns.</p>
+        <div class="gpc-columns" id="gpcListColumns"></div>
+      </div>
+    </div>
+
+    <div class="gpc-panel" data-gpc-panel="entry">
+      <div class="gpc-grid">
+        <div class="gpc-field wide"><label>Entry Title</label><input id="gpcEntryTitle" value="RGP Entry Form"></div>
+        <div class="gpc-field wide"><label>Entry Subtitle</label><input id="gpcEntrySubtitle" value="Create one RGP with multiple returnable items."></div>
+        <div class="gpc-field"><label>Form Columns</label><select id="gpcEntryColumns"><option value="5" selected>5 Columns</option><option value="4">4 Columns</option><option value="3">3 Columns</option><option value="2">2 Columns</option><option value="1">1 Column</option></select></div>
+        <div class="gpc-field"><label>Item Table Minimum Width</label><input type="number" id="gpcEntryTableWidth" min="700" max="2200" value="980"></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Show Vehicle Number</span><input type="checkbox" id="gpcShowVehicle" checked></label>
+        <label class="gpc-switch"><span>Show Contact Number</span><input type="checkbox" id="gpcShowContact" checked></label>
+        <label class="gpc-switch"><span>Show Bill Detail</span><input type="checkbox" id="gpcShowBill" checked></label>
+        <label class="gpc-switch"><span>Show Remarks</span><input type="checkbox" id="gpcShowRemarks" checked></label>
+        <label class="gpc-switch"><span>Show Purpose</span><input type="checkbox" id="gpcShowPurpose" checked></label>
+        <label class="gpc-switch"><span>Show Summary Totals</span><input type="checkbox" id="gpcShowEntrySummary" checked></label>
+        <label class="gpc-switch"><span>Show Save Draft</span><input type="checkbox" id="gpcShowSaveDraft" checked></label>
+        <label class="gpc-switch"><span>Show Clear Buttons</span><input type="checkbox" id="gpcShowClearButtons" checked></label>
+      </div>
+      <div class="gpc-section">
+        <h3>Entry Item Table Columns</h3>
+        <p>Rename, resize and show/hide item entry columns.</p>
+        <div class="gpc-columns" id="gpcEntryColumnsBox"></div>
+      </div>
+    </div>
+
+    <div class="gpc-panel" data-gpc-panel="global">
+      <div class="gpc-grid">
+        <div class="gpc-field"><label>Card Radius</label><input type="number" id="gpcCardRadius" min="0" max="30" value="15"></div>
+        <div class="gpc-field"><label>Card Gap</label><input type="number" id="gpcCardGap" min="4" max="30" value="14"></div>
+        <div class="gpc-field"><label>Page Padding</label><input type="number" id="gpcPagePadding" min="6" max="40" value="18"></div>
+        <div class="gpc-field"><label>Table Font Size</label><input type="number" id="gpcTableFont" min="9" max="16" value="11"></div>
+      </div>
+      <div class="gpc-switches">
+        <label class="gpc-switch"><span>Freeze Table Headers</span><input type="checkbox" id="gpcFreezeHeaders" checked></label>
+        <label class="gpc-switch"><span>Show Page Controller Button</span><input type="checkbox" id="gpcShowControllerBtn" checked></label>
+        <label class="gpc-switch"><span>Remember Last RGP Page</span><input type="checkbox" id="gpcRememberPage" checked></label>
+      </div>
+    </div>
+
+    <div class="gpc-actions">
+      <button class="btn" id="gpcRestoreBtn" type="button">Restore Defaults</button>
+      <button class="btn" id="gpcPreviewBtn" type="button">Preview</button>
+      <button class="btn primary" id="gpcSaveBtn" type="button">Save & Apply</button>
+    </div>
+  </div>
+</div>
+
+</body></html>`);w.document.close();w.focus();savePrintSettings();closePrintSettings()}
 async function pdfSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');const host=document.createElement('div');host.style.position='fixed';host.style.left='-100000px';host.style.top='0';host.innerHTML=buildDesignedReportHtml(reportDesignSelected);document.body.appendChild(host);if(window.html2pdf){try{const blob=await html2pdf().set({margin:0,filename:(reportDesignSelected.designName||'purchase-report')+'.pdf',html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:reportDesignSelected.paper||'landscape'},pagebreak:{mode:['css','legacy']}}).from(host.firstElementChild).outputPdf('blob');await purchaseReportSaveBlob(blob,(reportDesignSelected.designName||'purchase-report')+'.pdf');host.remove();closeReportDesignChooser();return}catch(e){console.error(e)}}host.remove();openPrintSettings()}
 
 function purchaseReportsInitialise(){
@@ -6950,6 +7354,17 @@ function bind(){
   $('#rgpListNewBtn')?.addEventListener('click',()=>setRgpPage('entry'));
   $('#rgpListReturnBtn')?.addEventListener('click',()=>setRgpPage('return'));
   bindRgpListActions();
+  $('#gatePassPageControllerBtn')?.addEventListener('click',gpcOpen);
+  $('#gpcCloseBtn')?.addEventListener('click',gpcClose);
+  $('#gpcSaveBtn')?.addEventListener('click',gpcSave);
+  $('#gpcPreviewBtn')?.addEventListener('click',()=>gpcApplySettings(gpcReadForm()));
+  $('#gpcRestoreBtn')?.addEventListener('click',gpcRestore);
+  $('#gatePassPageControllerModal')?.addEventListener('click',e=>{if(e.target.id==='gatePassPageControllerModal')gpcClose()});
+  $$('[data-gpc-tab]').forEach(btn=>btn.addEventListener('click',()=>{
+    $$('[data-gpc-tab]').forEach(x=>x.classList.toggle('active',x===btn));
+    $$('[data-gpc-panel]').forEach(x=>x.classList.toggle('active',x.dataset.gpcPanel===btn.dataset.gpcTab));
+  }));
+  gpcApplySettings();
   $('#rgpNo')?.addEventListener('blur',formatRgpNumberField);
   $('#rgpNo')?.addEventListener('change',formatRgpNumberField);
   ['rgpDate','rgpDueDate'].forEach(id=>{
