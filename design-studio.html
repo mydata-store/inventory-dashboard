@@ -7690,6 +7690,100 @@ function closePrintSettings(){$('#printSettingsModal').classList.remove('open');
 function savePrintSettings(){const c=currentPrintSettings();c.marginMode=$('#psMargins').value;localStorage.setItem(`erpPrintSettings:${reportDesignSource}:${reportDesignSource==='rgp'?'rgp':purchaseReportType}`,JSON.stringify(c));toast('Print settings saved for this report tab')}
 function printSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');openPrintSettings()}
 function printNowWithSettings(){if(!reportDesignSelected)return;const c=currentPrintSettings();let html=buildDesignedReportHtml({...reportDesignSelected,paper:c.orientation,showPage:c.pageNumbers,showGrid:c.gridlines});if(c.customHeader)html=`<div class="ps-custom-header">${rcEsc(c.customHeader)}</div>`+html;if(c.customFooter)html+=`<div class="ps-custom-footer">${rcEsc(c.customFooter)}</div>`;const margin=c.margins.map(x=>x+'mm').join(' ');const transform=c.scale==='adjust'?`transform:scale(${c.scalePercent/100});transform-origin:top left;width:${10000/c.scalePercent}%`:c.scale==='actual'?'':`width:100%;max-width:100%`;const justify=c.centerHorizontal?'center':'flex-start',align=c.centerVertical?'center':'flex-start';const bw=c.blackWhite?'filter:grayscale(1);':'';const w=open('','_blank');w.document.write(`<html><head><title>${rcEsc(reportDesignSelected.designName||(reportDesignSource==='rgp'?'RGP Report':'Purchase Report'))}</title><style>@page{size:${c.paper} ${c.orientation};margin:${margin}}html,body{margin:0;background:white;-webkit-print-color-adjust:${c.background?'exact':'economy'};print-color-adjust:${c.background?'exact':'economy'}}body{display:flex;justify-content:${justify};align-items:${align};min-height:100vh;${bw}}.generated-report{padding:0!important;${transform}}thead{display:${c.repeatHeader?'table-header-group':'table-row-group'}}tr{page-break-inside:avoid}.generated-page-number{display:${c.pageNumbers?'inline':'none'}}.ps-custom-header{position:fixed;top:${c.headerMargin}mm;left:0;right:0;text-align:center;font-size:9pt}.ps-custom-footer{position:fixed;bottom:${c.footerMargin}mm;left:0;right:0;text-align:center;font-size:8pt}${c.draft?'*{box-shadow:none!important;text-shadow:none!important}':''}@media print{body{margin:0}}</style></head><body>${html}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script>
+
+<style>
+/* Clean advanced Print Designer add-on */
+.pdx-clean-toggle{display:flex;align-items:center;gap:8px;margin:10px 0 14px;font-size:12px;color:var(--muted)}
+.pdx-clean-toggle input{width:16px;height:16px}
+.pdx-advanced{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}
+.pdx-advanced h4{margin:0 0 10px;font-size:13px}
+.pdx-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pdx-grid label{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.pdx-grid input,.pdx-grid select{width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 9px;background:var(--surface);color:var(--text)}
+.pdx-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.pdx-checks label{display:flex;align-items:center;gap:7px;font-size:11px}
+@media(max-width:700px){.pdx-grid,.pdx-checks{grid-template-columns:1fr}}
+</style>
+<script>
+(function(){
+  'use strict';
+  const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
+  function openPrintStudio(tab){
+    if(typeof window.openStudioPanel==='function') window.openStudioPanel('print-studio');
+    else {
+      qa('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-print-studio'));
+      qa('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel==='print-studio'));
+    }
+    setTimeout(()=>{
+      const wanted=tab||new URLSearchParams(location.search).get('tab')||'designs';
+      const btn=q(`[data-pdtab="${wanted}"]`)||q('[data-pdtab="designs"]');
+      if(btn) btn.click();
+    },80);
+  }
+  function setPrintRoute(tab){
+    const u=new URL(location.href);
+    u.searchParams.set('studio','design-studio');
+    u.searchParams.set('section','print-studio');
+    u.searchParams.set('tab',tab||'designs');
+    history.replaceState({studio:'print-studio',tab:tab||'designs'},'',u);
+  }
+  function installRouting(){
+    document.addEventListener('click',e=>{
+      const menu=e.target.closest('[data-panel="print-studio"]');
+      if(menu){e.preventDefault();setPrintRoute('designs');setTimeout(()=>openPrintStudio('designs'),0);return;}
+      const tab=e.target.closest('[data-pdtab]');
+      if(tab){setTimeout(()=>setPrintRoute(tab.dataset.pdtab),0);}
+    },true);
+    const p=new URLSearchParams(location.search);
+    if((p.get('studio')==='design-studio'&&p.get('section')==='print-studio')||p.has('tab')){
+      setTimeout(()=>openPrintStudio(p.get('tab')||'designs'),120);
+    }
+    window.addEventListener('popstate',()=>{
+      const x=new URLSearchParams(location.search);
+      if((x.get('studio')==='design-studio'&&x.get('section')==='print-studio')||x.has('tab')) openPrintStudio(x.get('tab')||'designs');
+    });
+  }
+  function friendlyInternalRow(tr){
+    if(tr.classList.contains('pd-module-head')) return false;
+    const page=(tr.querySelector('td:nth-child(2) b')?.textContent||'').trim();
+    const sub=(tr.querySelector('td:nth-child(2) div')?.textContent||'').trim();
+    return /^auto-table-/i.test(sub)||/^(ERP Register|rgpItemsTable|rgpListTable)$/i.test(page)||/Table$/i.test(page);
+  }
+  function installCleanManager(){
+    const pane=q('[data-pdpane="assign"]');
+    if(!pane||q('#pdxShowInternal')) return;
+    const toolbar=pane.querySelector('.pd-manager-toolbar');
+    if(!toolbar) return;
+    toolbar.insertAdjacentHTML('afterend','<label class="pdx-clean-toggle"><input type="checkbox" id="pdxShowInternal"> Show technical/internal tables</label>');
+    const apply=()=>{const show=q('#pdxShowInternal')?.checked;qa('#pdAssignBody tr').forEach(tr=>{tr.style.display=(!show&&friendlyInternalRow(tr))?'none':''})};
+    q('#pdxShowInternal').addEventListener('change',apply);
+    const body=q('#pdAssignBody'); if(body)new MutationObserver(apply).observe(body,{childList:true,subtree:true});
+    apply();
+  }
+  function installAdvancedControls(){
+    const controls=q('.pd-modal-controls');
+    if(!controls||q('#pdxAdvanced')) return;
+    controls.insertAdjacentHTML('beforeend',`<div class="pdx-advanced" id="pdxAdvanced"><h4>Advanced Table Controls</h4><div class="pdx-grid"><div><label>Table Width %</label><input id="pdxTableWidth" type="number" min="40" max="100" value="100"></div><div><label>Cell Padding</label><input id="pdxPadding" type="number" min="1" max="20" value="5"></div><div><label>Header Height</label><input id="pdxHeaderHeight" type="number" min="18" max="60" value="28"></div><div><label>Row Height</label><input id="pdxRowHeight" type="number" min="18" max="60" value="25"></div><div><label>Border Width</label><input id="pdxBorder" type="number" min="0" max="4" value="1"></div><div><label>Body Alignment</label><select id="pdxAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div></div><div class="pdx-checks"><label><input type="checkbox" id="pdxShowTable" checked> Show table</label><label><input type="checkbox" id="pdxHideAction" checked> Hide Action column</label><label><input type="checkbox" id="pdxRepeatHeader" checked> Repeat header</label><label><input type="checkbox" id="pdxWrap" checked> Wrap long text</label></div></div>`);
+    const apply=()=>{
+      const paper=q('#pdModalPaper'), table=paper?.querySelector('table'); if(!table)return;
+      table.style.display=q('#pdxShowTable').checked?'table':'none';
+      table.style.width=Math.max(40,Math.min(100,+q('#pdxTableWidth').value||100))+'%';table.style.margin='0 auto';
+      const pad=(+q('#pdxPadding').value||5)+'px', bw=+q('#pdxBorder').value||0, align=q('#pdxAlign').value;
+      const heads=[...table.querySelectorAll('thead th')];
+      heads.forEach((h,i)=>{const hide=q('#pdxHideAction').checked&&/action/i.test(h.textContent);h.style.display=hide?'none':'';h.style.height=(+q('#pdxHeaderHeight').value||28)+'px';h.style.padding=pad;h.style.border=bw?`${bw}px solid #222`:'0';table.querySelectorAll(`tbody tr`).forEach(r=>{const c=r.children[i];if(c){c.style.display=hide?'none':'';c.style.height=(+q('#pdxRowHeight').value||25)+'px';c.style.padding=pad;c.style.border=bw?`${bw}px solid #222`:'0';c.style.textAlign=align;c.style.whiteSpace=q('#pdxWrap').checked?'normal':'nowrap'}})});
+      const th=table.querySelector('thead'); if(th)th.style.display=q('#pdxRepeatHeader').checked?'table-header-group':'table-row-group';
+    };
+    q('#pdxAdvanced').addEventListener('input',apply);q('#pdxAdvanced').addEventListener('change',apply);apply();
+  }
+  function watch(){
+    const mo=new MutationObserver(()=>{installCleanManager();installAdvancedControls()});
+    mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    installCleanManager();installAdvancedControls();
+  }
+  document.addEventListener('DOMContentLoaded',()=>{installRouting();watch();});
+})();
+</script>
+
 </body></html>`);w.document.close();w.focus();savePrintSettings();closePrintSettings()}
 async function pdfSelectedDesign(){if(!reportDesignSelected)return toast('Please select a report design');const host=document.createElement('div');host.style.position='fixed';host.style.left='-100000px';host.style.top='0';host.innerHTML=buildDesignedReportHtml(reportDesignSelected);document.body.appendChild(host);if(window.html2pdf){try{const blob=await html2pdf().set({margin:0,filename:(reportDesignSelected.designName||'purchase-report')+'.pdf',html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:reportDesignSelected.paper||'landscape'},pagebreak:{mode:['css','legacy']}}).from(host.firstElementChild).outputPdf('blob');await purchaseReportSaveBlob(blob,(reportDesignSelected.designName||'purchase-report')+'.pdf');host.remove();closeReportDesignChooser();return}catch(e){console.error(e)}}host.remove();openPrintSettings()}
 
