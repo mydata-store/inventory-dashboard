@@ -1389,6 +1389,11 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
 .rgp-return-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .rgp-return-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .rgp-delete-btn{color:#b91c1c!important;border-color:#fecaca!important;background:#fff7f7!important}
+#rgpListBody tr{cursor:pointer}
+#rgpListBody tr.rgp-selected-row td{background:#fff7d6!important;box-shadow:inset 0 1px 0 #f4c430,inset 0 -1px 0 #f4c430}
+#rgpDeleteSelectedBtn:disabled{opacity:.45;cursor:not-allowed}
+.rgp-history-btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
+.rgp-history-btn{min-width:86px}
 .rgp-confirm{position:fixed;inset:0;background:rgba(5,18,31,.56);display:none;align-items:center;justify-content:center;z-index:10000;padding:18px}
 .rgp-confirm.open{display:flex}
 .rgp-confirm-box{width:min(430px,95vw);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
@@ -1620,6 +1625,166 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
   .rgp-pd-head,.rgp-pd-controls,.rgp-pd-actions{display:none!important}
   .rgp-pd-table thead{display:table-header-group}
   .rgp-pd-table tr{page-break-inside:avoid}
+}
+
+
+/* Operational RGP Detail + robust delete */
+.rgp-detail-modal{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  padding:18px;background:rgba(5,18,31,.66);z-index:14000
+}
+.rgp-detail-modal.open{display:flex}
+.rgp-detail-box{
+  width:min(1050px,97vw);max-height:94vh;overflow:auto;background:var(--surface);
+  border:1px solid var(--border);border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.34);padding:18px
+}
+.rgp-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+.rgp-detail-head h2{margin:0 0 4px}.rgp-detail-head p{margin:0;color:var(--muted)}
+.rgp-detail-close{width:38px;height:38px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:20px;cursor:pointer}
+.rgp-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.rgp-detail-field{padding:11px;border:1px solid var(--border);border-radius:11px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}
+.rgp-detail-field small{display:block;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase;margin-bottom:4px}
+.rgp-detail-field strong{font-size:12px}
+.rgp-detail-table{width:100%;border-collapse:collapse;min-width:820px}
+.rgp-detail-table th,.rgp-detail-table td{border:1px solid var(--border);padding:8px;font-size:11px;text-align:left}
+.rgp-detail-table th{background:color-mix(in srgb,var(--bg) 65%,var(--surface));font-size:10px;text-transform:uppercase}
+.rgp-detail-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.rgp-detail-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+@media(max-width:800px){.rgp-detail-grid,.rgp-detail-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.rgp-detail-grid,.rgp-detail-summary{grid-template-columns:1fr}}
+
+
+/* Gate Pass Design Studio Repair V1.0
+   Restores the approved compact blue ERP shell without changing other modules. */
+body.gatepass-mode{
+  --bg:#eef4ff!important;
+  --surface:#ffffff!important;
+  --text:#102d57!important;
+  --muted:#58739f!important;
+  --primary:#3568bd!important;
+  --accent:#ffb400!important;
+  --border:#b9cff0!important;
+  --shadow:0 8px 22px rgba(31,73,132,.09)!important;
+  --side-bg:#2c5489!important;
+  --side-text:#ffffff!important;
+  --side-active:#376db4!important;
+  --side-active-text:#ffffff!important;
+  --clock-bg:transparent!important;
+  --clock-border:transparent!important;
+  --side-cw:44px!important;
+}
+body.gatepass-mode #app.layout-left{
+  grid-template-columns:44px minmax(0,1fr)!important;
+}
+body.gatepass-mode #app.layout-left .studio-sidebar{
+  width:44px!important;
+  padding:10px 5px!important;
+  overflow:hidden!important;
+}
+body.gatepass-mode .side-brand{
+  justify-content:center!important;
+  padding:5px 0 12px!important;
+}
+body.gatepass-mode .side-logo{
+  width:31px!important;
+  height:31px!important;
+  border-radius:8px!important;
+  font-size:11px!important;
+}
+body.gatepass-mode .side-brand-copy,
+body.gatepass-mode .side-item span:last-child,
+body.gatepass-mode .side-group-toggle span:nth-child(2),
+body.gatepass-mode .side-group-toggle .chev,
+body.gatepass-mode .side-submenu,
+body.gatepass-mode .clock-copy,
+body.gatepass-mode .side-pcopy{
+  display:none!important;
+}
+body.gatepass-mode .side-item,
+body.gatepass-mode .side-group-toggle{
+  min-height:36px!important;
+  height:36px!important;
+  padding:0!important;
+  justify-content:center!important;
+  border-radius:8px!important;
+}
+body.gatepass-mode .side-icon{
+  width:auto!important;
+  font-size:14px!important;
+}
+body.gatepass-mode .side-bottom{
+  margin-top:auto!important;
+  background:transparent!important;
+}
+body.gatepass-mode .side-clock{
+  display:none!important;
+}
+body.gatepass-mode .side-profile{
+  width:36px!important;
+  height:58px!important;
+  margin:7px 0 0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  justify-content:center!important;
+  overflow:visible!important;
+}
+body.gatepass-mode .side-avatar{
+  display:block!important;
+  width:39px!important;
+  height:39px!important;
+  min-width:39px!important;
+  border-radius:50%!important;
+  border:2px solid #ffcc00!important;
+  background:#e6edf7!important;
+  object-fit:cover!important;
+}
+body.gatepass-mode .page-shell{
+  min-width:0!important;
+  width:100%!important;
+}
+body.gatepass-mode .top{
+  padding:14px 18px!important;
+  background:#eef4ff!important;
+  border-color:#b9cff0!important;
+}
+body.gatepass-mode .top .title h1{
+  font-size:23px!important;
+  color:#102d57!important;
+}
+body.gatepass-mode .content{
+  padding:16px!important;
+  max-width:none!important;
+  width:100%!important;
+}
+body.gatepass-mode #panel-gatepass .card{
+  border-radius:14px!important;
+  border-color:#b9cff0!important;
+  box-shadow:0 5px 16px rgba(31,73,132,.07)!important;
+}
+body.gatepass-mode .gatepass-kpi,
+body.gatepass-mode .gatepass-type-card,
+body.gatepass-mode .gatepass-box,
+body.gatepass-mode .rgp-entry-top,
+body.gatepass-mode .rgp-items-card,
+body.gatepass-mode .rgp-return-top,
+body.gatepass-mode .rgp-return-items{
+  border-color:#b9cff0!important;
+  background:#fff!important;
+}
+body.gatepass-mode .gatepass-page-card{
+  padding:14px!important;
+}
+body.gatepass-mode .gatepass-summary,
+body.gatepass-mode .gatepass-type-grid,
+body.gatepass-mode .gatepass-dashboard-grid{
+  gap:10px!important;
+}
+body.gatepass-mode #gatePassFixStudioBtn{
+  display:inline-flex!important;
+}
+@media(max-width:800px){
+  body.gatepass-mode #app.layout-left{grid-template-columns:44px minmax(0,1fr)!important}
 }
 
 </style>
@@ -1995,6 +2160,7 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
           <p>Manage Returnable, Out and Cash Gate Passes from one dashboard.</p>
         </div>
         <div class="cc-toolbar">
+          <button class="btn" id="gatePassFixStudioBtn" type="button">Fix Design Studio</button>
           <button class="btn" id="gatePassRefreshBtn">Refresh</button>
           <button class="btn" id="gatePassPrintBtn">Print</button>
         </div>
@@ -2157,18 +2323,18 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
           <div class="rgp-items-card">
             <div class="rgp-items-head">
               <div><h3>Returnable Gate Pass Register</h3><p>Latest RGP records appear first.</p></div>
-              <div class="rgp-list-actions"><button class="btn" id="rgpListExportBtn">Export Excel</button><button class="btn" id="rgpListPdfBtn">Export PDF</button></div>
+              <div class="rgp-list-actions"><button class="btn" id="rgpListExportBtn">Export Excel</button><button class="btn" id="rgpListPdfBtn">Export PDF</button><button class="btn rgp-history-btn" id="rgpUndoBtn" type="button" title="Undo last delete or RGP page setting (Ctrl+Z)">↶ Undo</button><button class="btn rgp-history-btn" id="rgpRedoBtn" type="button" title="Redo last undone action (Ctrl+Y or Ctrl+Shift+Z)">↷ Redo</button><button class="btn rgp-delete-btn" id="rgpDeleteSelectedBtn" type="button" title="Delete selected RGP record">🗑 Delete</button></div>
             </div>
             <div class="rgp-list-table-wrap">
               <table class="rgp-list-table" id="rgpListTable">
                 <thead><tr><th>RGP No.</th><th>Date</th><th>Due Date</th><th>Item Code</th><th>Item Name with Size</th><th>Qty</th><th>Unit</th><th>Qty Received</th><th>Qty Pending</th><th>Department</th><th>Workshop</th><th>Courier</th><th>Authorized By</th><th>Bill Detail</th><th>Pending Value</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody id="rgpListBody">
-                  <tr data-status="partial"><td><button class="rgp-link">RGP-00024</button></td><td>04-Aug-26</td><td>18-Aug-26</td><td>ITM-00078</td><td>M.S Welding Rod 6013 - 3.15mm</td><td class="num">50</td><td>KG</td><td class="num">20</td><td class="num">30</td><td>Mechanical</td><td>Workshop A</td><td>Muhammad Aslam</td><td>Muhammad Waqas</td><td>Repair Estimate #1254</td><td class="num">PKR 8,400.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="closed"><td><button class="rgp-link">RGP-00023</button></td><td>03-Aug-26</td><td>10-Aug-26</td><td>ITM-00156</td><td>Bearing 6205</td><td class="num">10</td><td>PCS</td><td class="num">10</td><td class="num">0</td><td>Mechanical</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Bill #445</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="pending"><td><button class="rgp-link">RGP-00022</button></td><td>02-Aug-26</td><td>16-Aug-26</td><td>ITM-00091</td><td>Motor 15 HP</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Electrical</td><td>Electric Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Inspection</td><td class="num">PKR 35,000.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="partial"><td><button class="rgp-link">RGP-00021</button></td><td>01-Aug-26</td><td>12-Aug-26</td><td>ITM-00034</td><td>Hydraulic Pump</td><td class="num">2</td><td>PCS</td><td class="num">1</td><td class="num">1</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Estimate #1190</td><td class="num">PKR 12,500.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="pending"><td><button class="rgp-link">RGP-00020</button></td><td>30-Jul-26</td><td>08-Aug-26</td><td>ITM-00055</td><td>Gear Box Assembly</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Maintenance</td><td>Lathe Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Service Detail</td><td class="num">PKR 7,550.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="closed"><td><button class="rgp-link">RGP-00019</button></td><td>29-Jul-26</td><td>05-Aug-26</td><td>ITM-00044</td><td>V-Belt A-32</td><td class="num">15</td><td>PCS</td><td class="num">15</td><td class="num">0</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Inspection Complete</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
+                  <tr data-status="partial"><td><button class="rgp-link">RGP-00024</button></td><td>04-Aug-26</td><td>18-Aug-26</td><td>ITM-00078</td><td>M.S Welding Rod 6013 - 3.15mm</td><td class="num">50</td><td>KG</td><td class="num">20</td><td class="num">30</td><td>Mechanical</td><td>Workshop A</td><td>Muhammad Aslam</td><td>Muhammad Waqas</td><td>Repair Estimate #1254</td><td class="num">PKR 8,400.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="closed"><td><button class="rgp-link">RGP-00023</button></td><td>03-Aug-26</td><td>10-Aug-26</td><td>ITM-00156</td><td>Bearing 6205</td><td class="num">10</td><td>PCS</td><td class="num">10</td><td class="num">0</td><td>Mechanical</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Bill #445</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="pending"><td><button class="rgp-link">RGP-00022</button></td><td>02-Aug-26</td><td>16-Aug-26</td><td>ITM-00091</td><td>Motor 15 HP</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Electrical</td><td>Electric Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Inspection</td><td class="num">PKR 35,000.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="partial"><td><button class="rgp-link">RGP-00021</button></td><td>01-Aug-26</td><td>12-Aug-26</td><td>ITM-00034</td><td>Hydraulic Pump</td><td class="num">2</td><td>PCS</td><td class="num">1</td><td class="num">1</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Estimate #1190</td><td class="num">PKR 12,500.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="pending"><td><button class="rgp-link">RGP-00020</button></td><td>30-Jul-26</td><td>08-Aug-26</td><td>ITM-00055</td><td>Gear Box Assembly</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Maintenance</td><td>Lathe Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Service Detail</td><td class="num">PKR 7,550.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="closed"><td><button class="rgp-link">RGP-00019</button></td><td>29-Jul-26</td><td>05-Aug-26</td><td>ITM-00044</td><td>V-Belt A-32</td><td class="num">15</td><td>PCS</td><td class="num">15</td><td class="num">0</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Inspection Complete</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
                 </tbody>
               </table>
             </div>
@@ -4483,6 +4649,7 @@ function openGatePassDashboard(type='dashboard'){
   document.querySelectorAll('.side-item').forEach(x=>x.classList.toggle('active',x.id==='gatePassMainBtn'));
   if(type==='rgp') openRgpDashboard(new URL(location.href).searchParams.get('page')||'dashboard');
   else showGatePassMain();
+  setTimeout(()=>fixGatePassDesignStudio(false),0);
 }
 
 
@@ -5024,21 +5191,8 @@ function rgpListClearFilters(){
   document.getElementById('rgpListCount').textContent='Showing 1 to 6 of 6 records';
 }
 function bindRgpListActions(){
-  document.querySelectorAll('#rgpListTable .rgp-link').forEach(btn=>btn.addEventListener('click',()=>toast(btn.textContent+' detail page will be made next')));
-  document.querySelectorAll('#rgpListTable .rgp-list-mini').forEach(btn=>{
-    if(btn.dataset.bound==='1') return;
-    btn.dataset.bound='1';
-    btn.addEventListener('click',()=>{
-      const a=btn.textContent.trim().toLowerCase();
-      const row=btn.closest('tr');
-      if(a==='return') openReturnFromRgpRow(row);
-      else if(a==='print') openRgpPrintDesign();
-      else if(a==='delete') askDeleteRgp(row);
-      else toast('RGP Detail page will be made next');
-    });
-  });
+  // Actions are handled by one delegated click listener.
 }
-
 
 const GPC_STORAGE_KEY='erpGatePassPageControllerV2';
 
@@ -5336,134 +5490,25 @@ function gpcClose(){
   modal?.setAttribute('aria-hidden','true');
 }
 function gpcSave(){
+  rgpHistoryRemember('Change RGP page settings');
   const s=gpcReadForm();
   localStorage.setItem(GPC_STORAGE_KEY,JSON.stringify(s));
   gpcApplySettings(s);
   gpcClose();
-  toast('Gate Pass page controller settings saved');
+  rgpHistoryUpdateButtons();
+  toast('Gate Pass page controller settings saved — Undo is available');
 }
 function gpcRestore(){
+  rgpHistoryRemember('Restore RGP controller defaults');
   localStorage.removeItem(GPC_STORAGE_KEY);
   gpcLoadForm();
   gpcApplySettings(gpcDefaults);
-  toast('Gate Pass controller restored to defaults');
+  rgpHistoryUpdateButtons();
+  toast('Gate Pass controller restored to defaults — Undo is available');
 }
 
 
-let rgpPendingDeleteRow=null;
 
-function rgpRowData(row){
-  const c=[...row.children];
-  return {
-    rgpNo:c[0]?.innerText.trim()||'',
-    date:c[1]?.innerText.trim()||'',
-    dueDate:c[2]?.innerText.trim()||'',
-    itemCode:c[3]?.innerText.trim()||'',
-    item:c[4]?.innerText.trim()||'',
-    qty:Number(c[5]?.innerText.replace(/,/g,'')||0),
-    unit:c[6]?.innerText.trim()||'',
-    received:Number(c[7]?.innerText.replace(/,/g,'')||0),
-    pending:Number(c[8]?.innerText.replace(/,/g,'')||0),
-    department:c[9]?.innerText.trim()||'',
-    workshop:c[10]?.innerText.trim()||'',
-    courier:c[11]?.innerText.trim()||'',
-    authorized:c[12]?.innerText.trim()||'',
-    bill:c[13]?.innerText.trim()||''
-  };
-}
-
-function openReturnFromRgpRow(row){
-  const d=rgpRowData(row);
-  document.getElementById('returnRgpNo').value=d.rgpNo;
-  document.getElementById('returnRgpDate').value=d.date;
-  document.getElementById('returnDepartment').value=d.department;
-  document.getElementById('returnWorkshop').value=d.workshop;
-  document.getElementById('returnCourier').value='';
-  document.getElementById('returnReceivedBy').value='';
-  document.getElementById('returnBillDetail').value=d.bill||'';
-  document.getElementById('returnRemarks').value='';
-
-  const body=document.getElementById('rgpReturnBody');
-  body.innerHTML='';
-  const tr=document.createElement('tr');
-  tr.innerHTML=`
-    <td>1</td>
-    <td>${d.itemCode}</td>
-    <td>${d.item}</td>
-    <td>${d.unit}</td>
-    <td class="return-sent">${d.qty.toFixed(2)}</td>
-    <td class="return-prev">${d.received.toFixed(2)}</td>
-    <td class="return-pending">${d.pending.toFixed(2)}</td>
-    <td><input class="return-now" type="number" min="0" max="${d.pending}" step="0.01" value="0.00"></td>
-    <td><input class="return-balance" readonly value="${d.pending.toFixed(2)}"></td>`;
-  body.appendChild(tr);
-  tr.querySelector('.return-now').addEventListener('input',updateRgpReturnTotals);
-  updateRgpReturnTotals();
-  setRgpPage('return');
-}
-
-function updateRgpReturnTotals(){
-  let sent=0,now=0,balance=0;
-  const rows=[...document.querySelectorAll('#rgpReturnBody tr')];
-  rows.forEach(row=>{
-    const qtySent=Number(row.querySelector('.return-sent')?.textContent||0);
-    const pending=Number(row.querySelector('.return-pending')?.textContent||0);
-    const input=row.querySelector('.return-now');
-    let receivedNow=Number(input?.value||0);
-    if(receivedNow<0) receivedNow=0;
-    if(receivedNow>pending){receivedNow=pending;if(input)input.value=pending.toFixed(2)}
-    const bal=pending-receivedNow;
-    const balanceInput=row.querySelector('.return-balance');
-    if(balanceInput) balanceInput.value=bal.toFixed(2);
-    sent+=qtySent;now+=receivedNow;balance+=bal;
-  });
-  document.getElementById('returnTotalItems').textContent=rows.length;
-  document.getElementById('returnQtySent').textContent=sent.toFixed(2);
-  document.getElementById('returnQtyNow').textContent=now.toFixed(2);
-  document.getElementById('returnQtyBalance').textContent=balance.toFixed(2);
-}
-
-function clearRgpReturn(){
-  ['returnDate','returnCourier','returnReceivedBy','returnBillDetail','returnVehicle','returnRemarks'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.value='';
-  });
-  document.querySelectorAll('#rgpReturnBody .return-now').forEach(x=>x.value='0.00');
-  updateRgpReturnTotals();
-  toast('Return Entry cleared');
-}
-
-function saveRgpReturn(draft=false){
-  const no=document.getElementById('returnRgpNo')?.value.trim();
-  const date=document.getElementById('returnDate')?.value.trim();
-  const receivedBy=document.getElementById('returnReceivedBy')?.value.trim();
-  const qty=Number(document.getElementById('returnQtyNow')?.textContent||0);
-  if(!draft && (!no||!date||!receivedBy||qty<=0)){
-    toast('Enter Return Date, Received By and quantity received');
-    return;
-  }
-  toast(draft?'Return draft saved':'RGP return saved successfully');
-}
-
-function askDeleteRgp(row){
-  rgpPendingDeleteRow=row;
-  const modal=document.getElementById('rgpDeleteConfirm');
-  const no=row?.children[0]?.innerText.trim()||'this RGP';
-  document.getElementById('rgpDeleteText').textContent=`Delete ${no}? This action cannot be undone.`;
-  modal.classList.add('open');
-}
-
-function closeDeleteRgp(){
-  document.getElementById('rgpDeleteConfirm')?.classList.remove('open');
-  rgpPendingDeleteRow=null;
-}
-
-function confirmDeleteRgp(){
-  if(rgpPendingDeleteRow){
-    rgpPendingDeleteRow.remove();
-    toast('RGP record deleted');
-  }
-  closeDeleteRgp();
-}
 
 
 
@@ -5560,6 +5605,260 @@ window.closeRgpPrintDesign=closeRgpPrintDesign;
 window.saveRgpPrintDesign=saveRgpPrintDesign;
 window.restoreRgpPrintDesign=restoreRgpPrintDesign;
 window.printRgpDesignedReport=printRgpDesignedReport;
+
+
+let rgpActiveDetailRow=null;
+let rgpDeleteTargetRow=null;
+let rgpSelectedRow=null;
+
+function selectRgpRow(row){
+  if(rgpSelectedRow && rgpSelectedRow!==row) rgpSelectedRow.classList.remove('rgp-selected-row');
+  rgpSelectedRow=row && row.isConnected ? row : null;
+  if(rgpSelectedRow) rgpSelectedRow.classList.add('rgp-selected-row');
+  const del=document.getElementById('rgpDeleteSelectedBtn');
+  if(del) del.disabled=!rgpSelectedRow;
+}
+
+function clearRgpRowSelection(){
+  if(rgpSelectedRow) rgpSelectedRow.classList.remove('rgp-selected-row');
+  rgpSelectedRow=null;
+  const del=document.getElementById('rgpDeleteSelectedBtn');
+  if(del) del.disabled=true;
+}
+
+function deleteSelectedRgp(){
+  if(!rgpSelectedRow || !rgpSelectedRow.isConnected){
+    clearRgpRowSelection();
+    toast('Select an RGP row first');
+    return;
+  }
+  openRgpDeleteConfirm(rgpSelectedRow);
+}
+
+function rgpText(cell){ return cell ? cell.innerText.trim() : ''; }
+
+function getRgpRowRecord(row){
+  const c=[...row.children];
+  return {
+    row,
+    rgpNo:rgpText(c[0]), date:rgpText(c[1]), dueDate:rgpText(c[2]),
+    itemCode:rgpText(c[3]), item:rgpText(c[4]),
+    qty:Number(rgpText(c[5]).replace(/,/g,''))||0,
+    unit:rgpText(c[6]),
+    received:Number(rgpText(c[7]).replace(/,/g,''))||0,
+    pending:Number(rgpText(c[8]).replace(/,/g,''))||0,
+    department:rgpText(c[9]), workshop:rgpText(c[10]), courier:rgpText(c[11]),
+    authorized:rgpText(c[12]), bill:rgpText(c[13]), pendingValue:rgpText(c[14]),
+    status:rgpText(c[15])
+  };
+}
+
+function openRgpDetail(row){
+  if(!row) return;
+  rgpActiveDetailRow=row;
+  const d=getRgpRowRecord(row);
+
+  document.getElementById('rgpDetailTitle').textContent=d.rgpNo+' — Detail';
+  const info=document.getElementById('rgpDetailInfo');
+  const fields=[
+    ['RGP Number',d.rgpNo],['RGP Date',d.date],['Due Date',d.dueDate],['Department',d.department],
+    ['Workshop',d.workshop],['Courier',d.courier],['Authorized By',d.authorized],['Bill Detail',d.bill]
+  ];
+  info.innerHTML=fields.map(([k,v])=>`<div class="rgp-detail-field"><small>${k}</small><strong>${v||'—'}</strong></div>`).join('');
+
+  document.getElementById('rgpDetailItems').innerHTML=`
+    <tr>
+      <td>${d.itemCode}</td><td>${d.item}</td><td>${d.qty.toFixed(2)}</td><td>${d.unit}</td>
+      <td>${d.received.toFixed(2)}</td><td>${d.pending.toFixed(2)}</td>
+      <td>${d.pendingValue}</td><td>${d.status}</td>
+    </tr>`;
+
+  document.getElementById('rgpDetailSummary').innerHTML=`
+    <div class="rgp-detail-field"><small>Qty Sent</small><strong>${d.qty.toFixed(2)}</strong></div>
+    <div class="rgp-detail-field"><small>Qty Received</small><strong>${d.received.toFixed(2)}</strong></div>
+    <div class="rgp-detail-field"><small>Qty Pending</small><strong>${d.pending.toFixed(2)}</strong></div>
+    <div class="rgp-detail-field"><small>Pending Value</small><strong>${d.pendingValue}</strong></div>`;
+
+  const returnBtn=document.getElementById('rgpDetailReturnBtn');
+  if(returnBtn){
+    returnBtn.style.display=d.pending>0?'':'none';
+    returnBtn.onclick=()=>{ closeRgpDetail(); openReturnFromRgpRow(row); };
+  }
+
+  document.getElementById('rgpDetailModal').classList.add('open');
+}
+
+function closeRgpDetail(){
+  document.getElementById('rgpDetailModal')?.classList.remove('open');
+  rgpActiveDetailRow=null;
+}
+
+function openRgpDeleteConfirm(row){
+  if(!row) return;
+  rgpDeleteTargetRow=row;
+  const no=getRgpRowRecord(row).rgpNo || 'this RGP';
+  document.getElementById('rgpDeleteText').textContent=`Delete ${no}? You can restore it with Undo.`;
+  document.getElementById('rgpDeleteConfirm').classList.add('open');
+}
+
+function closeDeleteRgp(){
+  document.getElementById('rgpDeleteConfirm')?.classList.remove('open');
+  rgpDeleteTargetRow=null;
+}
+
+function confirmDeleteRgp(){
+  if(!rgpDeleteTargetRow) return;
+  const no=getRgpRowRecord(rgpDeleteTargetRow).rgpNo;
+  rgpHistoryRemember('Delete '+no);
+  if(rgpSelectedRow===rgpDeleteTargetRow) clearRgpRowSelection();
+  rgpDeleteTargetRow.remove();
+  closeDeleteRgp();
+  rgpListClearFilters();
+  rgpHistoryPersistRows();
+  rgpHistoryUpdateButtons();
+  toast(no+' deleted successfully — Undo is available');
+}
+
+function refreshRgpListCountAfterDelete(){
+  const rows=[...document.querySelectorAll('#rgpListBody tr')];
+  const count=document.getElementById('rgpListCount');
+  if(count) count.textContent=`Showing 1 to ${rows.length} of ${rows.length} records`;
+}
+
+const RGP_HISTORY_ROWS_KEY='erpRgpListRowsV1';
+let rgpUndoStack=[];
+let rgpRedoStack=[];
+
+function rgpHistorySnapshot(label='RGP change'){
+  return {
+    label,
+    rows:document.getElementById('rgpListBody')?.innerHTML||'',
+    settings:localStorage.getItem(GPC_STORAGE_KEY)
+  };
+}
+function rgpHistoryRemember(label){
+  rgpUndoStack.push(rgpHistorySnapshot(label));
+  if(rgpUndoStack.length>40) rgpUndoStack.shift();
+  rgpRedoStack=[];
+  rgpHistoryUpdateButtons();
+}
+function rgpHistoryApply(snapshot){
+  if(!snapshot) return;
+  clearRgpRowSelection();
+  const body=document.getElementById('rgpListBody');
+  if(body && typeof snapshot.rows==='string') body.innerHTML=snapshot.rows;
+  if(snapshot.settings===null || snapshot.settings===undefined) localStorage.removeItem(GPC_STORAGE_KEY);
+  else localStorage.setItem(GPC_STORAGE_KEY,snapshot.settings);
+  const settings=gpcGetSettings();
+  gpcApplySettings(settings);
+  if(document.getElementById('gatePassPageControllerModal')?.classList.contains('open')) gpcLoadForm();
+  rgpListClearFilters();
+  rgpHistoryPersistRows();
+  rgpHistoryUpdateButtons();
+}
+function rgpUndo(){
+  if(!rgpUndoStack.length){toast('Nothing to undo');return;}
+  const action=rgpUndoStack.pop();
+  rgpRedoStack.push(rgpHistorySnapshot(action.label));
+  rgpHistoryApply(action);
+  toast('Undo successful: '+action.label);
+}
+function rgpRedo(){
+  if(!rgpRedoStack.length){toast('Nothing to redo');return;}
+  const action=rgpRedoStack.pop();
+  rgpUndoStack.push(rgpHistorySnapshot(action.label));
+  rgpHistoryApply(action);
+  toast('Redo successful: '+action.label);
+}
+function rgpHistoryUpdateButtons(){
+  const undo=document.getElementById('rgpUndoBtn');
+  const redo=document.getElementById('rgpRedoBtn');
+  if(undo){undo.disabled=!rgpUndoStack.length;undo.title=rgpUndoStack.length?'Undo: '+rgpUndoStack[rgpUndoStack.length-1].label+' (Ctrl+Z)':'Nothing to undo';}
+  if(redo){redo.disabled=!rgpRedoStack.length;redo.title=rgpRedoStack.length?'Redo: '+rgpRedoStack[rgpRedoStack.length-1].label+' (Ctrl+Y)':'Nothing to redo';}
+}
+function rgpHistoryPersistRows(){
+  const body=document.getElementById('rgpListBody');
+  if(body) localStorage.setItem(RGP_HISTORY_ROWS_KEY,body.innerHTML);
+}
+function rgpHistoryRestoreRows(){
+  const saved=localStorage.getItem(RGP_HISTORY_ROWS_KEY);
+  const body=document.getElementById('rgpListBody');
+  if(saved && body) body.innerHTML=saved;
+}
+
+window.openRgpDetail=openRgpDetail;
+window.closeRgpDetail=closeRgpDetail;
+window.openRgpDeleteConfirm=openRgpDeleteConfirm;
+window.closeDeleteRgp=closeDeleteRgp;
+window.confirmDeleteRgp=confirmDeleteRgp;
+window.deleteSelectedRgp=deleteSelectedRgp;
+
+document.addEventListener('click',function(event){
+  const button=event.target.closest('#rgpListTable .rgp-list-mini, #rgpListTable .rgp-link');
+  if(!button) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const row=button.closest('tr');
+  if(!row) return;
+  selectRgpRow(row);
+
+  const action=button.classList.contains('rgp-link') ? 'detail' : button.textContent.trim().toLowerCase();
+
+  if(action==='detail') openRgpDetail(row);
+  else if(action==='delete') openRgpDeleteConfirm(row);
+  else if(action==='return') openReturnFromRgpRow(row);
+  else if(action==='print') openRgpPrintDesign();
+});
+
+document.addEventListener('click',function(event){
+  const row=event.target.closest('#rgpListBody tr');
+  if(row && !event.target.closest('button,a,input,select,textarea')) selectRgpRow(row);
+});
+
+document.addEventListener('click',function(event){
+  const detail=document.getElementById('rgpDetailModal');
+  if(detail && event.target===detail) closeRgpDetail();
+});
+
+
+
+const GATEPASS_REPAIR_KEY='erpGatePassShellRepairV1';
+
+function gatePassFallbackAvatar(){
+  return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23e6edf7"/%3E%3Ccircle cx="50" cy="36" r="18" fill="%23637a9b"/%3E%3Cpath d="M17 96c4-25 19-37 33-37s29 12 33 37" fill="%23637a9b"/%3E%3C/svg%3E';
+}
+
+function fixGatePassDesignStudio(showMessage=true){
+  document.body.classList.add('gatepass-mode');
+
+  const app=document.getElementById('app');
+  if(app){
+    app.classList.remove('layout-top','layout-bottom','peek','taskbar-peek');
+    app.classList.add('layout-left','collapsed');
+  }
+
+  const avatar=document.getElementById('sideAvatar');
+  if(avatar){
+    const fallback=gatePassFallbackAvatar();
+    avatar.onerror=()=>{ avatar.onerror=null; avatar.src=fallback; };
+    if(!avatar.getAttribute('src') || avatar.naturalWidth===0) avatar.src=fallback;
+    avatar.alt='Muhammad Waqas';
+  }
+
+  const clock=document.getElementById('sideClock');
+  if(clock) clock.style.display='none';
+
+  const profile=document.querySelector('.side-profile');
+  if(profile) profile.title='Muhammad Waqas — Super Administrator';
+
+  localStorage.setItem(GATEPASS_REPAIR_KEY,'applied');
+  if(showMessage && typeof toast==='function') toast('Gate Pass Design Studio repaired');
+}
+
+window.fixGatePassDesignStudio=fixGatePassDesignStudio;
+
 
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
@@ -7813,6 +8112,7 @@ function bind(){
   }));
   $$('[data-rgp-page]').forEach(b=>b.addEventListener('click',()=>setRgpPage(b.dataset.rgpPage)));
   $('#backToGatePassBtn')?.addEventListener('click',showGatePassMain);
+  $('#gatePassFixStudioBtn')?.addEventListener('click',()=>fixGatePassDesignStudio(true));
   $('#gatePassRefreshBtn')?.addEventListener('click',()=>toast('Gate Pass dashboard refreshed'));
   $('#gatePassPrintBtn')?.addEventListener('click',()=>window.print());
   $('#rgpPrintBtn')?.addEventListener('click',()=>window.print());
@@ -7828,6 +8128,10 @@ function bind(){
   $('#rgpListExportBtn')?.addEventListener('click',()=>toast('RGP Excel export prepared'));
   $('#rgpListNewBtn')?.addEventListener('click',()=>setRgpPage('entry'));
   $('#rgpListReturnBtn')?.addEventListener('click',()=>setRgpPage('return'));
+  $('#rgpUndoBtn')?.addEventListener('click',rgpUndo);
+  $('#rgpRedoBtn')?.addEventListener('click',rgpRedo);
+  rgpHistoryRestoreRows();
+  rgpHistoryUpdateButtons();
   $('#returnClearBtn')?.addEventListener('click',clearRgpReturn);
   $('#rgpReturnClearTop')?.addEventListener('click',clearRgpReturn);
   $('#returnSaveDraftBtn')?.addEventListener('click',()=>saveRgpReturn(true));
@@ -7836,6 +8140,8 @@ function bind(){
   $('#returnDate')?.addEventListener('change',e=>formatRgpDateInput(e.target));
   $('#rgpDeleteCancelBtn')?.addEventListener('click',closeDeleteRgp);
   $('#rgpDeleteConfirmBtn')?.addEventListener('click',confirmDeleteRgp);
+  $('#rgpDeleteSelectedBtn')?.addEventListener('click',deleteSelectedRgp);
+  clearRgpRowSelection();
   bindRgpListActions();
   $('#gatePassPageControllerBtn')?.addEventListener('click',gpcOpen);
   $('#gatePassPageControllerModal')?.addEventListener('click',e=>{if(e.target.id==='gatePassPageControllerModal')gpcClose()});
@@ -8536,8 +8842,8 @@ window.erpPageEditor={open:peOpen,apply:peApplyAll,isSuperAdmin:peIsSuper};
     <h3>Delete RGP Record</h3>
     <p id="rgpDeleteText">Delete this RGP?</p>
     <div class="rgp-confirm-actions">
-      <button class="btn" id="rgpDeleteCancelBtn" type="button" onclick="closeDeleteRgp()">Cancel</button>
-      <button class="btn rgp-delete-btn" id="rgpDeleteConfirmBtn" type="button" onclick="confirmDeleteRgp()">Delete</button>
+      <button class="btn" id="rgpDeleteCancelBtn" type="button" onclick="window.closeDeleteRgp && window.closeDeleteRgp()">Cancel</button>
+      <button class="btn rgp-delete-btn" id="rgpDeleteConfirmBtn" type="button" onclick="window.confirmDeleteRgp && window.confirmDeleteRgp()">Delete</button>
     </div>
   </div>
 </div>
@@ -8575,6 +8881,19 @@ document.addEventListener('keydown',function(event){
 });
 </script>
 
+
+<script>
+document.addEventListener('keydown',function(event){
+  const ctrl=event.ctrlKey||event.metaKey;
+  if(!ctrl) return;
+  const listVisible=document.getElementById('rgpListContent')?.offsetParent!==null;
+  const controllerOpen=document.getElementById('gatePassPageControllerModal')?.classList.contains('open');
+  if(!listVisible && !controllerOpen) return;
+  const key=event.key.toLowerCase();
+  if(key==='z' && !event.shiftKey){event.preventDefault();rgpUndo();}
+  else if(key==='y' || (key==='z' && event.shiftKey)){event.preventDefault();rgpRedo();}
+});
+</script>
 
 <div class="rgp-print-modal" id="rgpPrintModal">
   <div class="rgp-print-box">
@@ -8663,6 +8982,53 @@ document.addEventListener('DOMContentLoaded',function(){
 document.addEventListener('click',function(e){
   const modal=document.getElementById('rgpPrintDesignModal');
   if(modal && e.target===modal) closeRgpPrintDesign();
+});
+</script>
+
+
+<div class="rgp-detail-modal" id="rgpDetailModal">
+  <div class="rgp-detail-box">
+    <div class="rgp-detail-head">
+      <div>
+        <h2 id="rgpDetailTitle">RGP Detail</h2>
+        <p>Complete gate pass information and return summary.</p>
+      </div>
+      <button class="rgp-detail-close" type="button" onclick="closeRgpDetail()">×</button>
+    </div>
+
+    <div class="rgp-detail-grid" id="rgpDetailInfo"></div>
+
+    <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+      <table class="rgp-detail-table">
+        <thead>
+          <tr>
+            <th>Item Code</th><th>Item Name with Size</th><th>Qty Sent</th><th>Unit</th>
+            <th>Qty Received</th><th>Qty Pending</th><th>Pending Value</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="rgpDetailItems"></tbody>
+      </table>
+    </div>
+
+    <div class="rgp-detail-summary" id="rgpDetailSummary"></div>
+
+    <div class="rgp-detail-actions">
+      <button class="btn" type="button" onclick="closeRgpDetail()">Close</button>
+      <button class="btn" type="button" onclick="openRgpPrintDesign()">Print</button>
+      <button class="btn primary" type="button" id="rgpDetailReturnBtn">Return Entry</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const params=new URL(location.href).searchParams;
+  if(params.get('studio')==='gatepass'){
+    setTimeout(function(){
+      if(typeof fixGatePassDesignStudio==='function') fixGatePassDesignStudio(false);
+    },50);
+  }
 });
 </script>
 
