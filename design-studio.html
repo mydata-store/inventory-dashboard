@@ -1585,6 +1585,32 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
 #boardEditPageBtn{display:none;align-items:center;justify-content:center;white-space:nowrap}
 #purchase-board .board-purchase-actions{align-items:center}
 </style>
+
+
+/* OGP List page V1.0 — clean register only */
+.ogp-list-page{display:none}
+.ogp-list-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.ogp-list-head h3{margin:0 0 4px;font-size:18px}.ogp-list-head p{margin:0;color:var(--muted);font-size:12px}
+.ogp-list-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ogp-list-search{display:grid;grid-template-columns:minmax(260px,1.4fr) repeat(3,minmax(155px,.7fr)) auto auto;gap:9px;align-items:end;margin-bottom:14px}
+.ogp-list-field label{display:block;font-size:10px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.ogp-list-field input,.ogp-list-field select{width:100%;height:38px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:0 10px}
+.ogp-list-table-wrap{width:100%;overflow:auto;border:1px solid var(--border);border-radius:13px;background:var(--surface);max-height:560px}
+.ogp-list-table{width:100%;min-width:1360px;border-collapse:collapse;font-size:11px}
+.ogp-list-table th,.ogp-list-table td{padding:8px 9px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;white-space:nowrap}
+.ogp-list-table th{position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--bg) 68%,var(--surface));font-size:9px;text-transform:uppercase;letter-spacing:.035em}
+.ogp-list-table tbody tr:hover{background:color-mix(in srgb,var(--primary) 5%,var(--surface))}
+.ogp-list-no{font-weight:900;color:var(--primary)}
+.ogp-list-value{text-align:right!important;font-weight:800}
+.ogp-list-center{text-align:center!important}
+.ogp-list-row-actions{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
+.ogp-list-mini{height:27px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 7px;font-size:9.5px;font-weight:800;cursor:pointer}
+.ogp-list-mini.primary{background:var(--primary);border-color:var(--primary);color:white}
+.ogp-list-mini:hover{filter:brightness(.97)}
+.ogp-list-empty{text-align:center!important;padding:28px!important;color:var(--muted)}
+@media(max-width:1050px){.ogp-list-search{grid-template-columns:repeat(2,minmax(170px,1fr))}.ogp-list-search .wide{grid-column:1/-1}}
+@media(max-width:620px){.ogp-list-search{grid-template-columns:1fr}.ogp-list-search .wide{grid-column:auto}.ogp-list-actions{width:100%}}
+
 </head>
 <body>
 <div id="erpLoginScreen" class="auth-shell" style="display:none">
@@ -2369,6 +2395,40 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
               <button class="btn" type="button" id="ogpReceiverSummaryBtn" style="width:100%">Receiver Party Summary</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div id="ogpListContent" class="ogp-list-page">
+        <div class="ogp-list-head">
+          <div>
+            <h3>OGP List</h3>
+            <p>Search and review permanent outward gate pass records. Latest OGP appears first.</p>
+          </div>
+          <div class="ogp-list-actions">
+            <button class="btn primary" type="button" data-ogp-page="entry">+ New OGP</button>
+            <button class="btn" type="button" id="ogpListPrintBtn">Print</button>
+          </div>
+        </div>
+
+        <div class="ogp-list-search">
+          <div class="ogp-list-field wide"><label>Search</label><input id="ogpListSearch" placeholder="OGP no., item, receiver, department, carrier or vehicle..."></div>
+          <div class="ogp-list-field"><label>Department</label><select id="ogpListDepartment"><option value="">All Departments</option><option>Maintenance</option><option>Mechanical</option><option>Electrical</option><option>Store</option></select></div>
+          <div class="ogp-list-field"><label>Receiver Party</label><select id="ogpListReceiver"><option value="">All Receiver Parties</option><option>Prime Engineering</option><option>Service Point</option><option>Electric Workshop</option><option>Approved Receiver</option></select></div>
+          <div class="ogp-list-field"><label>From Date</label><input id="ogpListFromDate" placeholder="DD-MM-YY"></div>
+          <button class="btn primary" type="button" id="ogpListSearchBtn">Search</button>
+          <button class="btn" type="button" id="ogpListClearBtn">Clear</button>
+        </div>
+
+        <div class="ogp-list-table-wrap">
+          <table class="ogp-list-table" id="ogpListTable">
+            <thead>
+              <tr>
+                <th>OGP No.</th><th>Date</th><th>Item Code</th><th>Item Name with Size</th><th>Qty</th><th>Unit</th>
+                <th>Item Total Value</th><th>Department</th><th>Receiver Party</th><th>Carrier</th><th>Vehicle No.</th><th>Authorized By</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="ogpListBody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -4531,12 +4591,17 @@ function setOgpPage(page='dashboard'){
   currentOgpPage=['dashboard','list','entry','detail'].includes(page)?page:'dashboard';
   document.querySelectorAll('[data-ogp-page]').forEach(btn=>btn.classList.toggle('active',btn.dataset.ogpPage===currentOgpPage));
   const dash=document.getElementById('ogpDashboardContent');
+  const list=document.getElementById('ogpListContent');
   const holder=document.getElementById('ogpPlaceholderContent');
   if(dash) dash.style.display=currentOgpPage==='dashboard'?'':'none';
-  if(holder) holder.style.display=currentOgpPage==='dashboard'?'none':'';
-  if(currentOgpPage!=='dashboard'){
-    const titles={list:'OGP List',entry:'OGP Entry Form',detail:'OGP Detail'};
-    const notes={list:'The complete OGP register will be designed in the next step.',entry:'The complete OGP entry form will be designed in the next step.',detail:'Select an OGP record from the register to view its complete detail.'};
+  if(list) list.style.display=currentOgpPage==='list'?'block':'none';
+  if(holder) holder.style.display=['entry','detail'].includes(currentOgpPage)?'':'none';
+  if(currentOgpPage==='list'){
+    if(typeof renderOgpList==='function') renderOgpList();
+  }
+  if(['entry','detail'].includes(currentOgpPage)){
+    const titles={entry:'OGP Entry Form',detail:'OGP Detail'};
+    const notes={entry:'The complete OGP entry form will be designed in the next step.',detail:'Select an OGP record from the register to view its complete detail.'};
     const title=document.getElementById('ogpPlaceholderTitle');
     const note=document.getElementById('ogpPlaceholderText');
     if(title) title.textContent=titles[currentOgpPage]||'OGP Page';
@@ -4559,6 +4624,63 @@ function openOgpDashboard(page='dashboard'){
   document.getElementById('workspaceSubtitle').textContent='Out Gate Pass dashboard and outward movement controls.';
   setOgpPage(page);
 }
+
+
+const OGP_LIST_SAMPLE=[
+  {no:'OGP-00018',date:'04-Aug-26',code:'ITM-0042',item:'Grease Lithium - 1 KG',qty:'10',unit:'PCS',value:28500,department:'Maintenance',receiver:'Prime Engineering',carrier:'Naveed',vehicle:'LEA-2568',authorized:'Store Manager'},
+  {no:'OGP-00017',date:'03-Aug-26',code:'ITM-0087',item:'V Belt B-72',qty:'6',unit:'PCS',value:18600,department:'Mechanical',receiver:'Service Point',carrier:'Aslam',vehicle:'LEB-1184',authorized:'Mechanical Manager'},
+  {no:'OGP-00016',date:'02-Aug-26',code:'ITM-0121',item:'Motor - 5 HP',qty:'1',unit:'PCS',value:98500,department:'Electrical',receiver:'Electric Workshop',carrier:'Faisal',vehicle:'LEC-7721',authorized:'Electrical Manager'},
+  {no:'OGP-00015',date:'01-Aug-26',code:'ITM-0194',item:'Scrap Packing Material',qty:'320',unit:'KG',value:22400,department:'Store',receiver:'Approved Receiver',carrier:'Akram',vehicle:'LES-3902',authorized:'General Manager'},
+  {no:'OGP-00014',date:'30-Jul-26',code:'ITM-0054',item:'Bearing 6205',qty:'8',unit:'PCS',value:39200,department:'Mechanical',receiver:'Service Point',carrier:'Shahid',vehicle:'LEB-9440',authorized:'Store Manager'},
+  {no:'OGP-00013',date:'29-Jul-26',code:'ITM-0031',item:'Hydraulic Pump Seal',qty:'4',unit:'PCS',value:16750,department:'Maintenance',receiver:'Prime Engineering',carrier:'Nadeem',vehicle:'LEE-6012',authorized:'Maintenance Manager'}
+];
+function ogpEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function ogpMoney(v){return 'PKR '+Number(v||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function ogpListRows(){
+  const stored=(()=>{try{return JSON.parse(localStorage.getItem('erpOgpRecordsV1')||'[]')}catch(e){return []}})();
+  return Array.isArray(stored)&&stored.length?stored:OGP_LIST_SAMPLE;
+}
+function renderOgpList(){
+  const body=document.getElementById('ogpListBody');if(!body)return;
+  const q=String(document.getElementById('ogpListSearch')?.value||'').trim().toLowerCase();
+  const dep=String(document.getElementById('ogpListDepartment')?.value||'').trim().toLowerCase();
+  const rec=String(document.getElementById('ogpListReceiver')?.value||'').trim().toLowerCase();
+  const rows=ogpListRows().filter(r=>{
+    const hay=[r.no,r.date,r.code,r.item,r.department,r.receiver,r.carrier,r.vehicle,r.authorized].join(' ').toLowerCase();
+    return (!q||hay.includes(q))&&(!dep||String(r.department||'').toLowerCase()===dep)&&(!rec||String(r.receiver||'').toLowerCase()===rec);
+  });
+  body.innerHTML=rows.length?rows.map(r=>`<tr>
+    <td class="ogp-list-no">${ogpEsc(r.no)}</td><td>${ogpEsc(r.date)}</td><td>${ogpEsc(r.code)}</td><td>${ogpEsc(r.item)}</td>
+    <td class="ogp-list-center">${ogpEsc(r.qty)}</td><td class="ogp-list-center">${ogpEsc(r.unit)}</td><td class="ogp-list-value">${ogpMoney(r.value)}</td>
+    <td>${ogpEsc(r.department)}</td><td>${ogpEsc(r.receiver)}</td><td>${ogpEsc(r.carrier)}</td><td>${ogpEsc(r.vehicle)}</td><td>${ogpEsc(r.authorized)}</td>
+    <td><div class="ogp-list-row-actions"><button class="ogp-list-mini primary" type="button" onclick="openOgpRecordDetail('${ogpEsc(r.no)}')">Detail</button><button class="ogp-list-mini" type="button" onclick="editOgpRecord('${ogpEsc(r.no)}')">Edit</button><button class="ogp-list-mini" type="button" onclick="printOgpRecord('${ogpEsc(r.no)}')">Print PDF</button></div></td>
+  </tr>`).join(''):`<tr><td colspan="13" class="ogp-list-empty">No OGP records found.</td></tr>`;
+}
+function openOgpRecordDetail(no){
+  localStorage.setItem('erpSelectedOgpNo',no);setOgpPage('detail');
+}
+function editOgpRecord(no){
+  localStorage.setItem('erpSelectedOgpNo',no);setOgpPage('entry');
+}
+function printOgpRecord(no){
+  if(typeof toast==='function')toast(no+' selected for printing');else alert(no+' selected for printing');
+}
+window.renderOgpList=renderOgpList;window.openOgpRecordDetail=openOgpRecordDetail;window.editOgpRecord=editOgpRecord;window.printOgpRecord=printOgpRecord;
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const search=document.getElementById('ogpListSearch');
+  const dep=document.getElementById('ogpListDepartment');
+  const rec=document.getElementById('ogpListReceiver');
+  const searchBtn=document.getElementById('ogpListSearchBtn');
+  const clearBtn=document.getElementById('ogpListClearBtn');
+  const printBtn=document.getElementById('ogpListPrintBtn');
+  if(search)search.addEventListener('input',renderOgpList);
+  if(dep)dep.addEventListener('change',renderOgpList);
+  if(rec)rec.addEventListener('change',renderOgpList);
+  if(searchBtn)searchBtn.addEventListener('click',renderOgpList);
+  if(clearBtn)clearBtn.addEventListener('click',()=>{if(search)search.value='';if(dep)dep.value='';if(rec)rec.value='';const fd=document.getElementById('ogpListFromDate');if(fd)fd.value='';renderOgpList()});
+  if(printBtn)printBtn.addEventListener('click',()=>{if(typeof toast==='function')toast('OGP List is ready for Print Designer');else window.print()});
+});
 
 function openGatePassDashboard(type='dashboard'){
   ccCurrentStudio='gatepass';
