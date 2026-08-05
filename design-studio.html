@@ -7696,102 +7696,108 @@ function printNowWithSettings(){if(!reportDesignSelected)return;const c=currentP
 .pd-editor-tabs{grid-column:1/-1;display:flex;gap:6px;position:sticky;top:0;z-index:4;background:var(--surface);padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px}.pd-editor-tab{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 6px;font-size:10px;font-weight:900;cursor:pointer}.pd-editor-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}.pd-edit-pane{display:none;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.pd-edit-pane.active{display:grid}.pd-column-toolbar{display:flex;gap:6px;flex-wrap:wrap}.pd-column-toolbar .btn{padding:7px 9px;font-size:10px}.pd-column-head,.pd-col-row{display:grid;grid-template-columns:58px minmax(120px,1fr) 72px 92px 58px;gap:6px;align-items:center}.pd-column-head{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);padding:7px 5px;border-bottom:1px solid var(--border)}.pd-column-list{display:grid;gap:5px;max-height:360px;overflow:auto;padding-right:3px}.pd-col-row{padding:6px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}.pd-col-show{display:flex!important;align-items:center;gap:4px;margin:0!important;font-size:10px!important;text-transform:none!important}.pd-col-show input{width:auto!important;height:auto!important}.pd-col-name{font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pd-col-row input,.pd-col-row select{height:32px!important;padding:0 6px!important;font-size:10px}.pd-col-move{display:flex;gap:3px}.pd-col-move button{width:26px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:900}.pd-report-table{max-width:100%}.pd-report-table th,.pd-report-table td{overflow:hidden}.pd-quick{align-content:start}@media(max-width:650px){.pd-column-head{display:none}.pd-col-row{grid-template-columns:70px 1fr}.pd-col-row>*{min-width:0}.pd-col-move{grid-column:1/-1}.pd-edit-pane{grid-template-columns:1fr}}
 </style>
 
+
+
+
 <script>
-/* V12.2 — final Design Studio panel/refresh route authority.
-   URL is the source of truth on refresh; sidebar selection always opens its real panel. */
+/* V12.3 — single clean route controller. URL is authoritative; stale handlers are removed. */
 (function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  function q(s){return document.querySelector(s)}
-  function qa(s){return [...document.querySelectorAll(s)]}
-  function routeFromUrl(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio') return null;
-    return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
-  }
-  function setRouteUrl(r){
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const LAST_TAB='erpPrintDesigner:lastTab';
+  let restoring=false;
+
+  function setUrl(studio,section,tab,push=false){
     const u=new URL(location.href);
-    u.searchParams.set('studio','design-studio');
-    u.searchParams.set('section',r.panel||'theme');
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');
+    u.searchParams.set('studio',studio);
+    if(section)u.searchParams.set('section',section);else u.searchParams.delete('section');
+    if(tab)u.searchParams.set('tab',tab);else u.searchParams.delete('tab');
+    u.searchParams.delete('subsection');
     u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-    localStorage.setItem(LAST,JSON.stringify(r));
+    const state={erpRoute:{studio,section:section||'',tab:tab||''}};
+    (push?history.pushState:history.replaceState).call(history,state,'',u);
   }
-  function selectPrintTab(tab){
-    tab=tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-    const host=q('#erpPrintDesignerStudio');
-    if(!host)return;
-    const btn=host.querySelector('.pd-tab[data-pdtab="'+CSS.escape(tab)+'"]')||host.querySelector('.pd-tab');
-    if(!btn)return;
+
+  function activatePrintTab(tab){
+    tab=tab||localStorage.getItem(LAST_TAB)||'designs';
+    const host=$('#erpPrintDesignerStudio');
+    if(!host)return false;
+    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`)||host.querySelector('.pd-tab');
+    if(!btn)return false;
     host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
     host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===btn.dataset.pdtab));
-    localStorage.setItem('erpPrintDesigner:lastTab',btn.dataset.pdtab);
-  }
-  function forcePanel(name,section,tab,write=true){
-    name=name||'theme'; section=section||'';
-    // Ensure Print Designer content exists before showing the panel.
-    if(name==='print-studio' && typeof renderStudio==='function'){
-      try{renderStudio()}catch(e){console.error('Print Designer render failed',e)}
-    }
-    qa('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
-    qa('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
-    qa('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
-    if(name==='control'){
-      const target=section||'home';
-      qa('[id^="control-"]').forEach(el=>{
-        if(el.classList.contains('control-workspace'))el.classList.toggle('active',el.id==='control-'+target)
-      });
-    }
-    const wt=q('#workspaceTitle'),ws=q('#workspaceSubtitle');
-    if(wt)wt.textContent=name==='control'?'Control Center':name==='print-studio'?'Print Designer':'Design Studio';
-    if(ws)ws.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':(name==='control'?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.');
-    if(name==='print-studio')setTimeout(()=>selectPrintTab(tab),30);
-    if(write)setRouteUrl({panel:name,section:section,tab:name==='print-studio'?(tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''});
+    localStorage.setItem(LAST_TAB,btn.dataset.pdtab);
+    return true;
   }
 
-  // Make all future calls reliable, including calls from older scripts.
-  const oldOpen=window.openStudioPanel;
-  window.openStudioPanel=function(name,section){
-    if(name==='print-studio'){
-      forcePanel(name,section,localStorage.getItem('erpPrintDesigner:lastTab')||'designs',true);
-      return;
+  function openDesignPanel(name,tab,write=true){
+    name=name||'theme';
+    if(name==='print-studio'&&typeof renderStudio==='function'){
+      try{renderStudio()}catch(err){console.error('Print Designer render failed',err)}
     }
-    try{if(typeof oldOpen==='function')oldOpen(name,section)}catch(e){console.error(e)}
-    setTimeout(()=>forcePanel(name,section,'',true),0);
-  };
-
-  // Sidebar clicks: open the selected Design Studio panel and never allow stale handlers to override it.
-  document.addEventListener('click',function(e){
-    const item=e.target.closest('[data-panel]');
-    if(!item)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const name=item.dataset.panel;
-    forcePanel(name,'',name==='print-studio'?(localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):'',true);
-  },true);
-
-  document.addEventListener('click',function(e){
-    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(!tab)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    selectPrintTab(tab.dataset.pdtab);
-    forcePanel('print-studio','',tab.dataset.pdtab,true);
-  },true);
-
-  function restoreExactUrl(){
-    const r=routeFromUrl();
-    if(r){
-      // URL wins over stale Theme Studio localStorage on refresh.
-      localStorage.setItem(LAST,JSON.stringify(r));
-      forcePanel(r.panel,r.section,r.tab,false);
-    }
+    if(typeof openStudioPanel==='function')openStudioPanel(name);
+    // Enforce the selected panel after older code finishes.
+    setTimeout(()=>{
+      $$('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${name}`));
+      $$('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
+      if(name==='print-studio')activatePrintTab(tab);
+      const title=$('#workspaceTitle'),sub=$('#workspaceSubtitle');
+      if(title)title.textContent=name==='print-studio'?'Print Designer':'Design Studio';
+      if(sub)sub.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':'Theme, sidebar and profile design for the complete ERP.';
+    },0);
+    if(write&&!restoring)setUrl('design-studio',name,name==='print-studio'?(tab||localStorage.getItem(LAST_TAB)||'designs'):'',true);
   }
+
+  function replaceAndBind(selector,handler){
+    $$(selector).forEach(old=>{
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();handler(fresh,e)});
+    });
+  }
+
+  function bindCleanNavigation(){
+    replaceAndBind('[data-panel]',el=>openDesignPanel(el.dataset.panel,el.dataset.panel==='print-studio'?(localStorage.getItem(LAST_TAB)||'designs'):''));
+
+    replaceAndBind('#issueMainBtn',()=>{ if(typeof openIssue==='function')openIssue(); if(!restoring)setUrl('issue','entry','',true); });
+    replaceAndBind('#purchaseMainBtn',()=>{ if(typeof openPurchase==='function')openPurchase('dashboard'); if(!restoring)setUrl('purchase','dashboard','',true); });
+    replaceAndBind('#gatePassMainBtn',()=>{ if(typeof showGatePassMain==='function')showGatePassMain(); else if(typeof openGatePassDashboard==='function')openGatePassDashboard('dashboard'); if(!restoring)setUrl('gatepass','dashboard','',true); });
+    replaceAndBind('#mastersMainBtn',()=>{ if(typeof openMasters==='function')openMasters('items'); if(!restoring)setUrl('masters','items','',true); });
+    replaceAndBind('#homeScreenMainBtn',()=>openDesignPanel('control','home-screen'));
+
+    // Print Designer tabs are recreated by renderStudio, so delegate them once.
+    document.addEventListener('click',e=>{
+      const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+      if(!tab)return;
+      e.preventDefault();e.stopPropagation();
+      activatePrintTab(tab.dataset.pdtab);
+      if(!restoring)setUrl('design-studio','print-studio',tab.dataset.pdtab,true);
+    });
+  }
+
+  function restoreFromUrl(){
+    const p=new URLSearchParams(location.search);
+    const studio=p.get('studio')||'design-studio';
+    const section=p.get('section')||'theme';
+    const tab=p.get('tab')||'';
+    restoring=true;
+    try{
+      if(studio==='design-studio')openDesignPanel(section,tab,false);
+      else if(studio==='issue'&&typeof openIssue==='function')openIssue();
+      else if(studio==='purchase'&&typeof openPurchase==='function')openPurchase(section||'dashboard');
+      else if(studio==='masters'&&typeof openMasters==='function')openMasters(section||'items');
+      else if((studio==='gatepass'||studio==='gate-pass')&&typeof openGatePassDashboard==='function')openGatePassDashboard(section||'dashboard');
+    }finally{setTimeout(()=>{restoring=false},80)}
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
-    // Run after all older delayed initializers.
-    setTimeout(restoreExactUrl,550);
-    setTimeout(restoreExactUrl,1100);
+    bindCleanNavigation();
+    // Restore only from the URL. Never replace it with an old saved Theme route.
+    setTimeout(restoreFromUrl,250);
+    setTimeout(restoreFromUrl,800);
   });
-  window.addEventListener('pageshow',()=>setTimeout(restoreExactUrl,80));
+  window.addEventListener('popstate',()=>setTimeout(restoreFromUrl,0));
+  window.addEventListener('pageshow',()=>setTimeout(restoreFromUrl,50));
 })();
 </script>
 
@@ -7871,102 +7877,108 @@ function rcPrint(){const c=rcConfig(),html=$('#rcPreview').outerHTML,w=open('','
 .pd-editor-tabs{grid-column:1/-1;display:flex;gap:6px;position:sticky;top:0;z-index:4;background:var(--surface);padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px}.pd-editor-tab{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 6px;font-size:10px;font-weight:900;cursor:pointer}.pd-editor-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}.pd-edit-pane{display:none;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.pd-edit-pane.active{display:grid}.pd-column-toolbar{display:flex;gap:6px;flex-wrap:wrap}.pd-column-toolbar .btn{padding:7px 9px;font-size:10px}.pd-column-head,.pd-col-row{display:grid;grid-template-columns:58px minmax(120px,1fr) 72px 92px 58px;gap:6px;align-items:center}.pd-column-head{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);padding:7px 5px;border-bottom:1px solid var(--border)}.pd-column-list{display:grid;gap:5px;max-height:360px;overflow:auto;padding-right:3px}.pd-col-row{padding:6px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}.pd-col-show{display:flex!important;align-items:center;gap:4px;margin:0!important;font-size:10px!important;text-transform:none!important}.pd-col-show input{width:auto!important;height:auto!important}.pd-col-name{font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pd-col-row input,.pd-col-row select{height:32px!important;padding:0 6px!important;font-size:10px}.pd-col-move{display:flex;gap:3px}.pd-col-move button{width:26px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:900}.pd-report-table{max-width:100%}.pd-report-table th,.pd-report-table td{overflow:hidden}.pd-quick{align-content:start}@media(max-width:650px){.pd-column-head{display:none}.pd-col-row{grid-template-columns:70px 1fr}.pd-col-row>*{min-width:0}.pd-col-move{grid-column:1/-1}.pd-edit-pane{grid-template-columns:1fr}}
 </style>
 
+
+
+
 <script>
-/* V12.2 — final Design Studio panel/refresh route authority.
-   URL is the source of truth on refresh; sidebar selection always opens its real panel. */
+/* V12.3 — single clean route controller. URL is authoritative; stale handlers are removed. */
 (function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  function q(s){return document.querySelector(s)}
-  function qa(s){return [...document.querySelectorAll(s)]}
-  function routeFromUrl(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio') return null;
-    return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
-  }
-  function setRouteUrl(r){
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const LAST_TAB='erpPrintDesigner:lastTab';
+  let restoring=false;
+
+  function setUrl(studio,section,tab,push=false){
     const u=new URL(location.href);
-    u.searchParams.set('studio','design-studio');
-    u.searchParams.set('section',r.panel||'theme');
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');
+    u.searchParams.set('studio',studio);
+    if(section)u.searchParams.set('section',section);else u.searchParams.delete('section');
+    if(tab)u.searchParams.set('tab',tab);else u.searchParams.delete('tab');
+    u.searchParams.delete('subsection');
     u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-    localStorage.setItem(LAST,JSON.stringify(r));
+    const state={erpRoute:{studio,section:section||'',tab:tab||''}};
+    (push?history.pushState:history.replaceState).call(history,state,'',u);
   }
-  function selectPrintTab(tab){
-    tab=tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-    const host=q('#erpPrintDesignerStudio');
-    if(!host)return;
-    const btn=host.querySelector('.pd-tab[data-pdtab="'+CSS.escape(tab)+'"]')||host.querySelector('.pd-tab');
-    if(!btn)return;
+
+  function activatePrintTab(tab){
+    tab=tab||localStorage.getItem(LAST_TAB)||'designs';
+    const host=$('#erpPrintDesignerStudio');
+    if(!host)return false;
+    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`)||host.querySelector('.pd-tab');
+    if(!btn)return false;
     host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
     host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===btn.dataset.pdtab));
-    localStorage.setItem('erpPrintDesigner:lastTab',btn.dataset.pdtab);
-  }
-  function forcePanel(name,section,tab,write=true){
-    name=name||'theme'; section=section||'';
-    // Ensure Print Designer content exists before showing the panel.
-    if(name==='print-studio' && typeof renderStudio==='function'){
-      try{renderStudio()}catch(e){console.error('Print Designer render failed',e)}
-    }
-    qa('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
-    qa('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
-    qa('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
-    if(name==='control'){
-      const target=section||'home';
-      qa('[id^="control-"]').forEach(el=>{
-        if(el.classList.contains('control-workspace'))el.classList.toggle('active',el.id==='control-'+target)
-      });
-    }
-    const wt=q('#workspaceTitle'),ws=q('#workspaceSubtitle');
-    if(wt)wt.textContent=name==='control'?'Control Center':name==='print-studio'?'Print Designer':'Design Studio';
-    if(ws)ws.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':(name==='control'?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.');
-    if(name==='print-studio')setTimeout(()=>selectPrintTab(tab),30);
-    if(write)setRouteUrl({panel:name,section:section,tab:name==='print-studio'?(tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''});
+    localStorage.setItem(LAST_TAB,btn.dataset.pdtab);
+    return true;
   }
 
-  // Make all future calls reliable, including calls from older scripts.
-  const oldOpen=window.openStudioPanel;
-  window.openStudioPanel=function(name,section){
-    if(name==='print-studio'){
-      forcePanel(name,section,localStorage.getItem('erpPrintDesigner:lastTab')||'designs',true);
-      return;
+  function openDesignPanel(name,tab,write=true){
+    name=name||'theme';
+    if(name==='print-studio'&&typeof renderStudio==='function'){
+      try{renderStudio()}catch(err){console.error('Print Designer render failed',err)}
     }
-    try{if(typeof oldOpen==='function')oldOpen(name,section)}catch(e){console.error(e)}
-    setTimeout(()=>forcePanel(name,section,'',true),0);
-  };
-
-  // Sidebar clicks: open the selected Design Studio panel and never allow stale handlers to override it.
-  document.addEventListener('click',function(e){
-    const item=e.target.closest('[data-panel]');
-    if(!item)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const name=item.dataset.panel;
-    forcePanel(name,'',name==='print-studio'?(localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):'',true);
-  },true);
-
-  document.addEventListener('click',function(e){
-    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(!tab)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    selectPrintTab(tab.dataset.pdtab);
-    forcePanel('print-studio','',tab.dataset.pdtab,true);
-  },true);
-
-  function restoreExactUrl(){
-    const r=routeFromUrl();
-    if(r){
-      // URL wins over stale Theme Studio localStorage on refresh.
-      localStorage.setItem(LAST,JSON.stringify(r));
-      forcePanel(r.panel,r.section,r.tab,false);
-    }
+    if(typeof openStudioPanel==='function')openStudioPanel(name);
+    // Enforce the selected panel after older code finishes.
+    setTimeout(()=>{
+      $$('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${name}`));
+      $$('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
+      if(name==='print-studio')activatePrintTab(tab);
+      const title=$('#workspaceTitle'),sub=$('#workspaceSubtitle');
+      if(title)title.textContent=name==='print-studio'?'Print Designer':'Design Studio';
+      if(sub)sub.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':'Theme, sidebar and profile design for the complete ERP.';
+    },0);
+    if(write&&!restoring)setUrl('design-studio',name,name==='print-studio'?(tab||localStorage.getItem(LAST_TAB)||'designs'):'',true);
   }
+
+  function replaceAndBind(selector,handler){
+    $$(selector).forEach(old=>{
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();handler(fresh,e)});
+    });
+  }
+
+  function bindCleanNavigation(){
+    replaceAndBind('[data-panel]',el=>openDesignPanel(el.dataset.panel,el.dataset.panel==='print-studio'?(localStorage.getItem(LAST_TAB)||'designs'):''));
+
+    replaceAndBind('#issueMainBtn',()=>{ if(typeof openIssue==='function')openIssue(); if(!restoring)setUrl('issue','entry','',true); });
+    replaceAndBind('#purchaseMainBtn',()=>{ if(typeof openPurchase==='function')openPurchase('dashboard'); if(!restoring)setUrl('purchase','dashboard','',true); });
+    replaceAndBind('#gatePassMainBtn',()=>{ if(typeof showGatePassMain==='function')showGatePassMain(); else if(typeof openGatePassDashboard==='function')openGatePassDashboard('dashboard'); if(!restoring)setUrl('gatepass','dashboard','',true); });
+    replaceAndBind('#mastersMainBtn',()=>{ if(typeof openMasters==='function')openMasters('items'); if(!restoring)setUrl('masters','items','',true); });
+    replaceAndBind('#homeScreenMainBtn',()=>openDesignPanel('control','home-screen'));
+
+    // Print Designer tabs are recreated by renderStudio, so delegate them once.
+    document.addEventListener('click',e=>{
+      const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+      if(!tab)return;
+      e.preventDefault();e.stopPropagation();
+      activatePrintTab(tab.dataset.pdtab);
+      if(!restoring)setUrl('design-studio','print-studio',tab.dataset.pdtab,true);
+    });
+  }
+
+  function restoreFromUrl(){
+    const p=new URLSearchParams(location.search);
+    const studio=p.get('studio')||'design-studio';
+    const section=p.get('section')||'theme';
+    const tab=p.get('tab')||'';
+    restoring=true;
+    try{
+      if(studio==='design-studio')openDesignPanel(section,tab,false);
+      else if(studio==='issue'&&typeof openIssue==='function')openIssue();
+      else if(studio==='purchase'&&typeof openPurchase==='function')openPurchase(section||'dashboard');
+      else if(studio==='masters'&&typeof openMasters==='function')openMasters(section||'items');
+      else if((studio==='gatepass'||studio==='gate-pass')&&typeof openGatePassDashboard==='function')openGatePassDashboard(section||'dashboard');
+    }finally{setTimeout(()=>{restoring=false},80)}
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
-    // Run after all older delayed initializers.
-    setTimeout(restoreExactUrl,550);
-    setTimeout(restoreExactUrl,1100);
+    bindCleanNavigation();
+    // Restore only from the URL. Never replace it with an old saved Theme route.
+    setTimeout(restoreFromUrl,250);
+    setTimeout(restoreFromUrl,800);
   });
-  window.addEventListener('pageshow',()=>setTimeout(restoreExactUrl,80));
+  window.addEventListener('popstate',()=>setTimeout(restoreFromUrl,0));
+  window.addEventListener('pageshow',()=>setTimeout(restoreFromUrl,50));
 })();
 </script>
 
@@ -8444,102 +8456,108 @@ function printOne(id){const x=load().find(y=>y.id===id);if(!x)return;const w=win
 .pd-editor-tabs{grid-column:1/-1;display:flex;gap:6px;position:sticky;top:0;z-index:4;background:var(--surface);padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px}.pd-editor-tab{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 6px;font-size:10px;font-weight:900;cursor:pointer}.pd-editor-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}.pd-edit-pane{display:none;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.pd-edit-pane.active{display:grid}.pd-column-toolbar{display:flex;gap:6px;flex-wrap:wrap}.pd-column-toolbar .btn{padding:7px 9px;font-size:10px}.pd-column-head,.pd-col-row{display:grid;grid-template-columns:58px minmax(120px,1fr) 72px 92px 58px;gap:6px;align-items:center}.pd-column-head{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);padding:7px 5px;border-bottom:1px solid var(--border)}.pd-column-list{display:grid;gap:5px;max-height:360px;overflow:auto;padding-right:3px}.pd-col-row{padding:6px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}.pd-col-show{display:flex!important;align-items:center;gap:4px;margin:0!important;font-size:10px!important;text-transform:none!important}.pd-col-show input{width:auto!important;height:auto!important}.pd-col-name{font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pd-col-row input,.pd-col-row select{height:32px!important;padding:0 6px!important;font-size:10px}.pd-col-move{display:flex;gap:3px}.pd-col-move button{width:26px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:900}.pd-report-table{max-width:100%}.pd-report-table th,.pd-report-table td{overflow:hidden}.pd-quick{align-content:start}@media(max-width:650px){.pd-column-head{display:none}.pd-col-row{grid-template-columns:70px 1fr}.pd-col-row>*{min-width:0}.pd-col-move{grid-column:1/-1}.pd-edit-pane{grid-template-columns:1fr}}
 </style>
 
+
+
+
 <script>
-/* V12.2 — final Design Studio panel/refresh route authority.
-   URL is the source of truth on refresh; sidebar selection always opens its real panel. */
+/* V12.3 — single clean route controller. URL is authoritative; stale handlers are removed. */
 (function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  function q(s){return document.querySelector(s)}
-  function qa(s){return [...document.querySelectorAll(s)]}
-  function routeFromUrl(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio') return null;
-    return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
-  }
-  function setRouteUrl(r){
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const LAST_TAB='erpPrintDesigner:lastTab';
+  let restoring=false;
+
+  function setUrl(studio,section,tab,push=false){
     const u=new URL(location.href);
-    u.searchParams.set('studio','design-studio');
-    u.searchParams.set('section',r.panel||'theme');
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');
+    u.searchParams.set('studio',studio);
+    if(section)u.searchParams.set('section',section);else u.searchParams.delete('section');
+    if(tab)u.searchParams.set('tab',tab);else u.searchParams.delete('tab');
+    u.searchParams.delete('subsection');
     u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-    localStorage.setItem(LAST,JSON.stringify(r));
+    const state={erpRoute:{studio,section:section||'',tab:tab||''}};
+    (push?history.pushState:history.replaceState).call(history,state,'',u);
   }
-  function selectPrintTab(tab){
-    tab=tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-    const host=q('#erpPrintDesignerStudio');
-    if(!host)return;
-    const btn=host.querySelector('.pd-tab[data-pdtab="'+CSS.escape(tab)+'"]')||host.querySelector('.pd-tab');
-    if(!btn)return;
+
+  function activatePrintTab(tab){
+    tab=tab||localStorage.getItem(LAST_TAB)||'designs';
+    const host=$('#erpPrintDesignerStudio');
+    if(!host)return false;
+    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`)||host.querySelector('.pd-tab');
+    if(!btn)return false;
     host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
     host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===btn.dataset.pdtab));
-    localStorage.setItem('erpPrintDesigner:lastTab',btn.dataset.pdtab);
-  }
-  function forcePanel(name,section,tab,write=true){
-    name=name||'theme'; section=section||'';
-    // Ensure Print Designer content exists before showing the panel.
-    if(name==='print-studio' && typeof renderStudio==='function'){
-      try{renderStudio()}catch(e){console.error('Print Designer render failed',e)}
-    }
-    qa('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
-    qa('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
-    qa('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
-    if(name==='control'){
-      const target=section||'home';
-      qa('[id^="control-"]').forEach(el=>{
-        if(el.classList.contains('control-workspace'))el.classList.toggle('active',el.id==='control-'+target)
-      });
-    }
-    const wt=q('#workspaceTitle'),ws=q('#workspaceSubtitle');
-    if(wt)wt.textContent=name==='control'?'Control Center':name==='print-studio'?'Print Designer':'Design Studio';
-    if(ws)ws.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':(name==='control'?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.');
-    if(name==='print-studio')setTimeout(()=>selectPrintTab(tab),30);
-    if(write)setRouteUrl({panel:name,section:section,tab:name==='print-studio'?(tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''});
+    localStorage.setItem(LAST_TAB,btn.dataset.pdtab);
+    return true;
   }
 
-  // Make all future calls reliable, including calls from older scripts.
-  const oldOpen=window.openStudioPanel;
-  window.openStudioPanel=function(name,section){
-    if(name==='print-studio'){
-      forcePanel(name,section,localStorage.getItem('erpPrintDesigner:lastTab')||'designs',true);
-      return;
+  function openDesignPanel(name,tab,write=true){
+    name=name||'theme';
+    if(name==='print-studio'&&typeof renderStudio==='function'){
+      try{renderStudio()}catch(err){console.error('Print Designer render failed',err)}
     }
-    try{if(typeof oldOpen==='function')oldOpen(name,section)}catch(e){console.error(e)}
-    setTimeout(()=>forcePanel(name,section,'',true),0);
-  };
-
-  // Sidebar clicks: open the selected Design Studio panel and never allow stale handlers to override it.
-  document.addEventListener('click',function(e){
-    const item=e.target.closest('[data-panel]');
-    if(!item)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const name=item.dataset.panel;
-    forcePanel(name,'',name==='print-studio'?(localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):'',true);
-  },true);
-
-  document.addEventListener('click',function(e){
-    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(!tab)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    selectPrintTab(tab.dataset.pdtab);
-    forcePanel('print-studio','',tab.dataset.pdtab,true);
-  },true);
-
-  function restoreExactUrl(){
-    const r=routeFromUrl();
-    if(r){
-      // URL wins over stale Theme Studio localStorage on refresh.
-      localStorage.setItem(LAST,JSON.stringify(r));
-      forcePanel(r.panel,r.section,r.tab,false);
-    }
+    if(typeof openStudioPanel==='function')openStudioPanel(name);
+    // Enforce the selected panel after older code finishes.
+    setTimeout(()=>{
+      $$('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${name}`));
+      $$('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
+      if(name==='print-studio')activatePrintTab(tab);
+      const title=$('#workspaceTitle'),sub=$('#workspaceSubtitle');
+      if(title)title.textContent=name==='print-studio'?'Print Designer':'Design Studio';
+      if(sub)sub.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':'Theme, sidebar and profile design for the complete ERP.';
+    },0);
+    if(write&&!restoring)setUrl('design-studio',name,name==='print-studio'?(tab||localStorage.getItem(LAST_TAB)||'designs'):'',true);
   }
+
+  function replaceAndBind(selector,handler){
+    $$(selector).forEach(old=>{
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();handler(fresh,e)});
+    });
+  }
+
+  function bindCleanNavigation(){
+    replaceAndBind('[data-panel]',el=>openDesignPanel(el.dataset.panel,el.dataset.panel==='print-studio'?(localStorage.getItem(LAST_TAB)||'designs'):''));
+
+    replaceAndBind('#issueMainBtn',()=>{ if(typeof openIssue==='function')openIssue(); if(!restoring)setUrl('issue','entry','',true); });
+    replaceAndBind('#purchaseMainBtn',()=>{ if(typeof openPurchase==='function')openPurchase('dashboard'); if(!restoring)setUrl('purchase','dashboard','',true); });
+    replaceAndBind('#gatePassMainBtn',()=>{ if(typeof showGatePassMain==='function')showGatePassMain(); else if(typeof openGatePassDashboard==='function')openGatePassDashboard('dashboard'); if(!restoring)setUrl('gatepass','dashboard','',true); });
+    replaceAndBind('#mastersMainBtn',()=>{ if(typeof openMasters==='function')openMasters('items'); if(!restoring)setUrl('masters','items','',true); });
+    replaceAndBind('#homeScreenMainBtn',()=>openDesignPanel('control','home-screen'));
+
+    // Print Designer tabs are recreated by renderStudio, so delegate them once.
+    document.addEventListener('click',e=>{
+      const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+      if(!tab)return;
+      e.preventDefault();e.stopPropagation();
+      activatePrintTab(tab.dataset.pdtab);
+      if(!restoring)setUrl('design-studio','print-studio',tab.dataset.pdtab,true);
+    });
+  }
+
+  function restoreFromUrl(){
+    const p=new URLSearchParams(location.search);
+    const studio=p.get('studio')||'design-studio';
+    const section=p.get('section')||'theme';
+    const tab=p.get('tab')||'';
+    restoring=true;
+    try{
+      if(studio==='design-studio')openDesignPanel(section,tab,false);
+      else if(studio==='issue'&&typeof openIssue==='function')openIssue();
+      else if(studio==='purchase'&&typeof openPurchase==='function')openPurchase(section||'dashboard');
+      else if(studio==='masters'&&typeof openMasters==='function')openMasters(section||'items');
+      else if((studio==='gatepass'||studio==='gate-pass')&&typeof openGatePassDashboard==='function')openGatePassDashboard(section||'dashboard');
+    }finally{setTimeout(()=>{restoring=false},80)}
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
-    // Run after all older delayed initializers.
-    setTimeout(restoreExactUrl,550);
-    setTimeout(restoreExactUrl,1100);
+    bindCleanNavigation();
+    // Restore only from the URL. Never replace it with an old saved Theme route.
+    setTimeout(restoreFromUrl,250);
+    setTimeout(restoreFromUrl,800);
   });
-  window.addEventListener('pageshow',()=>setTimeout(restoreExactUrl,80));
+  window.addEventListener('popstate',()=>setTimeout(restoreFromUrl,0));
+  window.addEventListener('pageshow',()=>setTimeout(restoreFromUrl,50));
 })();
 </script>
 
@@ -8587,102 +8605,108 @@ async function indentExportExcel(){
 .pd-editor-tabs{grid-column:1/-1;display:flex;gap:6px;position:sticky;top:0;z-index:4;background:var(--surface);padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px}.pd-editor-tab{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 6px;font-size:10px;font-weight:900;cursor:pointer}.pd-editor-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}.pd-edit-pane{display:none;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.pd-edit-pane.active{display:grid}.pd-column-toolbar{display:flex;gap:6px;flex-wrap:wrap}.pd-column-toolbar .btn{padding:7px 9px;font-size:10px}.pd-column-head,.pd-col-row{display:grid;grid-template-columns:58px minmax(120px,1fr) 72px 92px 58px;gap:6px;align-items:center}.pd-column-head{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);padding:7px 5px;border-bottom:1px solid var(--border)}.pd-column-list{display:grid;gap:5px;max-height:360px;overflow:auto;padding-right:3px}.pd-col-row{padding:6px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}.pd-col-show{display:flex!important;align-items:center;gap:4px;margin:0!important;font-size:10px!important;text-transform:none!important}.pd-col-show input{width:auto!important;height:auto!important}.pd-col-name{font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pd-col-row input,.pd-col-row select{height:32px!important;padding:0 6px!important;font-size:10px}.pd-col-move{display:flex;gap:3px}.pd-col-move button{width:26px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:900}.pd-report-table{max-width:100%}.pd-report-table th,.pd-report-table td{overflow:hidden}.pd-quick{align-content:start}@media(max-width:650px){.pd-column-head{display:none}.pd-col-row{grid-template-columns:70px 1fr}.pd-col-row>*{min-width:0}.pd-col-move{grid-column:1/-1}.pd-edit-pane{grid-template-columns:1fr}}
 </style>
 
+
+
+
 <script>
-/* V12.2 — final Design Studio panel/refresh route authority.
-   URL is the source of truth on refresh; sidebar selection always opens its real panel. */
+/* V12.3 — single clean route controller. URL is authoritative; stale handlers are removed. */
 (function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  function q(s){return document.querySelector(s)}
-  function qa(s){return [...document.querySelectorAll(s)]}
-  function routeFromUrl(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio') return null;
-    return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
-  }
-  function setRouteUrl(r){
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const LAST_TAB='erpPrintDesigner:lastTab';
+  let restoring=false;
+
+  function setUrl(studio,section,tab,push=false){
     const u=new URL(location.href);
-    u.searchParams.set('studio','design-studio');
-    u.searchParams.set('section',r.panel||'theme');
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');
+    u.searchParams.set('studio',studio);
+    if(section)u.searchParams.set('section',section);else u.searchParams.delete('section');
+    if(tab)u.searchParams.set('tab',tab);else u.searchParams.delete('tab');
+    u.searchParams.delete('subsection');
     u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-    localStorage.setItem(LAST,JSON.stringify(r));
+    const state={erpRoute:{studio,section:section||'',tab:tab||''}};
+    (push?history.pushState:history.replaceState).call(history,state,'',u);
   }
-  function selectPrintTab(tab){
-    tab=tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-    const host=q('#erpPrintDesignerStudio');
-    if(!host)return;
-    const btn=host.querySelector('.pd-tab[data-pdtab="'+CSS.escape(tab)+'"]')||host.querySelector('.pd-tab');
-    if(!btn)return;
+
+  function activatePrintTab(tab){
+    tab=tab||localStorage.getItem(LAST_TAB)||'designs';
+    const host=$('#erpPrintDesignerStudio');
+    if(!host)return false;
+    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`)||host.querySelector('.pd-tab');
+    if(!btn)return false;
     host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
     host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===btn.dataset.pdtab));
-    localStorage.setItem('erpPrintDesigner:lastTab',btn.dataset.pdtab);
-  }
-  function forcePanel(name,section,tab,write=true){
-    name=name||'theme'; section=section||'';
-    // Ensure Print Designer content exists before showing the panel.
-    if(name==='print-studio' && typeof renderStudio==='function'){
-      try{renderStudio()}catch(e){console.error('Print Designer render failed',e)}
-    }
-    qa('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
-    qa('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
-    qa('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
-    if(name==='control'){
-      const target=section||'home';
-      qa('[id^="control-"]').forEach(el=>{
-        if(el.classList.contains('control-workspace'))el.classList.toggle('active',el.id==='control-'+target)
-      });
-    }
-    const wt=q('#workspaceTitle'),ws=q('#workspaceSubtitle');
-    if(wt)wt.textContent=name==='control'?'Control Center':name==='print-studio'?'Print Designer':'Design Studio';
-    if(ws)ws.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':(name==='control'?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.');
-    if(name==='print-studio')setTimeout(()=>selectPrintTab(tab),30);
-    if(write)setRouteUrl({panel:name,section:section,tab:name==='print-studio'?(tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''});
+    localStorage.setItem(LAST_TAB,btn.dataset.pdtab);
+    return true;
   }
 
-  // Make all future calls reliable, including calls from older scripts.
-  const oldOpen=window.openStudioPanel;
-  window.openStudioPanel=function(name,section){
-    if(name==='print-studio'){
-      forcePanel(name,section,localStorage.getItem('erpPrintDesigner:lastTab')||'designs',true);
-      return;
+  function openDesignPanel(name,tab,write=true){
+    name=name||'theme';
+    if(name==='print-studio'&&typeof renderStudio==='function'){
+      try{renderStudio()}catch(err){console.error('Print Designer render failed',err)}
     }
-    try{if(typeof oldOpen==='function')oldOpen(name,section)}catch(e){console.error(e)}
-    setTimeout(()=>forcePanel(name,section,'',true),0);
-  };
-
-  // Sidebar clicks: open the selected Design Studio panel and never allow stale handlers to override it.
-  document.addEventListener('click',function(e){
-    const item=e.target.closest('[data-panel]');
-    if(!item)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const name=item.dataset.panel;
-    forcePanel(name,'',name==='print-studio'?(localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):'',true);
-  },true);
-
-  document.addEventListener('click',function(e){
-    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(!tab)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    selectPrintTab(tab.dataset.pdtab);
-    forcePanel('print-studio','',tab.dataset.pdtab,true);
-  },true);
-
-  function restoreExactUrl(){
-    const r=routeFromUrl();
-    if(r){
-      // URL wins over stale Theme Studio localStorage on refresh.
-      localStorage.setItem(LAST,JSON.stringify(r));
-      forcePanel(r.panel,r.section,r.tab,false);
-    }
+    if(typeof openStudioPanel==='function')openStudioPanel(name);
+    // Enforce the selected panel after older code finishes.
+    setTimeout(()=>{
+      $$('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${name}`));
+      $$('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
+      if(name==='print-studio')activatePrintTab(tab);
+      const title=$('#workspaceTitle'),sub=$('#workspaceSubtitle');
+      if(title)title.textContent=name==='print-studio'?'Print Designer':'Design Studio';
+      if(sub)sub.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':'Theme, sidebar and profile design for the complete ERP.';
+    },0);
+    if(write&&!restoring)setUrl('design-studio',name,name==='print-studio'?(tab||localStorage.getItem(LAST_TAB)||'designs'):'',true);
   }
+
+  function replaceAndBind(selector,handler){
+    $$(selector).forEach(old=>{
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();handler(fresh,e)});
+    });
+  }
+
+  function bindCleanNavigation(){
+    replaceAndBind('[data-panel]',el=>openDesignPanel(el.dataset.panel,el.dataset.panel==='print-studio'?(localStorage.getItem(LAST_TAB)||'designs'):''));
+
+    replaceAndBind('#issueMainBtn',()=>{ if(typeof openIssue==='function')openIssue(); if(!restoring)setUrl('issue','entry','',true); });
+    replaceAndBind('#purchaseMainBtn',()=>{ if(typeof openPurchase==='function')openPurchase('dashboard'); if(!restoring)setUrl('purchase','dashboard','',true); });
+    replaceAndBind('#gatePassMainBtn',()=>{ if(typeof showGatePassMain==='function')showGatePassMain(); else if(typeof openGatePassDashboard==='function')openGatePassDashboard('dashboard'); if(!restoring)setUrl('gatepass','dashboard','',true); });
+    replaceAndBind('#mastersMainBtn',()=>{ if(typeof openMasters==='function')openMasters('items'); if(!restoring)setUrl('masters','items','',true); });
+    replaceAndBind('#homeScreenMainBtn',()=>openDesignPanel('control','home-screen'));
+
+    // Print Designer tabs are recreated by renderStudio, so delegate them once.
+    document.addEventListener('click',e=>{
+      const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+      if(!tab)return;
+      e.preventDefault();e.stopPropagation();
+      activatePrintTab(tab.dataset.pdtab);
+      if(!restoring)setUrl('design-studio','print-studio',tab.dataset.pdtab,true);
+    });
+  }
+
+  function restoreFromUrl(){
+    const p=new URLSearchParams(location.search);
+    const studio=p.get('studio')||'design-studio';
+    const section=p.get('section')||'theme';
+    const tab=p.get('tab')||'';
+    restoring=true;
+    try{
+      if(studio==='design-studio')openDesignPanel(section,tab,false);
+      else if(studio==='issue'&&typeof openIssue==='function')openIssue();
+      else if(studio==='purchase'&&typeof openPurchase==='function')openPurchase(section||'dashboard');
+      else if(studio==='masters'&&typeof openMasters==='function')openMasters(section||'items');
+      else if((studio==='gatepass'||studio==='gate-pass')&&typeof openGatePassDashboard==='function')openGatePassDashboard(section||'dashboard');
+    }finally{setTimeout(()=>{restoring=false},80)}
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
-    // Run after all older delayed initializers.
-    setTimeout(restoreExactUrl,550);
-    setTimeout(restoreExactUrl,1100);
+    bindCleanNavigation();
+    // Restore only from the URL. Never replace it with an old saved Theme route.
+    setTimeout(restoreFromUrl,250);
+    setTimeout(restoreFromUrl,800);
   });
-  window.addEventListener('pageshow',()=>setTimeout(restoreExactUrl,80));
+  window.addEventListener('popstate',()=>setTimeout(restoreFromUrl,0));
+  window.addEventListener('pageshow',()=>setTimeout(restoreFromUrl,50));
 })();
 </script>
 
@@ -9250,102 +9274,108 @@ function printModal(){
     .pd-report-footer{text-align:center;margin-top:15px;font-size:10px}
     @media print{html,body{width:auto;height:auto}.pd-report-table thead{display:table-header-group}}
   </style></head><body><div class="pd-paper">${reportHtml}</div><script>window.addEventListener('load',function(){setTimeout(function(){window.print()},350)});<\/script>
+
+
+
 <script>
-/* V12.2 — final Design Studio panel/refresh route authority.
-   URL is the source of truth on refresh; sidebar selection always opens its real panel. */
+/* V12.3 — single clean route controller. URL is authoritative; stale handlers are removed. */
 (function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  function q(s){return document.querySelector(s)}
-  function qa(s){return [...document.querySelectorAll(s)]}
-  function routeFromUrl(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio') return null;
-    return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
-  }
-  function setRouteUrl(r){
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const LAST_TAB='erpPrintDesigner:lastTab';
+  let restoring=false;
+
+  function setUrl(studio,section,tab,push=false){
     const u=new URL(location.href);
-    u.searchParams.set('studio','design-studio');
-    u.searchParams.set('section',r.panel||'theme');
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');
+    u.searchParams.set('studio',studio);
+    if(section)u.searchParams.set('section',section);else u.searchParams.delete('section');
+    if(tab)u.searchParams.set('tab',tab);else u.searchParams.delete('tab');
+    u.searchParams.delete('subsection');
     u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-    localStorage.setItem(LAST,JSON.stringify(r));
+    const state={erpRoute:{studio,section:section||'',tab:tab||''}};
+    (push?history.pushState:history.replaceState).call(history,state,'',u);
   }
-  function selectPrintTab(tab){
-    tab=tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-    const host=q('#erpPrintDesignerStudio');
-    if(!host)return;
-    const btn=host.querySelector('.pd-tab[data-pdtab="'+CSS.escape(tab)+'"]')||host.querySelector('.pd-tab');
-    if(!btn)return;
+
+  function activatePrintTab(tab){
+    tab=tab||localStorage.getItem(LAST_TAB)||'designs';
+    const host=$('#erpPrintDesignerStudio');
+    if(!host)return false;
+    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`)||host.querySelector('.pd-tab');
+    if(!btn)return false;
     host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
     host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===btn.dataset.pdtab));
-    localStorage.setItem('erpPrintDesigner:lastTab',btn.dataset.pdtab);
-  }
-  function forcePanel(name,section,tab,write=true){
-    name=name||'theme'; section=section||'';
-    // Ensure Print Designer content exists before showing the panel.
-    if(name==='print-studio' && typeof renderStudio==='function'){
-      try{renderStudio()}catch(e){console.error('Print Designer render failed',e)}
-    }
-    qa('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
-    qa('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
-    qa('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
-    if(name==='control'){
-      const target=section||'home';
-      qa('[id^="control-"]').forEach(el=>{
-        if(el.classList.contains('control-workspace'))el.classList.toggle('active',el.id==='control-'+target)
-      });
-    }
-    const wt=q('#workspaceTitle'),ws=q('#workspaceSubtitle');
-    if(wt)wt.textContent=name==='control'?'Control Center':name==='print-studio'?'Print Designer':'Design Studio';
-    if(ws)ws.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':(name==='control'?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.');
-    if(name==='print-studio')setTimeout(()=>selectPrintTab(tab),30);
-    if(write)setRouteUrl({panel:name,section:section,tab:name==='print-studio'?(tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''});
+    localStorage.setItem(LAST_TAB,btn.dataset.pdtab);
+    return true;
   }
 
-  // Make all future calls reliable, including calls from older scripts.
-  const oldOpen=window.openStudioPanel;
-  window.openStudioPanel=function(name,section){
-    if(name==='print-studio'){
-      forcePanel(name,section,localStorage.getItem('erpPrintDesigner:lastTab')||'designs',true);
-      return;
+  function openDesignPanel(name,tab,write=true){
+    name=name||'theme';
+    if(name==='print-studio'&&typeof renderStudio==='function'){
+      try{renderStudio()}catch(err){console.error('Print Designer render failed',err)}
     }
-    try{if(typeof oldOpen==='function')oldOpen(name,section)}catch(e){console.error(e)}
-    setTimeout(()=>forcePanel(name,section,'',true),0);
-  };
-
-  // Sidebar clicks: open the selected Design Studio panel and never allow stale handlers to override it.
-  document.addEventListener('click',function(e){
-    const item=e.target.closest('[data-panel]');
-    if(!item)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const name=item.dataset.panel;
-    forcePanel(name,'',name==='print-studio'?(localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):'',true);
-  },true);
-
-  document.addEventListener('click',function(e){
-    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(!tab)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    selectPrintTab(tab.dataset.pdtab);
-    forcePanel('print-studio','',tab.dataset.pdtab,true);
-  },true);
-
-  function restoreExactUrl(){
-    const r=routeFromUrl();
-    if(r){
-      // URL wins over stale Theme Studio localStorage on refresh.
-      localStorage.setItem(LAST,JSON.stringify(r));
-      forcePanel(r.panel,r.section,r.tab,false);
-    }
+    if(typeof openStudioPanel==='function')openStudioPanel(name);
+    // Enforce the selected panel after older code finishes.
+    setTimeout(()=>{
+      $$('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${name}`));
+      $$('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
+      if(name==='print-studio')activatePrintTab(tab);
+      const title=$('#workspaceTitle'),sub=$('#workspaceSubtitle');
+      if(title)title.textContent=name==='print-studio'?'Print Designer':'Design Studio';
+      if(sub)sub.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':'Theme, sidebar and profile design for the complete ERP.';
+    },0);
+    if(write&&!restoring)setUrl('design-studio',name,name==='print-studio'?(tab||localStorage.getItem(LAST_TAB)||'designs'):'',true);
   }
+
+  function replaceAndBind(selector,handler){
+    $$(selector).forEach(old=>{
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();handler(fresh,e)});
+    });
+  }
+
+  function bindCleanNavigation(){
+    replaceAndBind('[data-panel]',el=>openDesignPanel(el.dataset.panel,el.dataset.panel==='print-studio'?(localStorage.getItem(LAST_TAB)||'designs'):''));
+
+    replaceAndBind('#issueMainBtn',()=>{ if(typeof openIssue==='function')openIssue(); if(!restoring)setUrl('issue','entry','',true); });
+    replaceAndBind('#purchaseMainBtn',()=>{ if(typeof openPurchase==='function')openPurchase('dashboard'); if(!restoring)setUrl('purchase','dashboard','',true); });
+    replaceAndBind('#gatePassMainBtn',()=>{ if(typeof showGatePassMain==='function')showGatePassMain(); else if(typeof openGatePassDashboard==='function')openGatePassDashboard('dashboard'); if(!restoring)setUrl('gatepass','dashboard','',true); });
+    replaceAndBind('#mastersMainBtn',()=>{ if(typeof openMasters==='function')openMasters('items'); if(!restoring)setUrl('masters','items','',true); });
+    replaceAndBind('#homeScreenMainBtn',()=>openDesignPanel('control','home-screen'));
+
+    // Print Designer tabs are recreated by renderStudio, so delegate them once.
+    document.addEventListener('click',e=>{
+      const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+      if(!tab)return;
+      e.preventDefault();e.stopPropagation();
+      activatePrintTab(tab.dataset.pdtab);
+      if(!restoring)setUrl('design-studio','print-studio',tab.dataset.pdtab,true);
+    });
+  }
+
+  function restoreFromUrl(){
+    const p=new URLSearchParams(location.search);
+    const studio=p.get('studio')||'design-studio';
+    const section=p.get('section')||'theme';
+    const tab=p.get('tab')||'';
+    restoring=true;
+    try{
+      if(studio==='design-studio')openDesignPanel(section,tab,false);
+      else if(studio==='issue'&&typeof openIssue==='function')openIssue();
+      else if(studio==='purchase'&&typeof openPurchase==='function')openPurchase(section||'dashboard');
+      else if(studio==='masters'&&typeof openMasters==='function')openMasters(section||'items');
+      else if((studio==='gatepass'||studio==='gate-pass')&&typeof openGatePassDashboard==='function')openGatePassDashboard(section||'dashboard');
+    }finally{setTimeout(()=>{restoring=false},80)}
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
-    // Run after all older delayed initializers.
-    setTimeout(restoreExactUrl,550);
-    setTimeout(restoreExactUrl,1100);
+    bindCleanNavigation();
+    // Restore only from the URL. Never replace it with an old saved Theme route.
+    setTimeout(restoreFromUrl,250);
+    setTimeout(restoreFromUrl,800);
   });
-  window.addEventListener('pageshow',()=>setTimeout(restoreExactUrl,80));
+  window.addEventListener('popstate',()=>setTimeout(restoreFromUrl,0));
+  window.addEventListener('pageshow',()=>setTimeout(restoreFromUrl,50));
 })();
 </script>
 
@@ -9469,175 +9499,110 @@ window.ERPPrintDesigner={registerPage,open,refresh:discoverPages,getPages:()=>Ob
 /* V12.1 final internal navigation fix */
 #studioBackBtn,#studioForwardBtn{display:inline-flex!important;align-items:center;justify-content:center}
 </style>
-<script>
-/* Design Studio V12.1 — keep all navigation inside Design Studio and restore the exact page after refresh. */
-(function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  const STACK='erpDesignStudio:internalStack:v2';
-  const POS='erpDesignStudio:internalPos:v2';
-  let busy=false;
-  const read=(k,d)=>{try{const v=JSON.parse(sessionStorage.getItem(k)||'null');return v??d}catch(e){return d}};
-  const write=(k,v)=>sessionStorage.setItem(k,JSON.stringify(v));
-  const saved=()=>{try{return JSON.parse(localStorage.getItem(LAST)||'null')}catch(e){return null}};
-  const activePrintTab=()=>document.querySelector('#erpPrintDesignerStudio .pd-tab.active')?.dataset.pdtab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-  const norm=r=>({panel:r?.panel||'theme',section:r?.section||'',tab:(r?.panel==='print-studio'?(r?.tab||activePrintTab()):'')});
-  const equal=(a,b)=>a&&b&&a.panel===b.panel&&(a.section||'')===(b.section||'')&&(a.tab||'')===(b.tab||'');
-  function urlRoute(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio')return null;
-    return norm({panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''});
-  }
-  function setUrl(r){
-    const u=new URL(location.href);u.searchParams.set('studio','design-studio');u.searchParams.set('section',r.panel);
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-  }
-  function buttons(){
-    const a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);
-    const b=document.getElementById('studioBackBtn'),f=document.getElementById('studioForwardBtn');
-    if(b)b.disabled=i<=0;if(f)f.disabled=i<0||i>=a.length-1;
-  }
-  function selectPrintTab(tab){
-    const host=document.getElementById('erpPrintDesignerStudio');if(!host)return;
-    const btn=[...host.querySelectorAll('.pd-tab')].find(x=>x.dataset.pdtab===tab);if(!btn)return;
-    host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
-    host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===tab));
-    localStorage.setItem('erpPrintDesigner:lastTab',tab);
-  }
-  function openRoute(route,record=true){
-    const r=norm(route);busy=true;
-    try{
-      if(typeof openStudioPanel==='function')openStudioPanel(r.panel,r.section);
-      if(r.panel==='print-studio')setTimeout(()=>selectPrintTab(r.tab),60);
-      localStorage.setItem(LAST,JSON.stringify(r));setUrl(r);
-      if(record){let a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);if(!equal(a[i],r)){a=a.slice(0,i+1);a.push(r);i=a.length-1;write(STACK,a);sessionStorage.setItem(POS,String(i));}}
-    }finally{setTimeout(()=>{busy=false;buttons()},90)}
-  }
-  function move(d){const a=read(STACK,[]);let i=Number(sessionStorage.getItem(POS)??-1)+d;if(i<0||i>=a.length)return;sessionStorage.setItem(POS,String(i));openRoute(a[i],false)}
 
-  // Stop the two external Costing links from ever leaving Design Studio.
-  document.addEventListener('click',function(e){
-    const ext=e.target.closest('a.side-item[href="costing.html"]');
-    if(ext){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:'control',section:'dashboard'});return;}
-    const p=e.target.closest('[data-panel]');
-    if(p){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:p.dataset.panel,section:''});return;}
-    const c=e.target.closest('[data-control-section]');
-    if(c){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:'control',section:c.dataset.controlSection});return;}
-    const t=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(t){e.preventDefault();e.stopImmediatePropagation();selectPrintTab(t.dataset.pdtab);openRoute({panel:'print-studio',tab:t.dataset.pdtab});return;}
-  },true);
 
-  window.addEventListener('popstate',e=>{const r=e.state?.dsExact||urlRoute()||saved();if(r)openRoute(r,false)});
-  document.addEventListener('DOMContentLoaded',function(){
-    const b=document.getElementById('studioBackBtn'),f=document.getElementById('studioForwardBtn');
-    if(b)b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();move(-1)},true);
-    if(f)f.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();move(1)},true);
-    // On refresh, saved exact route wins over the old default theme URL.
-    const r=saved()||urlRoute()||{panel:'theme',section:'',tab:''};
-    let a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);
-    if(!a.length||i<0){a=[norm(r)];i=0;write(STACK,a);sessionStorage.setItem(POS,'0')}
-    setTimeout(()=>openRoute(r,false),180);buttons();
-  });
-})();
-</script>
+
+
 
 <script>
-/* V12.2 — final Design Studio panel/refresh route authority.
-   URL is the source of truth on refresh; sidebar selection always opens its real panel. */
+/* V12.3 — single clean route controller. URL is authoritative; stale handlers are removed. */
 (function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  function q(s){return document.querySelector(s)}
-  function qa(s){return [...document.querySelectorAll(s)]}
-  function routeFromUrl(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio') return null;
-    return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
-  }
-  function setRouteUrl(r){
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const LAST_TAB='erpPrintDesigner:lastTab';
+  let restoring=false;
+
+  function setUrl(studio,section,tab,push=false){
     const u=new URL(location.href);
-    u.searchParams.set('studio','design-studio');
-    u.searchParams.set('section',r.panel||'theme');
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');
+    u.searchParams.set('studio',studio);
+    if(section)u.searchParams.set('section',section);else u.searchParams.delete('section');
+    if(tab)u.searchParams.set('tab',tab);else u.searchParams.delete('tab');
+    u.searchParams.delete('subsection');
     u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-    localStorage.setItem(LAST,JSON.stringify(r));
+    const state={erpRoute:{studio,section:section||'',tab:tab||''}};
+    (push?history.pushState:history.replaceState).call(history,state,'',u);
   }
-  function selectPrintTab(tab){
-    tab=tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-    const host=q('#erpPrintDesignerStudio');
-    if(!host)return;
-    const btn=host.querySelector('.pd-tab[data-pdtab="'+CSS.escape(tab)+'"]')||host.querySelector('.pd-tab');
-    if(!btn)return;
+
+  function activatePrintTab(tab){
+    tab=tab||localStorage.getItem(LAST_TAB)||'designs';
+    const host=$('#erpPrintDesignerStudio');
+    if(!host)return false;
+    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`)||host.querySelector('.pd-tab');
+    if(!btn)return false;
     host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
     host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===btn.dataset.pdtab));
-    localStorage.setItem('erpPrintDesigner:lastTab',btn.dataset.pdtab);
-  }
-  function forcePanel(name,section,tab,write=true){
-    name=name||'theme'; section=section||'';
-    // Ensure Print Designer content exists before showing the panel.
-    if(name==='print-studio' && typeof renderStudio==='function'){
-      try{renderStudio()}catch(e){console.error('Print Designer render failed',e)}
-    }
-    qa('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
-    qa('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===name));
-    qa('[data-control-section]').forEach(x=>x.classList.toggle('active',name==='control'&&x.dataset.controlSection===section));
-    if(name==='control'){
-      const target=section||'home';
-      qa('[id^="control-"]').forEach(el=>{
-        if(el.classList.contains('control-workspace'))el.classList.toggle('active',el.id==='control-'+target)
-      });
-    }
-    const wt=q('#workspaceTitle'),ws=q('#workspaceSubtitle');
-    if(wt)wt.textContent=name==='control'?'Control Center':name==='print-studio'?'Print Designer':'Design Studio';
-    if(ws)ws.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':(name==='control'?'Users, roles, permissions, restrictions and security inside Design Studio.':'Theme, sidebar and profile design for the complete ERP.');
-    if(name==='print-studio')setTimeout(()=>selectPrintTab(tab),30);
-    if(write)setRouteUrl({panel:name,section:section,tab:name==='print-studio'?(tab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''});
+    localStorage.setItem(LAST_TAB,btn.dataset.pdtab);
+    return true;
   }
 
-  // Make all future calls reliable, including calls from older scripts.
-  const oldOpen=window.openStudioPanel;
-  window.openStudioPanel=function(name,section){
-    if(name==='print-studio'){
-      forcePanel(name,section,localStorage.getItem('erpPrintDesigner:lastTab')||'designs',true);
-      return;
+  function openDesignPanel(name,tab,write=true){
+    name=name||'theme';
+    if(name==='print-studio'&&typeof renderStudio==='function'){
+      try{renderStudio()}catch(err){console.error('Print Designer render failed',err)}
     }
-    try{if(typeof oldOpen==='function')oldOpen(name,section)}catch(e){console.error(e)}
-    setTimeout(()=>forcePanel(name,section,'',true),0);
-  };
-
-  // Sidebar clicks: open the selected Design Studio panel and never allow stale handlers to override it.
-  document.addEventListener('click',function(e){
-    const item=e.target.closest('[data-panel]');
-    if(!item)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const name=item.dataset.panel;
-    forcePanel(name,'',name==='print-studio'?(localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):'',true);
-  },true);
-
-  document.addEventListener('click',function(e){
-    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(!tab)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    selectPrintTab(tab.dataset.pdtab);
-    forcePanel('print-studio','',tab.dataset.pdtab,true);
-  },true);
-
-  function restoreExactUrl(){
-    const r=routeFromUrl();
-    if(r){
-      // URL wins over stale Theme Studio localStorage on refresh.
-      localStorage.setItem(LAST,JSON.stringify(r));
-      forcePanel(r.panel,r.section,r.tab,false);
-    }
+    if(typeof openStudioPanel==='function')openStudioPanel(name);
+    // Enforce the selected panel after older code finishes.
+    setTimeout(()=>{
+      $$('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${name}`));
+      $$('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
+      if(name==='print-studio')activatePrintTab(tab);
+      const title=$('#workspaceTitle'),sub=$('#workspaceSubtitle');
+      if(title)title.textContent=name==='print-studio'?'Print Designer':'Design Studio';
+      if(sub)sub.textContent=name==='print-studio'?'Create, assign and manage print designs for every ERP page.':'Theme, sidebar and profile design for the complete ERP.';
+    },0);
+    if(write&&!restoring)setUrl('design-studio',name,name==='print-studio'?(tab||localStorage.getItem(LAST_TAB)||'designs'):'',true);
   }
+
+  function replaceAndBind(selector,handler){
+    $$(selector).forEach(old=>{
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();handler(fresh,e)});
+    });
+  }
+
+  function bindCleanNavigation(){
+    replaceAndBind('[data-panel]',el=>openDesignPanel(el.dataset.panel,el.dataset.panel==='print-studio'?(localStorage.getItem(LAST_TAB)||'designs'):''));
+
+    replaceAndBind('#issueMainBtn',()=>{ if(typeof openIssue==='function')openIssue(); if(!restoring)setUrl('issue','entry','',true); });
+    replaceAndBind('#purchaseMainBtn',()=>{ if(typeof openPurchase==='function')openPurchase('dashboard'); if(!restoring)setUrl('purchase','dashboard','',true); });
+    replaceAndBind('#gatePassMainBtn',()=>{ if(typeof showGatePassMain==='function')showGatePassMain(); else if(typeof openGatePassDashboard==='function')openGatePassDashboard('dashboard'); if(!restoring)setUrl('gatepass','dashboard','',true); });
+    replaceAndBind('#mastersMainBtn',()=>{ if(typeof openMasters==='function')openMasters('items'); if(!restoring)setUrl('masters','items','',true); });
+    replaceAndBind('#homeScreenMainBtn',()=>openDesignPanel('control','home-screen'));
+
+    // Print Designer tabs are recreated by renderStudio, so delegate them once.
+    document.addEventListener('click',e=>{
+      const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
+      if(!tab)return;
+      e.preventDefault();e.stopPropagation();
+      activatePrintTab(tab.dataset.pdtab);
+      if(!restoring)setUrl('design-studio','print-studio',tab.dataset.pdtab,true);
+    });
+  }
+
+  function restoreFromUrl(){
+    const p=new URLSearchParams(location.search);
+    const studio=p.get('studio')||'design-studio';
+    const section=p.get('section')||'theme';
+    const tab=p.get('tab')||'';
+    restoring=true;
+    try{
+      if(studio==='design-studio')openDesignPanel(section,tab,false);
+      else if(studio==='issue'&&typeof openIssue==='function')openIssue();
+      else if(studio==='purchase'&&typeof openPurchase==='function')openPurchase(section||'dashboard');
+      else if(studio==='masters'&&typeof openMasters==='function')openMasters(section||'items');
+      else if((studio==='gatepass'||studio==='gate-pass')&&typeof openGatePassDashboard==='function')openGatePassDashboard(section||'dashboard');
+    }finally{setTimeout(()=>{restoring=false},80)}
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
-    // Run after all older delayed initializers.
-    setTimeout(restoreExactUrl,550);
-    setTimeout(restoreExactUrl,1100);
+    bindCleanNavigation();
+    // Restore only from the URL. Never replace it with an old saved Theme route.
+    setTimeout(restoreFromUrl,250);
+    setTimeout(restoreFromUrl,800);
   });
-  window.addEventListener('pageshow',()=>setTimeout(restoreExactUrl,80));
+  window.addEventListener('popstate',()=>setTimeout(restoreFromUrl,0));
+  window.addEventListener('pageshow',()=>setTimeout(restoreFromUrl,50));
 })();
 </script>
 
