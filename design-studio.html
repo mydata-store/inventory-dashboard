@@ -1321,6 +1321,25 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
 @media(max-width:1150px){.rgp-entry-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.rgp-entry-grid{grid-template-columns:1fr}.rgp-entry-grid .span-2,.rgp-entry-grid .span-3{grid-column:auto}.rgp-entry-footer{align-items:stretch}.rgp-entry-actions{width:100%}}
 
+
+/* RGP List Page V1.0 */
+.rgp-list-shell{display:grid;gap:14px}.rgp-list-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rgp-list-filters{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:11px;flex:1}
+.rgp-list-filters label{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px}
+.rgp-list-filters input,.rgp-list-filters select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:0 10px}
+.rgp-list-actions{display:flex;gap:8px;flex-wrap:wrap}.rgp-list-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.rgp-list-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:13px;max-height:540px}
+.rgp-list-table{width:100%;border-collapse:collapse;min-width:1500px;background:var(--surface)}
+.rgp-list-table th,.rgp-list-table td{padding:10px 9px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:left;vertical-align:middle;white-space:nowrap;font-size:11px}
+.rgp-list-table th{position:sticky;top:0;z-index:3;background:color-mix(in srgb,var(--bg) 65%,var(--surface));font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.rgp-list-table .num{text-align:right}.rgp-link{border:0;background:transparent;color:var(--primary);font-weight:900;cursor:pointer;padding:0;text-decoration:underline}
+.rgp-list-status{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900}
+.rgp-list-status.pending{background:#fef3c7;color:#92400e}.rgp-list-status.partial{background:#dbeafe;color:#1d4ed8}.rgp-list-status.closed{background:#dcfce7;color:#166534}
+.rgp-list-row-actions{display:flex;gap:5px;flex-wrap:wrap}.rgp-list-mini{height:30px;padding:0 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:10px;font-weight:800;cursor:pointer}
+.rgp-list-mini.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.rgp-list-pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:11px}
+@media(max-width:1150px){.rgp-list-filters{grid-template-columns:repeat(3,minmax(150px,1fr))}.rgp-list-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){.rgp-list-filters,.rgp-list-summary{grid-template-columns:1fr}}
+
 </style>
 
 <script>
@@ -1811,6 +1830,66 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
               <div class="gatepass-activity-item"><b>3 RGPs are partially returned</b><small>Some quantity has been received and some is still pending.</small></div>
               <div class="gatepass-activity-item"><b>12 RGPs are completed</b><small>All issued material has been received back.</small></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="rgpListContent" style="display:none">
+        <div class="rgp-list-shell">
+          <div class="rgp-entry-top">
+            <div class="rgp-entry-head">
+              <div><h3>RGP List</h3><p>Search, review, return, print and open complete RGP details.</p></div>
+              <div class="rgp-list-actions">
+                <button class="btn primary" type="button" id="rgpListNewBtn">＋ New RGP</button>
+                <button class="btn" type="button" id="rgpListReturnBtn">↩ Return Entry</button>
+                <button class="btn" type="button" id="rgpListPrintBtn">Print</button>
+              </div>
+            </div>
+            <div class="rgp-list-toolbar">
+              <div class="rgp-list-filters">
+                <div><label>RGP Number</label><input id="rgpListNoFilter" placeholder="Type RGP number"></div>
+                <div><label>Item</label><input id="rgpListItemFilter" list="rgpItemList" placeholder="Type item name..."></div>
+                <div><label>Department</label><input id="rgpListDepartmentFilter" list="rgpDepartmentList" placeholder="Type department..."></div>
+                <div><label>Workshop</label><input id="rgpListWorkshopFilter" list="rgpWorkshopList" placeholder="Type workshop..."></div>
+                <div><label>Status</label><select id="rgpListStatusFilter"><option value="">All Statuses</option><option value="pending">Pending</option><option value="partial">Partial</option><option value="closed">Closed</option></select></div>
+                <div><label>From Date</label><input id="rgpListFromDate" placeholder="Date"></div>
+                <div><label>To Date</label><input id="rgpListToDate" placeholder="Date"></div>
+                <div><label>Courier</label><input id="rgpListCourierFilter" placeholder="Type courier name"></div>
+                <div><label>Authorized By</label><input id="rgpListAuthorizedFilter" placeholder="Type authorized person"></div>
+                <div><label>Bill Detail</label><input id="rgpListBillFilter" placeholder="Bill / repair detail"></div>
+              </div>
+              <div class="rgp-list-actions"><button class="btn primary" id="rgpListSearchBtn">Search</button><button class="btn" id="rgpListClearBtn">Clear</button></div>
+            </div>
+          </div>
+
+          <div class="rgp-list-summary">
+            <div class="gatepass-kpi"><div class="gatepass-kpi-icon">☷</div><div><small>Total RGP</small><strong>6</strong></div></div>
+            <div class="gatepass-kpi"><div class="gatepass-kpi-icon">◷</div><div><small>Pending</small><strong>2</strong></div></div>
+            <div class="gatepass-kpi"><div class="gatepass-kpi-icon">↔</div><div><small>Partial</small><strong>2</strong></div></div>
+            <div class="gatepass-kpi"><div class="gatepass-kpi-icon">✓</div><div><small>Closed</small><strong>2</strong></div></div>
+            <div class="gatepass-kpi"><div class="gatepass-kpi-icon">₨</div><div><small>Pending Value</small><strong>PKR 63,450.00</strong></div></div>
+          </div>
+
+          <div class="rgp-items-card">
+            <div class="rgp-items-head">
+              <div><h3>Returnable Gate Pass Register</h3><p>Latest RGP records appear first.</p></div>
+              <div class="rgp-list-actions"><button class="btn" id="rgpListExportBtn">Export Excel</button><button class="btn" id="rgpListPdfBtn">Export PDF</button></div>
+            </div>
+            <div class="rgp-list-table-wrap">
+              <table class="rgp-list-table" id="rgpListTable">
+                <thead><tr><th>RGP No.</th><th>Date</th><th>Due Date</th><th>Item Code</th><th>Item Name with Size</th><th>Qty</th><th>Unit</th><th>Qty Received</th><th>Qty Pending</th><th>Department</th><th>Workshop</th><th>Courier</th><th>Authorized By</th><th>Bill Detail</th><th>Pending Value</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="rgpListBody">
+                  <tr data-status="partial"><td><button class="rgp-link">RGP-00024</button></td><td>04-Aug-26</td><td>18-Aug-26</td><td>ITM-00078</td><td>M.S Welding Rod 6013 - 3.15mm</td><td class="num">50</td><td>KG</td><td class="num">20</td><td class="num">30</td><td>Mechanical</td><td>Workshop A</td><td>Muhammad Aslam</td><td>Muhammad Waqas</td><td>Repair Estimate #1254</td><td class="num">PKR 8,400.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button></div></td></tr>
+                  <tr data-status="closed"><td><button class="rgp-link">RGP-00023</button></td><td>03-Aug-26</td><td>10-Aug-26</td><td>ITM-00156</td><td>Bearing 6205</td><td class="num">10</td><td>PCS</td><td class="num">10</td><td class="num">0</td><td>Mechanical</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Bill #445</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button></div></td></tr>
+                  <tr data-status="pending"><td><button class="rgp-link">RGP-00022</button></td><td>02-Aug-26</td><td>16-Aug-26</td><td>ITM-00091</td><td>Motor 15 HP</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Electrical</td><td>Electric Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Inspection</td><td class="num">PKR 35,000.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button></div></td></tr>
+                  <tr data-status="partial"><td><button class="rgp-link">RGP-00021</button></td><td>01-Aug-26</td><td>12-Aug-26</td><td>ITM-00034</td><td>Hydraulic Pump</td><td class="num">2</td><td>PCS</td><td class="num">1</td><td class="num">1</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Estimate #1190</td><td class="num">PKR 12,500.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button></div></td></tr>
+                  <tr data-status="pending"><td><button class="rgp-link">RGP-00020</button></td><td>30-Jul-26</td><td>08-Aug-26</td><td>ITM-00055</td><td>Gear Box Assembly</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Maintenance</td><td>Lathe Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Service Detail</td><td class="num">PKR 7,550.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button></div></td></tr>
+                  <tr data-status="closed"><td><button class="rgp-link">RGP-00019</button></td><td>29-Jul-26</td><td>05-Aug-26</td><td>ITM-00044</td><td>V-Belt A-32</td><td class="num">15</td><td>PCS</td><td class="num">15</td><td class="num">0</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Inspection Complete</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="rgp-list-pagination"><div id="rgpListCount">Showing 1 to 6 of 6 records</div></div>
           </div>
         </div>
       </div>
@@ -4002,14 +4081,16 @@ function setRgpPage(page='dashboard'){
   currentRgpPage=['dashboard','list','entry','return'].includes(page)?page:'dashboard';
   document.querySelectorAll('[data-rgp-page]').forEach(btn=>btn.classList.toggle('active',btn.dataset.rgpPage===currentRgpPage));
   const dash=document.getElementById('rgpDashboardContent');
+  const list=document.getElementById('rgpListContent');
   const entry=document.getElementById('rgpEntryContent');
   const holder=document.getElementById('rgpPlaceholderContent');
 
   if(dash) dash.style.display=currentRgpPage==='dashboard'?'':'none';
+  if(list) list.style.display=currentRgpPage==='list'?'':'none';
   if(entry) entry.style.display=currentRgpPage==='entry'?'':'none';
-  if(holder) holder.style.display=(currentRgpPage==='list'||currentRgpPage==='return')?'':'none';
+  if(holder) holder.style.display=currentRgpPage==='return'?'':'none';
 
-  if(currentRgpPage==='list'||currentRgpPage==='return'){
+  if(currentRgpPage==='return'){
     const titles={
       list:'RGP List',
       return:'Return Entry Form'
@@ -4567,6 +4648,40 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+
+
+function rgpListFilterRows(){
+  const vals={
+    no:(document.getElementById('rgpListNoFilter')?.value||'').toLowerCase(),
+    item:(document.getElementById('rgpListItemFilter')?.value||'').toLowerCase(),
+    dep:(document.getElementById('rgpListDepartmentFilter')?.value||'').toLowerCase(),
+    work:(document.getElementById('rgpListWorkshopFilter')?.value||'').toLowerCase(),
+    status:(document.getElementById('rgpListStatusFilter')?.value||'').toLowerCase(),
+    courier:(document.getElementById('rgpListCourierFilter')?.value||'').toLowerCase(),
+    auth:(document.getElementById('rgpListAuthorizedFilter')?.value||'').toLowerCase(),
+    bill:(document.getElementById('rgpListBillFilter')?.value||'').toLowerCase()
+  };
+  let visible=0;
+  document.querySelectorAll('#rgpListBody tr').forEach(row=>{
+    const t=row.innerText.toLowerCase();
+    const ok=(!vals.no||t.includes(vals.no))&&(!vals.item||t.includes(vals.item))&&(!vals.dep||t.includes(vals.dep))&&(!vals.work||t.includes(vals.work))&&(!vals.status||row.dataset.status===vals.status)&&(!vals.courier||t.includes(vals.courier))&&(!vals.auth||t.includes(vals.auth))&&(!vals.bill||t.includes(vals.bill));
+    row.style.display=ok?'':'none'; if(ok) visible++;
+  });
+  document.getElementById('rgpListCount').textContent=visible?`Showing 1 to ${visible} of ${visible} matching records`:'No matching RGP records';
+}
+function rgpListClearFilters(){
+  document.querySelectorAll('#rgpListContent input').forEach(x=>x.value='');
+  document.querySelectorAll('#rgpListContent select').forEach(x=>x.selectedIndex=0);
+  document.querySelectorAll('#rgpListBody tr').forEach(x=>x.style.display='');
+  document.getElementById('rgpListCount').textContent='Showing 1 to 6 of 6 records';
+}
+function bindRgpListActions(){
+  document.querySelectorAll('#rgpListTable .rgp-link').forEach(btn=>btn.addEventListener('click',()=>toast(btn.textContent+' detail page will be made next')));
+  document.querySelectorAll('#rgpListTable .rgp-list-mini').forEach(btn=>btn.addEventListener('click',()=>{
+    const a=btn.textContent.trim().toLowerCase();
+    if(a==='return')setRgpPage('return'); else if(a==='print')window.print(); else toast('RGP Detail page will be made after Return Entry');
+  }));
+}
 
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
@@ -6827,6 +6942,14 @@ function bind(){
   $('#rgpEntryClearTop')?.addEventListener('click',clearRgpEntryForm);
   $('#rgpSaveDraftBtn')?.addEventListener('click',()=>saveRgpEntry(true));
   $('#rgpSaveBtn')?.addEventListener('click',()=>saveRgpEntry(false));
+  $('#rgpListSearchBtn')?.addEventListener('click',rgpListFilterRows);
+  $('#rgpListClearBtn')?.addEventListener('click',rgpListClearFilters);
+  $('#rgpListPrintBtn')?.addEventListener('click',()=>window.print());
+  $('#rgpListPdfBtn')?.addEventListener('click',()=>toast('RGP PDF export prepared'));
+  $('#rgpListExportBtn')?.addEventListener('click',()=>toast('RGP Excel export prepared'));
+  $('#rgpListNewBtn')?.addEventListener('click',()=>setRgpPage('entry'));
+  $('#rgpListReturnBtn')?.addEventListener('click',()=>setRgpPage('return'));
+  bindRgpListActions();
   $('#rgpNo')?.addEventListener('blur',formatRgpNumberField);
   $('#rgpNo')?.addEventListener('change',formatRgpNumberField);
   ['rgpDate','rgpDueDate'].forEach(id=>{
