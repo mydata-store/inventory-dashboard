@@ -1622,6 +1622,32 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
   .rgp-pd-table tr{page-break-inside:avoid}
 }
 
+
+/* Operational RGP Detail + robust delete */
+.rgp-detail-modal{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  padding:18px;background:rgba(5,18,31,.66);z-index:14000
+}
+.rgp-detail-modal.open{display:flex}
+.rgp-detail-box{
+  width:min(1050px,97vw);max-height:94vh;overflow:auto;background:var(--surface);
+  border:1px solid var(--border);border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.34);padding:18px
+}
+.rgp-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+.rgp-detail-head h2{margin:0 0 4px}.rgp-detail-head p{margin:0;color:var(--muted)}
+.rgp-detail-close{width:38px;height:38px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:20px;cursor:pointer}
+.rgp-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.rgp-detail-field{padding:11px;border:1px solid var(--border);border-radius:11px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}
+.rgp-detail-field small{display:block;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase;margin-bottom:4px}
+.rgp-detail-field strong{font-size:12px}
+.rgp-detail-table{width:100%;border-collapse:collapse;min-width:820px}
+.rgp-detail-table th,.rgp-detail-table td{border:1px solid var(--border);padding:8px;font-size:11px;text-align:left}
+.rgp-detail-table th{background:color-mix(in srgb,var(--bg) 65%,var(--surface));font-size:10px;text-transform:uppercase}
+.rgp-detail-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.rgp-detail-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+@media(max-width:800px){.rgp-detail-grid,.rgp-detail-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.rgp-detail-grid,.rgp-detail-summary{grid-template-columns:1fr}}
+
 </style>
 
 <script>
@@ -2163,12 +2189,12 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
               <table class="rgp-list-table" id="rgpListTable">
                 <thead><tr><th>RGP No.</th><th>Date</th><th>Due Date</th><th>Item Code</th><th>Item Name with Size</th><th>Qty</th><th>Unit</th><th>Qty Received</th><th>Qty Pending</th><th>Department</th><th>Workshop</th><th>Courier</th><th>Authorized By</th><th>Bill Detail</th><th>Pending Value</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody id="rgpListBody">
-                  <tr data-status="partial"><td><button class="rgp-link">RGP-00024</button></td><td>04-Aug-26</td><td>18-Aug-26</td><td>ITM-00078</td><td>M.S Welding Rod 6013 - 3.15mm</td><td class="num">50</td><td>KG</td><td class="num">20</td><td class="num">30</td><td>Mechanical</td><td>Workshop A</td><td>Muhammad Aslam</td><td>Muhammad Waqas</td><td>Repair Estimate #1254</td><td class="num">PKR 8,400.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="closed"><td><button class="rgp-link">RGP-00023</button></td><td>03-Aug-26</td><td>10-Aug-26</td><td>ITM-00156</td><td>Bearing 6205</td><td class="num">10</td><td>PCS</td><td class="num">10</td><td class="num">0</td><td>Mechanical</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Bill #445</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="pending"><td><button class="rgp-link">RGP-00022</button></td><td>02-Aug-26</td><td>16-Aug-26</td><td>ITM-00091</td><td>Motor 15 HP</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Electrical</td><td>Electric Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Inspection</td><td class="num">PKR 35,000.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="partial"><td><button class="rgp-link">RGP-00021</button></td><td>01-Aug-26</td><td>12-Aug-26</td><td>ITM-00034</td><td>Hydraulic Pump</td><td class="num">2</td><td>PCS</td><td class="num">1</td><td class="num">1</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Estimate #1190</td><td class="num">PKR 12,500.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="pending"><td><button class="rgp-link">RGP-00020</button></td><td>30-Jul-26</td><td>08-Aug-26</td><td>ITM-00055</td><td>Gear Box Assembly</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Maintenance</td><td>Lathe Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Service Detail</td><td class="num">PKR 7,550.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary">Return</button><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
-                  <tr data-status="closed"><td><button class="rgp-link">RGP-00019</button></td><td>29-Jul-26</td><td>05-Aug-26</td><td>ITM-00044</td><td>V-Belt A-32</td><td class="num">15</td><td>PCS</td><td class="num">15</td><td class="num">0</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Inspection Complete</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini">Detail</button><button class="rgp-list-mini">Print</button><button class="rgp-list-mini rgp-delete-btn">Delete</button></div></td></tr>
+                  <tr data-status="partial"><td><button class="rgp-link">RGP-00024</button></td><td>04-Aug-26</td><td>18-Aug-26</td><td>ITM-00078</td><td>M.S Welding Rod 6013 - 3.15mm</td><td class="num">50</td><td>KG</td><td class="num">20</td><td class="num">30</td><td>Mechanical</td><td>Workshop A</td><td>Muhammad Aslam</td><td>Muhammad Waqas</td><td>Repair Estimate #1254</td><td class="num">PKR 8,400.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="closed"><td><button class="rgp-link">RGP-00023</button></td><td>03-Aug-26</td><td>10-Aug-26</td><td>ITM-00156</td><td>Bearing 6205</td><td class="num">10</td><td>PCS</td><td class="num">10</td><td class="num">0</td><td>Mechanical</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Bill #445</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="pending"><td><button class="rgp-link">RGP-00022</button></td><td>02-Aug-26</td><td>16-Aug-26</td><td>ITM-00091</td><td>Motor 15 HP</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Electrical</td><td>Electric Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Inspection</td><td class="num">PKR 35,000.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="partial"><td><button class="rgp-link">RGP-00021</button></td><td>01-Aug-26</td><td>12-Aug-26</td><td>ITM-00034</td><td>Hydraulic Pump</td><td class="num">2</td><td>PCS</td><td class="num">1</td><td class="num">1</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Repair Estimate #1190</td><td class="num">PKR 12,500.00</td><td><span class="rgp-list-status partial">Partial</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="pending"><td><button class="rgp-link">RGP-00020</button></td><td>30-Jul-26</td><td>08-Aug-26</td><td>ITM-00055</td><td>Gear Box Assembly</td><td class="num">1</td><td>PCS</td><td class="num">0</td><td class="num">1</td><td>Maintenance</td><td>Lathe Workshop</td><td>Muhammad Aslam</td><td>Store Manager</td><td>Service Detail</td><td class="num">PKR 7,550.00</td><td><span class="rgp-list-status pending">Pending</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini primary" type="button" data-action="return">Return</button><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
+                  <tr data-status="closed"><td><button class="rgp-link">RGP-00019</button></td><td>29-Jul-26</td><td>05-Aug-26</td><td>ITM-00044</td><td>V-Belt A-32</td><td class="num">15</td><td>PCS</td><td class="num">15</td><td class="num">0</td><td>Production</td><td>Workshop A</td><td>Ali Raza</td><td>Muhammad Waqas</td><td>Inspection Complete</td><td class="num">PKR 0.00</td><td><span class="rgp-list-status closed">Closed</span></td><td><div class="rgp-list-row-actions"><button class="rgp-list-mini" type="button" data-action="detail">Detail</button><button class="rgp-list-mini" type="button" data-action="print">Print</button><button class="rgp-list-mini rgp-delete-btn" type="button" data-action="delete">Delete</button></div></td></tr>
                 </tbody>
               </table>
             </div>
@@ -5024,21 +5050,8 @@ function rgpListClearFilters(){
   document.getElementById('rgpListCount').textContent='Showing 1 to 6 of 6 records';
 }
 function bindRgpListActions(){
-  document.querySelectorAll('#rgpListTable .rgp-link').forEach(btn=>btn.addEventListener('click',()=>toast(btn.textContent+' detail page will be made next')));
-  document.querySelectorAll('#rgpListTable .rgp-list-mini').forEach(btn=>{
-    if(btn.dataset.bound==='1') return;
-    btn.dataset.bound='1';
-    btn.addEventListener('click',()=>{
-      const a=btn.textContent.trim().toLowerCase();
-      const row=btn.closest('tr');
-      if(a==='return') openReturnFromRgpRow(row);
-      else if(a==='print') openRgpPrintDesign();
-      else if(a==='delete') askDeleteRgp(row);
-      else toast('RGP Detail page will be made next');
-    });
-  });
+  // Actions are handled by one delegated click listener.
 }
-
 
 const GPC_STORAGE_KEY='erpGatePassPageControllerV2';
 
@@ -5350,120 +5363,7 @@ function gpcRestore(){
 }
 
 
-let rgpPendingDeleteRow=null;
 
-function rgpRowData(row){
-  const c=[...row.children];
-  return {
-    rgpNo:c[0]?.innerText.trim()||'',
-    date:c[1]?.innerText.trim()||'',
-    dueDate:c[2]?.innerText.trim()||'',
-    itemCode:c[3]?.innerText.trim()||'',
-    item:c[4]?.innerText.trim()||'',
-    qty:Number(c[5]?.innerText.replace(/,/g,'')||0),
-    unit:c[6]?.innerText.trim()||'',
-    received:Number(c[7]?.innerText.replace(/,/g,'')||0),
-    pending:Number(c[8]?.innerText.replace(/,/g,'')||0),
-    department:c[9]?.innerText.trim()||'',
-    workshop:c[10]?.innerText.trim()||'',
-    courier:c[11]?.innerText.trim()||'',
-    authorized:c[12]?.innerText.trim()||'',
-    bill:c[13]?.innerText.trim()||''
-  };
-}
-
-function openReturnFromRgpRow(row){
-  const d=rgpRowData(row);
-  document.getElementById('returnRgpNo').value=d.rgpNo;
-  document.getElementById('returnRgpDate').value=d.date;
-  document.getElementById('returnDepartment').value=d.department;
-  document.getElementById('returnWorkshop').value=d.workshop;
-  document.getElementById('returnCourier').value='';
-  document.getElementById('returnReceivedBy').value='';
-  document.getElementById('returnBillDetail').value=d.bill||'';
-  document.getElementById('returnRemarks').value='';
-
-  const body=document.getElementById('rgpReturnBody');
-  body.innerHTML='';
-  const tr=document.createElement('tr');
-  tr.innerHTML=`
-    <td>1</td>
-    <td>${d.itemCode}</td>
-    <td>${d.item}</td>
-    <td>${d.unit}</td>
-    <td class="return-sent">${d.qty.toFixed(2)}</td>
-    <td class="return-prev">${d.received.toFixed(2)}</td>
-    <td class="return-pending">${d.pending.toFixed(2)}</td>
-    <td><input class="return-now" type="number" min="0" max="${d.pending}" step="0.01" value="0.00"></td>
-    <td><input class="return-balance" readonly value="${d.pending.toFixed(2)}"></td>`;
-  body.appendChild(tr);
-  tr.querySelector('.return-now').addEventListener('input',updateRgpReturnTotals);
-  updateRgpReturnTotals();
-  setRgpPage('return');
-}
-
-function updateRgpReturnTotals(){
-  let sent=0,now=0,balance=0;
-  const rows=[...document.querySelectorAll('#rgpReturnBody tr')];
-  rows.forEach(row=>{
-    const qtySent=Number(row.querySelector('.return-sent')?.textContent||0);
-    const pending=Number(row.querySelector('.return-pending')?.textContent||0);
-    const input=row.querySelector('.return-now');
-    let receivedNow=Number(input?.value||0);
-    if(receivedNow<0) receivedNow=0;
-    if(receivedNow>pending){receivedNow=pending;if(input)input.value=pending.toFixed(2)}
-    const bal=pending-receivedNow;
-    const balanceInput=row.querySelector('.return-balance');
-    if(balanceInput) balanceInput.value=bal.toFixed(2);
-    sent+=qtySent;now+=receivedNow;balance+=bal;
-  });
-  document.getElementById('returnTotalItems').textContent=rows.length;
-  document.getElementById('returnQtySent').textContent=sent.toFixed(2);
-  document.getElementById('returnQtyNow').textContent=now.toFixed(2);
-  document.getElementById('returnQtyBalance').textContent=balance.toFixed(2);
-}
-
-function clearRgpReturn(){
-  ['returnDate','returnCourier','returnReceivedBy','returnBillDetail','returnVehicle','returnRemarks'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.value='';
-  });
-  document.querySelectorAll('#rgpReturnBody .return-now').forEach(x=>x.value='0.00');
-  updateRgpReturnTotals();
-  toast('Return Entry cleared');
-}
-
-function saveRgpReturn(draft=false){
-  const no=document.getElementById('returnRgpNo')?.value.trim();
-  const date=document.getElementById('returnDate')?.value.trim();
-  const receivedBy=document.getElementById('returnReceivedBy')?.value.trim();
-  const qty=Number(document.getElementById('returnQtyNow')?.textContent||0);
-  if(!draft && (!no||!date||!receivedBy||qty<=0)){
-    toast('Enter Return Date, Received By and quantity received');
-    return;
-  }
-  toast(draft?'Return draft saved':'RGP return saved successfully');
-}
-
-function askDeleteRgp(row){
-  rgpPendingDeleteRow=row;
-  const modal=document.getElementById('rgpDeleteConfirm');
-  const no=row?.children[0]?.innerText.trim()||'this RGP';
-  document.getElementById('rgpDeleteText').textContent=`Delete ${no}? This action cannot be undone.`;
-  modal.classList.add('open');
-}
-
-function closeDeleteRgp(){
-  document.getElementById('rgpDeleteConfirm')?.classList.remove('open');
-  rgpPendingDeleteRow=null;
-}
-
-function confirmDeleteRgp(){
-  if(rgpPendingDeleteRow){
-    rgpPendingDeleteRow.remove();
-    toast('RGP record deleted');
-  }
-  closeDeleteRgp();
-}
 
 
 
@@ -5560,6 +5460,126 @@ window.closeRgpPrintDesign=closeRgpPrintDesign;
 window.saveRgpPrintDesign=saveRgpPrintDesign;
 window.restoreRgpPrintDesign=restoreRgpPrintDesign;
 window.printRgpDesignedReport=printRgpDesignedReport;
+
+
+let rgpActiveDetailRow=null;
+let rgpDeleteTargetRow=null;
+
+function rgpText(cell){ return cell ? cell.innerText.trim() : ''; }
+
+function getRgpRowRecord(row){
+  const c=[...row.children];
+  return {
+    row,
+    rgpNo:rgpText(c[0]), date:rgpText(c[1]), dueDate:rgpText(c[2]),
+    itemCode:rgpText(c[3]), item:rgpText(c[4]),
+    qty:Number(rgpText(c[5]).replace(/,/g,''))||0,
+    unit:rgpText(c[6]),
+    received:Number(rgpText(c[7]).replace(/,/g,''))||0,
+    pending:Number(rgpText(c[8]).replace(/,/g,''))||0,
+    department:rgpText(c[9]), workshop:rgpText(c[10]), courier:rgpText(c[11]),
+    authorized:rgpText(c[12]), bill:rgpText(c[13]), pendingValue:rgpText(c[14]),
+    status:rgpText(c[15])
+  };
+}
+
+function openRgpDetail(row){
+  if(!row) return;
+  rgpActiveDetailRow=row;
+  const d=getRgpRowRecord(row);
+
+  document.getElementById('rgpDetailTitle').textContent=d.rgpNo+' — Detail';
+  const info=document.getElementById('rgpDetailInfo');
+  const fields=[
+    ['RGP Number',d.rgpNo],['RGP Date',d.date],['Due Date',d.dueDate],['Department',d.department],
+    ['Workshop',d.workshop],['Courier',d.courier],['Authorized By',d.authorized],['Bill Detail',d.bill]
+  ];
+  info.innerHTML=fields.map(([k,v])=>`<div class="rgp-detail-field"><small>${k}</small><strong>${v||'—'}</strong></div>`).join('');
+
+  document.getElementById('rgpDetailItems').innerHTML=`
+    <tr>
+      <td>${d.itemCode}</td><td>${d.item}</td><td>${d.qty.toFixed(2)}</td><td>${d.unit}</td>
+      <td>${d.received.toFixed(2)}</td><td>${d.pending.toFixed(2)}</td>
+      <td>${d.pendingValue}</td><td>${d.status}</td>
+    </tr>`;
+
+  document.getElementById('rgpDetailSummary').innerHTML=`
+    <div class="rgp-detail-field"><small>Qty Sent</small><strong>${d.qty.toFixed(2)}</strong></div>
+    <div class="rgp-detail-field"><small>Qty Received</small><strong>${d.received.toFixed(2)}</strong></div>
+    <div class="rgp-detail-field"><small>Qty Pending</small><strong>${d.pending.toFixed(2)}</strong></div>
+    <div class="rgp-detail-field"><small>Pending Value</small><strong>${d.pendingValue}</strong></div>`;
+
+  const returnBtn=document.getElementById('rgpDetailReturnBtn');
+  if(returnBtn){
+    returnBtn.style.display=d.pending>0?'':'none';
+    returnBtn.onclick=()=>{ closeRgpDetail(); openReturnFromRgpRow(row); };
+  }
+
+  document.getElementById('rgpDetailModal').classList.add('open');
+}
+
+function closeRgpDetail(){
+  document.getElementById('rgpDetailModal')?.classList.remove('open');
+  rgpActiveDetailRow=null;
+}
+
+function openRgpDeleteConfirm(row){
+  if(!row) return;
+  rgpDeleteTargetRow=row;
+  const no=getRgpRowRecord(row).rgpNo || 'this RGP';
+  document.getElementById('rgpDeleteText').textContent=`Delete ${no}? This action cannot be undone.`;
+  document.getElementById('rgpDeleteConfirm').classList.add('open');
+}
+
+function closeDeleteRgp(){
+  document.getElementById('rgpDeleteConfirm')?.classList.remove('open');
+  rgpDeleteTargetRow=null;
+}
+
+function confirmDeleteRgp(){
+  if(!rgpDeleteTargetRow) return;
+  const no=getRgpRowRecord(rgpDeleteTargetRow).rgpNo;
+  rgpDeleteTargetRow.remove();
+  closeDeleteRgp();
+  rgpListClearFilters();
+  toast(no+' deleted successfully');
+}
+
+function refreshRgpListCountAfterDelete(){
+  const rows=[...document.querySelectorAll('#rgpListBody tr')];
+  const count=document.getElementById('rgpListCount');
+  if(count) count.textContent=`Showing 1 to ${rows.length} of ${rows.length} records`;
+}
+
+window.openRgpDetail=openRgpDetail;
+window.closeRgpDetail=closeRgpDetail;
+window.openRgpDeleteConfirm=openRgpDeleteConfirm;
+window.closeDeleteRgp=closeDeleteRgp;
+window.confirmDeleteRgp=confirmDeleteRgp;
+
+document.addEventListener('click',function(event){
+  const button=event.target.closest('#rgpListTable .rgp-list-mini, #rgpListTable .rgp-link');
+  if(!button) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const row=button.closest('tr');
+  if(!row) return;
+
+  const action=button.classList.contains('rgp-link') ? 'detail' : button.textContent.trim().toLowerCase();
+
+  if(action==='detail') openRgpDetail(row);
+  else if(action==='delete') openRgpDeleteConfirm(row);
+  else if(action==='return') openReturnFromRgpRow(row);
+  else if(action==='print') openRgpPrintDesign();
+});
+
+document.addEventListener('click',function(event){
+  const detail=document.getElementById('rgpDetailModal');
+  if(detail && event.target===detail) closeRgpDetail();
+});
+
 
 function openPurchase(tab='dashboard'){
   currentPurchaseTab=PURCHASE_TITLES[tab]?tab:'dashboard';
@@ -8536,8 +8556,8 @@ window.erpPageEditor={open:peOpen,apply:peApplyAll,isSuperAdmin:peIsSuper};
     <h3>Delete RGP Record</h3>
     <p id="rgpDeleteText">Delete this RGP?</p>
     <div class="rgp-confirm-actions">
-      <button class="btn" id="rgpDeleteCancelBtn" type="button" onclick="closeDeleteRgp()">Cancel</button>
-      <button class="btn rgp-delete-btn" id="rgpDeleteConfirmBtn" type="button" onclick="confirmDeleteRgp()">Delete</button>
+      <button class="btn" id="rgpDeleteCancelBtn" type="button" onclick="window.closeDeleteRgp && window.closeDeleteRgp()">Cancel</button>
+      <button class="btn rgp-delete-btn" id="rgpDeleteConfirmBtn" type="button" onclick="window.confirmDeleteRgp && window.confirmDeleteRgp()">Delete</button>
     </div>
   </div>
 </div>
@@ -8665,5 +8685,40 @@ document.addEventListener('click',function(e){
   if(modal && e.target===modal) closeRgpPrintDesign();
 });
 </script>
+
+
+<div class="rgp-detail-modal" id="rgpDetailModal">
+  <div class="rgp-detail-box">
+    <div class="rgp-detail-head">
+      <div>
+        <h2 id="rgpDetailTitle">RGP Detail</h2>
+        <p>Complete gate pass information and return summary.</p>
+      </div>
+      <button class="rgp-detail-close" type="button" onclick="closeRgpDetail()">×</button>
+    </div>
+
+    <div class="rgp-detail-grid" id="rgpDetailInfo"></div>
+
+    <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+      <table class="rgp-detail-table">
+        <thead>
+          <tr>
+            <th>Item Code</th><th>Item Name with Size</th><th>Qty Sent</th><th>Unit</th>
+            <th>Qty Received</th><th>Qty Pending</th><th>Pending Value</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="rgpDetailItems"></tbody>
+      </table>
+    </div>
+
+    <div class="rgp-detail-summary" id="rgpDetailSummary"></div>
+
+    <div class="rgp-detail-actions">
+      <button class="btn" type="button" onclick="closeRgpDetail()">Close</button>
+      <button class="btn" type="button" onclick="openRgpPrintDesign()">Print</button>
+      <button class="btn primary" type="button" id="rgpDetailReturnBtn">Return Entry</button>
+    </div>
+  </div>
+</div>
 
 </body></html>
