@@ -1665,7 +1665,7 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
     <button class="purchase-tab" data-purchase-header-tab="suppliers">Supplier Analysis</button>
     <button class="purchase-tab" data-purchase-header-tab="settings">Purchase Settings</button>
   </div>
-</div><div class="actions"><button class="btn" type="button" id="studioBackBtn" title="Previous Design Studio page">← Back</button><button class="btn" type="button" id="studioForwardBtn" title="Next Design Studio page">Forward →</button><button class="btn" id="designPageBtn">✎ Design Page</button><button class="btn" id="universalEditPageBtn">✎ Edit Page</button><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
+</div><div class="actions"><a class="btn" href="costing.html">← Costing Dashboard</a><button class="btn" id="designPageBtn">✎ Design Page</button><button class="btn" id="universalEditPageBtn">✎ Edit Page</button><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
 <main class="content">
 <div class="notice">Changes preview instantly. Use <b>Save & Apply</b> to store them for connected ERP pages.</div>
 <section class="panel" id="panel-print-studio">
@@ -7737,7 +7737,6 @@ function openStudioPanel(name,section){
     const u=new URL(location.href);u.searchParams.delete('studio');u.searchParams.delete('section');history.replaceState(null,'',u);
   }
   setTimeout(ccApplyPageDesign,0);
-  if(typeof window.dsRecordStudioRoute==='function') window.dsRecordStudioRoute(name,section||'');
 }
 
 /* Universal Report Center V7.8 */
@@ -8863,182 +8862,4 @@ window.ERPPrintDesigner={registerPage,open,refresh:discoverPages,getPages:()=>Ob
 /* ERP Print Designer V3.0 — Table and Column Designer */
 .pd-editor-tabs{grid-column:1/-1;display:flex;gap:6px;position:sticky;top:0;z-index:4;background:var(--surface);padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px}.pd-editor-tab{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 6px;font-size:10px;font-weight:900;cursor:pointer}.pd-editor-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}.pd-edit-pane{display:none;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.pd-edit-pane.active{display:grid}.pd-column-toolbar{display:flex;gap:6px;flex-wrap:wrap}.pd-column-toolbar .btn{padding:7px 9px;font-size:10px}.pd-column-head,.pd-col-row{display:grid;grid-template-columns:58px minmax(120px,1fr) 72px 92px 58px;gap:6px;align-items:center}.pd-column-head{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);padding:7px 5px;border-bottom:1px solid var(--border)}.pd-column-list{display:grid;gap:5px;max-height:360px;overflow:auto;padding-right:3px}.pd-col-row{padding:6px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--surface) 95%,var(--bg))}.pd-col-show{display:flex!important;align-items:center;gap:4px;margin:0!important;font-size:10px!important;text-transform:none!important}.pd-col-show input{width:auto!important;height:auto!important}.pd-col-name{font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pd-col-row input,.pd-col-row select{height:32px!important;padding:0 6px!important;font-size:10px}.pd-col-move{display:flex;gap:3px}.pd-col-move button{width:26px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:900}.pd-report-table{max-width:100%}.pd-report-table th,.pd-report-table td{overflow:hidden}.pd-quick{align-content:start}@media(max-width:650px){.pd-column-head{display:none}.pd-col-row{grid-template-columns:70px 1fr}.pd-col-row>*{min-width:0}.pd-col-move{grid-column:1/-1}.pd-edit-pane{grid-template-columns:1fr}}
 </style>
-
-<style>
-#studioBackBtn:disabled,#studioForwardBtn:disabled{opacity:.45;cursor:not-allowed;filter:none}
-#studioBackBtn,#studioForwardBtn{min-width:82px}
-</style>
-<script>
-/* Design Studio V12.0 — internal Back/Forward navigation and exact refresh restore. */
-(function(){
-  const ROUTE_KEY='erpDesignStudio:lastRoute:v1';
-  const HISTORY_KEY='erpDesignStudio:routeHistory:v1';
-  const INDEX_KEY='erpDesignStudio:routeIndex:v1';
-  let restoring=false;
-
-  function readHistory(){
-    try{const v=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}
-  }
-  function readIndex(){const n=Number(sessionStorage.getItem(INDEX_KEY));return Number.isFinite(n)?n:-1}
-  function same(a,b){return !!a&&!!b&&a.panel===b.panel&&(a.section||'')===(b.section||'')&&(a.tab||'')===(b.tab||'')}
-  function currentTab(){return document.querySelector('#erpPrintDesignerStudio .pd-tab.active')?.dataset.pdtab||''}
-  function makeRoute(panel,section){return {panel:panel||'theme',section:section||'',tab:panel==='print-studio'?(currentTab()||localStorage.getItem('erpPrintDesigner:lastTab')||'designs'):''}}
-  function updateButtons(){
-    const h=readHistory(),i=readIndex(),back=document.getElementById('studioBackBtn'),forward=document.getElementById('studioForwardBtn');
-    if(back)back.disabled=i<=0;
-    if(forward)forward.disabled=i<0||i>=h.length-1;
-  }
-  function writeUrl(route,replace){
-    const u=new URL(location.href);
-    u.searchParams.set('studio','design-studio');
-    u.searchParams.set('section',route.panel||'theme');
-    if(route.section)u.searchParams.set('subsection',route.section);else u.searchParams.delete('subsection');
-    if(route.tab)u.searchParams.set('tab',route.tab);else u.searchParams.delete('tab');
-    u.searchParams.delete('page');
-    const state={erpDesignStudioRoute:route};
-    try{history[replace?'replaceState':'pushState'](state,'',u)}catch(e){history.replaceState(state,'',u)}
-  }
-  function saveLast(route){localStorage.setItem(ROUTE_KEY,JSON.stringify(route))}
-  function activatePrintTab(tab){
-    tab=tab||'designs';
-    const host=document.getElementById('erpPrintDesignerStudio');
-    if(!host)return false;
-    const btn=host.querySelector(`.pd-tab[data-pdtab="${CSS.escape(tab)}"]`);
-    if(!btn)return false;
-    host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
-    host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===tab));
-    localStorage.setItem('erpPrintDesigner:lastTab',tab);
-    return true;
-  }
-  function apply(route,fromHistory){
-    if(!route)return;
-    restoring=true;window.__dsRestoringRoute=true;
-    try{
-      if(typeof openStudioPanel==='function')openStudioPanel(route.panel||'theme',route.section||'');
-      if(route.panel==='print-studio'){
-        let tries=0;const timer=setInterval(()=>{tries++;if(activatePrintTab(route.tab)||tries>20)clearInterval(timer)},50);
-      }
-      saveLast(route);
-      if(!fromHistory)writeUrl(route,true);
-    }finally{setTimeout(()=>{restoring=false;window.__dsRestoringRoute=false;updateButtons()},0)}
-  }
-  window.dsRecordStudioRoute=function(panel,section){
-    const route=makeRoute(panel,section);
-    saveLast(route);
-    if(restoring||window.__dsRestoringRoute){writeUrl(route,true);updateButtons();return}
-    let h=readHistory(),i=readIndex();
-    if(i<0){h=[route];i=0;sessionStorage.setItem(HISTORY_KEY,JSON.stringify(h));sessionStorage.setItem(INDEX_KEY,String(i));writeUrl(route,true);updateButtons();return}
-    if(same(h[i],route)){writeUrl(route,true);updateButtons();return}
-    h=h.slice(0,i+1);h.push(route);i=h.length-1;
-    sessionStorage.setItem(HISTORY_KEY,JSON.stringify(h));sessionStorage.setItem(INDEX_KEY,String(i));
-    writeUrl(route,false);updateButtons();
-  };
-  function move(delta){
-    const h=readHistory();let i=readIndex()+delta;if(i<0||i>=h.length)return;
-    sessionStorage.setItem(INDEX_KEY,String(i));apply(h[i],true);writeUrl(h[i],true);updateButtons();
-  }
-  function routeFromUrl(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')==='design-studio')return {panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''};
-    try{return JSON.parse(localStorage.getItem(ROUTE_KEY)||'null')}catch(e){return null}
-  }
-  document.addEventListener('click',function(e){
-    const tab=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(tab){
-      const name=tab.dataset.pdtab;localStorage.setItem('erpPrintDesigner:lastTab',name);
-      setTimeout(()=>window.dsRecordStudioRoute('print-studio',''),0);
-    }
-  },true);
-  window.addEventListener('popstate',function(e){
-    const route=e.state?.erpDesignStudioRoute||routeFromUrl();if(route)apply(route,true);
-  });
-  document.addEventListener('DOMContentLoaded',function(){
-    const back=document.getElementById('studioBackBtn'),forward=document.getElementById('studioForwardBtn');
-    if(back)back.onclick=()=>move(-1);
-    if(forward)forward.onclick=()=>move(1);
-    const route=routeFromUrl()||{panel:'theme',section:'',tab:''};
-    let h=readHistory(),i=readIndex();
-    if(!h.length){h=[route];i=0;sessionStorage.setItem(HISTORY_KEY,JSON.stringify(h));sessionStorage.setItem(INDEX_KEY,'0')}
-    setTimeout(()=>apply(route,false),120);
-    updateButtons();
-  });
-})();
-</script>
-
-<style>
-/* V12.1 final internal navigation fix */
-#studioBackBtn,#studioForwardBtn{display:inline-flex!important;align-items:center;justify-content:center}
-</style>
-<script>
-/* Design Studio V12.1 — keep all navigation inside Design Studio and restore the exact page after refresh. */
-(function(){
-  const LAST='erpDesignStudio:lastExactRoute:v2';
-  const STACK='erpDesignStudio:internalStack:v2';
-  const POS='erpDesignStudio:internalPos:v2';
-  let busy=false;
-  const read=(k,d)=>{try{const v=JSON.parse(sessionStorage.getItem(k)||'null');return v??d}catch(e){return d}};
-  const write=(k,v)=>sessionStorage.setItem(k,JSON.stringify(v));
-  const saved=()=>{try{return JSON.parse(localStorage.getItem(LAST)||'null')}catch(e){return null}};
-  const activePrintTab=()=>document.querySelector('#erpPrintDesignerStudio .pd-tab.active')?.dataset.pdtab||localStorage.getItem('erpPrintDesigner:lastTab')||'designs';
-  const norm=r=>({panel:r?.panel||'theme',section:r?.section||'',tab:(r?.panel==='print-studio'?(r?.tab||activePrintTab()):'')});
-  const equal=(a,b)=>a&&b&&a.panel===b.panel&&(a.section||'')===(b.section||'')&&(a.tab||'')===(b.tab||'');
-  function urlRoute(){
-    const p=new URLSearchParams(location.search);
-    if(p.get('studio')!=='design-studio')return null;
-    return norm({panel:p.get('section')||'theme',section:p.get('subsection')||'',tab:p.get('tab')||''});
-  }
-  function setUrl(r){
-    const u=new URL(location.href);u.searchParams.set('studio','design-studio');u.searchParams.set('section',r.panel);
-    r.section?u.searchParams.set('subsection',r.section):u.searchParams.delete('subsection');
-    r.tab?u.searchParams.set('tab',r.tab):u.searchParams.delete('tab');u.searchParams.delete('page');
-    history.replaceState({dsExact:r},'',u);
-  }
-  function buttons(){
-    const a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);
-    const b=document.getElementById('studioBackBtn'),f=document.getElementById('studioForwardBtn');
-    if(b)b.disabled=i<=0;if(f)f.disabled=i<0||i>=a.length-1;
-  }
-  function selectPrintTab(tab){
-    const host=document.getElementById('erpPrintDesignerStudio');if(!host)return;
-    const btn=[...host.querySelectorAll('.pd-tab')].find(x=>x.dataset.pdtab===tab);if(!btn)return;
-    host.querySelectorAll('.pd-tab').forEach(x=>x.classList.toggle('active',x===btn));
-    host.querySelectorAll('.pd-pane').forEach(x=>x.classList.toggle('active',x.dataset.pdpane===tab));
-    localStorage.setItem('erpPrintDesigner:lastTab',tab);
-  }
-  function openRoute(route,record=true){
-    const r=norm(route);busy=true;
-    try{
-      if(typeof openStudioPanel==='function')openStudioPanel(r.panel,r.section);
-      if(r.panel==='print-studio')setTimeout(()=>selectPrintTab(r.tab),60);
-      localStorage.setItem(LAST,JSON.stringify(r));setUrl(r);
-      if(record){let a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);if(!equal(a[i],r)){a=a.slice(0,i+1);a.push(r);i=a.length-1;write(STACK,a);sessionStorage.setItem(POS,String(i));}}
-    }finally{setTimeout(()=>{busy=false;buttons()},90)}
-  }
-  function move(d){const a=read(STACK,[]);let i=Number(sessionStorage.getItem(POS)??-1)+d;if(i<0||i>=a.length)return;sessionStorage.setItem(POS,String(i));openRoute(a[i],false)}
-
-  // Stop the two external Costing links from ever leaving Design Studio.
-  document.addEventListener('click',function(e){
-    const ext=e.target.closest('a.side-item[href="costing.html"]');
-    if(ext){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:'control',section:'dashboard'});return;}
-    const p=e.target.closest('[data-panel]');
-    if(p){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:p.dataset.panel,section:''});return;}
-    const c=e.target.closest('[data-control-section]');
-    if(c){e.preventDefault();e.stopImmediatePropagation();openRoute({panel:'control',section:c.dataset.controlSection});return;}
-    const t=e.target.closest('#erpPrintDesignerStudio .pd-tab[data-pdtab]');
-    if(t){e.preventDefault();e.stopImmediatePropagation();selectPrintTab(t.dataset.pdtab);openRoute({panel:'print-studio',tab:t.dataset.pdtab});return;}
-  },true);
-
-  window.addEventListener('popstate',e=>{const r=e.state?.dsExact||urlRoute()||saved();if(r)openRoute(r,false)});
-  document.addEventListener('DOMContentLoaded',function(){
-    const b=document.getElementById('studioBackBtn'),f=document.getElementById('studioForwardBtn');
-    if(b)b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();move(-1)},true);
-    if(f)f.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();move(1)},true);
-    // On refresh, saved exact route wins over the old default theme URL.
-    const r=saved()||urlRoute()||{panel:'theme',section:'',tab:''};
-    let a=read(STACK,[]),i=Number(sessionStorage.getItem(POS)??-1);
-    if(!a.length||i<0){a=[norm(r)];i=0;write(STACK,a);sessionStorage.setItem(POS,'0')}
-    setTimeout(()=>openRoute(r,false),180);buttons();
-  });
-})();
-</script>
 </body></html>
