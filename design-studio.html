@@ -2137,16 +2137,16 @@ body.gatepass-mode #panel-gatepass .gatepass-page-card{width:100%;max-width:none
             </div>
             <div class="rgp-list-toolbar">
               <div class="rgp-list-filters">
-                <div><label>RGP Number</label><input id="rgpListNoFilter" placeholder="Type RGP number"></div>
+                <div><label>RGP Number</label><input id="rgpListNoFilter" list="rgpListNoList" placeholder="Type RGP number"></div>
                 <div><label>Item</label><input id="rgpListItemFilter" list="rgpItemList" placeholder="Type item name..."></div>
                 <div><label>Department</label><input id="rgpListDepartmentFilter" list="rgpDepartmentList" placeholder="Type department..."></div>
                 <div><label>Workshop</label><input id="rgpListWorkshopFilter" list="rgpWorkshopList" placeholder="Type workshop..."></div>
                 <div><label>Status</label><select id="rgpListStatusFilter"><option value="">All Statuses</option><option value="pending">Pending</option><option value="partial">Partial</option><option value="closed">Closed</option></select></div>
                 <div><label>From Date</label><input id="rgpListFromDate" placeholder="Date"></div>
                 <div><label>To Date</label><input id="rgpListToDate" placeholder="Date"></div>
-                <div><label>Courier</label><input id="rgpListCourierFilter" placeholder="Type courier name"></div>
-                <div><label>Authorized By</label><input id="rgpListAuthorizedFilter" placeholder="Type authorized person"></div>
-                <div><label>Bill Detail</label><input id="rgpListBillFilter" placeholder="Bill / repair detail"></div>
+                <div><label>Courier</label><input id="rgpListCourierFilter" list="rgpListCourierList" placeholder="Type courier name"></div>
+                <div><label>Authorized By</label><input id="rgpListAuthorizedFilter" list="rgpListAuthorizedList" placeholder="Type authorized person"></div>
+                <div><label>Bill Detail</label><input id="rgpListBillFilter" list="rgpListBillList" placeholder="Bill / repair detail"></div>
               </div>
               <div class="rgp-list-actions"><button class="btn primary" id="rgpListSearchBtn">Search</button><button class="btn" id="rgpListClearBtn">Clear</button></div>
             </div>
@@ -5283,30 +5283,78 @@ document.addEventListener('keydown',e=>{
 
 
 
+function rgpListParseDate(value){
+  const v=String(value||'').trim();
+  if(!v) return null;
+  const months={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  let m=v.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3})[-\/ ](\d{2,4})$/);
+  if(m){
+    let y=Number(m[3]); if(y<100)y+=2000;
+    const mon=months[m[2].slice(0,3).toLowerCase()];
+    if(mon!==undefined)return new Date(y,mon,Number(m[1])).getTime();
+  }
+  m=v.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);
+  if(m){
+    let y=m[3]?Number(m[3]):new Date().getFullYear(); if(y<100)y+=2000;
+    return new Date(y,Number(m[2])-1,Number(m[1])).getTime();
+  }
+  const t=Date.parse(v); return Number.isNaN(t)?null:t;
+}
+function rgpListCellText(row,index){return (row.cells[index]?.innerText||'').trim().toLowerCase()}
 function rgpListFilterRows(){
   const vals={
-    no:(document.getElementById('rgpListNoFilter')?.value||'').toLowerCase(),
-    item:(document.getElementById('rgpListItemFilter')?.value||'').toLowerCase(),
-    dep:(document.getElementById('rgpListDepartmentFilter')?.value||'').toLowerCase(),
-    work:(document.getElementById('rgpListWorkshopFilter')?.value||'').toLowerCase(),
-    status:(document.getElementById('rgpListStatusFilter')?.value||'').toLowerCase(),
-    courier:(document.getElementById('rgpListCourierFilter')?.value||'').toLowerCase(),
-    auth:(document.getElementById('rgpListAuthorizedFilter')?.value||'').toLowerCase(),
-    bill:(document.getElementById('rgpListBillFilter')?.value||'').toLowerCase()
+    no:(document.getElementById('rgpListNoFilter')?.value||'').trim().toLowerCase(),
+    item:(document.getElementById('rgpListItemFilter')?.value||'').trim().toLowerCase(),
+    dep:(document.getElementById('rgpListDepartmentFilter')?.value||'').trim().toLowerCase(),
+    work:(document.getElementById('rgpListWorkshopFilter')?.value||'').trim().toLowerCase(),
+    status:(document.getElementById('rgpListStatusFilter')?.value||'').trim().toLowerCase(),
+    from:rgpListParseDate(document.getElementById('rgpListFromDate')?.value),
+    to:rgpListParseDate(document.getElementById('rgpListToDate')?.value),
+    courier:(document.getElementById('rgpListCourierFilter')?.value||'').trim().toLowerCase(),
+    auth:(document.getElementById('rgpListAuthorizedFilter')?.value||'').trim().toLowerCase(),
+    bill:(document.getElementById('rgpListBillFilter')?.value||'').trim().toLowerCase()
   };
+  const rows=[...document.querySelectorAll('#rgpListBody tr')];
   let visible=0;
-  document.querySelectorAll('#rgpListBody tr').forEach(row=>{
-    const t=row.innerText.toLowerCase();
-    const ok=(!vals.no||t.includes(vals.no))&&(!vals.item||t.includes(vals.item))&&(!vals.dep||t.includes(vals.dep))&&(!vals.work||t.includes(vals.work))&&(!vals.status||row.dataset.status===vals.status)&&(!vals.courier||t.includes(vals.courier))&&(!vals.auth||t.includes(vals.auth))&&(!vals.bill||t.includes(vals.bill));
-    row.style.display=ok?'':'none'; if(ok) visible++;
+  rows.forEach(row=>{
+    const rowDate=rgpListParseDate(row.cells[1]?.innerText);
+    const ok=
+      (!vals.no||rgpListCellText(row,0).includes(vals.no))&&
+      (!vals.item||rgpListCellText(row,4).includes(vals.item))&&
+      (!vals.dep||rgpListCellText(row,9).includes(vals.dep))&&
+      (!vals.work||rgpListCellText(row,10).includes(vals.work))&&
+      (!vals.status||(row.dataset.status||'').toLowerCase()===vals.status)&&
+      (!vals.from||rowDate===null||rowDate>=vals.from)&&
+      (!vals.to||rowDate===null||rowDate<=vals.to)&&
+      (!vals.courier||rgpListCellText(row,11).includes(vals.courier))&&
+      (!vals.auth||rgpListCellText(row,12).includes(vals.auth))&&
+      (!vals.bill||rgpListCellText(row,13).includes(vals.bill));
+    row.style.display=ok?'':'none';
+    if(ok)visible++;
   });
-  document.getElementById('rgpListCount').textContent=visible?`Showing 1 to ${visible} of ${visible} matching records`:'No matching RGP records';
+  const count=document.getElementById('rgpListCount');
+  if(count)count.textContent=visible?`Showing 1 to ${visible} of ${visible} matching records`:'No matching RGP records';
+}
+function rgpListPopulateFilterLists(){
+  const rows=[...document.querySelectorAll('#rgpListBody tr')];
+  const defs=[
+    ['rgpListNoList',0],['rgpItemList',4],['rgpDepartmentList',9],['rgpWorkshopList',10],
+    ['rgpListCourierList',11],['rgpListAuthorizedList',12],['rgpListBillList',13]
+  ];
+  defs.forEach(([id,index])=>{
+    let dl=document.getElementById(id);
+    if(!dl){dl=document.createElement('datalist');dl.id=id;document.body.appendChild(dl)}
+    const values=[...new Set(rows.map(r=>(r.cells[index]?.innerText||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    dl.innerHTML=values.map(v=>`<option value="${v.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}"></option>`).join('');
+  });
 }
 function rgpListClearFilters(){
   document.querySelectorAll('#rgpListContent input').forEach(x=>x.value='');
   document.querySelectorAll('#rgpListContent select').forEach(x=>x.selectedIndex=0);
   document.querySelectorAll('#rgpListBody tr').forEach(x=>x.style.display='');
-  document.getElementById('rgpListCount').textContent='Showing 1 to 6 of 6 records';
+  const total=document.querySelectorAll('#rgpListBody tr').length;
+  const count=document.getElementById('rgpListCount');
+  if(count)count.textContent=`Showing 1 to ${total} of ${total} records`;
 }
 function bindRgpListActions(){
   document.querySelectorAll('#rgpListTable .rgp-link').forEach(btn=>btn.addEventListener('click',()=>toast(btn.textContent+' detail page will be made next')));
@@ -8146,6 +8194,14 @@ function bind(){
   $('#rgpSaveBtn')?.addEventListener('click',()=>saveRgpEntry(false));
   $('#rgpListSearchBtn')?.addEventListener('click',rgpListFilterRows);
   $('#rgpListClearBtn')?.addEventListener('click',rgpListClearFilters);
+  rgpListPopulateFilterLists();
+  ['rgpListNoFilter','rgpListItemFilter','rgpListDepartmentFilter','rgpListWorkshopFilter','rgpListCourierFilter','rgpListAuthorizedFilter','rgpListBillFilter'].forEach(id=>{
+    const el=document.getElementById(id);
+    el?.addEventListener('input',rgpListFilterRows);
+    el?.addEventListener('change',rgpListFilterRows);
+  });
+  $('#rgpListStatusFilter')?.addEventListener('change',rgpListFilterRows);
+  ['rgpListFromDate','rgpListToDate'].forEach(id=>{const el=document.getElementById(id);el?.addEventListener('change',rgpListFilterRows);el?.addEventListener('blur',rgpListFilterRows)});
   $('#rgpListPrintBtn')?.addEventListener('click',()=>{reportDesignSource='rgp';openReportDesignChooser('print')});
   $('#rgpListPdfBtn')?.addEventListener('click',()=>toast('RGP PDF export prepared'));
   $('#rgpListExportBtn')?.addEventListener('click',()=>toast('RGP Excel export prepared'));
