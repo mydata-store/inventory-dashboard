@@ -1,139 +1,627 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core</title>
-<style>
-:root{
-  --bg:#eef8f3;--surface:#ffffff;--text:#0e2b22;--muted:#58756c;--primary:#117a55;--accent:#f5a400;--border:#b9d9cd;
-  --shadow:0 12px 30px rgba(16,60,47,.10);--font:'Segoe UI',Arial,sans-serif;--radius:12px;--page-max:1600px;
-  --field-h:40px;--field-radius:9px;--table-row-h:36px;--table-head-h:38px;--table-font:13px;
-  --side-w:230px;--side-cw:58px;--side-bg:#0d5b42;--side-text:#fff;--side-active:#159b6a;--side-active-text:#fff;
-  --btn-h:38px;--btn-radius:9px;--header-align:left;--table-align:left;
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Design Studio Core V11</title><style>
+:root{--bg:#eef8f3;--surface:#fff;--text:#0e2b22;--muted:#58756c;--primary:#117a55;--accent:#f5a400;--border:#b9d9cd;--shadow:0 12px 30px rgba(16,60,47,.10);--font:'Segoe UI',Arial,sans-serif;--side-w:230px;--side-cw:58px;--side-row:42px;--side-subrow:30px;--side-icon:15px;--side-radius:9px;--side-gap:3px;--side-subindent:32px;--side-main:13px;--side-sub:11px;--side-line:1.2;--side-letter:0px;--side-anim:220ms;--side-bg:#0d5b42;--side-text:#fff;--side-active:#159b6a;--side-active-text:#fff;--clock-bg:#ffffff14;--clock-border:#ffffff30}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}button,input,select{font:inherit}.app{min-height:100vh}.page-shell{min-width:0}.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 24px;background:color-mix(in srgb,var(--bg) 92%,white);border-bottom:1px solid var(--border)}.title h1{margin:0;font-size:27px}.title p{margin:5px 0 0;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn.warn{background:#fff7df;border-color:#ffd36a}.btn:hover{filter:brightness(.98)}.content{padding:20px;max-width:1550px;margin:auto}.notice{padding:12px 14px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px}.card h2{margin:0 0 4px;font-size:21px}.sub{color:var(--muted);margin:0 0 16px}.grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px}.field{min-width:0}.field label{display:block;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;color:#405f55}.field input,.field select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 10px;background:white;color:var(--text)}.field input[type=color]{padding:3px}.field input[type=range]{padding:0}.value{font-size:12px;color:var(--muted);margin-top:4px}.switch{display:flex;align-items:center;gap:8px;height:40px}.switch input{width:auto;height:auto}.section-title{margin:20px 0 10px;font-size:15px;border-bottom:1px solid var(--border);padding-bottom:8px}.themes{display:grid;grid-template-columns:repeat(4,minmax(165px,1fr));gap:12px}.theme{border:2px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;background:white}.theme.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}.swatches{height:30px;border-radius:8px;display:flex;overflow:hidden;margin-bottom:8px}.swatches i{flex:1}.panel{display:none}.panel.active{display:block}.studio-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.studio-tabs button{border:1px solid var(--border);background:white;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.studio-tabs button.active{background:var(--primary);color:white;border-color:var(--primary)}
+/* Universal live sidebar engine */
+.layout-left{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);transition:grid-template-columns var(--side-anim) ease}.layout-left.collapsed{grid-template-columns:var(--side-cw) minmax(0,1fr)}.layout-left.peek{grid-template-columns:var(--side-w) minmax(0,1fr)}
+.studio-sidebar{background:var(--side-bg);color:var(--side-text);z-index:40;transition:all var(--side-anim) ease}.layout-left .studio-sidebar{position:sticky;top:0;height:100vh;padding:12px 10px;display:flex;flex-direction:column;overflow:hidden}.layout-top,.layout-bottom{display:flex;flex-direction:column;min-height:100vh}.layout-top .studio-sidebar,.layout-bottom .studio-sidebar{height:auto;width:100%;padding:8px 14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:14px;position:sticky;z-index:40}.layout-top .studio-sidebar{top:0;order:0}.layout-top .page-shell{order:1}.layout-bottom .page-shell{order:0}.layout-bottom .studio-sidebar{bottom:0;order:1;position:sticky}.layout-top.collapsed .studio-sidebar,.layout-bottom.collapsed .studio-sidebar{height:var(--side-cw);overflow:hidden}.layout-top .side-brand,.layout-bottom .side-brand{padding:0;min-height:0}.layout-top .side-menu,.layout-bottom .side-menu{flex-direction:row;align-items:center;overflow:visible}.layout-top .side-profile,.layout-bottom .side-profile{margin:0;min-width:190px}.layout-top .side-clock,.layout-bottom .side-clock{margin:0}.layout-top .side-submenu,.layout-bottom .side-submenu{position:absolute;top:calc(100% + 4px);min-width:220px;background:var(--side-bg);border:1px solid color-mix(in srgb,var(--side-text) 25%,transparent);border-radius:10px;padding:6px;box-shadow:0 12px 25px rgba(0,0,0,.22)}.layout-bottom .side-submenu{top:auto;bottom:calc(100% + 4px)}
+.side-brand{display:flex;align-items:center;gap:10px;padding:7px 7px 15px;min-height:56px}.side-logo{width:38px;height:38px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#111;font-weight:900;flex:0 0 auto}.side-brand-copy{min-width:0}.side-brand-copy b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.side-brand-copy small{color:color-mix(in srgb,var(--side-text) 72%,transparent);font-size:10px}.side-menu{display:flex;flex-direction:column;gap:var(--side-gap);min-height:0}.side-item,.side-group-toggle,.side-subitem{appearance:none;border:0;width:100%;color:inherit;background:transparent;display:flex;align-items:center;gap:10px;min-height:var(--side-row);border-radius:var(--side-radius);padding:0 10px;text-decoration:none;cursor:pointer;font-family:var(--font);font-size:var(--side-main);font-weight:600;line-height:var(--side-line);letter-spacing:var(--side-letter);text-align:left;white-space:nowrap;overflow:hidden}.side-item span:last-child,.side-group-toggle span:nth-child(2),.side-subitem span:last-child{overflow:hidden;text-overflow:ellipsis;min-width:0}.side-item:hover,.side-group-toggle:hover,.side-subitem:hover{background:color-mix(in srgb,var(--side-active) 42%,transparent)}.side-item.active,.side-subitem.active{background:var(--side-active);color:var(--side-active-text);box-shadow:inset 3px 0 0 color-mix(in srgb,var(--side-active-text) 70%,transparent)}.side-icon{width:22px;text-align:center;flex:0 0 auto;font-size:var(--side-icon)}.side-group{position:relative}.side-group-toggle .chev{margin-left:auto;transition:transform var(--side-anim) ease}.side-group.open .chev{transform:rotate(180deg)}.side-submenu{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--side-anim) ease}.side-group.open .side-submenu{grid-template-rows:1fr}.side-submenu-inner{min-height:0;overflow:hidden;padding-left:var(--side-subindent)}.side-subitem{min-height:var(--side-subrow);font-size:var(--side-sub);font-weight:500;padding-left:8px}.side-bottom{margin-top:auto}.side-clock{margin:10px 0 8px;padding:9px 10px;border:1px solid var(--clock-border);background:var(--clock-bg);border-radius:12px;display:flex;align-items:center;gap:9px;min-width:0}.clock-icon{font-size:18px}.clock-copy{min-width:0}.clock-time{font-weight:800;font-size:13px;white-space:nowrap}.clock-date{font-size:10px;opacity:.8;white-space:nowrap}.side-profile{margin-top:8px;padding:10px;border:1px solid #ffffff35;background:#ffffff18;border-radius:15px;display:flex;align-items:center;gap:10px;min-width:0}.side-avatar{width:48px;height:48px;border-radius:50%;border:2px solid var(--accent);object-fit:cover}.side-pcopy{min-width:0}.side-pname{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.side-prole,.side-pstatus{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.side-pstatus{color:#32d583;margin-top:3px}.collapsed .side-brand-copy,.collapsed .side-item span:last-child,.collapsed .side-group-toggle span:nth-child(2),.collapsed .chev,.collapsed .side-submenu,.collapsed .clock-copy,.collapsed .side-pcopy{display:none}.collapsed .side-brand,.collapsed .side-item,.collapsed .side-group-toggle,.collapsed .side-clock,.collapsed .side-profile{justify-content:center;padding-left:0;padding-right:0}.collapsed .side-profile{padding:6px}.collapsed .side-avatar{width:34px;height:34px}.layout-top.collapsed .side-brand-copy,.layout-bottom.collapsed .side-brand-copy,.layout-top.collapsed .side-item span:last-child,.layout-bottom.collapsed .side-item span:last-child,.layout-top.collapsed .side-profile,.layout-bottom.collapsed .side-profile,.layout-top.collapsed .side-clock,.layout-bottom.collapsed .side-clock{display:none}
+
+/* V4.9: auto-hover expansion for Top/Bottom taskbar modes */
+.layout-top .studio-sidebar,
+.layout-bottom .studio-sidebar{
+  min-height:var(--side-cw);
+  transition:min-height var(--side-anim) ease, padding var(--side-anim) ease, background var(--side-anim) ease;
 }
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}
-button,input,select{font:inherit}.app{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);min-height:100vh}.app.collapsed{grid-template-columns:var(--side-cw) minmax(0,1fr)}
-.sidebar{position:sticky;top:0;height:100vh;background:var(--side-bg);color:var(--side-text);padding:12px 10px;display:flex;flex-direction:column;overflow:hidden;transition:.2s}
-.brand{display:flex;align-items:center;gap:10px;padding:6px 6px 14px}.logo{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--side-active);font-weight:900}.brand-copy{white-space:nowrap}.brand-copy b{display:block}.brand-copy small{opacity:.75}
-.nav{display:grid;gap:4px}.nav button{width:100%;height:42px;border:0;border-radius:9px;padding:0 12px;background:transparent;color:inherit;display:flex;gap:10px;align-items:center;cursor:pointer;text-align:left;font-weight:700;white-space:nowrap}.nav button:hover,.nav button.active{background:var(--side-active);color:var(--side-active-text)}.ico{width:22px;text-align:center}.app.collapsed .brand-copy,.app.collapsed .nav button span:not(.ico),.app.collapsed .profile-copy{display:none}.app.collapsed .nav button{justify-content:center;padding:0}.app.collapsed .brand{justify-content:center}.app.collapsed .logo{width:36px;height:36px}
-.side-spacer{flex:1}.profile{display:flex;align-items:center;gap:9px;padding:9px;border:1px solid #ffffff2b;border-radius:12px;background:#ffffff12;white-space:nowrap}.avatar{width:34px;height:34px;border-radius:50%;background:#fff;color:var(--side-bg);display:grid;place-items:center;font-weight:900}.profile-copy b{display:block}.profile-copy small{opacity:.72}
-.shell{min-width:0}.topbar{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;background:color-mix(in srgb,var(--bg) 92%,white);border-bottom:1px solid var(--border);backdrop-filter:blur(8px)}.top-title h1{margin:0;font-size:25px}.top-title p{margin:4px 0 0;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{height:var(--btn-h);border:1px solid var(--border);border-radius:var(--btn-radius);padding:0 13px;background:#fff;color:var(--text);font-weight:800;cursor:pointer}.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.warn{background:var(--accent);border-color:var(--accent);color:#111}.btn.danger{background:#b42318;color:#fff;border-color:#b42318}
-.content{max-width:var(--page-max);margin:0 auto;padding:20px}.notice{padding:11px 14px;border:1px solid var(--border);background:color-mix(in srgb,var(--surface) 88%,var(--accent) 12%);border-radius:10px;margin-bottom:14px;color:var(--muted)}
-.panel{display:none}.panel.active{display:block}.grid{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}.card h2,.card h3{margin:0 0 12px}.sub{color:var(--muted);margin:-4px 0 14px}.section{border-top:1px solid var(--border);padding-top:14px;margin-top:14px}.section:first-child{border-top:0;padding-top:0;margin-top:0}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px}.field input,.field select{width:100%;height:var(--field-h);border:1px solid var(--border);border-radius:var(--field-radius);padding:0 10px;background:#fff;color:var(--text)}.field input[type=color]{padding:3px}.field input[type=range]{padding:0;border:0;background:transparent}.field .value{font-size:11px;color:var(--muted);margin-top:4px}.check{display:flex;align-items:center;gap:8px;height:40px}.check input{width:auto}.full{grid-column:1/-1}
-.themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.theme{border:2px solid var(--border);border-radius:11px;padding:9px;background:#fff;cursor:pointer}.theme.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}.swatches{display:flex;height:27px;border-radius:7px;overflow:hidden;margin-bottom:7px}.swatches i{flex:1}.theme b{font-size:12px}
-.preview{position:sticky;top:88px;align-self:start;overflow:hidden}.preview-head{text-align:var(--header-align);padding-bottom:12px}.preview-head h3{margin:0}.preview-head small{color:var(--muted)}.preview-form{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}.demo-field label{display:block;font-size:11px;color:var(--muted);font-weight:800;margin-bottom:4px}.demo-field div{height:var(--field-h);border:1px solid var(--border);border-radius:var(--field-radius);background:#fff;display:flex;align-items:center;padding:0 9px;color:var(--muted)}.demo-table-wrap{border:1px solid var(--border);border-radius:10px;overflow:auto}.demo-table{width:100%;border-collapse:collapse;font-size:var(--table-font);text-align:var(--table-align)}.demo-table th{height:var(--table-head-h);padding:0 9px;background:var(--primary);color:#fff;white-space:nowrap}.demo-table td{height:var(--table-row-h);padding:0 9px;border-top:1px solid var(--border);white-space:nowrap}.preview-actions{display:flex;gap:7px;margin-top:12px}.mini-btn{height:32px;border:1px solid var(--border);border-radius:var(--btn-radius);padding:0 10px;background:#fff;font-weight:800}.mini-btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.mini-btn.accent{background:var(--accent);border-color:var(--accent);color:#111}
-.status{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.pill{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800}.pill.good{color:#067647;border-color:#a6f4c5;background:#ecfdf3}.pill.info{color:#175cd3;border-color:#b2ccff;background:#eff4ff}
-.key-table{width:100%;border-collapse:collapse}.key-table th,.key-table td{padding:9px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.key-table th{background:color-mix(in srgb,var(--surface) 88%,var(--primary) 12%)}code{background:#f2f4f7;padding:2px 5px;border-radius:5px;font-size:12px}.jsonbox{width:100%;min-height:240px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace;font-size:12px;resize:vertical;background:#101828;color:#e4e7ec}
-.toast{position:fixed;right:18px;bottom:18px;z-index:100;padding:11px 14px;border-radius:10px;background:#101828;color:#fff;box-shadow:0 10px 30px #0003;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s}.toast.show{opacity:1;transform:none}
-@media(max-width:1100px){.grid{grid-template-columns:1fr}.preview{position:static}.themes{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.app,.app.collapsed{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.brand-copy,.profile-copy{display:block!important}.nav{grid-template-columns:repeat(2,1fr)}.side-spacer{display:none}.fields,.preview-form{grid-template-columns:1fr}.content{padding:12px}.topbar{position:relative}.themes{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="app" id="app">
-  <aside class="sidebar">
-    <div class="brand"><div class="logo">ERP</div><div class="brand-copy"><b>Design Studio</b><small>Core Controller</small></div></div>
-    <nav class="nav" id="nav">
-      <button class="active" data-panel="overview"><span class="ico">⌂</span><span>Control Center</span></button>
-      <button data-panel="theme"><span class="ico">◈</span><span>Theme & Colors</span></button>
-      <button data-panel="typography"><span class="ico">Aa</span><span>Typography</span></button>
-      <button data-panel="forms"><span class="ico">▤</span><span>Forms & Fields</span></button>
-      <button data-panel="tables"><span class="ico">▦</span><span>Tables</span></button>
-      <button data-panel="sidebar"><span class="ico">☰</span><span>Sidebar</span></button>
-      <button data-panel="buttons"><span class="ico">▣</span><span>Buttons</span></button>
-      <button data-panel="layout"><span class="ico">▱</span><span>Page Layout</span></button>
-      <button data-panel="print"><span class="ico">⎙</span><span>Print Defaults</span></button>
-      <button data-panel="integration"><span class="ico">↔</span><span>Module Connection</span></button>
-      <button data-panel="backup"><span class="ico">⇅</span><span>Backup / Restore</span></button>
-    </nav>
-    <div class="side-spacer"></div>
-    <div class="profile"><div class="avatar">MW</div><div class="profile-copy"><b>Muhammad Waqas</b><small>ERP Administrator</small></div></div>
-  </aside>
-  <section class="shell">
-    <header class="topbar">
-      <div class="top-title"><h1 id="panelTitle">Control Center</h1><p>One design controller for every ERP module.</p></div>
-      <div class="actions"><button class="btn" id="collapseBtn">☰ Sidebar</button><button class="btn" id="undoBtn">Undo</button><button class="btn" id="resetBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div>
-    </header>
-    <main class="content">
-      <div class="notice">This file contains <b>design settings only</b>. Masters, Purchase, Issue, Gate Pass, Costing and Reports will stay in separate module files and read these saved settings.</div>
+/* Compact taskbar: icons + clock + profile picture only */
+.layout-top:not(.taskbar-peek) .side-brand-copy,
+.layout-bottom:not(.taskbar-peek) .side-brand-copy,
+.layout-top:not(.taskbar-peek) .side-item span:last-child,
+.layout-bottom:not(.taskbar-peek) .side-item span:last-child,
+.layout-top:not(.taskbar-peek) .side-group-toggle span:nth-child(2),
+.layout-bottom:not(.taskbar-peek) .side-group-toggle span:nth-child(2),
+.layout-top:not(.taskbar-peek) .side-group-toggle .chev,
+.layout-bottom:not(.taskbar-peek) .side-group-toggle .chev,
+.layout-top .side-pcopy,
+.layout-bottom .side-pcopy{
+  display:none !important;
+}
+.layout-top:not(.taskbar-peek) .side-item,
+.layout-bottom:not(.taskbar-peek) .side-item,
+.layout-top:not(.taskbar-peek) .side-group-toggle,
+.layout-bottom:not(.taskbar-peek) .side-group-toggle{
+  width:42px;
+  min-width:42px;
+  padding:0;
+  justify-content:center;
+}
+.layout-top .side-profile,
+.layout-bottom .side-profile{
+  min-width:auto !important;
+  width:auto;
+  padding:5px;
+  justify-content:center;
+}
+.layout-top .side-avatar,
+.layout-bottom .side-avatar{
+  width:34px !important;
+  height:34px !important;
+}
+/* Hover expansion: reveal labels and give the bar a little more room */
+.layout-top.taskbar-peek .studio-sidebar,
+.layout-bottom.taskbar-peek .studio-sidebar{
+  min-height:max(var(--side-cw),68px);
+  padding-top:10px;
+  padding-bottom:10px;
+}
+.layout-top.taskbar-peek .side-brand-copy,
+.layout-bottom.taskbar-peek .side-brand-copy,
+.layout-top.taskbar-peek .side-item span:last-child,
+.layout-bottom.taskbar-peek .side-item span:last-child,
+.layout-top.taskbar-peek .side-group-toggle span:nth-child(2),
+.layout-bottom.taskbar-peek .side-group-toggle span:nth-child(2),
+.layout-top.taskbar-peek .side-group-toggle .chev,
+.layout-bottom.taskbar-peek .side-group-toggle .chev{
+  display:block !important;
+}
+.layout-top.taskbar-peek .side-item,
+.layout-bottom.taskbar-peek .side-item,
+.layout-top.taskbar-peek .side-group-toggle,
+.layout-bottom.taskbar-peek .side-group-toggle{
+  width:auto;
+  min-width:max-content;
+  padding:0 11px;
+  justify-content:flex-start;
+}
+.layout-top.taskbar-peek .side-menu,
+.layout-bottom.taskbar-peek .side-menu{
+  gap:max(4px,var(--side-gap));
+}
+/* Keep taskbar submenu opening direction Windows-like */
+.layout-top .side-submenu{top:calc(100% + 6px);bottom:auto}
+.layout-bottom .side-submenu{bottom:calc(100% + 6px);top:auto}
 
-      <section class="panel active" id="panel-overview">
-        <div class="status"><span class="pill good" id="savedStatus">Core ready</span><span class="pill info">Storage: localStorage</span><span class="pill">Key: ERP_DESIGN_CORE_V1</span><span class="pill">Schema: v1</span></div>
-        <div class="grid"><div class="card"><h2>Design Studio Core</h2><p class="sub">Shared visual foundation for the complete ERP.</p>
-          <div class="section"><h3>What this core controls</h3><table class="key-table"><tr><th>Area</th><th>Shared setting</th></tr><tr><td>Theme</td><td>Background, cards, text, primary, accent and borders</td></tr><tr><td>Typography</td><td>Font family, base size and heading style</td></tr><tr><td>Forms</td><td>Field height, radius, border and spacing</td></tr><tr><td>Tables</td><td>Header/row height, alignment and font size</td></tr><tr><td>Sidebar</td><td>Width, colors, active state and collapsed width</td></tr><tr><td>Buttons</td><td>Height, radius and shared primary/accent treatment</td></tr><tr><td>Layout</td><td>Page width, card radius/shadow and header alignment</td></tr><tr><td>Print</td><td>Paper, orientation, header, footer and report accent</td></tr></table></div>
-          <div class="section"><h3>Module plan</h3><p class="sub">Every new module will keep its own business logic, while reading this core for its appearance.</p><div class="status"><span class="pill">masters.html</span><span class="pill">purchase.html</span><span class="pill">issue.html</span><span class="pill">gate-pass.html</span><span class="pill">costing.html</span><span class="pill">reports.html</span></div></div>
-        </div><div class="card preview" id="previewCard"></div></div>
-      </section>
+/* profile designer */.profile-preview{display:grid;grid-template-columns:260px 1fr;gap:18px}.profile-stage{background:var(--side-bg);padding:18px;border-radius:16px;min-height:270px;display:flex;align-items:flex-end}.profile-card{width:100%;padding:12px;border:1px solid #ffffff35;background:#ffffff18;border-radius:15px;display:flex;gap:10px;align-items:center;color:white}.profile-card img{width:54px;height:54px;border-radius:50%;border:2px solid var(--accent);object-fit:cover}.profile-card .n{font-weight:800}.profile-card .r,.profile-card .s{font-size:11px}.profile-card .s{color:#32d583;margin-top:3px}.toast{position:fixed;right:20px;bottom:20px;background:#102a22;color:white;padding:12px 16px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;z-index:99}.toast.show{opacity:1;transform:none}
 
-      <section class="panel" id="panel-theme"><div class="grid"><div class="card"><h2>Theme & Colors</h2><p class="sub">Choose a preset or adjust individual colors.</p><div class="themes" id="themePresets"></div><div class="section fields">
-        <div class="field"><label>Workspace Background</label><input type="color" data-path="theme.background"></div><div class="field"><label>Card Surface</label><input type="color" data-path="theme.surface"></div><div class="field"><label>Primary</label><input type="color" data-path="theme.primary"></div><div class="field"><label>Accent</label><input type="color" data-path="theme.accent"></div><div class="field"><label>Heading / Main Text</label><input type="color" data-path="theme.text"></div><div class="field"><label>Muted Text</label><input type="color" data-path="theme.muted"></div><div class="field"><label>Border</label><input type="color" data-path="theme.border"></div>
-      </div></div><div class="card preview" id="previewTheme"></div></div></section>
+/* Hover-expanded collapsed sidebar: reveal full menu content */
+.layout-left.collapsed.peek .side-brand-copy,
+.layout-left.collapsed.peek .side-item span:last-child,
+.layout-left.collapsed.peek .side-group-toggle span:nth-child(2),
+.layout-left.collapsed.peek .side-group-toggle .chev,
+.layout-left.collapsed.peek .clock-copy,
+.layout-left.collapsed.peek .side-pcopy{display:block}
+.layout-left.collapsed.peek .side-submenu{display:grid}
+.layout-left.collapsed.peek .side-brand,
+.layout-left.collapsed.peek .side-item,
+.layout-left.collapsed.peek .side-group-toggle,
+.layout-left.collapsed.peek .side-clock,
+.layout-left.collapsed.peek .side-profile{justify-content:flex-start;padding-left:10px;padding-right:10px}
+.layout-left.collapsed.peek .side-profile{padding:10px}
+.layout-left.collapsed.peek .side-avatar{width:48px;height:48px}
 
-      <section class="panel" id="panel-typography"><div class="grid"><div class="card"><h2>Typography</h2><div class="fields"><div class="field full"><label>Font Family</label><select data-path="typography.font"><option value="Segoe UI">Segoe UI</option><option value="Arial">Arial</option><option value="Tahoma">Tahoma</option><option value="Verdana">Verdana</option><option value="Trebuchet MS">Trebuchet MS</option></select></div><div class="field"><label>Base Font Size</label><input type="range" min="12" max="17" data-path="typography.baseSize" data-number><div class="value" data-value="typography.baseSize"></div></div><div class="field"><label>Heading Weight</label><select data-path="typography.headingWeight" data-number><option value="600">600</option><option value="700">700</option><option value="800">800</option><option value="900">900</option></select></div></div></div><div class="card preview" id="previewTypography"></div></div></section>
 
-      <section class="panel" id="panel-forms"><div class="grid"><div class="card"><h2>Forms & Fields</h2><div class="fields"><div class="field"><label>Field Height</label><input type="range" min="32" max="50" data-path="forms.height" data-number><div class="value" data-value="forms.height"></div></div><div class="field"><label>Field Radius</label><input type="range" min="0" max="16" data-path="forms.radius" data-number><div class="value" data-value="forms.radius"></div></div><div class="field"><label>Border Width</label><select data-path="forms.borderWidth" data-number><option value="1">1 px</option><option value="2">2 px</option></select></div><div class="field"><label>Form Gap</label><input type="range" min="6" max="20" data-path="forms.gap" data-number><div class="value" data-value="forms.gap"></div></div></div></div><div class="card preview" id="previewForms"></div></div></section>
+/* Horizontal taskbar mode: top/bottom behave like a Windows-style taskbar. */
+.layout-top .studio-sidebar,.layout-bottom .studio-sidebar{
+  grid-template-columns:auto minmax(0,1fr) auto;
+  min-height:var(--side-cw);height:var(--side-cw);overflow:visible;
+  padding:6px 12px;align-items:center;
+}
+.layout-top .side-brand,.layout-bottom .side-brand{padding:0;min-height:0}
+.layout-top .side-brand-copy,.layout-bottom .side-brand-copy{display:none!important}
+.layout-top .side-logo,.layout-bottom .side-logo{width:38px;height:38px}
+.layout-top .side-menu,.layout-bottom .side-menu{
+  display:flex;flex-direction:row;justify-content:center;align-items:center;
+  gap:8px;overflow:visible;min-width:0;
+}
+.layout-top .side-menu>.side-item,.layout-bottom .side-menu>.side-item,
+.layout-top .side-group>.side-group-toggle,.layout-bottom .side-group>.side-group-toggle{
+  width:42px;min-width:42px;min-height:42px;height:42px;padding:0;
+  justify-content:center;border-radius:10px;overflow:visible;
+}
+.layout-top .side-menu>.side-item>span:last-child,.layout-bottom .side-menu>.side-item>span:last-child,
+.layout-top .side-group>.side-group-toggle>span:nth-child(2),.layout-bottom .side-group>.side-group-toggle>span:nth-child(2),
+.layout-top .side-group>.side-group-toggle>.chev,.layout-bottom .side-group>.side-group-toggle>.chev{display:none!important}
+.layout-top .side-icon,.layout-bottom .side-icon{width:auto;font-size:var(--side-icon);text-align:center}
+.layout-top .side-item.active,.layout-top .side-subitem.active,
+.layout-bottom .side-item.active,.layout-bottom .side-subitem.active{box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--side-active-text) 70%,transparent)}
+.layout-bottom .side-item.active,.layout-bottom .side-subitem.active{box-shadow:inset 0 3px 0 color-mix(in srgb,var(--side-active-text) 70%,transparent)}
+.layout-top .side-bottom,.layout-bottom .side-bottom{margin:0;display:flex;align-items:center;gap:8px}
+.layout-top .side-clock,.layout-bottom .side-clock{
+  margin:0;padding:3px 8px;min-width:78px;height:42px;justify-content:center;
+  text-align:center;border-radius:9px;
+}
+.layout-top .clock-icon,.layout-bottom .clock-icon{display:none}
+.layout-top .clock-copy,.layout-bottom .clock-copy{display:block!important;line-height:1.05}
+.layout-top .clock-time,.layout-bottom .clock-time{font-size:12px!important}
+.layout-top .clock-date,.layout-bottom .clock-date{font-size:9px!important;margin-top:3px}
+.layout-top .side-profile,.layout-bottom .side-profile{
+  margin:0;padding:0;border:0;background:transparent!important;min-width:auto;
+  width:42px;height:42px;justify-content:center;border-radius:50%!important;
+}
+.layout-top .side-pcopy,.layout-bottom .side-pcopy{display:none!important}
+.layout-top .side-avatar,.layout-bottom .side-avatar{width:36px!important;height:36px!important;display:block!important}
+.layout-top .side-group,.layout-bottom .side-group{position:relative}
+.layout-top .side-submenu,.layout-bottom .side-submenu{
+  display:none;position:absolute;left:50%;transform:translateX(-50%);min-width:230px;
+  background:var(--side-bg);border:1px solid color-mix(in srgb,var(--side-text) 25%,transparent);
+  border-radius:10px;padding:6px;box-shadow:0 12px 25px rgba(0,0,0,.22);z-index:100;
+}
+.layout-top .side-submenu{top:calc(100% + 7px);bottom:auto}
+.layout-bottom .side-submenu{bottom:calc(100% + 7px);top:auto}
+.layout-top .side-group.open .side-submenu,.layout-bottom .side-group.open .side-submenu{display:block}
+.layout-top .side-submenu-inner,.layout-bottom .side-submenu-inner{padding:0;overflow:visible}
+.layout-top .side-subitem,.layout-bottom .side-subitem{
+  min-height:34px;width:100%;padding:0 12px;justify-content:flex-start;
+  font-size:var(--side-sub);white-space:nowrap;
+}
+.layout-top.collapsed .studio-sidebar,.layout-bottom.collapsed .studio-sidebar{height:var(--side-cw)}
+.layout-top.collapsed .side-clock,.layout-bottom.collapsed .side-clock,
+.layout-top.collapsed .side-profile,.layout-bottom.collapsed .side-profile{display:flex!important}
 
-      <section class="panel" id="panel-tables"><div class="grid"><div class="card"><h2>Tables</h2><div class="fields"><div class="field"><label>Header Height</label><input type="range" min="30" max="52" data-path="tables.headerHeight" data-number><div class="value" data-value="tables.headerHeight"></div></div><div class="field"><label>Row Height</label><input type="range" min="26" max="52" data-path="tables.rowHeight" data-number><div class="value" data-value="tables.rowHeight"></div></div><div class="field"><label>Table Font Size</label><input type="range" min="10" max="16" data-path="tables.fontSize" data-number><div class="value" data-value="tables.fontSize"></div></div><div class="field"><label>Table Alignment</label><select data-path="tables.alignment"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div><div class="field"><label>Header Text</label><select data-path="tables.headerText"><option value="#ffffff">White</option><option value="#111111">Black</option></select></div><div class="field"><label>Sticky Headers</label><div class="check"><input type="checkbox" data-path="tables.stickyHeader"><span>Freeze table header</span></div></div></div></div><div class="card preview" id="previewTables"></div></div></section>
+@media(max-width:1050px){.grid,.themes{grid-template-columns:repeat(2,minmax(150px,1fr))}.layout-left{grid-template-columns:var(--side-cw) minmax(0,1fr)}.layout-left:not(.peek) .side-brand-copy,.layout-left:not(.peek) .side-item span:last-child,.layout-left:not(.peek) .side-group-toggle span:nth-child(2),.layout-left:not(.peek) .chev,.layout-left:not(.peek) .side-submenu,.layout-left:not(.peek) .clock-copy,.layout-left:not(.peek) .side-pcopy{display:none}}@media(max-width:700px){.top{align-items:flex-start;flex-direction:column}.grid,.themes{grid-template-columns:1fr}.content{padding:10px}.profile-preview{grid-template-columns:1fr}.layout-top .studio-sidebar,.layout-bottom .studio-sidebar{grid-template-columns:auto 1fr auto}.layout-top .side-profile,.layout-bottom .side-profile{display:none}}
 
-      <section class="panel" id="panel-sidebar"><div class="grid"><div class="card"><h2>Sidebar</h2><p class="sub">Universal shell settings. Business menu links will be supplied by each module.</p><div class="fields"><div class="field"><label>Expanded Width</label><input type="range" min="190" max="300" data-path="sidebar.width" data-number><div class="value" data-value="sidebar.width"></div></div><div class="field"><label>Collapsed Width</label><input type="range" min="48" max="78" data-path="sidebar.collapsedWidth" data-number><div class="value" data-value="sidebar.collapsedWidth"></div></div><div class="field"><label>Background</label><input type="color" data-path="sidebar.background"></div><div class="field"><label>Text</label><input type="color" data-path="sidebar.text"></div><div class="field"><label>Active Background</label><input type="color" data-path="sidebar.activeBackground"></div><div class="field"><label>Active Text</label><input type="color" data-path="sidebar.activeText"></div><div class="field"><label>Auto Collapse</label><div class="check"><input type="checkbox" data-path="sidebar.autoCollapse"><span>Allow compact mode</span></div></div></div></div><div class="card preview" id="previewSidebar"></div></div></section>
 
-      <section class="panel" id="panel-buttons"><div class="grid"><div class="card"><h2>Buttons</h2><div class="fields"><div class="field"><label>Button Height</label><input type="range" min="30" max="48" data-path="buttons.height" data-number><div class="value" data-value="buttons.height"></div></div><div class="field"><label>Button Radius</label><input type="range" min="0" max="16" data-path="buttons.radius" data-number><div class="value" data-value="buttons.radius"></div></div><div class="field"><label>Primary Source</label><select data-path="buttons.primarySource"><option value="primary">Theme Primary</option><option value="accent">Theme Accent</option></select></div><div class="field"><label>Text Weight</label><select data-path="buttons.weight" data-number><option value="600">600</option><option value="700">700</option><option value="800">800</option></select></div></div></div><div class="card preview" id="previewButtons"></div></div></section>
+/* V5.0: taskbar menu-name labels above/below each icon */
+.layout-top .side-menu > .side-item,
+.layout-bottom .side-menu > .side-item,
+.layout-top .side-group > .side-group-toggle,
+.layout-bottom .side-group > .side-group-toggle{
+  position:relative;
+}
+.layout-top .side-menu > .side-item::after,
+.layout-bottom .side-menu > .side-item::after,
+.layout-top .side-group > .side-group-toggle::after,
+.layout-bottom .side-group > .side-group-toggle::after{
+  content:attr(title);
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%) scale(.96);
+  z-index:140;
+  padding:6px 9px;
+  border-radius:7px;
+  background:color-mix(in srgb,var(--side-bg) 92%,#000 8%);
+  color:var(--side-text);
+  border:1px solid color-mix(in srgb,var(--side-text) 24%,transparent);
+  box-shadow:0 8px 20px rgba(0,0,0,.24);
+  font-size:11px;
+  font-weight:700;
+  line-height:1.15;
+  white-space:nowrap;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity 120ms ease,transform 120ms ease,visibility 120ms ease;
+}
+.layout-bottom .side-menu > .side-item::after,
+.layout-bottom .side-group > .side-group-toggle::after{
+  bottom:calc(100% + 9px);
+}
+.layout-top .side-menu > .side-item::after,
+.layout-top .side-group > .side-group-toggle::after{
+  top:calc(100% + 9px);
+}
+.layout-top .side-menu > .side-item:hover::after,
+.layout-bottom .side-menu > .side-item:hover::after,
+.layout-top .side-menu > .side-item:focus-visible::after,
+.layout-bottom .side-menu > .side-item:focus-visible::after,
+.layout-top .side-group > .side-group-toggle:hover::after,
+.layout-bottom .side-group > .side-group-toggle:hover::after,
+.layout-top .side-group > .side-group-toggle:focus-visible::after,
+.layout-bottom .side-group > .side-group-toggle:focus-visible::after{
+  opacity:1;
+  visibility:visible;
+  transform:translateX(-50%) scale(1);
+}
+/* In taskbar mode, keep the icon centered while its floating label identifies it. */
+.layout-top .side-menu > .side-item .side-icon,
+.layout-bottom .side-menu > .side-item .side-icon,
+.layout-top .side-group > .side-group-toggle .side-icon,
+.layout-bottom .side-group > .side-group-toggle .side-icon{
+  position:relative;
+  z-index:1;
+}
 
-      <section class="panel" id="panel-layout"><div class="grid"><div class="card"><h2>Page Layout</h2><div class="fields"><div class="field"><label>Maximum Page Width</label><input type="range" min="1100" max="2000" step="50" data-path="layout.maxWidth" data-number><div class="value" data-value="layout.maxWidth"></div></div><div class="field"><label>Card Radius</label><input type="range" min="0" max="24" data-path="layout.cardRadius" data-number><div class="value" data-value="layout.cardRadius"></div></div><div class="field"><label>Header Alignment</label><select data-path="layout.headerAlignment"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div><div class="field"><label>Card Shadow</label><select data-path="layout.shadow"><option value="soft">Soft</option><option value="none">None</option><option value="strong">Strong</option></select></div></div></div><div class="card preview" id="previewLayout"></div></div></section>
 
-      <section class="panel" id="panel-print"><div class="grid"><div class="card"><h2>Universal Print Defaults</h2><p class="sub">Reports can override these later, but every module starts from the same print style.</p><div class="fields"><div class="field"><label>Paper Size</label><select data-path="print.paper"><option value="A4">A4</option><option value="A3">A3</option><option value="Letter">Letter</option><option value="Legal">Legal</option></select></div><div class="field"><label>Orientation</label><select data-path="print.orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div><div class="field"><label>Report Accent</label><input type="color" data-path="print.accent"></div><div class="field"><label>Header Alignment</label><select data-path="print.headerAlignment"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div><div class="field"><label>Show Logo</label><div class="check"><input type="checkbox" data-path="print.showLogo"><span>Show company logo</span></div></div><div class="field"><label>Page Numbers</label><div class="check"><input type="checkbox" data-path="print.pageNumbers"><span>Show page number</span></div></div><div class="field full"><label>Footer Text</label><input type="text" data-path="print.footer"></div></div></div><div class="card preview" id="previewPrint"></div></div></section>
+/* Built-in Control Center workspace (native, no iframe) */
+.control-workspace{display:none}
+.control-workspace.active{display:block}
+.control-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap}
+.control-user-chip{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-weight:700}
+.control-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.control-kpi{padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.control-kpi small{display:block;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.control-kpi strong{display:block;font-size:30px;margin:8px 0 4px}
+.control-two{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
+.control-list{display:grid;gap:9px;margin-top:12px}
+.control-list-item{padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--surface) 94%,var(--primary) 6%)}
+.control-list-item b{display:block}
+.control-list-item small{display:block;color:var(--muted);margin-top:4px}
+.control-empty{padding:36px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:14px;background:var(--surface)}
+.side-group.control-group .side-submenu-inner{padding-left:var(--side-subindent)}
+.layout-top .control-group .side-submenu-inner,.layout-bottom .control-group .side-submenu-inner{padding-left:0}
+@media(max-width:1000px){.control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.control-two{grid-template-columns:1fr}}
+@media(max-width:620px){.control-grid{grid-template-columns:1fr}}
 
-      <section class="panel" id="panel-integration"><div class="card"><h2>Module Connection</h2><p class="sub">This is the contract every ERP module will use.</p><table class="key-table"><tr><th>Item</th><th>Value</th></tr><tr><td>Storage Key</td><td><code>ERP_DESIGN_CORE_V1</code></td></tr><tr><td>Schema Version</td><td><code>1</code></td></tr><tr><td>Change Event</td><td><code>erp-design-core-changed</code></td></tr><tr><td>Storage Event</td><td>Other open module tabs can react to the browser <code>storage</code> event.</td></tr><tr><td>Public API</td><td><code>window.ERPDesignCore.get()</code>, <code>apply()</code>, <code>subscribe()</code></td></tr></table><div class="section"><h3>Connection Test</h3><p class="sub">Change any theme setting and press Save & Apply. Future modules will read the same saved object.</p><button class="btn primary" id="copyContractBtn">Copy Core Settings JSON</button></div></div></section>
+/* Control Center Users page */
+.control-users-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.control-users-head h2{margin:0 0 4px}.control-users-head p{margin:0;color:var(--muted)}
+.control-filters{display:grid;grid-template-columns:minmax(240px,1.5fr) minmax(170px,.7fr) minmax(190px,.8fr);gap:12px;margin-bottom:14px}.control-filters input,.control-filters select{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:0 12px}
+.control-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}.control-table{width:100%;border-collapse:collapse;min-width:1080px;background:var(--surface)}.control-table th,.control-table td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}.control-table th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:color-mix(in srgb,var(--bg) 65%,var(--surface));position:sticky;top:0;z-index:1}.control-table tr:last-child td{border-bottom:0}.cc-user-cell{display:flex;align-items:center;gap:10px}.cc-user-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);background:#e8eef0}.cc-user-name{font-weight:800}.cc-user-email{font-size:11px;color:var(--muted);margin-top:2px}.cc-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;text-transform:capitalize}.cc-badge.active{background:#dcfce7;color:#166534}.cc-badge.disabled{background:#fee2e2;color:#991b1b}.cc-protected{display:inline-block;margin-left:5px;color:#9a6700;font-size:10px}.cc-actions{display:flex;gap:6px;flex-wrap:wrap}.cc-mini{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 9px;font-size:11px;font-weight:800;cursor:pointer}.cc-mini.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.cc-mini.danger{color:#a61b1b}.cc-empty{text-align:center;padding:34px;color:var(--muted)}
+.cc-modal{position:fixed;inset:0;background:rgba(5,18,31,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:200}.cc-modal.open{display:flex}.cc-modal-box{width:min(880px,96vw);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:20px}.cc-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.cc-modal-head h2{margin:0}.cc-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.cc-form-grid .full{grid-column:1/-1}.cc-form-grid label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;color:var(--muted)}.cc-form-grid input,.cc-form-grid select,.cc-form-grid textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:10px}.cc-form-grid input,.cc-form-grid select{height:42px}.cc-form-grid textarea{min-height:78px;resize:vertical}.cc-photo-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px;border:1px solid var(--border);border-radius:14px}.cc-photo-preview{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);background:#e8eef0}.cc-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.cc-security-note{padding:12px 14px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-top:14px;display:none}
+@media(max-width:850px){.control-filters{grid-template-columns:1fr}.cc-form-grid{grid-template-columns:1fr}.cc-form-grid .full{grid-column:auto}}
 
-      <section class="panel" id="panel-backup"><div class="card"><h2>Backup / Restore</h2><p class="sub">Export the visual configuration or paste a previous configuration to restore it.</p><div class="actions" style="margin-bottom:10px"><button class="btn" id="exportBtn">Refresh JSON</button><button class="btn primary" id="importBtn">Import JSON</button></div><textarea class="jsonbox" id="jsonBox"></textarea></div></section>
-    </main>
-  </section>
+/* Control Center Permissions page */
+.cc-permission-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.cc-permission-head h2{margin:0 0 4px}.cc-permission-head p{margin:0;color:var(--muted)}
+.cc-role-picker{min-width:260px}.cc-role-picker label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px}
+.cc-role-picker select{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:0 12px}
+.cc-permission-toolbar{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}
+.cc-permission-note{padding:11px 13px;border-radius:10px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:14px}
+.cc-permission-matrix{overflow:auto;border:1px solid var(--border);border-radius:14px}
+.cc-permission-matrix table{width:100%;border-collapse:collapse;min-width:1180px;background:var(--surface)}
+.cc-permission-matrix th,.cc-permission-matrix td{padding:10px 9px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle}
+.cc-permission-matrix th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;background:color-mix(in srgb,var(--bg) 65%,var(--surface));position:sticky;top:0;z-index:2}
+.cc-permission-matrix th:first-child,.cc-permission-matrix td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1;min-width:210px}
+.cc-permission-matrix th:first-child{z-index:3;background:color-mix(in srgb,var(--bg) 65%,var(--surface))}
+.cc-permission-matrix tr:last-child td{border-bottom:0}
+.cc-permission-matrix input[type=checkbox]{width:17px;height:17px;accent-color:var(--primary);cursor:pointer}
+.cc-permission-matrix input[type=checkbox]:disabled{cursor:not-allowed;opacity:.75}
+
+/* Design Page is a permanent header action on every workspace page */
+#designPageBtn{position:relative;white-space:nowrap}
+.cc-page-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.cc-page-design-grid .full{grid-column:1/-1}
+.cc-page-design-grid label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;color:var(--muted)}
+.cc-page-design-grid input,.cc-page-design-grid select{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:0 10px}
+@media(max-width:760px){.cc-permission-head{flex-direction:column}.cc-role-picker{width:100%;min-width:0}.cc-page-design-grid{grid-template-columns:1fr}.cc-page-design-grid .full{grid-column:auto}}
+
+
+/* Remaining Control Center pages */
+.cc-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.cc-section-head h2{margin:0 0 4px}.cc-section-head p{margin:0;color:var(--muted)}
+.cc-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cc-toolbar input,.cc-toolbar select{height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:0 10px}
+.cc-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
+.cc-table{width:100%;border-collapse:collapse;min-width:900px;background:var(--surface)}
+.cc-table th,.cc-table td{padding:11px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+.cc-table th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;background:color-mix(in srgb,var(--bg) 65%,var(--surface));position:sticky;top:0;z-index:2}
+.cc-table tr:last-child td{border-bottom:0}
+.cc-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800}
+.cc-badge.good{background:#dcfce7;color:#166534}.cc-badge.warn{background:#fef3c7;color:#92400e}.cc-badge.bad{background:#fee2e2;color:#991b1b}.cc-badge.info{background:#dbeafe;color:#1d4ed8}
+.cc-mini-actions{display:flex;gap:6px;flex-wrap:wrap}
+.cc-mini{height:32px;padding:0 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-weight:700;font-size:11px}
+.cc-mini.danger{border-color:#fecaca;color:#b91c1c;background:#fff7f7}
+.cc-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cc-form-grid .full{grid-column:1/-1}
+.cc-form-grid label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px}
+.cc-form-grid input,.cc-form-grid select,.cc-form-grid textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:10px}
+.cc-form-grid input,.cc-form-grid select{height:42px}.cc-form-grid textarea{min-height:90px;resize:vertical}
+.cc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.cc-kpi{padding:15px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.cc-kpi small{display:block;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em}.cc-kpi strong{font-size:25px;display:block;margin-top:5px}
+.cc-security-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cc-setting{border:1px solid var(--border);border-radius:14px;padding:14px;background:var(--surface)}
+.cc-setting h3{margin:0 0 4px}.cc-setting p{margin:0 0 12px;color:var(--muted);font-size:12px}
+.cc-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.cc-setting-row input[type=number],.cc-setting-row select{height:38px;width:150px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:0 9px}
+.cc-switch{width:42px;height:23px;appearance:none;background:#cbd5e1;border-radius:999px;position:relative;cursor:pointer;transition:.2s}
+.cc-switch:checked{background:var(--primary)}.cc-switch:before{content:"";position:absolute;width:17px;height:17px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}.cc-switch:checked:before{transform:translateX(19px)}
+.cc-empty-state{text-align:center;padding:38px;color:var(--muted)}
+@media(max-width:900px){.cc-kpis{grid-template-columns:repeat(2,1fr)}.cc-security-grid{grid-template-columns:1fr}}
+@media(max-width:680px){.cc-form-grid{grid-template-columns:1fr}.cc-form-grid .full{grid-column:auto}.cc-kpis{grid-template-columns:1fr}}
+
+
+.auth-shell{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,var(--sidebar),var(--primary))}
+.auth-card{width:min(460px,96vw);background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 22px 60px rgba(0,0,0,.28);overflow:hidden}
+.auth-brand{padding:24px;background:var(--sidebar);color:white;display:flex;align-items:center;gap:14px}.auth-logo{width:52px;height:52px;border-radius:15px;background:var(--accent);color:#111;display:grid;place-items:center;font-weight:1000}
+.auth-brand h1{margin:0;font-size:24px}.auth-brand p{margin:4px 0 0;opacity:.8}.auth-body{padding:24px}.auth-field{margin-bottom:14px}
+.auth-field label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;color:var(--muted);margin-bottom:6px}.auth-field input{width:100%;height:46px;border:1px solid var(--border);border-radius:11px;padding:0 12px}
+.auth-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 18px}.auth-error{display:none;padding:10px 12px;border-radius:10px;background:#fee2e2;color:#991b1b;margin-bottom:13px}.auth-error.show{display:block}
+.home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.home-tile{border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:18px;cursor:pointer;min-height:145px;transition:.18s}
+.home-tile:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(15,23,42,.12);border-color:var(--primary)}.home-tile .icon{font-size:28px}.home-tile h3{margin:12px 0 5px}.home-tile p{margin:0;color:var(--muted);font-size:12px}
+.home-welcome{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}.home-user{display:flex;align-items:center;gap:12px}.home-user img{width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)}
+.user-password-box{border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:14px}.pw-strength{height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:8px}.pw-strength span{display:block;height:100%;width:0}
+.pw-rules{font-size:11px;color:var(--muted);margin-top:6px}@media(max-width:1050px){.home-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.home-grid{grid-template-columns:1fr}}
+
+/* Login and Home pages inside Control Center */
+.cc-login-layout{display:grid;grid-template-columns:minmax(330px,440px) minmax(420px,1fr);gap:16px;align-items:start}
+.cc-login-settings,.cc-login-preview,.cc-home-settings,.cc-home-preview{border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:16px}
+.cc-login-preview .auth-shell{position:relative;inset:auto;min-height:600px;border-radius:16px;overflow:hidden;z-index:auto;padding:20px}
+.cc-login-preview .auth-card{width:min(430px,96%);transform:scale(.92);transform-origin:center}
+.cc-home-layout{display:grid;grid-template-columns:minmax(320px,420px) minmax(460px,1fr);gap:16px;align-items:start}
+.cc-home-preview .home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cc-setting-list{display:grid;gap:12px}.cc-setting-list .field{margin:0}
+.cc-section-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
+.cc-preview-label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:10px}
+.cc-home-banner{padding:18px;border-radius:14px;background:var(--bg);border:1px solid var(--border);margin-bottom:14px}
+.cc-home-banner h2{margin:0 0 4px}.cc-home-banner p{margin:0;color:var(--muted)}
+@media(max-width:980px){.cc-login-layout,.cc-home-layout{grid-template-columns:1fr}}
+
+.theme-subsection{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.theme-subsection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.theme-subsection-head h3{margin:0 0 4px;font-size:18px}.theme-subsection-head p{margin:0;color:var(--muted);font-size:12px}
+.theme-control-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.theme-control-grid .field{margin:0}
+.theme-color-input{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:4px}
+.theme-mini-preview{margin-top:14px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--bg)}
+.login-theme-preview{display:grid;grid-template-columns:1.2fr .8fr;min-height:250px}.login-theme-preview-left{padding:24px;color:white;display:flex;flex-direction:column;justify-content:center}.login-theme-preview-right{padding:24px;display:grid;place-items:center}
+.login-theme-preview-card{width:min(300px,100%);padding:20px;border-radius:16px;background:white;box-shadow:0 12px 28px rgba(0,0,0,.15)}
+.home-theme-preview{padding:18px}.home-theme-preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.home-theme-preview-card{height:85px;border-radius:12px;border:1px solid var(--border);padding:12px}
+@media(max-width:950px){.theme-control-grid{grid-template-columns:repeat(2,1fr)}.login-theme-preview{grid-template-columns:1fr}.home-theme-preview-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.theme-control-grid{grid-template-columns:1fr}}
+
+/* Sidebar usability fixes V2.0 */
+.layout-left .studio-sidebar{
+  overflow:hidden;
+}
+.layout-left .side-menu{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding-right:4px;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:color-mix(in srgb,var(--side-text) 42%,transparent) transparent;
+}
+.layout-left .side-menu::-webkit-scrollbar{width:7px}
+.layout-left .side-menu::-webkit-scrollbar-track{background:transparent}
+.layout-left .side-menu::-webkit-scrollbar-thumb{
+  background:color-mix(in srgb,var(--side-text) 38%,transparent);
+  border-radius:999px;
+}
+.layout-left .side-menu::-webkit-scrollbar-thumb:hover{
+  background:color-mix(in srgb,var(--side-text) 58%,transparent);
+}
+.layout-left .side-bottom{
+  flex:0 0 auto;
+  margin-top:8px;
+  position:relative;
+  z-index:2;
+  background:var(--side-bg);
+}
+.layout-left.peek .side-menu{
+  overflow-y:auto;
+}
+/* Do not show browser title tooltips over expanded submenu text */
+.layout-left.peek .side-group-toggle[title],
+.layout-left.peek .side-item[title]{pointer-events:auto}
+
+
+.home-designer-grid{display:grid;grid-template-columns:minmax(340px,430px) minmax(520px,1fr);gap:16px;align-items:start}
+.home-designer-panel,.home-designer-preview{border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:16px}
+.home-control-section{border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;background:color-mix(in srgb,var(--surface) 94%,var(--bg))}
+.home-control-section h3{margin:0 0 10px;font-size:15px}.home-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.home-control-grid .full{grid-column:1/-1}
+.home-control-grid label{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:var(--muted);margin-bottom:5px}.home-control-grid input,.home-control-grid select,.home-control-grid textarea{width:100%;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:9px}.home-control-grid input,.home-control-grid select{height:40px}
+.home-screen-preview{min-height:620px;border-radius:18px;overflow:hidden;border:1px solid var(--border);background:#eef5ff}.home-screen-preview-header{padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:rgba(255,255,255,.88);border-bottom:1px solid rgba(0,0,0,.08)}
+.home-company-block{display:flex;align-items:center;gap:12px}.home-company-logo{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:#ffb000;color:#111;font-weight:1000}.home-company-logo img{width:100%;height:100%;object-fit:cover}.home-company-name{font-weight:900;font-size:20px}.home-company-tagline{font-size:12px;opacity:.7}
+.home-right-cluster{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}.home-mini-widget{padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.08)}.home-mini-widget strong{display:block;font-size:13px}.home-mini-widget span{font-size:11px;opacity:.72}
+.home-profile-chip{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:13px;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.08)}.home-profile-chip img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #ffb000}
+.home-command-row{padding:12px 22px;display:flex;gap:9px;flex-wrap:wrap;background:rgba(255,255,255,.68);border-bottom:1px solid rgba(0,0,0,.06)}.home-command-row button{height:38px;border-radius:10px;border:1px solid rgba(0,0,0,.1);padding:0 13px;background:white;font-weight:800}
+.home-welcome-zone{padding:34px 28px 18px}.home-welcome-zone h1{font-size:34px;margin:0 0 6px}.home-body-reserved{margin:18px 28px 28px;border:1px dashed rgba(0,0,0,.18);border-radius:16px;min-height:290px;display:grid;place-items:center;text-align:center;padding:28px}
+.theme-subsection{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}.theme-subsection-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.theme-subsection-head h3{margin:0 0 4px}.theme-subsection-head p{margin:0;color:var(--muted)}
+.theme-library-toolbar{display:flex;gap:8px;flex-wrap:wrap}.theme-library-toolbar input{display:none}.theme-library-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}.theme-library-card{border:1px solid var(--border);border-radius:14px;padding:12px;background:var(--surface);cursor:pointer}.theme-library-card:hover{border-color:var(--primary)}.theme-library-swatches{height:44px;display:flex;border-radius:9px;overflow:hidden;margin-bottom:9px}.theme-library-swatches span{flex:1}.theme-library-card h4{margin:0}.theme-library-card small{color:var(--muted)}
+.advanced-theme-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:1100px){.home-designer-grid{grid-template-columns:1fr}.theme-library-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.home-control-grid,.advanced-theme-grid{grid-template-columns:1fr}.theme-library-grid{grid-template-columns:1fr}.home-screen-preview-header{flex-direction:column;align-items:flex-start}}
+
+
+
+
+.save-theme-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.save-theme-option{border:1px solid var(--border);border-radius:15px;padding:16px;background:var(--surface);cursor:pointer;transition:.18s;text-align:left}
+.save-theme-option:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.10)}
+.save-theme-option .icon{font-size:28px}.save-theme-option h3{margin:10px 0 5px;font-size:16px}.save-theme-option p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+@media(max-width:760px){.save-theme-options{grid-template-columns:1fr}}
+
+
+/* Core-only refinements */
+.core-menu-note{font-size:10px;opacity:.72;padding:8px 10px 12px;line-height:1.35} .core-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:var(--accent);color:#111;font-size:10px;font-weight:900;margin-left:8px}
+#panel-theme,#panel-sidebar,#panel-profile{max-width:1500px;margin:auto} .actions{align-items:center} .core-status{font-size:11px;color:var(--muted);font-weight:700}
+</style></head><body>
+<div class="app layout-left collapsed" id="app">
+<aside class="studio-sidebar" id="studioSidebar">
+  <div class="side-brand"><div class="side-logo">ERP</div><div class="side-brand-copy"><b>Design Studio</b><small>Core V11</small></div></div>
+  <nav class="side-menu" id="sideMenu">
+    <button class="side-item active" data-panel="theme" title="Theme Studio"><span class="side-icon">◈</span><span>Theme Studio</span></button>
+    <button class="side-item" data-panel="sidebar" title="Sidebar Studio"><span class="side-icon">☷</span><span>Sidebar Studio</span></button>
+    <button class="side-item" data-panel="profile" title="Profile Card Designer"><span class="side-icon">●</span><span>Profile Card Designer</span></button>
+    <div class="core-menu-note">This core controls shared ERP appearance only. Business modules will connect to these saved settings.</div>
+  </nav>
+  <div class="side-bottom">
+    <div class="side-clock" id="sideClock"><span class="clock-icon">◷</span><div class="clock-copy"><div class="clock-time" id="clockTime"></div><div class="clock-date" id="clockDate"></div></div></div>
+    <div class="side-profile"><img class="side-avatar" id="sideAvatar" alt="Profile"><div class="side-pcopy"><div class="side-pname" id="sidePname">Muhammad Waqas</div><div class="side-prole" id="sideProle">Store Officer</div><div class="side-pstatus" id="sidePstatus">● Online</div></div></div>
+  </div>
+</aside>
+<div class="page-shell"><header class="top"><div class="title"><h1 id="workspaceTitle">Design Studio <span class="core-badge">CORE</span></h1><p id="workspaceSubtitle">Theme, sidebar and profile design for the complete ERP.</p></div><div class="actions"><span class="core-status" id="saveStatus">Ready</span><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
+<main class="content"><div class="notice">Changes preview instantly. <b>Save & Apply</b> stores the shared design settings for connected ERP modules.</div>
+<section class="panel active" id="panel-theme">
+<div class="card"><h2>Theme Studio</h2><p class="sub">Control the complete ERP palette and global typography.</p>
+<div class="notice" style="margin:12px 0"><b>Linked Theme Mode:</b> Selecting any ERP theme now automatically matches the Home Screen and Login Page themes. Use <b>Save Theme As</b> to choose what to save.</div>
+<div class="theme-library-toolbar" style="margin:12px 0 14px">
+<button class="btn" id="erpSaveCustomTheme">Save Theme As ▾</button>
+<button class="btn" id="erpExportThemes">Export Themes</button>
+<label class="btn" for="erpImportThemes">Import Themes</label>
+<input accept=".json,application/json" id="erpImportThemes" style="display:none" type="file"/>
 </div>
-<div class="toast" id="toast"></div>
+<div class="themes" id="themes"></div>
+<h3 class="section-title">Global Typography &amp; Palette</h3><div class="grid">
+<div class="field"><label>Global Font Family</label><select data-key="theme.fontFamily"><option>Segoe UI</option><option>Arial</option><option>Tahoma</option><option>Verdana</option><option>Trebuchet MS</option><option>Georgia</option></select></div>
+<div class="field"><label>Base Font Size</label><input data-key="theme.baseSize" max="18" min="11" type="range"/><div class="value"></div></div>
+<div class="field"><label>Heading Weight</label><select data-key="theme.headingWeight"><option value="500">Medium</option><option value="600">Semi Bold</option><option value="700">Bold</option><option value="800">Extra Bold</option></select></div>
+<div class="field"><label>Body Text Color</label><input data-key="theme.text" type="color"/></div>
+<div class="field"><label>Workspace</label><input data-key="theme.background" type="color"/></div><div class="field"><label>Surface / Cards</label><input data-key="theme.surface" type="color"/></div><div class="field"><label>Primary</label><input data-key="theme.primary" type="color"/></div><div class="field"><label>Accent</label><input data-key="theme.accent" type="color"/></div>
+<div class="field"><label>Sidebar Background</label><input data-key="theme.sidebar" type="color"/></div><div class="field"><label>Sidebar Text</label><input data-key="theme.sidebarText" type="color"/></div><div class="field"><label>Active Menu</label><input data-key="theme.sidebarActive" type="color"/></div><div class="field"><label>Active Text</label><input data-key="theme.sidebarActiveText" type="color"/></div>
+</div>
+<div class="theme-subsection" id="loginPageThemeSection">
+<div class="theme-subsection-head">
+<div><h3>Login Page Theme</h3><p>Control the visual style of the ERP login screen globally.</p></div>
+<button class="btn" id="resetLoginTheme">Reset Login Theme</button>
+</div>
+<div class="theme-control-grid">
+<div class="field"><label>Background Start</label><input class="theme-color-input" id="loginThemeBgStart" type="color"/></div>
+<div class="field"><label>Background End</label><input class="theme-color-input" id="loginThemeBgEnd" type="color"/></div>
+<div class="field"><label>Login Card Color</label><input class="theme-color-input" id="loginThemeCard" type="color"/></div>
+<div class="field"><label>Primary Button</label><input class="theme-color-input" id="loginThemePrimary" type="color"/></div>
+<div class="field"><label>Accent Color</label><input class="theme-color-input" id="loginThemeAccent" type="color"/></div>
+<div class="field"><label>Heading Color</label><input class="theme-color-input" id="loginThemeHeading" type="color"/></div>
+<div class="field"><label>Body Text Color</label><input class="theme-color-input" id="loginThemeText" type="color"/></div>
+<div class="field"><label>Input Border</label><input class="theme-color-input" id="loginThemeBorder" type="color"/></div>
+<div class="field"><label>Card Radius</label><input id="loginThemeRadius" max="32" min="0" type="range" value="22"/><small id="loginThemeRadiusValue">22 px</small></div>
+<div class="field"><label>Card Shadow</label><select id="loginThemeShadow"><option value="soft">Soft</option><option value="medium">Medium</option><option value="strong">Strong</option><option value="none">None</option></select></div>
+<div class="field"><label>Logo Shape</label><select id="loginThemeLogoShape"><option value="rounded">Rounded Square</option><option value="circle">Circle</option><option value="square">Square</option></select></div>
+<div class="field"><label>Layout</label><select id="loginThemeLayout"><option value="split">Split Screen</option><option value="centered">Centered Card</option></select></div>
+</div>
+<div class="theme-mini-preview">
+<div class="login-theme-preview" id="loginThemePreview">
+<div class="login-theme-preview-left" id="loginThemePreviewLeft"><div style="font-size:13px;font-weight:800;opacity:.85">STORE INVENTORY ERP</div><h2 style="font-size:28px;margin:12px 0 8px">One secure workspace</h2><p style="margin:0;opacity:.85">Inventory, purchase, gate pass, costing and reports.</p></div>
+<div class="login-theme-preview-right" id="loginThemePreviewRight"><div class="login-theme-preview-card" id="loginThemePreviewCard"><h3 style="margin:0 0 5px">Welcome back</h3><p style="margin:0 0 14px;font-size:12px">Sign in to open your ERP workspace.</p><div style="height:36px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:9px"></div><div style="height:36px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px"></div><div id="loginThemePreviewButton" style="height:38px;border-radius:8px;display:grid;place-items:center;color:white;font-weight:800">Sign In</div></div></div>
+</div>
+</div>
+</div>
+<div class="theme-subsection" id="homeScreenThemeSection">
+<div class="theme-subsection-head">
+<div><h3>Home Screen Theme</h3><p>Set its visual foundation now. Dashboard content will be added after the project is complete.</p></div>
+<button class="btn" id="resetHomeTheme">Reset Home Theme</button>
+</div>
+<div class="theme-control-grid">
+<div class="field"><label>Workspace Color</label><input class="theme-color-input" id="homeThemeWorkspace" type="color"/></div>
+<div class="field"><label>Card Color</label><input class="theme-color-input" id="homeThemeCard" type="color"/></div>
+<div class="field"><label>Primary Color</label><input class="theme-color-input" id="homeThemePrimary" type="color"/></div>
+<div class="field"><label>Accent Color</label><input class="theme-color-input" id="homeThemeAccent" type="color"/></div>
+<div class="field"><label>Heading Color</label><input class="theme-color-input" id="homeThemeHeading" type="color"/></div>
+<div class="field"><label>Body Text Color</label><input class="theme-color-input" id="homeThemeText" type="color"/></div>
+<div class="field"><label>Border Color</label><input class="theme-color-input" id="homeThemeBorder" type="color"/></div>
+<div class="field"><label>Positive KPI Color</label><input class="theme-color-input" id="homeThemePositive" type="color"/></div>
+<div class="field"><label>Card Radius</label><input id="homeThemeRadius" max="30" min="0" type="range" value="16"/><small id="homeThemeRadiusValue">16 px</small></div>
+<div class="field"><label>Card Shadow</label><select id="homeThemeShadow"><option value="soft">Soft</option><option value="medium">Medium</option><option value="strong">Strong</option><option value="none">None</option></select></div>
+<div class="field"><label>Chart Style</label><select id="homeThemeChartStyle"><option value="clean">Clean</option><option value="filled">Filled</option><option value="minimal">Minimal</option></select></div>
+<div class="field"><label>Dashboard Density</label><select id="homeThemeDensity"><option value="comfortable">Comfortable</option><option value="compact">Compact</option><option value="spacious">Spacious</option></select></div>
+</div>
+<div class="theme-mini-preview home-theme-preview" id="homeThemePreview">
+<div><h3 id="homeThemePreviewHeading" style="margin:0">Management Overview</h3><p id="homeThemePreviewText" style="margin:4px 0 0">Reserved for graphs, purchases, production and KPIs.</p></div>
+<div class="home-theme-preview-grid"><div class="home-theme-preview-card"><small>Purchase Value</small><strong style="display:block;font-size:22px;margin-top:8px">PKR —</strong></div><div class="home-theme-preview-card"><small>Production</small><strong style="display:block;font-size:22px;margin-top:8px">—</strong></div><div class="home-theme-preview-card"><small>Stock Alerts</small><strong style="display:block;font-size:22px;margin-top:8px">—</strong></div></div>
+</div>
+</div>
+<div class="theme-subsection">
+<div class="theme-subsection-head"><div><h3>Home Screen Theme Library</h3><p>Apply ready-made themes or save, import and export your own.</p></div><div class="theme-library-toolbar"><button class="btn" id="hsSaveCustomTheme">Save Custom</button><button class="btn" id="hsExportThemes">Export</button><label class="btn" for="hsImportThemes">Import</label><input accept=".json" id="hsImportThemes" type="file"/></div></div>
+<div class="theme-library-grid" id="hsThemeLibrary"></div>
+</div>
+<div class="theme-subsection">
+<div class="theme-subsection-head"><div><h3>Login Page Theme Library</h3><p>Apply ready-made login themes or save, import and export your own.</p></div><div class="theme-library-toolbar"><button class="btn" id="loginSaveCustomTheme">Save Custom</button><button class="btn" id="loginExportThemes">Export</button><label class="btn" for="loginImportThemes">Import</label><input accept=".json" id="loginImportThemes" type="file"/></div></div>
+<div class="theme-library-grid" id="loginThemeLibrary"></div>
+</div>
+<div class="theme-subsection"><div class="theme-subsection-head"><div><h3>Advanced ERP Theme Controls</h3><p>Expanded options for the complete ERP framework.</p></div></div><div class="advanced-theme-grid">
+<div class="field"><label>Button Radius</label><input max="24" min="0" type="range" value="10"/></div><div class="field"><label>Input Radius</label><input max="20" min="0" type="range" value="10"/></div><div class="field"><label>Table Header Height</label><input max="64" min="34" type="range" value="44"/></div><div class="field"><label>Card Shadow</label><select><option>Soft</option><option>Medium</option><option>Strong</option><option>None</option></select></div>
+<div class="field"><label>Header Style</label><select><option>Solid</option><option>Glass</option><option>Gradient</option></select></div><div class="field"><label>Table Density</label><select><option>Comfortable</option><option>Compact</option><option>Spacious</option></select></div><div class="field"><label>Animation</label><select><option>Normal</option><option>Reduced</option><option>None</option></select></div><div class="field"><label>Focus Ring</label><select><option>Show</option><option>Hide</option></select></div>
+</div></div>
+</div>
+</section><section class="panel" id="panel-sidebar">
+<div class="card"><h2>Sidebar Studio</h2><p class="sub">Control placement, size, typography, clock, spacing and behavior.</p>
+<h3 class="section-title">Placement &amp; Geometry</h3><div class="grid">
+<div class="field"><label>Sidebar Position</label><select data-key="sidebar.position"><option value="left">Left</option><option value="top">Top</option><option value="bottom">Bottom</option></select></div>
+<div class="field"><label>Expanded Width</label><input data-key="sidebar.width" max="340" min="180" type="range"/><div class="value"></div></div>
+<div class="field"><label>Collapsed Width / Bar Height</label><input data-key="sidebar.collapsedWidth" max="90" min="48" type="range"/><div class="value"></div></div>
+<div class="field"><label>Icon Size</label><input data-key="sidebar.iconSize" max="26" min="12" type="range"/><div class="value"></div></div>
+<div class="field"><label>Main Row Height</label><input data-key="sidebar.rowHeight" max="60" min="32" type="range"/><div class="value"></div></div>
+<div class="field"><label>Submenu Row Height</label><input data-key="sidebar.subRowHeight" max="46" min="24" type="range"/><div class="value"></div></div>
+<div class="field"><label>Menu Radius</label><input data-key="sidebar.radius" max="24" min="0" type="range"/><div class="value"></div></div>
+<div class="field"><label>Row Gap</label><input data-key="sidebar.gap" max="14" min="0" type="range"/><div class="value"></div></div>
+</div>
+<h3 class="section-title">Typography</h3><div class="grid">
+<div class="field"><label>Main Font Size</label><input data-key="sidebar.mainSize" max="20" min="10" type="range"/><div class="value"></div></div>
+<div class="field"><label>Main Font Weight</label><select data-key="sidebar.mainWeight"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semi Bold</option><option value="700">Bold</option></select></div>
+<div class="field"><label>Submenu Font Size</label><input data-key="sidebar.subSize" max="18" min="9" type="range"/><div class="value"></div></div>
+<div class="field"><label>Submenu Weight</label><select data-key="sidebar.subWeight"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semi Bold</option><option value="700">Bold</option></select></div>
+<div class="field"><label>Line Height</label><input data-key="sidebar.lineHeight" max="1.8" min="1" step=".05" type="range"/><div class="value"></div></div>
+<div class="field"><label>Letter Spacing</label><input data-key="sidebar.letterSpacing" max="2" min="-.5" step=".1" type="range"/><div class="value"></div></div>
+<div class="field"><label>Text Alignment</label><select data-key="sidebar.alignment"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+<div class="field"><label>Long Labels</label><select data-key="sidebar.wrap"><option value="nowrap">Single line / Ellipsis</option><option value="normal">Allow wrapping</option></select></div>
+</div>
+<h3 class="section-title">Behavior</h3><div class="grid">
+<div class="field"><label>Default State</label><select data-key="sidebar.defaultState"><option value="expanded">Expanded</option><option value="collapsed">Collapsed</option></select></div>
+<div class="field"><label>Submenu Opening</label><select data-key="sidebar.submenuOpening"><option value="closed">Closed by default</option><option value="current">Open current group</option><option value="remember">Remember last opened</option></select></div>
+<div class="field"><label>Open Behavior</label><select data-key="sidebar.submenuMode"><option value="single">Only one submenu open</option><option value="multiple">Allow multiple open</option></select></div>
+<div class="field"><label>Animation Speed</label><input data-key="sidebar.animation" max="600" min="0" step="25" type="range"/><div class="value"></div></div>
+<div class="field"><label>Expand on Hover</label><div class="switch"><input data-key="sidebar.expandHover" type="checkbox"/> Enable</div></div>
+</div>
+<h3 class="section-title">Date &amp; Time Taskbar</h3><div class="grid">
+<div class="field"><label>Show Clock</label><div class="switch"><input data-key="clock.show" type="checkbox"/> Visible</div></div>
+<div class="field"><label>Show Date</label><div class="switch"><input data-key="clock.showDate" type="checkbox"/> Visible</div></div>
+<div class="field"><label>Time Format</label><select data-key="clock.format"><option value="12">12 hour</option><option value="24">24 hour</option></select></div>
+<div class="field"><label>Show Seconds</label><div class="switch"><input data-key="clock.seconds" type="checkbox"/> Enable</div></div>
+<div class="field"><label>Date Format</label><select data-key="clock.dateFormat"><option value="dd-MMM-yy">25-Jul-26</option><option value="dd/MM/yyyy">25/07/2026</option><option value="MMM dd, yyyy">Jul 25, 2026</option><option value="dddd, dd MMM">Saturday, 25 Jul</option></select></div>
+<div class="field"><label>Clock Font Size</label><input data-key="clock.fontSize" max="18" min="9" type="range"/><div class="value"></div></div>
+<div class="field"><label>Clock Text Color</label><input data-key="clock.color" type="color"/></div>
+<div class="field"><label>Clock Background</label><input data-key="clock.background" type="color"/></div>
+</div></div>
+</section><section class="panel" id="panel-profile">
+<div class="card"><h2>Profile Card Designer</h2><p class="sub">Control picture, frame, typography, status and visibility.</p>
+<div class="profile-preview"><div class="profile-stage"><div class="profile-card" id="profilePreview"><img alt="Profile" id="profilePreviewImg"/><div><div class="n" id="profilePreviewName"></div><div class="r" id="profilePreviewRole"></div><div class="s" id="profilePreviewStatus"></div></div></div></div><div>
+<div class="grid">
+<div class="field"><label>Profile Name</label><input data-key="profile.name" type="text"/></div><div class="field"><label>Role Text</label><input data-key="profile.role" type="text"/></div><div class="field"><label>Status Text</label><input data-key="profile.status" type="text"/></div><div class="field"><label>Upload Picture</label><input accept="image/*" id="pictureInput" type="file"/></div>
+<div class="field"><label>Name Font</label><select data-key="profile.nameFont"><option>Segoe UI</option><option>Arial</option><option>Tahoma</option><option>Verdana</option><option>Georgia</option></select></div><div class="field"><label>Name Size</label><input data-key="profile.nameSize" max="24" min="9" type="range"/><div class="value"></div></div><div class="field"><label>Name Weight</label><select data-key="profile.nameWeight"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semi Bold</option><option value="700">Bold</option><option value="800">Extra Bold</option></select></div><div class="field"><label>Name Style</label><select data-key="profile.nameStyle"><option value="normal">Normal</option><option value="italic">Italic</option></select></div>
+<div class="field"><label>Name Color</label><input data-key="profile.nameColor" type="color"/></div><div class="field"><label>Name Wrap</label><select data-key="profile.nameWrap"><option value="nowrap">Single line</option><option value="normal">Wrap</option></select></div><div class="field"><label>Text Alignment</label><select data-key="profile.textAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div><div class="field"><label>Role Color</label><input data-key="profile.roleColor" type="color"/></div>
+<div class="field"><label>Picture Size</label><input data-key="profile.pictureSize" max="90" min="30" type="range"/><div class="value"></div></div><div class="field"><label>Picture Shape</label><select data-key="profile.pictureShape"><option value="circle">Circle</option><option value="rounded">Rounded</option><option value="square">Square</option><option value="oval">Oval</option></select></div><div class="field"><label>Picture Border</label><input data-key="profile.pictureBorderWidth" max="8" min="0" type="range"/><div class="value"></div></div><div class="field"><label>Picture Border Color</label><input data-key="profile.pictureBorder" type="color"/></div>
+<div class="field"><label>Card Radius</label><input data-key="profile.cardRadius" max="32" min="0" type="range"/><div class="value"></div></div><div class="field"><label>Card Background</label><input data-key="profile.cardBackground" type="color"/></div><div class="field"><label>Card Border Color</label><input data-key="profile.cardBorder" type="color"/></div><div class="field"><label>Status Color</label><input data-key="profile.statusColor" type="color"/></div>
+<div class="field"><label>Show Picture</label><div class="switch"><input data-key="profile.showPicture" type="checkbox"/> Visible</div></div><div class="field"><label>Show Role</label><div class="switch"><input data-key="profile.showRole" type="checkbox"/> Visible</div></div><div class="field"><label>Show Status</label><div class="switch"><input data-key="profile.showStatus" type="checkbox"/> Visible</div></div>
+</div></div></div></div>
+</section>
+</main></div></div><div class="toast" id="toast"></div>
 <script>
-(()=>{
-'use strict';
-const KEY='ERP_DESIGN_CORE_V1';
-const EVENT='erp-design-core-changed';
-const presets={
-  'ERP Green':{background:'#eef8f3',surface:'#ffffff',text:'#0e2b22',muted:'#58756c',primary:'#117a55',accent:'#f5a400',border:'#b9d9cd'},
-  'Professional Orange':{background:'#f7f7f8',surface:'#ffffff',text:'#202124',muted:'#666b73',primary:'#2c2c2c',accent:'#ffcc00',border:'#d7d9dd'},
-  'Executive Blue':{background:'#f2f6fb',surface:'#ffffff',text:'#102a43',muted:'#627d98',primary:'#1f5f99',accent:'#f0a202',border:'#c9d7e5'},
-  'Graphite':{background:'#f3f4f6',surface:'#ffffff',text:'#111827',muted:'#6b7280',primary:'#374151',accent:'#f59e0b',border:'#d1d5db'},
-  'Teal':{background:'#effcf9',surface:'#ffffff',text:'#123b3a',muted:'#5f7f7d',primary:'#0f766e',accent:'#f59e0b',border:'#b8ddd9'},
-  'Burgundy':{background:'#fbf5f6',surface:'#ffffff',text:'#3b151d',muted:'#80616a',primary:'#7a263a',accent:'#d9a441',border:'#dec8ce'}
-};
-const defaults={schemaVersion:1,updatedAt:null,theme:{name:'ERP Green',...presets['ERP Green']},typography:{font:'Segoe UI',baseSize:14,headingWeight:800},forms:{height:40,radius:9,borderWidth:1,gap:12},tables:{headerHeight:38,rowHeight:34,fontSize:12,alignment:'left',headerText:'#ffffff',stickyHeader:true},sidebar:{width:230,collapsedWidth:58,background:'#0d5b42',text:'#ffffff',activeBackground:'#159b6a',activeText:'#ffffff',autoCollapse:true},buttons:{height:38,radius:9,primarySource:'primary',weight:800},layout:{maxWidth:1600,cardRadius:12,headerAlignment:'left',shadow:'soft'},print:{paper:'A4',orientation:'portrait',accent:'#ffcc00',headerAlignment:'center',showLogo:true,pageNumbers:true,footer:'This is computer generated report.'}};
-let state=load();let previous=clone(state);
+const KEY='ERP_DESIGN_CORE_V1'; const LEGACY_KEY='erpDesignStudioV11'; const HOME_THEME_KEY='erpHomeScreenThemeV1'; const LOGIN_THEME_KEY='erpLoginPageThemeV1';
+const themes={
+'Factory Navy & Orange':{background:'#edf4fb',surface:'#ffffff',text:'#0b203d',muted:'#60738b',primary:'#0d2b52',accent:'#f5a400',border:'#c9d7e7',sidebar:'#0e1a2c',sidebarText:'#ffffff',sidebarActive:'#f5a400',sidebarActiveText:'#111111'},
+'Executive Blue':{background:'#eef5ff',surface:'#ffffff',text:'#102a4d',muted:'#5c7190',primary:'#1d5fbf',accent:'#f4a61d',border:'#bfd2ee',sidebar:'#102e57',sidebarText:'#ffffff',sidebarActive:'#2f75d6',sidebarActiveText:'#ffffff'},
+'Industrial Steel':{background:'#eef2f3',surface:'#ffffff',text:'#26343a',muted:'#63747b',primary:'#3b4d55',accent:'#ff8a00',border:'#c8d1d5',sidebar:'#29383e',sidebarText:'#f5f7f8',sidebarActive:'#ff8a00',sidebarActiveText:'#151515'},
+'Emerald Inventory':{background:'#eef8f3',surface:'#ffffff',text:'#0e2b22',muted:'#58756c',primary:'#117a55',accent:'#e6a412',border:'#b9d9cd',sidebar:'#0d5b42',sidebarText:'#ffffff',sidebarActive:'#159b6a',sidebarActiveText:'#ffffff'},
+'Minimal White':{background:'#f6f7f8',surface:'#ffffff',text:'#202326',muted:'#6d7278',primary:'#222222',accent:'#666666',border:'#d8dde1',sidebar:'#202020',sidebarText:'#ffffff',sidebarActive:'#575757',sidebarActiveText:'#ffffff'},
+'Modern Glass':{background:'#eaf1ff',surface:'#ffffff',text:'#18345e',muted:'#61789d',primary:'#3464ad',accent:'#f6a800',border:'#bed0ea',sidebar:'#254579',sidebarText:'#ffffff',sidebarActive:'#3869b6',sidebarActiveText:'#ffffff'},
+'Carbon Dark':{background:'#151a20',surface:'#20262d',text:'#f2f5f7',muted:'#a6b0ba',primary:'#f5a623',accent:'#f5a623',border:'#3a434d',sidebar:'#0e1217',sidebarText:'#f7f7f7',sidebarActive:'#f5a623',sidebarActiveText:'#111111'},
+'Midnight Blue':{background:'#eaf6fa',surface:'#ffffff',text:'#09283a',muted:'#557585',primary:'#0b6f97',accent:'#0db5d1',border:'#b9d8e2',sidebar:'#081523',sidebarText:'#ffffff',sidebarActive:'#2473ad',sidebarActiveText:'#ffffff'},
+'Premium Black & Gold':{background:'#f7f4e9',surface:'#ffffff',text:'#201c12',muted:'#756d57',primary:'#171717',accent:'#d6ae32',border:'#d9cfad',sidebar:'#111111',sidebarText:'#fff8df',sidebarActive:'#d6ae32',sidebarActiveText:'#111111'},
+'Office Professional':{background:'#eef4fd',surface:'#ffffff',text:'#16365e',muted:'#5f7594',primary:'#2564bd',accent:'#f4b244',border:'#c4d5ed',sidebar:'#17497f',sidebarText:'#ffffff',sidebarActive:'#2b69c2',sidebarActiveText:'#ffffff'},
+'Enterprise Blue':{background:'#edf4f8',surface:'#ffffff',text:'#183247',muted:'#657b8d',primary:'#147ac2',accent:'#eb6b08',border:'#c3d3dd',sidebar:'#294357',sidebarText:'#ffffff',sidebarActive:'#147ac2',sidebarActiveText:'#ffffff'},
+'Sunrise Orange':{background:'#fff5ed',surface:'#ffffff',text:'#52200f',muted:'#8b6557',primary:'#c84e16',accent:'#ff6b18',border:'#efd0bf',sidebar:'#8c2f12',sidebarText:'#ffffff',sidebarActive:'#ff6b18',sidebarActiveText:'#ffffff'},
+'Royal Purple':{background:'#f5f3ff',surface:'#ffffff',text:'#2e1065',muted:'#6b5a7a',primary:'#6d28d9',accent:'#a78bfa',border:'#ddd6fe',sidebar:'#2e1065',sidebarText:'#f5f3ff',sidebarActive:'#7c3aed',sidebarActiveText:'#ffffff'},
+'Teal Professional':{background:'#ecfeff',surface:'#ffffff',text:'#083344',muted:'#52727a',primary:'#0f766e',accent:'#2dd4bf',border:'#a5f3fc',sidebar:'#083344',sidebarText:'#ecfeff',sidebarActive:'#0d9488',sidebarActiveText:'#ffffff'},
+'Burgundy Classic':{background:'#fff7ed',surface:'#ffffff',text:'#450a0a',muted:'#8f5d52',primary:'#991b1b',accent:'#f59e0b',border:'#fed7aa',sidebar:'#450a0a',sidebarText:'#fff7ed',sidebarActive:'#b91c1c',sidebarActiveText:'#ffffff'},
+'Forest Green':{background:'#f0fdf4',surface:'#ffffff',text:'#052e16',muted:'#4f6f5d',primary:'#166534',accent:'#84cc16',border:'#bbf7d0',sidebar:'#052e16',sidebarText:'#f0fdf4',sidebarActive:'#15803d',sidebarActiveText:'#ffffff'},
+'Ocean Cyan':{background:'#ecfeff',surface:'#ffffff',text:'#082f49',muted:'#4f6f7a',primary:'#0369a1',accent:'#22d3ee',border:'#bae6fd',sidebar:'#082f49',sidebarText:'#ecfeff',sidebarActive:'#0284c7',sidebarActiveText:'#ffffff'},
+'Sandstone':{background:'#fefce8',surface:'#ffffff',text:'#3f2d20',muted:'#7b6b5f',primary:'#a16207',accent:'#facc15',border:'#fde68a',sidebar:'#3f2d20',sidebarText:'#fefce8',sidebarActive:'#ca8a04',sidebarActiveText:'#111827'},
+'Slate Modern':{background:'#f8fafc',surface:'#ffffff',text:'#0f172a',muted:'#64748b',primary:'#475569',accent:'#38bdf8',border:'#cbd5e1',sidebar:'#0f172a',sidebarText:'#f8fafc',sidebarActive:'#334155',sidebarActiveText:'#ffffff'},
+'Rose Executive':{background:'#fff1f2',surface:'#ffffff',text:'#4c0519',muted:'#8c5b68',primary:'#be123c',accent:'#fb7185',border:'#fecdd3',sidebar:'#4c0519',sidebarText:'#fff1f2',sidebarActive:'#e11d48',sidebarActiveText:'#ffffff'},
+'Copper Industrial':{background:'#fff7ed',surface:'#ffffff',text:'#431407',muted:'#8b5e49',primary:'#9a3412',accent:'#fb923c',border:'#fed7aa',sidebar:'#431407',sidebarText:'#fff7ed',sidebarActive:'#c2410c',sidebarActiveText:'#ffffff'},
+'Ice Blue':{background:'#f0f9ff',surface:'#ffffff',text:'#0c4a6e',muted:'#5d7f94',primary:'#0284c7',accent:'#67e8f9',border:'#bae6fd',sidebar:'#0c4a6e',sidebarText:'#f0f9ff',sidebarActive:'#0369a1',sidebarActiveText:'#ffffff'},
+'Graphite Pro':{background:'#f3f4f6',surface:'#ffffff',text:'#111827',muted:'#6b7280',primary:'#374151',accent:'#9ca3af',border:'#d1d5db',sidebar:'#111827',sidebarText:'#f9fafb',sidebarActive:'#4b5563',sidebarActiveText:'#ffffff'},
+'Lime Factory':{background:'#f7fee7',surface:'#ffffff',text:'#365314',muted:'#6b7a4e',primary:'#4d7c0f',accent:'#a3e635',border:'#d9f99d',sidebar:'#365314',sidebarText:'#f7fee7',sidebarActive:'#65a30d',sidebarActiveText:'#ffffff'},
+'Pearl Blue':{background:'#f5f9ff',surface:'#ffffff',text:'#17324d',muted:'#6c8096',primary:'#6ea8dc',accent:'#b9d7f0',border:'#d9e8f5',sidebar:'#dbeafe',sidebarText:'#17324d',sidebarActive:'#93c5fd',sidebarActiveText:'#102a43'},
+'Mint Breeze':{background:'#f3fff9',surface:'#ffffff',text:'#23443a',muted:'#6d8b80',primary:'#62b69b',accent:'#a7e8d2',border:'#d5f4e8',sidebar:'#d1fae5',sidebarText:'#23443a',sidebarActive:'#86efac',sidebarActiveText:'#18392f'},
+'Lavender Mist':{background:'#faf7ff',surface:'#ffffff',text:'#3f3155',muted:'#81738f',primary:'#9b87c7',accent:'#cfc2ed',border:'#e8e0f6',sidebar:'#ede9fe',sidebarText:'#3f3155',sidebarActive:'#c4b5fd',sidebarActiveText:'#312e55'},
+'Peach Cream':{background:'#fff8f3',surface:'#ffffff',text:'#5b3827',muted:'#947666',primary:'#e9a07a',accent:'#f7c7a8',border:'#f5dfd2',sidebar:'#ffedd5',sidebarText:'#5b3827',sidebarActive:'#fdba74',sidebarActiveText:'#4a2a1d'},
+'Sky Morning':{background:'#f2fbff',surface:'#ffffff',text:'#21445a',muted:'#708b9b',primary:'#75b9d6',accent:'#b5e3f3',border:'#d6edf6',sidebar:'#e0f2fe',sidebarText:'#21445a',sidebarActive:'#7dd3fc',sidebarActiveText:'#164e63'},
+'Soft Rose':{background:'#fff7fa',surface:'#ffffff',text:'#5a3140',muted:'#927381',primary:'#d98aa7',accent:'#f2bfd0',border:'#f5dce5',sidebar:'#fce7f3',sidebarText:'#5a3140',sidebarActive:'#f9a8d4',sidebarActiveText:'#4a2634'},
+'Ivory Gold':{background:'#fffdf5',surface:'#ffffff',text:'#4f4528',muted:'#8a8064',primary:'#c9a84c',accent:'#ecd78c',border:'#f1e7bd',sidebar:'#fef3c7',sidebarText:'#4f4528',sidebarActive:'#fde68a',sidebarActiveText:'#463d21'},
+'Cool Silver':{background:'#f8fafc',surface:'#ffffff',text:'#334155',muted:'#7b8796',primary:'#94a3b8',accent:'#cbd5e1',border:'#e2e8f0',sidebar:'#e2e8f0',sidebarText:'#334155',sidebarActive:'#cbd5e1',sidebarActiveText:'#1e293b'},
+'Aqua Pearl':{background:'#f2fffe',surface:'#ffffff',text:'#204b49',muted:'#718e8c',primary:'#62bcb6',accent:'#a7e3df',border:'#d6f1ef',sidebar:'#ccfbf1',sidebarText:'#204b49',sidebarActive:'#99f6e4',sidebarActiveText:'#134e4a'},
+'Vanilla Office':{background:'#fffdf7',surface:'#ffffff',text:'#55472f',muted:'#8a7d67',primary:'#d4b36b',accent:'#f2dda6',border:'#f1e7ca',sidebar:'#fef9c3',sidebarText:'#55472f',sidebarActive:'#fde68a',sidebarActiveText:'#463a25'}};
+const defaults={theme:{name:'Emerald Inventory',fontFamily:'Segoe UI',baseSize:14,headingWeight:'700',...themes['Emerald Inventory']},sidebar:{position:'left',width:230,collapsedWidth:58,rowHeight:42,subRowHeight:30,iconSize:15,radius:9,gap:3,subIndent:32,mainSize:13,mainWeight:'600',subSize:11,subWeight:'500',lineHeight:1.2,letterSpacing:0,alignment:'left',wrap:'nowrap',animation:220,submenuOpening:'closed',submenuMode:'single',defaultState:'collapsed',expandHover:true},clock:{show:true,showDate:true,format:'12',seconds:false,dateFormat:'dd-MMM-yy',fontSize:13,color:'#ffffff',background:'#1d6d56'},profile:{picture:'',pictureSize:50,pictureShape:'circle',pictureBorderWidth:2,pictureBorder:'#f5a400',cardRadius:15,cardBackground:'#1d6d56',cardBorder:'#ffffff35',name:'Muhammad Waqas',nameFont:'Segoe UI',nameSize:13,nameColor:'#ffffff',nameWeight:'700',nameStyle:'normal',nameWrap:'nowrap',textAlign:'left',role:'Store Officer',roleColor:'#dbe8e3',status:'Online',statusColor:'#32d583',showRole:true,showStatus:true,showPicture:true}};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-function clone(v){return JSON.parse(JSON.stringify(v))}
-function merge(a,b){if(!b||typeof b!=='object')return clone(a);const out=clone(a);for(const k of Object.keys(b)){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])&&out[k]&&typeof out[k]==='object')out[k]=merge(out[k],b[k]);else out[k]=b[k]}return out}
-function load(){try{return merge(defaults,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return clone(defaults)}}
-function getPath(path,obj=state){return path.split('.').reduce((o,k)=>o?.[k],obj)}
-function setPath(path,value){const parts=path.split('.');let o=state;while(parts.length>1){const k=parts.shift();o=o[k]||(o[k]={})}o[parts[0]]=value}
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1800)}
-function shadowValue(){return state.layout.shadow==='none'?'none':state.layout.shadow==='strong'?'0 18px 45px rgba(16,24,40,.18)':'0 12px 30px rgba(16,60,47,.10)'}
-function apply(s=state){const r=document.documentElement.style;r.setProperty('--bg',s.theme.background);r.setProperty('--surface',s.theme.surface);r.setProperty('--text',s.theme.text);r.setProperty('--muted',s.theme.muted);r.setProperty('--primary',s.theme.primary);r.setProperty('--accent',s.theme.accent);r.setProperty('--border',s.theme.border);r.setProperty('--font',`'${s.typography.font}',Arial,sans-serif`);r.setProperty('--radius',s.layout.cardRadius+'px');r.setProperty('--page-max',s.layout.maxWidth+'px');r.setProperty('--field-h',s.forms.height+'px');r.setProperty('--field-radius',s.forms.radius+'px');r.setProperty('--table-row-h',s.tables.rowHeight+'px');r.setProperty('--table-head-h',s.tables.headerHeight+'px');r.setProperty('--table-font',s.tables.fontSize+'px');r.setProperty('--side-w',s.sidebar.width+'px');r.setProperty('--side-cw',s.sidebar.collapsedWidth+'px');r.setProperty('--side-bg',s.sidebar.background);r.setProperty('--side-text',s.sidebar.text);r.setProperty('--side-active',s.sidebar.activeBackground);r.setProperty('--side-active-text',s.sidebar.activeText);r.setProperty('--btn-h',s.buttons.height+'px');r.setProperty('--btn-radius',s.buttons.radius+'px');r.setProperty('--header-align',s.layout.headerAlignment);r.setProperty('--table-align',s.tables.alignment);r.setProperty('--shadow',shadowValue());document.body.style.fontSize=s.typography.baseSize+'px';renderPreview();renderValues();renderPresets()}
-function save(){state.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(state));previous=clone(state);document.dispatchEvent(new CustomEvent(EVENT,{detail:clone(state)}));window.dispatchEvent(new CustomEvent(EVENT,{detail:clone(state)}));$('#savedStatus').textContent='Saved & applied';$('#jsonBox').value=JSON.stringify(state,null,2);toast('Design Core saved and applied')}
-function previewMarkup(){return `<div class="preview-head"><h3>Purchase Entry</h3><small>Shared module design preview</small></div><div class="preview-form"><div class="demo-field"><label>Date</label><div>25-Jun-26</div></div><div class="demo-field"><label>Supplier</label><div>ABC Traders</div></div><div class="demo-field"><label>Item</label><div>MS Welding Rod</div></div><div class="demo-field"><label>Quantity</label><div>25</div></div></div><div class="demo-table-wrap"><table class="demo-table"><thead><tr><th>Date</th><th>Item</th><th>Qty</th><th>Unit</th></tr></thead><tbody><tr><td>25-Jun-26</td><td>MS Welding Rod</td><td>25</td><td>Kg</td></tr><tr><td>26-Jun-26</td><td>V Belt B-72</td><td>4</td><td>Nos</td></tr><tr><td>27-Jun-26</td><td>Bearing 6205</td><td>6</td><td>Nos</td></tr></tbody></table></div><div class="preview-actions"><button class="mini-btn primary">Save</button><button class="mini-btn">Search</button><button class="mini-btn accent">Print</button></div>`}
-function renderPreview(){$$('.preview').forEach(el=>el.innerHTML=previewMarkup());$$('.demo-table th').forEach(th=>th.style.color=state.tables.headerText);$$('.mini-btn').forEach(b=>b.style.fontWeight=state.buttons.weight);const c=state.buttons.primarySource==='accent'?state.theme.accent:state.theme.primary;$$('.mini-btn.primary').forEach(b=>{b.style.background=c;b.style.borderColor=c;b.style.color=state.buttons.primarySource==='accent'?'#111':'#fff'})}
-function bindControls(){$$('[data-path]').forEach(el=>{const path=el.dataset.path;const v=getPath(path);if(el.type==='checkbox')el.checked=!!v;else el.value=v;el.addEventListener('input',()=>{previous=clone(state);let val=el.type==='checkbox'?el.checked:el.value;if(el.hasAttribute('data-number'))val=Number(val);setPath(path,val);if(path.startsWith('theme.'))state.theme.name='Custom';apply()})})}
-function renderValues(){$$('[data-value]').forEach(el=>{const p=el.dataset.value;const v=getPath(p);const suffix=/height|width|radius|size|gap/i.test(p)?' px':'';el.textContent=v+suffix})}
-function renderPresets(){const box=$('#themePresets');box.innerHTML='';Object.entries(presets).forEach(([name,p])=>{const b=document.createElement('button');b.type='button';b.className='theme'+(state.theme.name===name?' active':'');b.innerHTML=`<span class="swatches"><i style="background:${p.background}"></i><i style="background:${p.primary}"></i><i style="background:${p.accent}"></i><i style="background:${p.text}"></i></span><b>${name}</b>`;b.onclick=()=>{previous=clone(state);state.theme={name,...p};syncControls();apply()};box.appendChild(b)})}
-function syncControls(){$$('[data-path]').forEach(el=>{const v=getPath(el.dataset.path);if(el.type==='checkbox')el.checked=!!v;else el.value=v})}
-function showPanel(name,label){$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));$$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));$('#panelTitle').textContent=label||name;window.scrollTo({top:0,behavior:'smooth'})}
-$$('#nav button').forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel,b.innerText.trim())));
-$('#collapseBtn').onclick=()=>$('#app').classList.toggle('collapsed');
-$('#saveBtn').onclick=save;
-$('#undoBtn').onclick=()=>{const tmp=clone(state);state=clone(previous);previous=tmp;syncControls();apply();toast('Last design change undone')};
-$('#resetBtn').onclick=()=>{previous=clone(state);state=clone(defaults);syncControls();apply();toast('Default design restored — press Save & Apply to keep it')};
-$('#exportBtn').onclick=()=>{$('#jsonBox').value=JSON.stringify(state,null,2);toast('Current settings shown')};
-$('#importBtn').onclick=()=>{try{const imported=JSON.parse($('#jsonBox').value);previous=clone(state);state=merge(defaults,imported);syncControls();apply();save();toast('Design settings imported')}catch(e){toast('Invalid JSON — import not applied')}};
-$('#copyContractBtn').onclick=async()=>{const txt=JSON.stringify(state,null,2);try{await navigator.clipboard.writeText(txt);toast('Core settings copied')}catch(e){$('#jsonBox').value=txt;showPanel('backup','Backup / Restore');toast('Settings opened for copying')}};
-window.addEventListener('storage',e=>{if(e.key===KEY&&e.newValue){try{state=merge(defaults,JSON.parse(e.newValue));syncControls();apply();toast('Design updated from another tab')}catch(_){}}});
-window.ERPDesignCore={key:KEY,event:EVENT,get:()=>clone(state),apply:(settings)=>{state=merge(defaults,settings||state);syncControls();apply();return clone(state)},save,subscribe:(fn)=>{const h=e=>fn(e.detail||clone(state));window.addEventListener(EVENT,h);window.addEventListener('storage',e=>{if(e.key===KEY)fn(load())});return()=>window.removeEventListener(EVENT,h)}};
-bindControls();apply();$('#jsonBox').value=JSON.stringify(state,null,2);
-})();
-</script>
-</body>
-</html>
+const clone=o=>JSON.parse(JSON.stringify(o));
+function merge(a,b){const o=clone(a); if(!b||typeof b!=='object')return o; for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])&&o[k]&&typeof o[k]==='object')o[k]=merge(o[k],b[k]);else o[k]=b[k]} return o}
+function load(){try{return merge(defaults,JSON.parse(localStorage.getItem(KEY)||localStorage.getItem(LEGACY_KEY)||'{}'))}catch(e){return clone(defaults)}}
+let state=load(),previous=clone(state),clockTimer=null;
+function get(path){return path.split('.').reduce((o,k)=>o?.[k],state)} function set(path,val){const p=path.split('.');let o=state;while(p.length>1){const k=p.shift();o=o[k]||(o[k]={})}o[p[0]]=val}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),1800)}
+function formatDate(d,f){const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']; const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yyyy=d.getFullYear(),yy=String(yyyy).slice(-2); if(f==='dd/MM/yyyy')return `${dd}/${mm}/${yyyy}`; if(f==='MMM dd, yyyy')return `${mons[d.getMonth()]} ${dd}, ${yyyy}`; if(f==='dddd, dd MMM')return `${days[d.getDay()]}, ${dd} ${mons[d.getMonth()]}`; return `${dd}-${mons[d.getMonth()]}-${yy}`}
+function updateClock(){clearInterval(clockTimer);const run=()=>{const n=new Date(),c=state.clock; const opt={hour:'2-digit',minute:'2-digit',hour12:c.format==='12'}; if(c.seconds)opt.second='2-digit'; $('#clockTime').textContent=n.toLocaleTimeString([],opt); $('#clockDate').textContent=c.showDate?formatDate(n,c.dateFormat):''};run();clockTimer=setInterval(run,1000)}
+function renderThemes(){const box=$('#themes');if(!box)return;box.innerHTML='';Object.entries(themes).forEach(([name,t])=>{const d=document.createElement('div');d.className='theme'+(state.theme.name===name?' active':'');d.innerHTML=`<div class="swatches"><i style="background:${t.primary}"></i><i style="background:${t.accent}"></i><i style="background:${t.sidebar}"></i><i style="background:${t.background}"></i></div><b>${name}</b>`;d.onclick=()=>{previous=clone(state);state.theme={...state.theme,...t,name};sync();render();toast(name+' applied')};box.appendChild(d)})}
+function sync(){$$('[data-key]').forEach(el=>{const v=get(el.dataset.key); if(el.type==='checkbox')el.checked=!!v; else if(el.type!=='file')el.value=v??''; const out=el.parentElement?.querySelector('.value'); if(out)out.textContent=(el.type==='range'?el.value:'')}); syncExtraThemeControls()}
+function syncExtraThemeControls(){const home=loadObj(HOME_THEME_KEY,linkedHome(state.theme)), login=loadObj(LOGIN_THEME_KEY,linkedLogin(state.theme)); const map={homeThemeWorkspace:home.workspace,homeThemeCard:home.card,homeThemePrimary:home.primary,homeThemeAccent:home.accent,homeThemeHeading:home.heading,homeThemeText:home.text,homeThemeBorder:home.border,homeThemePositive:home.positive,homeThemeRadius:home.radius,homeThemeShadow:home.shadow,homeThemeChartStyle:home.chartStyle,homeThemeDensity:home.density,loginThemeBgStart:login.bgStart,loginThemeBgEnd:login.bgEnd,loginThemeCard:login.card,loginThemePrimary:login.primary,loginThemeAccent:login.accent,loginThemeHeading:login.heading,loginThemeText:login.text,loginThemeBorder:login.border,loginThemeRadius:login.radius,loginThemeShadow:login.shadow,loginThemeLogoShape:login.logoShape,loginThemeLayout:login.layout};Object.entries(map).forEach(([id,v])=>{const e=$('#'+id);if(e)e.value=v??''}); updateThemePreviews()}
+function loadObj(k,d){try{return {...d,...JSON.parse(localStorage.getItem(k)||'{}')}}catch(e){return d}}
+function linkedHome(t){return{workspace:t.background,card:t.surface,primary:t.primary,accent:t.accent,heading:t.text,text:t.muted,border:t.border,positive:'#16a34a',radius:16,shadow:'soft',chartStyle:'clean',density:'comfortable'}}
+function linkedLogin(t){return{bgStart:t.sidebar,bgEnd:t.primary,card:t.surface,primary:t.primary,accent:t.accent,heading:t.text,text:t.muted,border:t.border,radius:22,shadow:'strong',logoShape:'rounded',layout:'split'}}
+function updateThemePreviews(){const l={bgStart:$('#loginThemeBgStart')?.value, bgEnd:$('#loginThemeBgEnd')?.value, card:$('#loginThemeCard')?.value, primary:$('#loginThemePrimary')?.value, heading:$('#loginThemeHeading')?.value,text:$('#loginThemeText')?.value,border:$('#loginThemeBorder')?.value,radius:$('#loginThemeRadius')?.value}; const lp=$('#loginThemePreview'); if(lp)lp.style.background=`linear-gradient(135deg,${l.bgStart},${l.bgEnd})`; const lc=$('#loginThemePreviewCard');if(lc){lc.style.background=l.card;lc.style.color=l.text;lc.style.border=`1px solid ${l.border}`;lc.style.borderRadius=(l.radius||22)+'px'} const lb=$('#loginThemePreviewButton');if(lb)lb.style.background=l.primary; const h=$('#homeThemePreview'); if(h){h.style.background=$('#homeThemeWorkspace')?.value;h.style.color=$('#homeThemeText')?.value} $$('.home-theme-preview-card').forEach(x=>{x.style.background=$('#homeThemeCard')?.value;x.style.borderColor=$('#homeThemeBorder')?.value}); const rv=$('#loginThemeRadiusValue');if(rv)rv.textContent=($('#loginThemeRadius')?.value||22)+' px'; const hv=$('#homeThemeRadiusValue');if(hv)hv.textContent=($('#homeThemeRadius')?.value||16)+' px'}
+function render(){const r=document.documentElement.style,t=state.theme,s=state.sidebar,c=state.clock,p=state.profile; [['--bg',t.background],['--surface',t.surface],['--text',t.text],['--muted',t.muted],['--primary',t.primary],['--accent',t.accent],['--border',t.border],['--side-bg',t.sidebar],['--side-text',t.sidebarText],['--side-active',t.sidebarActive],['--side-active-text',t.sidebarActiveText],['--clock-bg',c.background],['--side-w',s.width+'px'],['--side-cw',s.collapsedWidth+'px'],['--side-row',s.rowHeight+'px'],['--side-subrow',s.subRowHeight+'px'],['--side-icon',s.iconSize+'px'],['--side-radius',s.radius+'px'],['--side-gap',s.gap+'px'],['--side-subindent',s.subIndent+'px'],['--side-main',s.mainSize+'px'],['--side-sub',s.subSize+'px'],['--side-line',s.lineHeight],['--side-letter',s.letterSpacing+'px'],['--side-anim',s.animation+'ms']].forEach(x=>r.setProperty(x[0],x[1]));r.setProperty('--font',`'${t.fontFamily}',Arial,sans-serif`);document.body.style.fontSize=t.baseSize+'px';const app=$('#app');app.className='app layout-'+s.position+(s.position==='left'&&s.defaultState==='collapsed'?' collapsed':'');$('#sideClock').style.display=c.show?'flex':'none';$('#sideClock').style.color=c.color;$('#clockTime').style.fontSize=c.fontSize+'px';const avatar=p.picture||`data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23e8eef0'/%3E%3Ccircle cx='50' cy='37' r='18' fill='%235f7280'/%3E%3Cpath d='M17 95c4-25 19-36 33-36s29 11 33 36' fill='%235f7280'/%3E%3C/svg%3E`;const rad=p.pictureShape==='circle'?'50%':p.pictureShape==='square'?'0':p.pictureShape==='oval'?'50% / 38%':'12px'; [$('#sideAvatar'),$('#profilePreviewImg')].forEach(img=>{if(!img)return;img.src=avatar;img.style.display=p.showPicture?'block':'none';img.style.width=p.pictureSize+'px';img.style.height=p.pictureSize+'px';img.style.borderWidth=p.pictureBorderWidth+'px';img.style.borderColor=p.pictureBorder;img.style.borderRadius=rad});$('#sidePname').textContent=$('#profilePreviewName').textContent=p.name;$('#sideProle').textContent=$('#profilePreviewRole').textContent=p.role;$('#sidePstatus').textContent=$('#profilePreviewStatus').textContent='● '+p.status;[$('#sideProle'),$('#profilePreviewRole')].forEach(e=>e.style.display=p.showRole?'block':'none');[$('#sidePstatus'),$('#profilePreviewStatus')].forEach(e=>e.style.display=p.showStatus?'block':'none');$$('.side-profile,.profile-card').forEach(x=>{x.style.background=p.cardBackground;x.style.borderColor=p.cardBorder;x.style.borderRadius=p.cardRadius+'px'});$('#sidePname').style.cssText=$('#profilePreviewName').style.cssText=`font-family:${p.nameFont};font-size:${p.nameSize}px;color:${p.nameColor};font-weight:${p.nameWeight};font-style:${p.nameStyle};white-space:${p.nameWrap};text-align:${p.textAlign}`;$('#sideProle').style.color=$('#profilePreviewRole').style.color=p.roleColor;$('#sidePstatus').style.color=$('#profilePreviewStatus').style.color=p.statusColor;renderThemes();updateClock();updateThemePreviews()}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem(LEGACY_KEY,JSON.stringify(state));localStorage.setItem('erpThemeSettingsV1',JSON.stringify(state.theme));localStorage.setItem('erpSidebarSettingsV1',JSON.stringify(state.sidebar));localStorage.setItem('erpProfileSettingsV1',JSON.stringify(state.profile));localStorage.setItem('erpClockSettingsV1',JSON.stringify(state.clock));$('#saveStatus').textContent='Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});toast('Design saved & applied')}
+function bind(){$$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+b.dataset.panel))}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
+sync();bind();render();
+</script></body></html>
