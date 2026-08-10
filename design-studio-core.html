@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.16</title>
+<title>ERP Design Studio Core V14.17</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -938,7 +938,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 /* ===== V14.16 Local Purchase Section Totals ===== */
 #panel-local-purchase .local-section-totals{
   display:grid;
-  grid-template-columns:repeat(4,minmax(150px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
   gap:10px;
   margin-top:10px
 }
@@ -1131,19 +1131,14 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
     <div class="purchase-page-head">
       <button class="btn purchase-controller-btn" data-purchase-controller="local-purchase">⚙ Page Controller</button>
     </div>
-    <div class="purchase-instruction" data-purchase-instruction="local-purchase">Type date like <b>25-6</b>. Searchable autofill works quietly in linked Master fields. Selecting an Item fills Size and Unit automatically. Vehicle No. remains uppercase.</div>
+    <div class="purchase-instruction" data-purchase-instruction="local-purchase">Type date like <b>25-6</b>. Searchable autofill works quietly in linked Master fields. Selecting an Item fills Size and Unit automatically. Purchase Section comes from Purchase Sections Master. Vehicle No. remains uppercase.</div>
     <div class="local-entry-wrap">
       <table class="local-entry-table" id="localEntryTable">
         <thead><tr><th data-lp-col="sr">Sr No.</th><th data-lp-col="date">Date</th><th data-lp-col="igp">IGP No.</th><th data-lp-col="control">Control No.</th><th data-lp-col="item">Item</th><th data-lp-col="size">Size</th><th data-lp-col="qty">Quantity</th><th data-lp-col="unit">Unit</th><th data-lp-col="rate">Rate</th><th data-lp-col="amount">Amount</th><th data-lp-col="supplier">Supplier</th><th data-lp-col="purchaseby">Purchase By</th><th data-lp-col="section">Purchase Section</th><th data-lp-col="vehicle">Vehicle No.</th><th data-lp-col="remarks">Remarks</th></tr></thead>
         <tbody id="localEntryBody"></tbody>
       </table>
     </div>
-    <div class="local-section-totals" id="localSectionTotals">
-  <div class="local-section-total"><small>Inventory Total</small><strong id="localTotalInventory">0.00</strong></div>
-  <div class="local-section-total"><small>Mess Total</small><strong id="localTotalMess">0.00</strong></div>
-  <div class="local-section-total"><small>Cattle Farm Total</small><strong id="localTotalCattle">0.00</strong></div>
-  <div class="local-section-total grand"><small>Grand Total</small><strong id="localGrandTotal">0.00</strong></div>
-</div>
+    <div class="local-section-totals" id="localSectionTotals"></div>
 <div class="local-entry-actions"><div class="local-entry-status" id="localEntryStatus">15 blank entry rows ready</div><button class="btn" id="localEntryClear" type="button">Clear Table</button><button class="btn primary" id="localEntrySave" type="button">Save Purchase</button></div>
   </div>
 </section>
@@ -1236,7 +1231,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
     <div class="purchase-toolbar" data-purchase-filters="purchase-history">
       <div><label>Search</label><input id="pphSearch" placeholder="Supplier, item, bill, month, date..."></div>
       <div><label>Register</label><select id="pphRegister"><option value="">All Registers</option><option value="local">Local Purchase</option><option value="zafar">Zafar Purchase</option><option value="board">Board Purchase</option></select></div>
-      <div><label>Section</label><select id="pphSection"><option value="">All Sections</option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></div>
+      <div><label>Section</label><select id="pphSection"><option value="">All Sections</option></select></div>
       <div><button class="btn" id="pphClear">Clear</button></div>
     </div>
     <div class="purchase-kpis" data-purchase-summary="purchase-history">
@@ -2231,7 +2226,12 @@ const MASTER_TYPES={
   ],columns:[['code','Code'],['name','Vehicle No.'],['vehicleType','Type'],['driver','Driver / Carrier'],['status','Status']]},
   locations:{name:'Locations / Racks',singular:'Location / Rack',code:'LOC',fields:[
     ['name','Location / Rack','text',true],['department','Department','text',false],['description','Description','textarea',false],['status','Status','select',false,['active','inactive']]
-  ],columns:[['code','Code'],['name','Location / Rack'],['department','Department'],['description','Description'],['status','Status']]}
+  ],columns:[['code','Code'],['name','Location / Rack'],['department','Department'],['description','Description'],['status','Status']]},
+  purchaseSections:{name:'Purchase Sections',singular:'Purchase Section',code:'PSC',fields:[
+    ['name','Purchase Section Name','text',true],
+    ['stockTreatment','Stock Treatment','select',false,['inventory','non-inventory']],
+    ['status','Status','select',false,['active','inactive']]
+  ],columns:[['code','Code'],['name','Purchase Section'],['stockTreatment','Stock Treatment'],['status','Status']]}
 };
 let masterCurrent='items',masterEditingId='';
 
@@ -2641,7 +2641,20 @@ function masterDelete(id){
   const rows=masterBucket(),r=rows.find(x=>x.id===id);if(!r)return;if(!confirm(`Delete ${r.name||r.code}?`))return;
   masterWriteBucket(masterCurrent,rows.filter(x=>x.id!==id));window.ERPAudit?.log?.({module:'Masters',page:MASTER_TYPES[masterCurrent].name,action:'Delete',recordId:r.code,before:r});masterRenderAll();toast('Master record deleted')
 }
+
+function ensureDefaultPurchaseSections(){
+  const rows=masterBucket('purchaseSections');
+  if(rows.length)return;
+  const now=new Date().toISOString(),tenantId=masterTenantId();
+  const defaults=[
+    {id:'PSC-DEFAULT-1',code:'PSC-00001',tenantId,name:'Inventory',stockTreatment:'inventory',status:'active',createdAt:now,updatedAt:now},
+    {id:'PSC-DEFAULT-2',code:'PSC-00002',tenantId,name:'Mess',stockTreatment:'non-inventory',status:'active',createdAt:now,updatedAt:now},
+    {id:'PSC-DEFAULT-3',code:'PSC-00003',tenantId,name:'Cattle Farm',stockTreatment:'non-inventory',status:'active',createdAt:now,updatedAt:now}
+  ];
+  masterWriteBucket('purchaseSections',defaults)
+}
 function masterBind(){
+  ensureDefaultPurchaseSections();
   window.ERPAccessControl?.registerPage?.({id:'all-masters',name:'All Masters',module:'masters',actions:['view','add','edit','delete','print'],description:'Central ERP master data'});
   $('#masterSearch')?.addEventListener('input',masterRenderTable);$('#masterStatusFilter')?.addEventListener('change',masterRenderTable);$('#masterClearSearch')?.addEventListener('click',()=>{$('#masterSearch').value='';$('#masterStatusFilter').value='';masterRenderTable()});
   $('#masterSaveBtn')?.addEventListener('click',masterSave);$('#masterClearBtn')?.addEventListener('click',()=>{masterEditingId='';masterClearForm()});
@@ -2817,23 +2830,35 @@ function purchaseClearInputs(ids){ids.forEach(id=>{const e=$('#'+id);if(!e)retur
 
 const LOCAL_ENTRY_ROWS=15;
 function localEntryAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
-function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td><select class="lp-section"><option value=""></option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase');localEntryUpdateSectionTotals()}
+function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td>${localEntryAutoCell('purchaseSections','lp-section')}</td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase');localEntryUpdateSectionTotals()}
 
+function localActivePurchaseSections(){
+  const rows=purchaseMaster('purchaseSections').filter(r=>r.status!=='inactive');
+  return rows.length?rows:[
+    {name:'Inventory',stockTreatment:'inventory'},
+    {name:'Mess',stockTreatment:'non-inventory'},
+    {name:'Cattle Farm',stockTreatment:'non-inventory'}
+  ]
+}
+function localRenderSectionTotals(totals={}){
+  const box=$('#localSectionTotals');if(!box)return;
+  const sections=localActivePurchaseSections();
+  box.innerHTML=sections.map(sec=>{
+    const key=String(sec.name||'').trim().toLowerCase();
+    return `<div class="local-section-total"><small>${escHtml(sec.name)} Total</small><strong>${purchaseMoney(totals[key]||0)}</strong></div>`
+  }).join('')+`<div class="local-section-total grand"><small>Grand Total</small><strong>${purchaseMoney(Object.values(totals).reduce((a,b)=>a+purchaseNum(b),0))}</strong></div>`
+}
 function localEntryUpdateSectionTotals(){
-  let inventory=0,mess=0,cattle=0;
+  const totals={};
+  localActivePurchaseSections().forEach(sec=>totals[String(sec.name||'').trim().toLowerCase()]=0);
   lpExcelRows().forEach(tr=>{
-    const section=String(tr.querySelector('.lp-section')?.value||'').trim().toLowerCase();
+    const section=String(tr.querySelector('.lp-section')?.value||'').trim();
     const amount=purchaseNum(tr.querySelector('.lp-amount')?.value);
-    if(!amount)return;
-    if(section==='inventory')inventory+=amount;
-    else if(section==='mess')mess+=amount;
-    else if(section==='cattle farm')cattle+=amount;
+    if(!section||!amount)return;
+    const key=section.toLowerCase();
+    totals[key]=(totals[key]||0)+amount
   });
-  const grand=inventory+mess+cattle;
-  if($('#localTotalInventory'))$('#localTotalInventory').textContent=purchaseMoney(inventory);
-  if($('#localTotalMess'))$('#localTotalMess').textContent=purchaseMoney(mess);
-  if($('#localTotalCattle'))$('#localTotalCattle').textContent=purchaseMoney(cattle);
-  if($('#localGrandTotal'))$('#localGrandTotal').textContent=purchaseMoney(grand);
+  localRenderSectionTotals(totals)
 }
 function localEntryCalcRow(tr){
   const qEl=tr.querySelector('.lp-qty'),rEl=tr.querySelector('.lp-rate'),a=tr.querySelector('.lp-amount');
@@ -2942,7 +2967,7 @@ function lpExcelSetValue(r,c,value){
   const col=LP_EDITABLE_COLS[c];
   let v=String(value??'');
   if(col==='vehicle')v=v.toUpperCase();
-  else if(['item','size','unit','supplier','purchaseby','remarks'].includes(col))v=purchaseFormatText(v,col,col);
+  else if(['item','size','unit','supplier','purchaseby','section','remarks'].includes(col))v=purchaseFormatText(v,col,col);
   if(ed.tagName==='SELECT'){
     const opt=[...ed.options].find(o=>String(o.value).toLowerCase()===v.trim().toLowerCase()||String(o.text).toLowerCase()===v.trim().toLowerCase());
     ed.value=opt?opt.value:v;
@@ -3097,6 +3122,7 @@ function localEntryBind(){
   body.querySelectorAll('tr').forEach(tr=>{
     tr.querySelectorAll('.lp-qty,.lp-rate').forEach(e=>e.addEventListener('input',()=>localEntryCalcRow(tr)));
     tr.querySelector('.lp-section')?.addEventListener('change',localEntryUpdateSectionTotals);
+    tr.querySelector('.lp-section')?.addEventListener('input',localEntryUpdateSectionTotals);
 
     const dt=tr.querySelector('.lp-date');
     if(dt)dt.addEventListener('blur',()=>dt.value=purchaseFmtDate(dt.value));
@@ -3107,7 +3133,7 @@ function localEntryBind(){
       if(p!=null)try{veh.setSelectionRange(p,p)}catch(e){}
     });
 
-    ['.lp-item','.lp-size','.lp-unit','.lp-supplier','.lp-purchaseby','.lp-remarks'].forEach(sel=>{
+    ['.lp-item','.lp-size','.lp-unit','.lp-supplier','.lp-purchaseby','.lp-section','.lp-remarks'].forEach(sel=>{
       const e=tr.querySelector(sel);
       if(e)e.addEventListener('blur',()=>{e.value=purchaseFormatText(e.value,e.className,e.className)})
     });
@@ -3149,7 +3175,12 @@ function localEntryBind(){
 }
 
 function localEntryIsFilled(tr){return [...tr.querySelectorAll('input,select')].some(e=>!e.readOnly&&String(e.value||'').trim())}
-function localEntryReadRow(tr,index){const v=sel=>tr.querySelector(sel)?.value||'',section=v('.lp-section');return {...purchaseRecordBase('local'),srNo:index+1,date:purchaseFmtDate(v('.lp-date')),igp:String(v('.lp-igp')).toUpperCase(),controlNo:String(v('.lp-control')).trim(),item:purchaseFormatText(v('.lp-item'),'item','Item'),size:purchaseFormatText(v('.lp-size'),'size','Size'),qty:purchaseNum(v('.lp-qty')),unit:purchaseFormatText(v('.lp-unit'),'unit','Unit'),rate:purchaseNum(v('.lp-rate')),amount:purchaseNum(v('.lp-amount')),supplier:purchaseFormatText(v('.lp-supplier'),'supplier','Supplier'),purchasedBy:purchaseFormatText(v('.lp-purchaseby'),'purchasedBy','Purchase By'),section,vehicle:String(v('.lp-vehicle')).toUpperCase(),remarks:purchaseFormatText(v('.lp-remarks'),'remarks','Remarks'),bill:'',inventoryEffect:section==='Inventory'?'stock-in':'auto-issue'}}
+function localEntryReadRow(tr,index){
+  const v=sel=>tr.querySelector(sel)?.value||'',section=purchaseFormatText(v('.lp-section'),'section','Purchase Section');
+  const sectionRec=purchaseMaster('purchaseSections').find(x=>String(x.name||'').toLowerCase()===section.toLowerCase());
+  const inventoryEffect=(sectionRec?.stockTreatment||'non-inventory')==='inventory'?'stock-in':'auto-issue';
+  return {...purchaseRecordBase('local'),srNo:index+1,date:purchaseFmtDate(v('.lp-date')),igp:String(v('.lp-igp')).toUpperCase(),controlNo:String(v('.lp-control')).trim(),item:purchaseFormatText(v('.lp-item'),'item','Item'),size:purchaseFormatText(v('.lp-size'),'size','Size'),qty:purchaseNum(v('.lp-qty')),unit:purchaseFormatText(v('.lp-unit'),'unit','Unit'),rate:purchaseNum(v('.lp-rate')),amount:purchaseNum(v('.lp-amount')),supplier:purchaseFormatText(v('.lp-supplier'),'supplier','Supplier'),purchasedBy:purchaseFormatText(v('.lp-purchaseby'),'purchasedBy','Purchase By'),section,vehicle:String(v('.lp-vehicle')).toUpperCase(),remarks:purchaseFormatText(v('.lp-remarks'),'remarks','Remarks'),bill:'',inventoryEffect}}
+
 function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
 function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow'}
 function purchaseLocalCalc(){}
@@ -3191,8 +3222,15 @@ function purchaseRenderSupplierAnalysis(){
   const map={};a.forEach(r=>{const k=r.supplier||'Unknown Supplier';map[k]=map[k]||{supplier:k,count:0,local:0,zafar:0,board:0,qty:0,value:0,last:''};const x=map[k];x.count++;x[r.register]++;x.qty+=purchaseNum(r.register==='board'?r.netWeight:r.qty);x.value+=purchaseNum(r.register==='board'?r.grossTotal:r.amount);if(String(r.createdAt)>String(x.lastCreated||'')){x.lastCreated=r.createdAt;x.last=r.date}});
   const rows=Object.values(map).sort((a,b)=>b.value-a.value);$('#psaRows').innerHTML=rows.length?rows.map(x=>`<tr><td><b>${escHtml(x.supplier)}</b></td><td>${x.count}</td><td>${x.local}</td><td>${x.zafar}</td><td>${x.board}</td><td>${purchaseMoney(x.qty)}</td><td>${purchaseMoney(x.value)}</td><td>${escHtml(x.last||'—')}</td></tr>`).join(''):'<tr><td class="purchase-empty" colspan="8">No supplier purchase data.</td></tr>';$('#psaSupplierCount').textContent=rows.length;$('#psaPurchaseCount').textContent=a.length;$('#psaTotalValue').textContent=purchaseMoney(a.reduce((n,r)=>n+purchaseNum(r.register==='board'?r.grossTotal:r.amount),0))
 }
+
+function purchaseRefreshSectionFilters(){
+  const sel=$('#pphSection');if(!sel)return;
+  const current=sel.value;
+  sel.innerHTML='<option value="">All Sections</option>'+localActivePurchaseSections().map(x=>`<option value="${escHtml(x.name)}">${escHtml(x.name)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===current))sel.value=current
+}
 function purchaseRenderEntry(){const l=purchaseRows('local').length,z=purchaseRows('zafar').length,b=purchaseRows('board').length;$('#ppeTotal').textContent=l+z+b;$('#ppeLocal').textContent=l;$('#ppeZafar').textContent=z;$('#ppeBoard').textContent=b}
-function purchaseRenderAll(){purchaseRenderEntry();purchaseRenderLocal();purchaseRenderZafar();purchaseRenderBoard();purchaseRenderHistory();purchaseRenderSupplierAnalysis();PURCHASE_PAGE_IDS.forEach(purchaseApplyPc)}
+function purchaseRenderAll(){purchaseRefreshSectionFilters();purchaseRenderEntry();purchaseRenderLocal();purchaseRenderZafar();purchaseRenderBoard();purchaseRenderHistory();purchaseRenderSupplierAnalysis();PURCHASE_PAGE_IDS.forEach(purchaseApplyPc)}
 
 function purchasePcDefaults(){
   return{
@@ -3635,7 +3673,7 @@ $('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEve
 }
 window.ERPPurchase={rows:purchaseRows,all:purchaseAllRows,render:purchaseRenderAll};
 window.ERP_LOCKED_BASELINE=Object.freeze({
-  version:'V14.16',
+  version:'V14.17',
   rule:'Approved features are preserved unless the user explicitly asks to change them.',
   locked:[
     'Design Studio shared core and sidebar placement',
@@ -3643,7 +3681,7 @@ window.ERP_LOCKED_BASELINE=Object.freeze({
     'Title Case plus uppercase Vehicle/Bill rule',
     'Purchase Entry dashboard approved structure',
     'Local Purchase 15-row entry structure',
-    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection','Clean multi-cell paste with blank calculated cells preserved','Live Inventory/Mess/Cattle Farm totals and Grand Total'
+    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection','Clean multi-cell paste with blank calculated cells preserved','Dynamic Purchase Sections Master with automatic section totals and Grand Total'
   ],
   universalStandards:['Page Controller / Page Designer','Live Preview','Searchable Master Autofill','Audit','Access Control','Tenant Isolation']
 });
