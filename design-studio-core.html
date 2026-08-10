@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.3</title>
+<title>ERP Design Studio Core V14.4</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -620,6 +620,70 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .master-modal{position:fixed;inset:0;background:rgba(8,20,35,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:500}.master-modal.open{display:flex}.master-modal-box{width:min(720px,96vw);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.28)}.master-modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.master-modal-head h3{margin:0}
 .master-controller-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.master-controller-grid label{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:11px;font-weight:800}.master-controller-grid input[type=checkbox]{width:18px;height:18px}
 @media(max-width:1050px){.master-layout{grid-template-columns:1fr}.master-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.master-summary,.master-toolbar,.master-form,.master-controller-grid{grid-template-columns:1fr}.master-form .full{grid-column:auto}}
+
+/* V14.4 Complete Masters Page Controller */
+.master-controller-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.master-controller-section{grid-column:1/-1;padding-top:12px;margin-top:4px;border-top:1px solid var(--border)}
+.master-controller-section h4{margin:0 0 8px;font-size:13px}
+.master-controller-field{border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--surface)}
+.master-controller-field>label{display:block!important;border:0!important;padding:0!important;margin:0 0 6px!important;font-size:10px!important;text-transform:uppercase;color:var(--muted)}
+.master-controller-field input[type=range]{width:100%}
+.master-controller-field select{width:100%;height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 8px}
+.master-controller-value{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* Page-specific style variables */
+#panel-masters{
+  --mp-page-width:100%;
+  --mp-page-gap:12px;
+  --mp-box-padding:14px;
+  --mp-box-radius:14px;
+  --mp-box-border:1px;
+  --mp-form-width:36%;
+  --mp-list-width:64%;
+  --mp-row-height:36px;
+  --mp-table-font:10px;
+  --mp-header-font:9px;
+  --mp-header-align:left;
+  --mp-data-align:left;
+  --mp-header-weight:700;
+  --mp-header-style:normal;
+  --mp-data-weight:400;
+  --mp-data-style:normal;
+  --mp-white-space:normal;
+  --mp-title-align:left;
+  --mp-title-weight:700;
+  --mp-title-style:normal;
+}
+#panel-masters>.card{max-width:var(--mp-page-width);margin-left:auto;margin-right:auto}
+#panel-masters .master-page-head{text-align:var(--mp-title-align)}
+#panel-masters .master-page-head h2{font-weight:var(--mp-title-weight);font-style:var(--mp-title-style)}
+#panel-masters .master-layout{
+  gap:var(--mp-page-gap);
+  grid-template-columns:minmax(280px,var(--mp-form-width)) minmax(0,var(--mp-list-width))
+}
+#panel-masters .master-box{
+  padding:var(--mp-box-padding);
+  border-radius:var(--mp-box-radius);
+  border-width:var(--mp-box-border)
+}
+#panel-masters .master-table th,
+#panel-masters .master-table td{
+  height:var(--mp-row-height);
+  font-size:var(--mp-table-font);
+  white-space:var(--mp-white-space)
+}
+#panel-masters .master-table th{
+  text-align:var(--mp-header-align);
+  font-size:var(--mp-header-font);
+  font-weight:var(--mp-header-weight);
+  font-style:var(--mp-header-style)
+}
+#panel-masters .master-table td{
+  text-align:var(--mp-data-align);
+  font-weight:var(--mp-data-weight);
+  font-style:var(--mp-data-style)
+}
+@media(max-width:1050px){#panel-masters .master-layout{grid-template-columns:1fr}}
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -709,6 +773,35 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
         <label>Show search / filters <input type="checkbox" id="mpcFilters"></label>
         <label>Compact table rows <input type="checkbox" id="mpcCompact"></label>
         <label>Show row numbers <input type="checkbox" id="mpcRowNumbers"></label>
+
+        <div class="master-controller-section"><h4>Page & Boxes</h4></div>
+        <div class="master-controller-field"><label>Page Content Width</label><input type="range" id="mpcPageWidth" min="70" max="100" step="1"><div class="master-controller-value" id="mpcPageWidthVal"></div></div>
+        <div class="master-controller-field"><label>Gap Between Boxes</label><input type="range" id="mpcPageGap" min="4" max="30" step="1"><div class="master-controller-value" id="mpcPageGapVal"></div></div>
+        <div class="master-controller-field"><label>Box Padding</label><input type="range" id="mpcBoxPadding" min="6" max="30" step="1"><div class="master-controller-value" id="mpcBoxPaddingVal"></div></div>
+        <div class="master-controller-field"><label>Box Radius</label><input type="range" id="mpcBoxRadius" min="0" max="30" step="1"><div class="master-controller-value" id="mpcBoxRadiusVal"></div></div>
+        <div class="master-controller-field"><label>Box Border Width</label><input type="range" id="mpcBoxBorder" min="0" max="4" step="1"><div class="master-controller-value" id="mpcBoxBorderVal"></div></div>
+        <div class="master-controller-field"><label>Form Box Width</label><input type="range" id="mpcFormWidth" min="25" max="55" step="1"><div class="master-controller-value" id="mpcFormWidthVal"></div></div>
+
+        <div class="master-controller-section"><h4>Page Title</h4></div>
+        <div class="master-controller-field"><label>Title Alignment</label><select id="mpcTitleAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <label>Title Bold <input type="checkbox" id="mpcTitleBold"></label>
+        <label>Title Italic <input type="checkbox" id="mpcTitleItalic"></label>
+
+        <div class="master-controller-section"><h4>Table Size & Text</h4></div>
+        <div class="master-controller-field"><label>Table Row Height</label><input type="range" id="mpcRowHeight" min="24" max="64" step="1"><div class="master-controller-value" id="mpcRowHeightVal"></div></div>
+        <div class="master-controller-field"><label>Table Data Font Size</label><input type="range" id="mpcTableFont" min="8" max="18" step="1"><div class="master-controller-value" id="mpcTableFontVal"></div></div>
+        <div class="master-controller-field"><label>Table Header Font Size</label><input type="range" id="mpcHeaderFont" min="8" max="18" step="1"><div class="master-controller-value" id="mpcHeaderFontVal"></div></div>
+        <div class="master-controller-field"><label>Table Text Wrap</label><select id="mpcWrap"><option value="normal">Wrap</option><option value="nowrap">No Wrap / One Line</option></select></div>
+
+        <div class="master-controller-section"><h4>Table Header</h4></div>
+        <div class="master-controller-field"><label>Header Alignment</label><select id="mpcHeaderAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <label>Header Bold <input type="checkbox" id="mpcHeaderBold"></label>
+        <label>Header Italic <input type="checkbox" id="mpcHeaderItalic"></label>
+
+        <div class="master-controller-section"><h4>Table Data</h4></div>
+        <div class="master-controller-field"><label>Data Alignment</label><select id="mpcDataAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <label>Data Bold <input type="checkbox" id="mpcDataBold"></label>
+        <label>Data Italic <input type="checkbox" id="mpcDataItalic"></label>
       </div>
       <div class="master-actions"><button class="btn primary" id="masterPageControllerSave" type="button">Save Page Settings</button><button class="btn" id="masterPageControllerReset" type="button">Restore Page Defaults</button></div>
     </div>
@@ -1572,22 +1665,86 @@ function masterNextCode(type){
 }
 function masterCap(v){return String(v||'').trim().replace(/\s+/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
 function masterPageSettings(){
-  const def={subtitle:true,instruction:true,summary:true,filters:true,compact:false,rowNumbers:true};
+  const def={
+    subtitle:true,instruction:true,summary:true,filters:true,compact:false,rowNumbers:true,
+    pageWidth:100,pageGap:12,boxPadding:14,boxRadius:14,boxBorder:1,formWidth:36,
+    titleAlign:'left',titleBold:true,titleItalic:false,
+    rowHeight:36,tableFont:10,headerFont:9,wrap:'normal',
+    headerAlign:'left',headerBold:true,headerItalic:false,
+    dataAlign:'left',dataBold:false,dataItalic:false
+  };
   try{
     const legacy=JSON.parse(localStorage.getItem(MASTER_PAGE_SETTINGS_KEY)||'{}');
     const shared=window.ERPPageController?.load?.('all-masters',{})||{};
     return {...def,...shared,...legacy};
   }catch(e){return def}
 }
+function masterControllerValues(){
+  const pairs=[
+    ['mpcPageWidth','mpcPageWidthVal','%'],['mpcPageGap','mpcPageGapVal',' px'],
+    ['mpcBoxPadding','mpcBoxPaddingVal',' px'],['mpcBoxRadius','mpcBoxRadiusVal',' px'],
+    ['mpcBoxBorder','mpcBoxBorderVal',' px'],['mpcFormWidth','mpcFormWidthVal','%'],
+    ['mpcRowHeight','mpcRowHeightVal',' px'],['mpcTableFont','mpcTableFontVal',' px'],
+    ['mpcHeaderFont','mpcHeaderFontVal',' px']
+  ];
+  pairs.forEach(([a,b,suf])=>{const a1=$('#'+a),b1=$('#'+b);if(a1&&b1)b1.textContent=a1.value+suf});
+}
 function masterApplyPageSettings(){
-  const x=masterPageSettings();
+  const x=masterPageSettings(),p=$('#panel-masters');
   $('#masterPageSubtitle').style.display=x.subtitle?'':'none';
   $('#masterInstruction').style.display=x.instruction?'':'none';
   $('#masterSummary').style.display=x.summary?'':'none';
   $('#masterFilters').style.display=x.filters?'grid':'none';
   $('#masterTable').classList.toggle('compact',!!x.compact);
-  ['mpcSubtitle','mpcInstruction','mpcSummary','mpcFilters','mpcCompact','mpcRowNumbers'].forEach(id=>{const e=$('#'+id);if(e)e.checked=!!x[id.replace('mpc','').toLowerCase()]});
+
+  p.style.setProperty('--mp-page-width',x.pageWidth+'%');
+  p.style.setProperty('--mp-page-gap',x.pageGap+'px');
+  p.style.setProperty('--mp-box-padding',x.boxPadding+'px');
+  p.style.setProperty('--mp-box-radius',x.boxRadius+'px');
+  p.style.setProperty('--mp-box-border',x.boxBorder+'px');
+  p.style.setProperty('--mp-form-width',x.formWidth+'%');
+  p.style.setProperty('--mp-list-width',(100-x.formWidth)+'%');
+  p.style.setProperty('--mp-title-align',x.titleAlign);
+  p.style.setProperty('--mp-title-weight',x.titleBold?'800':'400');
+  p.style.setProperty('--mp-title-style',x.titleItalic?'italic':'normal');
+  p.style.setProperty('--mp-row-height',x.rowHeight+'px');
+  p.style.setProperty('--mp-table-font',x.tableFont+'px');
+  p.style.setProperty('--mp-header-font',x.headerFont+'px');
+  p.style.setProperty('--mp-white-space',x.wrap);
+  p.style.setProperty('--mp-header-align',x.headerAlign);
+  p.style.setProperty('--mp-header-weight',x.headerBold?'800':'400');
+  p.style.setProperty('--mp-header-style',x.headerItalic?'italic':'normal');
+  p.style.setProperty('--mp-data-align',x.dataAlign);
+  p.style.setProperty('--mp-data-weight',x.dataBold?'700':'400');
+  p.style.setProperty('--mp-data-style',x.dataItalic?'italic':'normal');
+
+  $('#mpcSubtitle').checked=!!x.subtitle;
+  $('#mpcInstruction').checked=!!x.instruction;
+  $('#mpcSummary').checked=!!x.summary;
+  $('#mpcFilters').checked=!!x.filters;
+  $('#mpcCompact').checked=!!x.compact;
   $('#mpcRowNumbers').checked=!!x.rowNumbers;
+
+  $('#mpcPageWidth').value=x.pageWidth;
+  $('#mpcPageGap').value=x.pageGap;
+  $('#mpcBoxPadding').value=x.boxPadding;
+  $('#mpcBoxRadius').value=x.boxRadius;
+  $('#mpcBoxBorder').value=x.boxBorder;
+  $('#mpcFormWidth').value=x.formWidth;
+  $('#mpcTitleAlign').value=x.titleAlign;
+  $('#mpcTitleBold').checked=!!x.titleBold;
+  $('#mpcTitleItalic').checked=!!x.titleItalic;
+  $('#mpcRowHeight').value=x.rowHeight;
+  $('#mpcTableFont').value=x.tableFont;
+  $('#mpcHeaderFont').value=x.headerFont;
+  $('#mpcWrap').value=x.wrap;
+  $('#mpcHeaderAlign').value=x.headerAlign;
+  $('#mpcHeaderBold').checked=!!x.headerBold;
+  $('#mpcHeaderItalic').checked=!!x.headerItalic;
+  $('#mpcDataAlign').value=x.dataAlign;
+  $('#mpcDataBold').checked=!!x.dataBold;
+  $('#mpcDataItalic').checked=!!x.dataItalic;
+  masterControllerValues();
 }
 function masterRenderTabs(){
   $('#masterTabs').innerHTML=Object.entries(MASTER_TYPES).map(([id,x])=>`<button type="button" class="master-tab ${id===masterCurrent?'active':''}" data-master-type="${id}">${escHtml(x.name)}</button>`).join('');
@@ -1658,8 +1815,31 @@ function masterBind(){
   $('#masterPageControllerBtn')?.addEventListener('click',()=>{$('#masterPageControllerModal').classList.add('open');masterApplyPageSettings()});
   $('#masterPageControllerClose')?.addEventListener('click',()=>$('#masterPageControllerModal').classList.remove('open'));
   $('#masterPageControllerModal')?.addEventListener('click',e=>{if(e.target===$('#masterPageControllerModal'))$('#masterPageControllerModal').classList.remove('open')});
-  $('#masterPageControllerSave')?.addEventListener('click',()=>{const x={subtitle:$('#mpcSubtitle').checked,instruction:$('#mpcInstruction').checked,summary:$('#mpcSummary').checked,filters:$('#mpcFilters').checked,compact:$('#mpcCompact').checked,rowNumbers:$('#mpcRowNumbers').checked};localStorage.setItem(MASTER_PAGE_SETTINGS_KEY,JSON.stringify(x));window.ERPPageController?.save?.('all-masters',x);$('#masterPageControllerModal').classList.remove('open');masterRenderAll();toast('Page settings saved')});
-  $('#masterPageControllerReset')?.addEventListener('click',()=>{localStorage.removeItem(MASTER_PAGE_SETTINGS_KEY);window.ERPPageController?.reset?.('all-masters');masterRenderAll();toast('Page defaults restored')});
+  ['mpcPageWidth','mpcPageGap','mpcBoxPadding','mpcBoxRadius','mpcBoxBorder','mpcFormWidth','mpcRowHeight','mpcTableFont','mpcHeaderFont'].forEach(id=>$('#'+id)?.addEventListener('input',masterControllerValues));
+  $('#masterPageControllerSave')?.addEventListener('click',()=>{
+    const x={
+      subtitle:$('#mpcSubtitle').checked,instruction:$('#mpcInstruction').checked,summary:$('#mpcSummary').checked,
+      filters:$('#mpcFilters').checked,compact:$('#mpcCompact').checked,rowNumbers:$('#mpcRowNumbers').checked,
+      pageWidth:+$('#mpcPageWidth').value,pageGap:+$('#mpcPageGap').value,boxPadding:+$('#mpcBoxPadding').value,
+      boxRadius:+$('#mpcBoxRadius').value,boxBorder:+$('#mpcBoxBorder').value,formWidth:+$('#mpcFormWidth').value,
+      titleAlign:$('#mpcTitleAlign').value,titleBold:$('#mpcTitleBold').checked,titleItalic:$('#mpcTitleItalic').checked,
+      rowHeight:+$('#mpcRowHeight').value,tableFont:+$('#mpcTableFont').value,headerFont:+$('#mpcHeaderFont').value,
+      wrap:$('#mpcWrap').value,headerAlign:$('#mpcHeaderAlign').value,headerBold:$('#mpcHeaderBold').checked,
+      headerItalic:$('#mpcHeaderItalic').checked,dataAlign:$('#mpcDataAlign').value,dataBold:$('#mpcDataBold').checked,
+      dataItalic:$('#mpcDataItalic').checked
+    };
+    localStorage.setItem(MASTER_PAGE_SETTINGS_KEY,JSON.stringify(x));
+    window.ERPPageController?.save?.('all-masters',x);
+    $('#masterPageControllerModal').classList.remove('open');
+    masterRenderAll();
+    toast('Page settings saved');
+  });
+  $('#masterPageControllerReset')?.addEventListener('click',()=>{
+    localStorage.removeItem(MASTER_PAGE_SETTINGS_KEY);
+    window.ERPPageController?.reset?.('all-masters');
+    masterRenderAll();
+    toast('Page defaults restored');
+  });
   const nav=$('[data-panel="masters"]');if(nav)nav.style.display=window.ERPAccessControl?.canPage?.('all-masters','view')?'':'none';
   masterRenderAll()
 }
