@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.17</title>
+<title>ERP Design Studio Core V14.18</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -900,7 +900,9 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   background:color-mix(in srgb,var(--primary) 4%,transparent)!important
 }
 #localDesignerControls{display:none}
+#zafarDesignerControls{display:none}
 #localDesignerControls.show{display:contents}
+#zafarDesignerControls.show{display:contents!important}
 .lpd-column-summary{
   grid-column:1/-1;padding:9px 11px;border:1px solid var(--border);
   border-radius:9px;background:color-mix(in srgb,var(--primary) 5%,var(--surface));
@@ -967,6 +969,23 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 @media(max-width:800px){
   #panel-local-purchase .local-section-totals{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* V14.18 Zafar Purchase locked Excel format */
+#panel-zafar-purchase{--zpd-header-height:32px;--zpd-cell-padding:7px;--zpd-border-width:1px;--zpd-header-font:9px;--zpd-data-font:10px;--zpd-header-align:center;--zpd-data-align:left;--zpd-header-weight:800;--zpd-header-style:normal;--zpd-data-weight:400;--zpd-data-style:normal;--zpd-white-space:nowrap}
+#panel-zafar-purchase>.card{padding:12px}#panel-zafar-purchase .purchase-page-head{margin-bottom:6px}
+#panel-zafar-purchase .zafar-entry-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
+#panel-zafar-purchase .zafar-entry-table{border-collapse:collapse;table-layout:fixed;min-width:1500px;width:100%}
+#panel-zafar-purchase .zafar-entry-table th{height:var(--zpd-header-height);padding:5px 7px;background:color-mix(in srgb,var(--bg) 70%,var(--surface));border-right:var(--zpd-border-width) solid var(--border);border-bottom:var(--zpd-border-width) solid var(--border);font-size:var(--zpd-header-font);text-align:var(--zpd-header-align);font-weight:var(--zpd-header-weight);font-style:var(--zpd-header-style);white-space:var(--zpd-white-space);position:sticky;top:0;z-index:3;cursor:pointer}
+#panel-zafar-purchase .zafar-entry-table td{height:34px;padding:0;border-right:var(--zpd-border-width) solid var(--border);border-bottom:var(--zpd-border-width) solid var(--border)}
+#panel-zafar-purchase .zafar-entry-table td.zp-sr{text-align:center;font-size:10px;color:var(--muted);font-weight:700}
+#panel-zafar-purchase .zafar-entry-table input{width:100%;height:100%;border:0!important;border-radius:0!important;outline:none;background:transparent!important;color:var(--text);padding:0 var(--zpd-cell-padding)!important;font-size:var(--zpd-data-font)!important;text-align:var(--zpd-data-align)!important;font-weight:var(--zpd-data-weight)!important;font-style:var(--zpd-data-style)!important;white-space:var(--zpd-white-space)!important}
+#panel-zafar-purchase .purchase-auto-arrow{display:none!important}#panel-zafar-purchase .purchase-auto-wrap{height:100%}#panel-zafar-purchase .zp-amount{font-weight:800}
+#panel-zafar-purchase .zafar-total-box{margin:10px 0 0 auto;width:min(260px,100%);border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px 12px;text-align:right}#panel-zafar-purchase .zafar-total-box small{display:block;font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted)}#panel-zafar-purchase .zafar-total-box strong{display:block;font-size:17px;margin-top:4px}
+#panel-zafar-purchase .zafar-entry-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px}#panel-zafar-purchase #zafarEntryStatus{margin-right:auto;color:var(--muted);font-size:9px}
+#panel-zafar-purchase td.zp-excel-selected{background:color-mix(in srgb,var(--primary) 8%,transparent)!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 45%,transparent)}#panel-zafar-purchase td.zp-excel-active{background:color-mix(in srgb,var(--primary) 5%,transparent)!important;box-shadow:inset 0 0 0 2px var(--primary)!important}#panel-zafar-purchase td.zp-excel-copy{outline:2px dashed color-mix(in srgb,var(--primary) 75%,#fff);outline-offset:-3px}
+
+#panel-zafar-purchase th.zpd-selected-column{box-shadow:inset 0 -3px 0 var(--primary),inset 0 0 0 1px var(--primary)}
+#panel-zafar-purchase td.zpd-selected-column{background:color-mix(in srgb,var(--primary) 4%,transparent)!important}
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -1145,37 +1164,12 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 
 <section class="panel purchase-page" id="panel-zafar-purchase">
   <div class="card">
-    <div class="purchase-page-head">
-      <div><h2>Zafar Purchase</h2><p id="pzpSubtitle">Separate purchase register with shared supplier and item Masters.</p></div>
-      <button class="btn purchase-controller-btn" data-purchase-controller="zafar-purchase">⚙ Page Controller</button>
-    </div>
-    <div class="purchase-instruction" data-purchase-instruction="zafar-purchase">Bill numbers are stored in uppercase. Item selection can autofill Size and Unit from Item Master.</div>
-    <div class="purchase-layout">
-      <div class="purchase-box">
-        <h3>Add Zafar Purchase</h3>
-        <div class="purchase-form">
-          <div><label>Date</label><input id="pzpDate" placeholder="25-6"></div>
-          <div><label>Supplier</label><div class="purchase-auto-wrap"><input id="pzpSupplier" autocomplete="off" data-purchase-auto="suppliers"><span class="purchase-auto-arrow">▼</span><div class="purchase-auto-list"></div></div></div>
-          <div><label>Item</label><div class="purchase-auto-wrap"><input id="pzpItem" autocomplete="off" data-purchase-auto="items"><span class="purchase-auto-arrow">▼</span><div class="purchase-auto-list"></div></div></div>
-          <div><label>Size</label><input id="pzpSize"></div>
-          <div><label>Unit</label><div class="purchase-auto-wrap"><input id="pzpUnit" autocomplete="off" data-purchase-auto="units"><span class="purchase-auto-arrow">▼</span><div class="purchase-auto-list"></div></div></div>
-          <div><label>Qty</label><input id="pzpQty" inputmode="decimal"></div>
-          <div><label>Rate</label><input id="pzpRate" inputmode="decimal"></div>
-          <div><label>Amount</label><input id="pzpAmount" readonly></div>
-          <div><label>Bill No.</label><input id="pzpBill"></div>
-          <div><label>IGP / GRN</label><input id="pzpIgp"></div>
-          <div><label>Vehicle No.</label><input id="pzpVehicle"></div>
-          <div><label>Purchased By</label><div class="purchase-auto-wrap"><input id="pzpPurchasedBy" autocomplete="off" data-purchase-auto="employees"><span class="purchase-auto-arrow">▼</span><div class="purchase-auto-list"></div></div></div>
-          <div class="full"><label>Remarks</label><input id="pzpRemarks"></div>
-        </div>
-        <div class="purchase-actions"><button class="btn primary" id="pzpSave">Save Purchase</button><button class="btn" id="pzpClear">Clear</button></div>
-      </div>
-      <div class="purchase-box">
-        <h3>Recent Zafar Purchases</h3>
-        <div class="purchase-table-wrap"><table class="purchase-table"><thead><tr><th>Date</th><th>Supplier</th><th>Item</th><th>Size</th><th>Qty</th><th>Unit</th><th>Rate</th><th>Amount</th><th>Bill</th><th>Action</th></tr></thead><tbody id="pzpRows"></tbody></table></div>
-        <div class="purchase-total-strip"><div><small>Total Qty</small><b id="pzpTotalQty">0</b></div><div><small>Total Amount</small><b id="pzpTotalAmount">0</b></div></div>
-      </div>
-    </div>
+    <div class="purchase-page-head" style="justify-content:flex-end"><button class="btn purchase-controller-btn" data-purchase-controller="zafar-purchase">⚙ Page Controller</button></div>
+    <div class="zafar-entry-wrap" id="zafarEntryWrap"><table class="purchase-table zafar-entry-table" id="zafarEntryTable"><thead><tr>
+      <th data-zp-col="sr">Sr No.</th><th data-zp-col="date">Date</th><th data-zp-col="control">Control No.</th><th data-zp-col="item">Item</th><th data-zp-col="size">Size</th><th data-zp-col="unit">Unit</th><th data-zp-col="qty">Quantity</th><th data-zp-col="rate">Rate</th><th data-zp-col="amount">Amount</th><th data-zp-col="supplier">Supplier</th><th data-zp-col="bill">Bill No.</th><th data-zp-col="remarks">Remarks</th>
+    </tr></thead><tbody id="zafarEntryBody"></tbody></table></div>
+    <div class="zafar-total-box"><small>Total Amount</small><strong id="zafarGrandTotal">0.00</strong></div>
+    <div class="local-entry-actions zafar-entry-actions"><span id="zafarEntryStatus">15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow</span><button class="btn" id="zafarEntryClear">Clear Table</button><button class="btn primary" id="zafarEntrySave">Save Purchase</button></div>
   </div>
 </section>
 
@@ -1308,6 +1302,40 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       </div>
 
 
+      <div id="zafarDesignerControls" style="display:none">
+        <div class="purchase-pc-section-title"><h4>Zafar Purchase — Complete Table Designer</h4></div>
+        <div class="lpd-column-summary">Select a column and control its width, header alignment, cell-data alignment, font, bold/italic, wrap and visibility with live preview.</div>
+        <div class="lpd-columns-bar" id="zpdColumnChips"></div>
+        <div class="purchase-pc-field"><label>Selected Column</label><select id="zpdColumnSelect"></select></div>
+        <label>Show Selected Column <input type="checkbox" id="zpdColVisible"></label>
+        <div class="purchase-pc-field"><label>Column Width px</label><input type="range" id="zpdColWidth" min="45" max="360" step="1"><div class="purchase-pc-value" id="zpdColWidthVal"></div></div>
+        <div class="purchase-pc-field"><label>Column Text Wrap</label><select id="zpdColWrap"><option value="inherit">Use Table Setting</option><option value="nowrap">No Wrap / One Line</option><option value="normal">Wrap</option></select></div>
+        <div class="purchase-pc-field"><label>Column Header Alignment</label><select id="zpdColHeadAlign"><option value="inherit">Use Table Setting</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <div class="purchase-pc-field"><label>Column Data Alignment</label><select id="zpdColDataAlign"><option value="inherit">Use Table Setting</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <div class="purchase-pc-field"><label>Column Header Font Size</label><input type="range" id="zpdColHeadFont" min="8" max="20"><div class="purchase-pc-value" id="zpdColHeadFontVal"></div></div>
+        <div class="purchase-pc-field"><label>Column Data Font Size</label><input type="range" id="zpdColDataFont" min="8" max="20"><div class="purchase-pc-value" id="zpdColDataFontVal"></div></div>
+        <label>Column Header Bold <input type="checkbox" id="zpdColHeadBold"></label><label>Column Header Italic <input type="checkbox" id="zpdColHeadItalic"></label>
+        <label>Column Data Bold <input type="checkbox" id="zpdColDataBold"></label><label>Column Data Italic <input type="checkbox" id="zpdColDataItalic"></label>
+        <div class="purchase-actions" style="grid-column:1/-1;margin-top:0"><button class="btn" id="zpdResetColumn" type="button">Reset Selected Column</button></div>
+        <div class="purchase-pc-section-title"><h4>Whole Zafar Purchase Table</h4></div>
+        <div class="purchase-pc-field"><label>Header Height</label><input type="range" id="zpdHeaderHeight" min="24" max="64"><div class="purchase-pc-value" id="zpdHeaderHeightVal"></div></div>
+        <div class="purchase-pc-field"><label>Cell Horizontal Padding</label><input type="range" id="zpdCellPadding" min="0" max="20"><div class="purchase-pc-value" id="zpdCellPaddingVal"></div></div>
+        <div class="purchase-pc-field"><label>Border Width</label><input type="range" id="zpdBorderWidth" min="0" max="4"><div class="purchase-pc-value" id="zpdBorderWidthVal"></div></div>
+        <div class="purchase-pc-field"><label>Table Minimum Width px</label><input type="range" id="zpdTableMinWidth" min="950" max="2600" step="10"><div class="purchase-pc-value" id="zpdTableMinWidthVal"></div></div>
+        <div class="purchase-pc-field"><label>Header Font Size</label><input type="range" id="zpdHeaderFont" min="8" max="18"><div class="purchase-pc-value" id="zpdHeaderFontVal"></div></div>
+        <div class="purchase-pc-field"><label>Data Font Size</label><input type="range" id="zpdDataFont" min="8" max="18"><div class="purchase-pc-value" id="zpdDataFontVal"></div></div>
+        <div class="purchase-pc-field"><label>All Headers Alignment</label><select id="zpdHeaderAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <div class="purchase-pc-field"><label>All Cell Data Alignment</label><select id="zpdDataAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <div class="purchase-pc-field"><label>Whole Table Wrap</label><select id="zpdTableWrap"><option value="nowrap">No Wrap / One Line</option><option value="normal">Wrap</option></select></div>
+        <label>Freeze Header <input type="checkbox" id="zpdFreezeHeader"></label>
+        <label>All Headers Bold <input type="checkbox" id="zpdHeaderBold"></label><label>All Headers Italic <input type="checkbox" id="zpdHeaderItalic"></label>
+        <label>All Data Bold <input type="checkbox" id="zpdDataBold"></label><label>All Data Italic <input type="checkbox" id="zpdDataItalic"></label>
+        <div class="purchase-pc-section-title"><h4>Page Actions</h4></div>
+        <label>Show Total Amount <input type="checkbox" id="zpdShowTotal"></label><label>Show Entry Status <input type="checkbox" id="zpdShowStatus"></label>
+        <label>Show Clear Table Button <input type="checkbox" id="zpdShowClear"></label><label>Show Save Purchase Button <input type="checkbox" id="zpdShowSave"></label>
+        <div class="purchase-pc-field"><label>Action Buttons Alignment</label><select id="zpdActionAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="space-between">Spread</option></select></div>
+        <div class="purchase-actions" style="grid-column:1/-1;margin-top:0"><button class="btn" id="zpdResetTable" type="button">Reset Table Design</button></div>
+      </div>
       <div id="localDesignerControls">
         <div class="purchase-pc-section-title"><h4>Local Purchase — Complete Table Designer</h4></div>
         <div class="lpd-column-summary">Click any table header behind this controller, use the chips below, or select a column here. The selected column can have its <b>own width, header alignment and cell-data alignment</b>.</div>
@@ -2756,7 +2784,9 @@ function purchaseBindAutos(root=document){
       list.classList.remove('open');
 
       if(type==='items'){
-        const localRow=input.closest('#localEntryBody tr');
+        const zafarRow=input.closest('#zafarEntryBody tr');
+        if(zafarRow){const sz=zafarRow.querySelector('.zp-size'),un=zafarRow.querySelector('.zp-unit');if(sz)sz.value=r.size||'';if(un)un.value=r.unit||'';}
+        else {const localRow=input.closest('#localEntryBody tr');
         if(localRow){
           const sz=localRow.querySelector('.lp-size');
           const un=localRow.querySelector('.lp-unit');
@@ -2767,7 +2797,7 @@ function purchaseBindAutos(root=document){
           const sz=$('#'+prefix+'Size'),un=$('#'+prefix+'Unit');
           if(sz)sz.value=r.size||'';
           if(un)un.value=r.unit||'';
-        }
+        }}
       }
     };
     const paint=()=>{list.querySelectorAll('.purchase-auto-option').forEach((x,i)=>x.classList.toggle('active',i===active));if(active>=0)list.querySelector(`[data-pao="${active}"]`)?.scrollIntoView({block:'nearest'})};
@@ -3185,6 +3215,31 @@ function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','a
 function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow'}
 function purchaseLocalCalc(){}
 function purchaseLocalSave(){localEntrySaveAll()}
+const ZAFAR_ENTRY_ROWS=15;
+const ZP_EDITABLE_COLS=['date','control','item','size','unit','qty','rate','amount','supplier','bill','remarks'];
+let zpExcelAnchor=null,zpExcelFocus=null,zpExcelCopyRange=null,zpExcelInternalClipboard='',zpExcelUndoStack=[],zpExcelUndoing=false,zpExcelLastSnapshot='';
+function zafarAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
+function zafarEntryBuild(){const body=$('#zafarEntryBody');if(!body)return;body.innerHTML=Array.from({length:ZAFAR_ENTRY_ROWS},(_,i)=>`<tr data-zafar-row="${i}"><td class="zp-sr">${i+1}</td><td><input class="zp-date"></td><td><input class="zp-control"></td><td>${zafarAutoCell('items','zp-item')}</td><td><input class="zp-size"></td><td>${zafarAutoCell('units','zp-unit')}</td><td><input class="zp-qty" inputmode="decimal"></td><td><input class="zp-rate" inputmode="decimal"></td><td><input class="zp-amount" readonly></td><td>${zafarAutoCell('suppliers','zp-supplier')}</td><td><input class="zp-bill"></td><td><input class="zp-remarks"></td></tr>`).join('');zafarEntryBind();zafarDesignerBindHeaders();purchaseApplyPc('zafar-purchase');zafarEntryUpdateTotal()}
+function zafarEntryRows(){return [...($('#zafarEntryBody')?.querySelectorAll('tr')||[])]}
+function zafarEntryCalcRow(tr){const q=String(tr.querySelector('.zp-qty')?.value||'').trim(),r=String(tr.querySelector('.zp-rate')?.value||'').trim(),a=tr.querySelector('.zp-amount');if(!a)return;if(!q||!r)a.value='';else a.value=(purchaseNum(q)*purchaseNum(r)).toFixed(2);zafarEntryUpdateTotal()}
+function zafarEntryUpdateTotal(){const total=zafarEntryRows().reduce((n,tr)=>n+purchaseNum(tr.querySelector('.zp-amount')?.value),0);if($('#zafarGrandTotal'))$('#zafarGrandTotal').textContent=purchaseMoney(total)}
+function zafarEntryIsFilled(tr){return ['.zp-date','.zp-control','.zp-item','.zp-size','.zp-unit','.zp-qty','.zp-rate','.zp-supplier','.zp-bill','.zp-remarks'].some(sel=>String(tr.querySelector(sel)?.value||'').trim())}
+function zafarEntryReadRow(tr,index){const v=sel=>tr.querySelector(sel)?.value||'';return {...purchaseRecordBase('zafar'),srNo:index+1,date:purchaseFmtDate(v('.zp-date')),controlNo:String(v('.zp-control')).trim(),item:purchaseFormatText(v('.zp-item'),'item','Item'),size:purchaseFormatText(v('.zp-size'),'size','Size'),unit:purchaseFormatText(v('.zp-unit'),'unit','Unit'),qty:purchaseNum(v('.zp-qty')),rate:purchaseNum(v('.zp-rate')),amount:purchaseNum(v('.zp-amount')),supplier:purchaseFormatText(v('.zp-supplier'),'supplier','Supplier'),bill:String(v('.zp-bill')).toUpperCase(),remarks:purchaseFormatText(v('.zp-remarks'),'remarks','Remarks'),inventoryEffect:'stock-in'}}
+function zafarEntrySave(){if(!ERPAccessControl?.canPage?.('zafar-purchase','add'))return toast('You do not have add permission');const rows=zafarEntryRows().filter(zafarEntryIsFilled);if(!rows.length)return toast('No purchase data entered');const records=rows.map((tr,i)=>zafarEntryReadRow(tr,i));for(const r of records)if(r.bill&&purchaseDuplicateBill('zafar',r.bill))return toast('Duplicate Bill No. '+r.bill);const all=purchaseRows('zafar');records.forEach(r=>{all.push(r);purchaseAudit('Add',r)});purchaseWrite('zafar',all);zafarEntryBuild();purchaseRenderAll();toast(records.length+' Zafar Purchase row'+(records.length>1?'s':'')+' saved')}
+function zafarFillItemLinked(input,r){const row=input.closest('#zafarEntryBody tr');if(!row)return false;const sz=row.querySelector('.zp-size'),un=row.querySelector('.zp-unit');if(sz)sz.value=r.size||'';if(un)un.value=r.unit||'';return true}
+function zpRows(){return zafarEntryRows()}function zpCell(r,c){const tr=zpRows()[r];return tr?tr.children[c+1]||null:null}function zpEd(cell){return cell?.querySelector('input')||null}function zpPos(el){const tr=el?.closest('tr'),td=el?.closest('td');if(!tr||!td)return null;return{row:+tr.dataset.zafarRow,col:[...tr.children].indexOf(td)-1}}function zpClamp(p){return{row:Math.max(0,Math.min(ZAFAR_ENTRY_ROWS-1,p.row)),col:Math.max(0,Math.min(ZP_EDITABLE_COLS.length-1,p.col))}}function zpRect(a,b){a=zpClamp(a);b=zpClamp(b);return{r1:Math.min(a.row,b.row),r2:Math.max(a.row,b.row),c1:Math.min(a.col,b.col),c2:Math.max(a.col,b.col)}}
+function zpPaint(){$('#zafarEntryTable')?.querySelectorAll('.zp-excel-selected,.zp-excel-active').forEach(x=>x.classList.remove('zp-excel-selected','zp-excel-active'));if(!zpExcelFocus)return;const rect=zpRect(zpExcelAnchor||zpExcelFocus,zpExcelFocus);for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)zpCell(r,c)?.classList.add('zp-excel-selected');zpCell(zpExcelFocus.row,zpExcelFocus.col)?.classList.add('zp-excel-active')}
+function zpFocus(r,c){const p=zpClamp({row:r,col:c}),ed=zpEd(zpCell(p.row,p.col));if(!ed)return;zpExcelFocus=p;if(!zpExcelAnchor)zpExcelAnchor={...p};ed.focus({preventScroll:true});ed.closest('td')?.scrollIntoView({block:'nearest',inline:'nearest'});zpPaint()}function zpSingle(el){const p=zpPos(el);if(!p)return;zpExcelAnchor={...p};zpExcelFocus={...p};zpPaint()}function zpSel(){return zpExcelFocus?zpRect(zpExcelAnchor||zpExcelFocus,zpExcelFocus):null}function zpVal(r,c){return zpEd(zpCell(r,c))?.value??''}
+function zpSnap(){return zpRows().map(tr=>ZP_EDITABLE_COLS.map((_,c)=>zpVal(+tr.dataset.zafarRow,c)))}function zpKeySnap(x){try{return JSON.stringify(x)}catch(e){return''}}function zpRemember(){if(zpExcelUndoing)return;const a=zpSnap(),k=zpKeySnap(a);if(k===zpExcelLastSnapshot)return;zpExcelUndoStack.push(a);if(zpExcelUndoStack.length>100)zpExcelUndoStack.shift();zpExcelLastSnapshot=k}
+function zpSet(r,c,val){zpRemember();const ed=zpEd(zpCell(r,c));if(!ed||ed.readOnly)return;let v=String(val??''),col=ZP_EDITABLE_COLS[c];if(col==='bill')v=v.toUpperCase();else if(['item','size','unit','supplier','remarks'].includes(col))v=purchaseFormatText(v,col,col);ed.value=v;ed.dispatchEvent(new Event('input',{bubbles:true}));ed.dispatchEvent(new Event('change',{bubbles:true}));zafarEntryCalcRow(ed.closest('tr'))}
+function zpRestore(a){if(!a)return;zpExcelUndoing=true;a.forEach((row,r)=>row.forEach((v,c)=>{const ed=zpEd(zpCell(r,c));if(!ed||ed.readOnly)return;ed.value=v??'';ed.dispatchEvent(new Event('input',{bubbles:true}));ed.dispatchEvent(new Event('change',{bubbles:true}))}));zpRows().forEach(zafarEntryCalcRow);zpExcelUndoing=false;zpExcelLastSnapshot=zpKeySnap(zpSnap());zpPaint()}function zpUndo(){if(zpExcelUndoStack.length)zpRestore(zpExcelUndoStack.pop())}
+function zpClear(){const rect=zpSel();if(!rect)return;zpRemember();const old=zpExcelUndoing;zpExcelUndoing=true;for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)if(ZP_EDITABLE_COLS[c]!=='amount')zpSet(r,c,'');zpExcelUndoing=old;zafarEntryUpdateTotal()}
+function zpTSV(){const rect=zpSel();if(!rect)return'';let lines=[];for(let r=rect.r1;r<=rect.r2;r++){let row=[];for(let c=rect.c1;c<=rect.c2;c++)row.push(zpVal(r,c));lines.push(row.join('\t'))}return lines.join('\n')}function zpMark(rect){$('#zafarEntryTable')?.querySelectorAll('.zp-excel-copy').forEach(x=>x.classList.remove('zp-excel-copy'));if(rect)for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)zpCell(r,c)?.classList.add('zp-excel-copy')}
+function zpPaste(text){if(!zpExcelFocus)return;zpRemember();const old=zpExcelUndoing;zpExcelUndoing=true;const data=String(text??'').replace(/\r/g,'').split('\n').filter((x,i,a)=>!(i===a.length-1&&x==='')).map(x=>x.split('\t'));if(!data.length){zpExcelUndoing=old;return}const rect=zpSel(),start=rect?{row:rect.r1,col:rect.c1}:zpExcelFocus,rr=rect?rect.r2-rect.r1+1:1,cc=rect?rect.c2-rect.c1+1:1;if(data.length===1&&data[0].length===1&&(rr>1||cc>1)){for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)zpSet(r,c,data[0][0])}else data.forEach((rv,ri)=>rv.forEach((v,ci)=>{if(start.row+ri<ZAFAR_ENTRY_ROWS&&start.col+ci<ZP_EDITABLE_COLS.length)zpSet(start.row+ri,start.col+ci,v)}));zpExcelUndoing=old;zpExcelCopyRange=null;$('#zafarEntryTable')?.querySelectorAll('.zp-excel-copy').forEach(x=>x.classList.remove('zp-excel-copy'));zpPaint();zafarEntryUpdateTotal()}
+function zpFill(){const rect=zpSel();if(!rect)return;zpRemember();const old=zpExcelUndoing;zpExcelUndoing=true;if(rect.r1===rect.r2){if(rect.r1>0)zpSet(rect.r1,rect.c1,zpVal(rect.r1-1,rect.c1))}else for(let c=rect.c1;c<=rect.c2;c++){const v=zpVal(rect.r1,c);for(let r=rect.r1+1;r<=rect.r2;r++)zpSet(r,c,v)}zpExcelUndoing=old}function zpAll(){zpExcelAnchor={row:0,col:0};zpExcelFocus={row:ZAFAR_ENTRY_ROWS-1,col:ZP_EDITABLE_COLS.length-1};zpPaint();zpFocus(0,0)}function zpCtrl(p,k){if(k==='ArrowUp')return{row:0,col:p.col};if(k==='ArrowDown')return{row:ZAFAR_ENTRY_ROWS-1,col:p.col};if(k==='ArrowLeft')return{row:p.row,col:0};return{row:p.row,col:ZP_EDITABLE_COLS.length-1}}
+function zpHandle(ev,el){const p=zpPos(el);if(!p)return;const auto=el.closest('.purchase-auto-wrap')?.querySelector('.purchase-auto-list.open');if(ev.key==='Escape'){zpExcelCopyRange=null;$('#zafarEntryTable')?.querySelectorAll('.zp-excel-copy').forEach(x=>x.classList.remove('zp-excel-copy'));return}if(ev.key==='F2'){ev.preventDefault();zpSingle(el);if(!el.readOnly){const n=el.value.length;try{el.setSelectionRange(n,n)}catch(e){}}return}if(ev.key==='Delete'){ev.preventDefault();zpClear();return}if(ev.ctrlKey&&ev.key.toLowerCase()==='z'){ev.preventDefault();zpUndo();return}if(ev.ctrlKey&&ev.key.toLowerCase()==='a'){ev.preventDefault();zpAll();return}if(ev.ctrlKey&&ev.key.toLowerCase()==='d'){ev.preventDefault();zpFill();return}if(ev.ctrlKey&&['c','x','v'].includes(ev.key.toLowerCase()))return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.key)){if(auto&&(ev.key==='ArrowUp'||ev.key==='ArrowDown'))return;ev.preventDefault();const cur=zpExcelFocus||p;let t;if(ev.ctrlKey)t=zpCtrl(cur,ev.key);else{t={...cur};if(ev.key==='ArrowUp')t.row--;if(ev.key==='ArrowDown')t.row++;if(ev.key==='ArrowLeft')t.col--;if(ev.key==='ArrowRight')t.col++;t=zpClamp(t)}if(ev.shiftKey){if(!zpExcelAnchor)zpExcelAnchor={...cur};zpExcelFocus=t}else{zpExcelAnchor={...t};zpExcelFocus={...t}}const keep=zpExcelAnchor?{...zpExcelAnchor}:null;zpFocus(zpExcelFocus.row,zpExcelFocus.col);if(ev.shiftKey&&keep){zpExcelAnchor=keep;zpPaint()}return}if(ev.key==='Enter'&&!ev.defaultPrevented){ev.preventDefault();const t=zpClamp({row:p.row+1,col:p.col});zpExcelAnchor={...t};zpExcelFocus={...t};zpFocus(t.row,t.col)}}
+function zafarEntryBind(){const body=$('#zafarEntryBody');if(!body)return;purchaseBindAutos(body);body.querySelectorAll('tr').forEach(tr=>{tr.querySelectorAll('.zp-qty,.zp-rate').forEach(e=>e.addEventListener('input',()=>zafarEntryCalcRow(tr)));tr.querySelector('.zp-date')?.addEventListener('blur',e=>e.target.value=purchaseFmtDate(e.target.value));const bill=tr.querySelector('.zp-bill');bill?.addEventListener('input',()=>{const p=bill.selectionStart;bill.value=String(bill.value||'').toUpperCase();if(p!=null)try{bill.setSelectionRange(p,p)}catch(e){}});['.zp-item','.zp-size','.zp-unit','.zp-supplier','.zp-remarks'].forEach(sel=>{const e=tr.querySelector(sel);e?.addEventListener('blur',()=>e.value=purchaseFormatText(e.value,e.className,e.className))});tr.querySelectorAll('input').forEach(e=>{e.addEventListener('beforeinput',()=>zpRemember());e.addEventListener('change',()=>{if(!zpExcelUndoing)zpExcelLastSnapshot=zpKeySnap(zpSnap())});e.addEventListener('focus',()=>zpSingle(e));e.addEventListener('mousedown',()=>zpSingle(e));e.addEventListener('keydown',ev=>zpHandle(ev,e))})});body.addEventListener('copy',ev=>{if(!zpExcelFocus)return;const text=zpTSV();if(!text)return;ev.preventDefault();ev.clipboardData?.setData('text/plain',text);zpExcelInternalClipboard=text;zpExcelCopyRange=zpSel();zpMark(zpExcelCopyRange)});body.addEventListener('cut',ev=>{if(!zpExcelFocus)return;const text=zpTSV();if(!text)return;ev.preventDefault();ev.clipboardData?.setData('text/plain',text);zpExcelInternalClipboard=text;zpExcelCopyRange=zpSel();zpMark(zpExcelCopyRange);zpClear();zpExcelCopyRange=null;$('#zafarEntryTable')?.querySelectorAll('.zp-excel-copy').forEach(x=>x.classList.remove('zp-excel-copy'))});body.addEventListener('paste',ev=>{if(!zpExcelFocus)return;const text=ev.clipboardData?.getData('text/plain')||zpExcelInternalClipboard;if(text==null)return;ev.preventDefault();zpPaste(text)});zpExcelAnchor={row:0,col:0};zpExcelFocus={row:0,col:0};zpPaint();zpExcelUndoStack=[];zpExcelLastSnapshot=zpKeySnap(zpSnap())}
+
 function purchaseZafarCalc(){const q=purchaseNum($('#pzpQty')?.value),r=purchaseNum($('#pzpRate')?.value);if($('#pzpAmount'))$('#pzpAmount').value=(q*r||0).toFixed(2)}
 function purchaseZafarSave(){
   if(!ERPAccessControl?.canPage?.('zafar-purchase','add'))return toast('You do not have add permission');
@@ -3210,7 +3265,7 @@ window.purchaseDelete=(reg,id)=>{
 };
 
 function purchaseRenderLocal(){if($('#localEntryBody')&&!$('#localEntryBody').children.length)localEntryBuild()}
-function purchaseRenderZafar(){const a=purchaseRows('zafar').slice().reverse(),t=purchaseTotals(a);$('#pzpRows').innerHTML=a.length?a.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.supplier)}</td><td>${escHtml(r.item)}</td><td>${escHtml(r.size)}</td><td>${r.qty}</td><td>${escHtml(r.unit)}</td><td>${purchaseMoney(r.rate)}</td><td>${purchaseMoney(r.amount)}</td><td>${escHtml(r.bill)}</td><td><button class="purchase-mini danger" onclick="purchaseDelete('zafar','${r.id}')">Delete</button></td></tr>`).join(''):'<tr><td class="purchase-empty" colspan="10">No Zafar Purchase records.</td></tr>';$('#pzpTotalQty').textContent=purchaseMoney(t.qty);$('#pzpTotalAmount').textContent=purchaseMoney(t.amount)}
+function purchaseRenderZafar(){if($('#zafarEntryBody')&&!$('#zafarEntryBody').children.length)zafarEntryBuild();else zafarEntryUpdateTotal()}
 function purchaseRenderBoard(){const a=purchaseRows('board').slice().reverse(),t=purchaseTotals(a,'netWeight','grossTotal');$('#pbpRows').innerHTML=a.length?a.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.supplier)}</td><td>${escHtml(r.item)}</td><td>${escHtml(r.package)}</td><td>${purchaseMoney(r.netWeight)}</td><td>${escHtml(r.unit)}</td><td>${purchaseMoney(r.rate)}</td><td>${purchaseMoney(r.tax)}%</td><td>${purchaseMoney(r.grossTotal)}</td><td>${escHtml(r.bill)}</td><td><button class="purchase-mini danger" onclick="purchaseDelete('board','${r.id}')">Delete</button></td></tr>`).join(''):'<tr><td class="purchase-empty" colspan="11">No Board Purchase records.</td></tr>';$('#pbpTotalQty').textContent=purchaseMoney(t.qty);$('#pbpTotalAmount').textContent=purchaseMoney(t.amount)}
 function purchaseHistoryFiltered(){
   const q=String($('#pphSearch')?.value||'').toLowerCase().trim().split(/\s+/).filter(Boolean),reg=$('#pphRegister')?.value||'',sec=$('#pphSection')?.value||'';
@@ -3250,6 +3305,21 @@ function purchasePcLoad(page){
   return window.ERPPageController?.load?.(page,purchasePcDefaults())||purchasePcDefaults()
 }
 
+const ZAFAR_DESIGN_COLUMNS=[['sr','Sr No.'],['date','Date'],['control','Control No.'],['item','Item'],['size','Size'],['unit','Unit'],['qty','Quantity'],['rate','Rate'],['amount','Amount'],['supplier','Supplier'],['bill','Bill No.'],['remarks','Remarks']];
+let zafarDesignerSelected='date';
+function zafarDesignerDefaults(){return{table:{headerHeight:32,cellPadding:7,borderWidth:1,minWidth:1500,headerFont:9,dataFont:10,headerAlign:'center',dataAlign:'left',wrap:'nowrap',freezeHeader:true,headerBold:true,headerItalic:false,dataBold:false,dataItalic:false,showTotal:true,showStatus:true,showClear:true,showSave:true,actionAlign:'right'},widths:{sr:55,date:92,control:110,item:210,size:105,unit:90,qty:90,rate:90,amount:105,supplier:190,bill:115,remarks:220}}}
+function zafarDesignerDefaultColumn(id){const d=zafarDesignerDefaults();return{visible:true,width:d.widths[id]||100,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false}}
+function zafarDesignerNormalize(x){const d=zafarDesignerDefaults();x.zafarTable={...d.table,...(x.zafarTable||{})};x.zafarColumns=x.zafarColumns||{};ZAFAR_DESIGN_COLUMNS.forEach(([id])=>x.zafarColumns[id]={...zafarDesignerDefaultColumn(id),...(x.zafarColumns[id]||{})});return x}
+function zafarColumnCells(id){const t=$('#zafarEntryTable');if(!t)return[];const th=t.querySelector(`th[data-zp-col="${id}"]`);if(!th)return[];const n=[...th.parentElement.children].indexOf(th)+1;return[th,...t.querySelectorAll(`tbody td:nth-child(${n})`)]}
+function zafarApplyDesigner(x){const p=$('#panel-zafar-purchase'),t=$('#zafarEntryTable');if(!p||!t)return;x=zafarDesignerNormalize(x);const d=x.zafarTable;p.style.setProperty('--zpd-header-height',d.headerHeight+'px');p.style.setProperty('--zpd-cell-padding',d.cellPadding+'px');p.style.setProperty('--zpd-border-width',d.borderWidth+'px');p.style.setProperty('--zpd-header-font',d.headerFont+'px');p.style.setProperty('--zpd-data-font',d.dataFont+'px');p.style.setProperty('--zpd-header-align',d.headerAlign);p.style.setProperty('--zpd-data-align',d.dataAlign);p.style.setProperty('--zpd-header-weight',d.headerBold?'800':'400');p.style.setProperty('--zpd-header-style',d.headerItalic?'italic':'normal');p.style.setProperty('--zpd-data-weight',d.dataBold?'700':'400');p.style.setProperty('--zpd-data-style',d.dataItalic?'italic':'normal');p.style.setProperty('--zpd-white-space',d.wrap);t.style.minWidth=d.minWidth+'px';ZAFAR_DESIGN_COLUMNS.forEach(([id])=>{const c=x.zafarColumns[id],cells=zafarColumnCells(id);cells.forEach((cell,n)=>{cell.style.display=c.visible?'':'none';cell.style.width=c.width+'px';cell.style.minWidth=c.width+'px';cell.style.maxWidth=c.width+'px';const open=purchasePcPage==='zafar-purchase'&&$('#purchasePcModal')?.classList.contains('open');cell.classList.toggle('zpd-selected-column',open&&id===zafarDesignerSelected);if(n===0){cell.style.textAlign=c.headAlign==='inherit'?'':c.headAlign;cell.style.fontSize=c.headFont+'px';cell.style.fontWeight=c.headBold?'800':'400';cell.style.fontStyle=c.headItalic?'italic':'normal';cell.style.whiteSpace=c.wrap==='inherit'?'':c.wrap}else{cell.style.textAlign=c.dataAlign==='inherit'?'':c.dataAlign;cell.style.fontSize=c.dataFont+'px';cell.style.fontWeight=c.dataBold?'700':'400';cell.style.fontStyle=c.dataItalic?'italic':'normal';cell.style.whiteSpace=c.wrap==='inherit'?'':c.wrap;cell.querySelectorAll('input').forEach(el=>{el.style.textAlign=c.dataAlign==='inherit'?'':c.dataAlign;el.style.fontSize=c.dataFont+'px';el.style.fontWeight=c.dataBold?'700':'400';el.style.fontStyle=c.dataItalic?'italic':'normal';el.style.whiteSpace=c.wrap==='inherit'?'':c.wrap})}})});const total=$('#zafarGrandTotal')?.parentElement,status=$('#zafarEntryStatus'),clear=$('#zafarEntryClear'),save=$('#zafarEntrySave'),actions=p.querySelector('.zafar-entry-actions');if(total)total.style.display=d.showTotal?'':'none';if(status)status.style.display=d.showStatus?'':'none';if(clear)clear.style.display=d.showClear?'':'none';if(save)save.style.display=d.showSave?'':'none';if(actions){actions.style.justifyContent=d.actionAlign==='left'?'flex-start':d.actionAlign==='center'?'center':d.actionAlign==='space-between'?'space-between':'flex-end';status&&(status.style.marginRight=d.actionAlign==='right'?'auto':'0')}}
+function zafarDesignerBuildSelector(){const sel=$('#zpdColumnSelect'),chips=$('#zpdColumnChips');if(!sel||!chips)return;sel.innerHTML=ZAFAR_DESIGN_COLUMNS.map(([id,n])=>`<option value="${id}">${n}</option>`).join('');chips.innerHTML=ZAFAR_DESIGN_COLUMNS.map(([id,n])=>`<button class="lpd-col-chip ${id===zafarDesignerSelected?'active':''}" data-zpd-chip="${id}" type="button">${n}</button>`).join('');sel.value=zafarDesignerSelected;chips.querySelectorAll('[data-zpd-chip]').forEach(b=>b.onclick=()=>zafarDesignerSelectColumn(b.dataset.zpdChip))}
+function zafarDesignerSelectColumn(id){zafarDesignerSelected=id;zafarDesignerBuildSelector();zafarDesignerPopulateColumn(purchasePcReadUi());purchasePcLivePreview()}
+function zafarDesignerValues(){[['zpdColWidth','zpdColWidthVal',' px'],['zpdColHeadFont','zpdColHeadFontVal',' px'],['zpdColDataFont','zpdColDataFontVal',' px'],['zpdHeaderHeight','zpdHeaderHeightVal',' px'],['zpdCellPadding','zpdCellPaddingVal',' px'],['zpdBorderWidth','zpdBorderWidthVal',' px'],['zpdTableMinWidth','zpdTableMinWidthVal',' px'],['zpdHeaderFont','zpdHeaderFontVal',' px'],['zpdDataFont','zpdDataFontVal',' px']].forEach(([a,b,u])=>{const e=$('#'+a),v=$('#'+b);if(e&&v)v.textContent=e.value+u})}
+function zafarDesignerPopulateColumn(x){if(purchasePcPage!=='zafar-purchase')return;x=zafarDesignerNormalize(x);const c=x.zafarColumns[zafarDesignerSelected];$('#zpdColumnSelect').value=zafarDesignerSelected;$('#zpdColVisible').checked=c.visible!==false;$('#zpdColWidth').value=c.width;$('#zpdColWrap').value=c.wrap;$('#zpdColHeadAlign').value=c.headAlign;$('#zpdColDataAlign').value=c.dataAlign;$('#zpdColHeadFont').value=c.headFont;$('#zpdColDataFont').value=c.dataFont;$('#zpdColHeadBold').checked=!!c.headBold;$('#zpdColHeadItalic').checked=!!c.headItalic;$('#zpdColDataBold').checked=!!c.dataBold;$('#zpdColDataItalic').checked=!!c.dataItalic;zafarDesignerValues()}
+function zafarDesignerPopulateWhole(x){if(purchasePcPage!=='zafar-purchase')return;x=zafarDesignerNormalize(x);const d=x.zafarTable;$('#zpdHeaderHeight').value=d.headerHeight;$('#zpdCellPadding').value=d.cellPadding;$('#zpdBorderWidth').value=d.borderWidth;$('#zpdTableMinWidth').value=d.minWidth;$('#zpdHeaderFont').value=d.headerFont;$('#zpdDataFont').value=d.dataFont;$('#zpdHeaderAlign').value=d.headerAlign;$('#zpdDataAlign').value=d.dataAlign;$('#zpdTableWrap').value=d.wrap;$('#zpdFreezeHeader').checked=!!d.freezeHeader;$('#zpdHeaderBold').checked=!!d.headerBold;$('#zpdHeaderItalic').checked=!!d.headerItalic;$('#zpdDataBold').checked=!!d.dataBold;$('#zpdDataItalic').checked=!!d.dataItalic;$('#zpdShowTotal').checked=d.showTotal!==false;$('#zpdShowStatus').checked=d.showStatus!==false;$('#zpdShowClear').checked=d.showClear!==false;$('#zpdShowSave').checked=d.showSave!==false;$('#zpdActionAlign').value=d.actionAlign;zafarDesignerValues()}
+function zafarDesignerReadInto(x){x=zafarDesignerNormalize(x);if(purchasePcPage!=='zafar-purchase')return x;const c=x.zafarColumns[zafarDesignerSelected];c.visible=$('#zpdColVisible').checked;c.width=+$('#zpdColWidth').value;c.wrap=$('#zpdColWrap').value;c.headAlign=$('#zpdColHeadAlign').value;c.dataAlign=$('#zpdColDataAlign').value;c.headFont=+$('#zpdColHeadFont').value;c.dataFont=+$('#zpdColDataFont').value;c.headBold=$('#zpdColHeadBold').checked;c.headItalic=$('#zpdColHeadItalic').checked;c.dataBold=$('#zpdColDataBold').checked;c.dataItalic=$('#zpdColDataItalic').checked;const d=x.zafarTable;d.headerHeight=+$('#zpdHeaderHeight').value;d.cellPadding=+$('#zpdCellPadding').value;d.borderWidth=+$('#zpdBorderWidth').value;d.minWidth=+$('#zpdTableMinWidth').value;d.headerFont=+$('#zpdHeaderFont').value;d.dataFont=+$('#zpdDataFont').value;d.headerAlign=$('#zpdHeaderAlign').value;d.dataAlign=$('#zpdDataAlign').value;d.wrap=$('#zpdTableWrap').value;d.freezeHeader=$('#zpdFreezeHeader').checked;d.headerBold=$('#zpdHeaderBold').checked;d.headerItalic=$('#zpdHeaderItalic').checked;d.dataBold=$('#zpdDataBold').checked;d.dataItalic=$('#zpdDataItalic').checked;d.showTotal=$('#zpdShowTotal').checked;d.showStatus=$('#zpdShowStatus').checked;d.showClear=$('#zpdShowClear').checked;d.showSave=$('#zpdShowSave').checked;d.actionAlign=$('#zpdActionAlign').value;return x}
+function zafarDesignerClearHighlight(){$('#zafarEntryTable')?.querySelectorAll('.zpd-selected-column').forEach(x=>x.classList.remove('zpd-selected-column'))}
+function zafarDesignerBindHeaders(){$('#zafarEntryTable')?.querySelectorAll('th[data-zp-col]').forEach(th=>th.onclick=()=>{if(purchasePcPage==='zafar-purchase'&&$('#purchasePcModal')?.classList.contains('open'))zafarDesignerSelectColumn(th.dataset.zpCol)})}
 const LOCAL_DESIGN_COLUMNS=[
   ['sr','Sr No.'],['date','Date'],['igp','IGP No.'],['control','Control No.'],['item','Item'],
   ['size','Size'],['qty','Quantity'],['unit','Unit'],['rate','Rate'],['amount','Amount'],
@@ -3435,6 +3505,9 @@ function purchaseApplyPcState(page,x){
       wsSub.style.display=x.subtitle?'':'none';
     }
   }
+  if(page==='zafar-purchase'){
+    const wsSub=$('#workspaceSubtitle');if(wsSub){wsSub.textContent='Zafar Purchase';wsSub.style.display=x.subtitle?'':'none'}
+  }
 
   panel.querySelectorAll('[data-purchase-instruction]').forEach(e=>e.style.display=x.instructions?'':'none');
   panel.querySelectorAll('[data-purchase-summary]').forEach(e=>e.style.display=x.summary?'':'none');
@@ -3452,6 +3525,7 @@ function purchaseApplyPcState(page,x){
   panel.style.setProperty('--pp-data-style',x.dataItalic?'italic':'normal');
 
   if(page==='local-purchase')localApplyDesigner(localDesignerNormalize(x));
+  if(page==='zafar-purchase')zafarApplyDesigner(zafarDesignerNormalize(x));
   if(page==='purchase-entry'){
     panel.querySelector('[data-ppe-card="local"]')?.style.setProperty('display',x.cardLocal?'':'none');
     panel.querySelector('[data-ppe-card="zafar"]')?.style.setProperty('display',x.cardZafar?'':'none');
@@ -3519,9 +3593,13 @@ function purchasePcReadUi(){
     kpiRadius:+$('#ppcKpiRadius').value,
     sectionGap:+$('#ppcSectionGap').value,
     localTable:purchasePcPage==='local-purchase'?JSON.parse(JSON.stringify((purchasePcPreviewBase?.localTable)||purchasePcDefaults().localTable)):undefined,
-    localColumns:purchasePcPage==='local-purchase'?JSON.parse(JSON.stringify((purchasePcPreviewBase?.localColumns)||purchasePcDefaults().localColumns)):undefined
+    localColumns:purchasePcPage==='local-purchase'?JSON.parse(JSON.stringify((purchasePcPreviewBase?.localColumns)||purchasePcDefaults().localColumns)):undefined,
+    zafarTable:purchasePcPage==='zafar-purchase'?JSON.parse(JSON.stringify((purchasePcPreviewBase?.zafarTable)||zafarDesignerDefaults().table)):undefined,
+    zafarColumns:purchasePcPage==='zafar-purchase'?JSON.parse(JSON.stringify((purchasePcPreviewBase?.zafarColumns)||{})):undefined
   };
-  return purchasePcPage==='local-purchase'?localDesignerReadInto(base):base
+  if(purchasePcPage==='local-purchase')return localDesignerReadInto(base);
+  if(purchasePcPage==='zafar-purchase')return zafarDesignerReadInto(base);
+  return base
 }
 function purchasePcValues(){
   const pairs=[
@@ -3572,6 +3650,7 @@ function purchasePcPopulate(x){
   $('#ppcKpiPadding').value=x.kpiPadding;
   $('#ppcKpiRadius').value=x.kpiRadius;
   $('#ppcSectionGap').value=x.sectionGap;
+  if(purchasePcPage==='zafar-purchase'){x=zafarDesignerNormalize(x);purchasePcPreviewBase=JSON.parse(JSON.stringify(x));zafarDesignerBuildSelector();zafarDesignerPopulateWhole(x);zafarDesignerPopulateColumn(x)}
   if(purchasePcPage==='local-purchase'){
     x=localDesignerNormalize(x);
     purchasePcPreviewBase=JSON.parse(JSON.stringify(x));
@@ -3584,7 +3663,7 @@ function purchasePcPopulate(x){
 function purchasePcLivePreview(){
   if(!purchasePcPage)return;
   const x=purchasePcReadUi();
-  if(purchasePcPage==='local-purchase')purchasePcPreviewBase=JSON.parse(JSON.stringify(x));
+  if(purchasePcPage==='local-purchase'||purchasePcPage==='zafar-purchase')purchasePcPreviewBase=JSON.parse(JSON.stringify(x));
   purchaseApplyPcState(purchasePcPage,x);
 }
 function purchaseOpenPc(page){
@@ -3597,11 +3676,12 @@ function purchaseOpenPc(page){
   }[page]||page);
   $('#ppeSpecialControls').style.display=page==='purchase-entry'?'contents':'none';
   $('#localDesignerControls').classList.toggle('show',page==='local-purchase');
+  $('#zafarDesignerControls').classList.toggle('show',page==='zafar-purchase');
   $('#ppcInnerTitle').closest('label').style.display=page==='purchase-entry'?'flex':'none';
-  purchasePcPreviewBase=JSON.parse(JSON.stringify(localDesignerNormalize(x)));
+  purchasePcPreviewBase=JSON.parse(JSON.stringify(page==='zafar-purchase'?zafarDesignerNormalize(x):localDesignerNormalize(x)));
   purchasePcPopulate(x);
   $('#purchasePcModal').classList.add('open');
-  if(page==='local-purchase')purchaseApplyPcState(page,x)
+  if(page==='local-purchase'||page==='zafar-purchase')purchaseApplyPcState(page,x)
 }
 let purchasePcOriginal=null,purchasePcPreviewBase=null;
 function purchaseSavePc(){
@@ -3611,8 +3691,8 @@ function purchaseSavePc(){
   purchasePcOriginal=JSON.parse(JSON.stringify(x));
   purchaseApplyPcState(purchasePcPage,x);
   $('#purchasePcModal').classList.remove('open');
-  localDesignerClearHighlight();
-  if(purchasePcPage==='local-purchase')purchaseApplyPcState(purchasePcPage,x);
+  localDesignerClearHighlight();zafarDesignerClearHighlight();
+  if(purchasePcPage==='local-purchase'||purchasePcPage==='zafar-purchase')purchaseApplyPcState(purchasePcPage,x);
   toast('Page settings saved')
 }
 function purchaseCancelPc(){
@@ -3621,8 +3701,8 @@ function purchaseCancelPc(){
     purchaseApplyPcState(purchasePcPage,purchasePcOriginal)
   }
   $('#purchasePcModal').classList.remove('open');
-  localDesignerClearHighlight();
-  if(purchasePcPage==='local-purchase'&&purchasePcOriginal)purchaseApplyPcState(purchasePcPage,purchasePcOriginal)
+  localDesignerClearHighlight();zafarDesignerClearHighlight();
+  if((purchasePcPage==='local-purchase'||purchasePcPage==='zafar-purchase')&&purchasePcOriginal)purchaseApplyPcState(purchasePcPage,purchasePcOriginal)
 }
 function purchaseOpenPanel(panel){
   const btn=$(`[data-panel="${panel}"]`);if(btn)btn.click();
@@ -3632,12 +3712,16 @@ function purchaseBind(){
   $('#purchaseToggle')?.addEventListener('click',()=>{$('#purchaseGroup')?.classList.toggle('open');$('#designStudioGroup')?.classList.remove('open')});
   $$('[data-go-purchase]').forEach(x=>x.onclick=()=>purchaseOpenPanel(x.dataset.goPurchase));
   $$('[data-purchase-controller]').forEach(x=>x.onclick=()=>purchaseOpenPc(x.dataset.purchaseController));
-  const pcLiveIds=['ppcInnerTitle','ppcSubtitle','ppcInstruction','ppcSummary','ppcFilters','ppcWidth','ppcPadding','ppcRowHeight','ppcWrap','ppcHeadAlign','ppcDataAlign','ppcHeadBold','ppcHeadItalic','ppcDataBold','ppcDataItalic','ppcCardLocal','ppcCardZafar','ppcCardBoard','ppcCardHistory','ppcCardSupplier','ppcCardCols','ppcCardGap','ppcCardPadding','ppcCardRadius','ppcCardBorder','ppcCardAlign','ppcCardTitleSize','ppcCardTextSize','ppcCardTitleBold','ppcCardTitleItalic','ppcCardTextBold','ppcCardTextItalic','ppcKpiGap','ppcKpiPadding','ppcKpiRadius','ppcSectionGap','lpdColVisible','lpdColWidth','lpdColWrap','lpdColHeadAlign','lpdColDataAlign','lpdColHeadFont','lpdColDataFont','lpdColHeadBold','lpdColHeadItalic','lpdColDataBold','lpdColDataItalic','lpdHeaderHeight','lpdCellPadding','lpdBorderWidth','lpdTableMinWidth','lpdHeaderFont','lpdDataFont','lpdHeaderAlign','lpdDataAlign','lpdTableWrap','lpdFreezeHeader','lpdHeaderBold','lpdHeaderItalic','lpdDataBold','lpdDataItalic','lpdShowSectionTotals','lpdShowStatus','lpdShowClear','lpdShowSave','lpdActionAlign'];
+  const pcLiveIds=['ppcInnerTitle','ppcSubtitle','ppcInstruction','ppcSummary','ppcFilters','ppcWidth','ppcPadding','ppcRowHeight','ppcWrap','ppcHeadAlign','ppcDataAlign','ppcHeadBold','ppcHeadItalic','ppcDataBold','ppcDataItalic','ppcCardLocal','ppcCardZafar','ppcCardBoard','ppcCardHistory','ppcCardSupplier','ppcCardCols','ppcCardGap','ppcCardPadding','ppcCardRadius','ppcCardBorder','ppcCardAlign','ppcCardTitleSize','ppcCardTextSize','ppcCardTitleBold','ppcCardTitleItalic','ppcCardTextBold','ppcCardTextItalic','ppcKpiGap','ppcKpiPadding','ppcKpiRadius','ppcSectionGap','lpdColVisible','lpdColWidth','lpdColWrap','lpdColHeadAlign','lpdColDataAlign','lpdColHeadFont','lpdColDataFont','lpdColHeadBold','lpdColHeadItalic','lpdColDataBold','lpdColDataItalic','lpdHeaderHeight','lpdCellPadding','lpdBorderWidth','lpdTableMinWidth','lpdHeaderFont','lpdDataFont','lpdHeaderAlign','lpdDataAlign','lpdTableWrap','lpdFreezeHeader','lpdHeaderBold','lpdHeaderItalic','lpdDataBold','lpdDataItalic','lpdShowSectionTotals','lpdShowStatus','lpdShowClear','lpdShowSave','lpdActionAlign','zpdColVisible','zpdColWidth','zpdColWrap','zpdColHeadAlign','zpdColDataAlign','zpdColHeadFont','zpdColDataFont','zpdColHeadBold','zpdColHeadItalic','zpdColDataBold','zpdColDataItalic','zpdHeaderHeight','zpdCellPadding','zpdBorderWidth','zpdTableMinWidth','zpdHeaderFont','zpdDataFont','zpdHeaderAlign','zpdDataAlign','zpdTableWrap','zpdFreezeHeader','zpdHeaderBold','zpdHeaderItalic','zpdDataBold','zpdDataItalic','zpdShowTotal','zpdShowStatus','zpdShowClear','zpdShowSave','zpdActionAlign'];
   pcLiveIds.forEach(id=>{
     const e=$('#'+id);if(!e)return;
     const ev=(e.type==='range')?'input':'change';
-    e.addEventListener(ev,()=>{purchasePcValues();localDesignerValues();purchasePcLivePreview()})
+    e.addEventListener(ev,()=>{purchasePcValues();localDesignerValues();zafarDesignerValues();purchasePcLivePreview()})
   });
+  $('#zpdColumnSelect')?.addEventListener('change',e=>zafarDesignerSelectColumn(e.target.value));
+  $('#zpdResetColumn')?.addEventListener('click',()=>{if(purchasePcPage!=='zafar-purchase')return;const x=purchasePcReadUi();x.zafarColumns[zafarDesignerSelected]=zafarDesignerDefaultColumn(zafarDesignerSelected);purchasePcPreviewBase=JSON.parse(JSON.stringify(x));zafarDesignerPopulateColumn(x);purchaseApplyPcState('zafar-purchase',x);toast('Selected column reset in live preview')});
+  $('#zpdResetTable')?.addEventListener('click',()=>{if(purchasePcPage!=='zafar-purchase')return;const x=purchasePcReadUi(),d=zafarDesignerDefaults();x.zafarTable=JSON.parse(JSON.stringify(d.table));x.zafarColumns={};ZAFAR_DESIGN_COLUMNS.forEach(([id])=>x.zafarColumns[id]=zafarDesignerDefaultColumn(id));purchasePcPreviewBase=JSON.parse(JSON.stringify(x));zafarDesignerPopulateWhole(x);zafarDesignerPopulateColumn(x);purchaseApplyPcState('zafar-purchase',x);toast('Zafar Purchase table design reset in live preview')});
+  zafarDesignerBindHeaders();
   $('#lpdColumnSelect')?.addEventListener('change',e=>localDesignerSelectColumn(e.target.value));
   $('#lpdResetColumn')?.addEventListener('click',()=>{
     if(purchasePcPage!=='local-purchase')return;
@@ -3657,15 +3741,15 @@ function purchaseBind(){
   $('#purchasePcSave')?.addEventListener('click',purchaseSavePc);
   $('#purchasePcReset')?.addEventListener('click',()=>{
     if(!purchasePcPage)return;
-    const d=localDesignerNormalize(purchasePcDefaults());
+    const d=purchasePcPage==='zafar-purchase'?zafarDesignerNormalize(purchasePcDefaults()):localDesignerNormalize(purchasePcDefaults());
     purchasePcPreviewBase=JSON.parse(JSON.stringify(d));
     purchasePcPopulate(d);
     purchaseApplyPcState(purchasePcPage,d);
     toast('Page defaults previewed — press Save Page Settings to keep them')
   });
-['pzpQty','pzpRate'].forEach(id=>$('#'+id)?.addEventListener('input',purchaseZafarCalc));['pbpCount','pbpWeightItem','pbpDeduction','pbpRate','pbpTax'].forEach(id=>$('#'+id)?.addEventListener('input',purchaseBoardCalc));
-$('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEventListener('click',purchaseBoardSave);
-  $('#pzpClear')?.addEventListener('click',()=>purchaseClearInputs(['pzpDate','pzpSupplier','pzpItem','pzpSize','pzpUnit','pzpQty','pzpRate','pzpAmount','pzpBill','pzpIgp','pzpVehicle','pzpPurchasedBy','pzpRemarks']));
+if($('#zafarEntryBody'))zafarEntryBuild();$('#zafarEntrySave')?.addEventListener('click',zafarEntrySave);$('#zafarEntryClear')?.addEventListener('click',()=>{zafarEntryBuild();zafarEntryUpdateTotal();toast('Zafar Purchase table cleared')});['pbpCount','pbpWeightItem','pbpDeduction','pbpRate','pbpTax'].forEach(id=>$('#'+id)?.addEventListener('input',purchaseBoardCalc));
+$('#pbpSave')?.addEventListener('click',purchaseBoardSave);
+  
   $('#pbpClear')?.addEventListener('click',()=>purchaseClearInputs(['pbpDate','pbpSupplier','pbpItem','pbpCount','pbpWeightItem','pbpGrossWeight','pbpDeduction','pbpNetWeight','pbpUnit','pbpRate','pbpAmount','pbpTaxAmount','pbpGrossTotal','pbpBill','pbpIgp','pbpVehicle','pbpRemarks']));
   $('#pphSearch')?.addEventListener('input',purchaseRenderHistory);$('#pphRegister')?.addEventListener('change',purchaseRenderHistory);$('#pphSection')?.addEventListener('change',purchaseRenderHistory);$('#pphClear')?.addEventListener('click',()=>{$('#pphSearch').value='';$('#pphRegister').value='';$('#pphSection').value='';purchaseRenderHistory()});
   $('#psaSearch')?.addEventListener('input',purchaseRenderSupplierAnalysis);$('#psaRegister')?.addEventListener('change',purchaseRenderSupplierAnalysis);$('#psaClear')?.addEventListener('click',()=>{$('#psaSearch').value='';$('#psaRegister').value='';purchaseRenderSupplierAnalysis()});
@@ -3673,7 +3757,7 @@ $('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEve
 }
 window.ERPPurchase={rows:purchaseRows,all:purchaseAllRows,render:purchaseRenderAll};
 window.ERP_LOCKED_BASELINE=Object.freeze({
-  version:'V14.17',
+  version:'V14.18',
   rule:'Approved features are preserved unless the user explicitly asks to change them.',
   locked:[
     'Design Studio shared core and sidebar placement',
@@ -3681,7 +3765,7 @@ window.ERP_LOCKED_BASELINE=Object.freeze({
     'Title Case plus uppercase Vehicle/Bill rule',
     'Purchase Entry dashboard approved structure',
     'Local Purchase 15-row entry structure',
-    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection','Clean multi-cell paste with blank calculated cells preserved','Dynamic Purchase Sections Master with automatic section totals and Grand Total'
+    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection','Clean multi-cell paste with blank calculated cells preserved','Dynamic Purchase Sections Master with automatic section totals and Grand Total','Zafar Purchase 15-row Excel grid using locked Local Purchase standard'
   ],
   universalStandards:['Page Controller / Page Designer','Live Preview','Searchable Master Autofill','Audit','Access Control','Tenant Isolation']
 });
@@ -4116,7 +4200,7 @@ const pc=$('#collapsedPreviewClock');if(pc){pc.style.display=c.collapsedShow?'bl
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem(LEGACY_KEY,JSON.stringify(state));localStorage.setItem('erpThemeSettingsV1',JSON.stringify(state.theme));localStorage.setItem('erpSidebarSettingsV1',JSON.stringify(state.sidebar));localStorage.setItem('erpProfileSettingsV1',JSON.stringify(state.profile));localStorage.setItem('erpClockSettingsV1',JSON.stringify(state.clock));localStorage.setItem('erpCompanyIdentityV1',JSON.stringify(state.company));$('#saveStatus').textContent='Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});toast('Design saved & applied')}
 const ACTIVE_STUDIO_PANEL_KEY='erpDesignStudioActivePanelV1';
-function bind(){ $('#designStudioToggle')?.addEventListener('click',()=>$('#designStudioGroup')?.classList.toggle('open')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','local-purchase':'Purchase Entry','zafar-purchase':'Zafar Purchase','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='local-purchase'?'Local Purchase':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else{purchaseGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
+function bind(){ $('#designStudioToggle')?.addEventListener('click',()=>$('#designStudioGroup')?.classList.toggle('open')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else{purchaseGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
 
 /* Shared Print Designer V1.0 */
 const PRINT_GALLERY_KEY='erpPrintDesignGalleryV1', PRINT_ASSIGN_KEY='erpPrintAssignmentsV1', PRINT_CONTRACT_KEY='erpPrintDataContractsV1';
@@ -4201,7 +4285,7 @@ function erpStableStartup(){
     erpSafeCall('software center render',()=>scRender());
     erpSafeCall('account render',()=>maRender());
     if(restoredPanel==='masters'){erpSafeCall('masters render',()=>masterRenderAll());if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Central master data for the complete ERP.'}
-    if(['purchase-entry','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(restoredPanel)){erpSafeCall('purchase render',()=>purchaseRenderAll());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','local-purchase':'Purchase Entry','zafar-purchase':'Zafar Purchase','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[restoredPanel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=restoredPanel==='local-purchase'?'Local Purchase':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware'}
+    if(['purchase-entry','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(restoredPanel)){erpSafeCall('purchase render',()=>purchaseRenderAll());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[restoredPanel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=restoredPanel==='local-purchase'?'Local Purchase':restoredPanel==='zafar-purchase'?'Zafar Purchase':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware'}
     if(restoredPanel==='company-control'){
       if(!ccmpTenantId)ccmpTenantId=tenantCurrentId();
       if(ccmpTenantId)erpSafeCall('company control render',()=>ccmpRender());
