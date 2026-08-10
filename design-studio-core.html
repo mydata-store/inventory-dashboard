@@ -2031,7 +2031,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
           </tbody>
         </table>
       </div>
-      <div class="rgp-key-help">Keyboard: Arrow keys move between cells, Enter moves under the current cell, Tab moves to next cell, Ctrl+D copies above, Ctrl+C/Ctrl+V copy and paste, Ctrl+A selects all cells, Shift+Arrow selects multiple cells, Delete clears selected cells, F2 edits the cell.</div>
+      <div class="rgp-key-help">Item search: type 1–2 letters and select from Item Master. Item Code, Unit and last saved purchase Rate fill automatically; Rate can still be edited manually. Keyboard: Arrow keys move between cells, Enter moves under the current cell, Tab moves to next cell, Ctrl+D copies above, Ctrl+C/Ctrl+V copy and paste, Ctrl+A selects all cells, Shift+Arrow selects multiple cells, Delete clears selected cells, F2 edits the cell.</div>
     </div>
 
     <div class="rgp-entry-bottom">
@@ -5827,6 +5827,45 @@ function rgpFormatNo(v){
 function rgpFormatDate(v){return typeof purchaseFmtDate==='function'?purchaseFmtDate(v):v}
 function rgpInputs(){return [...document.querySelectorAll('#rgpEntryTable tbody tr')].map(tr=>[...tr.querySelectorAll('input')])}
 function rgpRows(){return [...document.querySelectorAll('#rgpEntryTable tbody tr')]}
+
+function rgpLastPurchaseRate(itemName,itemSize){
+  const name=String(itemName||'').trim().toLowerCase();
+  const size=String(itemSize||'').trim().toLowerCase();
+  let best=null;
+
+  try{
+    const rows=typeof purchaseAllRows==='function'?purchaseAllRows():[];
+    rows.forEach((r,idx)=>{
+      if(r?.deletedAt)return;
+      const rName=String(r.item||r.itemName||'').trim().toLowerCase();
+      const rSize=String(r.size||'').trim().toLowerCase();
+
+      let matched=(rName===name && (!size || !rSize || rSize===size));
+
+      // Board/Paper style records can store item+size together.
+      if(!matched && r.itemWithSize){
+        const txt=String(r.itemWithSize).trim().toLowerCase();
+        matched=txt.includes(name) && (!size || txt.includes(size));
+      }
+      if(!matched)return;
+
+      const rate=purchaseNum(r.rate||r.unitPrice||r.price||0);
+      if(rate<=0)return;
+
+      const stamp=String(r.savedAt||r.createdAt||r.updatedAt||r.date||'');
+      if(!best || stamp>best.stamp || (stamp===best.stamp && idx<best.idx)){
+        best={rate,stamp,idx}
+      }
+    });
+  }catch(e){}
+
+  return best?.rate||0
+}
+function rgpFormatRate(v){
+  const n=purchaseNum(v);
+  return n?String(n):''
+}
+
 function rgpFillItemLinked(input,r){
   const tr=input.closest('#rgpEntryTable tbody tr');if(!tr)return false;
   const a=[...tr.querySelectorAll('input')];
@@ -5836,6 +5875,8 @@ function rgpFillItemLinked(input,r){
   input.dataset.itemSize=r.size||'';
   if(a[1])a[1].value=r.code||r.itemCode||'';
   if(a[2])a[2].value=r.unit||'';
+  const lastRate=rgpLastPurchaseRate(r.name,r.size);
+  if(a[4] && lastRate>0 && !String(a[4].value||'').trim())a[4].value=rgpFormatRate(lastRate);
   rgpUpdateTotal();
   return true
 }
@@ -5983,7 +6024,10 @@ function rgpMakeRow(){
   const tr=document.createElement('tr');tr.dataset.rgpRow=i;
   tr.innerHTML=`<td>${i+1}</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td><td><input readonly></td><td><button type="button" class="rgp-delete-row">Delete</button></td>`;
   body.appendChild(tr);
-  rgpEnhanceGridDropdowns();rgpBindExcel();rgpBindDeleteRows();rgpUpdateTotal();
+  rgpEnhanceGridDropdowns();rgpBindExcel();rgpBindDeleteRows();
+  const rateInput=[...tr.querySelectorAll('input')][4];
+  if(rateInput)rateInput.addEventListener('blur',()=>{rateInput.value=rgpFormatRate(rateInput.value);rgpUpdateTotal()});
+  rgpUpdateTotal();
   tr.querySelector('input')?.focus()
 }
 function rgpBindDeleteRows(){
@@ -6192,15 +6236,38 @@ function rgpBindList(){
   rgpRenderList()
 }
 
+
+function rgpPrepareHeaderDropdowns(){
+  // Header fields already use the shared quiet Master search engine.
+  purchaseBindAutos($('#panel-rgp-entry'));
+
+  // If Authorization Master has no records, allow Employee names as a fallback
+  // without changing any other page.
+  const auth=$('#rgpAuthorized');
+  if(auth){
+    try{
+      const authRows=purchaseAutoSource?.('authorization')||[];
+      if(!authRows.length)auth.setAttribute('data-purchase-auto','employees')
+    }catch(e){}
+  }
+  purchaseBindAutos($('#panel-rgp-entry'))
+}
+
 function rgpBind(){
   if(!$('#panel-rgp-entry'))return;
-  purchaseBindAutos($('#panel-rgp-entry'));
+  rgpPrepareHeaderDropdowns();
   rgpEnhanceGridDropdowns();rgpBindExcel();rgpBindDeleteRows();
   $('#rgpNo')?.addEventListener('blur',e=>e.target.value=rgpFormatNo(e.target.value));
   $('#rgpDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
   $('#rgpDueDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
   ['rgpDepartment','rgpWorkshop','rgpCarrier','rgpAuthorized','rgpPurpose','rgpHeaderRemarks'].forEach(id=>$('#'+id)?.addEventListener('blur',e=>e.target.value=purchaseFormatText(e.target.value,id,id)));
   ['rgpBillDetail','rgpVehicle'].forEach(id=>$('#'+id)?.addEventListener('blur',e=>e.target.value=String(e.target.value||'').toUpperCase()));
+  rgpInputs().forEach(a=>{
+    if(a[4] && !a[4].dataset.rateBlurBound){
+      a[4].dataset.rateBlurBound='1';
+      a[4].addEventListener('blur',()=>{a[4].value=rgpFormatRate(a[4].value);rgpUpdateTotal()})
+    }
+  });
   $('#rgpClearHeaderBtn')?.addEventListener('click',rgpHeaderClear);
   $('#rgpAddRowBtn')?.addEventListener('click',rgpMakeRow);
   $('#rgpDraftBtn')?.addEventListener('click',()=>toast('RGP draft saved locally'));
