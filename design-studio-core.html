@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.14</title>
+<title>ERP Design Studio Core V14.15</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -2778,7 +2778,14 @@ function purchaseClearInputs(ids){ids.forEach(id=>{const e=$('#'+id);if(!e)retur
 const LOCAL_ENTRY_ROWS=15;
 function localEntryAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
 function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td><select class="lp-section"><option value=""></option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase')}
-function localEntryCalcRow(tr){const q=purchaseNum(tr.querySelector('.lp-qty')?.value),r=purchaseNum(tr.querySelector('.lp-rate')?.value),a=tr.querySelector('.lp-amount');if(a)a.value=(q*r||0).toFixed(2)}
+function localEntryCalcRow(tr){
+  const qEl=tr.querySelector('.lp-qty'),rEl=tr.querySelector('.lp-rate'),a=tr.querySelector('.lp-amount');
+  if(!a)return;
+  const qRaw=String(qEl?.value??'').trim(),rRaw=String(rEl?.value??'').trim();
+  if(!qRaw||!rRaw){a.value='';return}
+  const q=purchaseNum(qRaw),r=purchaseNum(rRaw);
+  a.value=(q*r).toFixed(2)
+}
 const LP_EDITABLE_COLS=['date','igp','control','item','size','qty','unit','rate','amount','supplier','purchaseby','section','vehicle','remarks'];
 let lpExcelAnchor=null,lpExcelFocus=null,lpExcelCopyRange=null,lpExcelInternalClipboard='';
 let lpExcelUndoStack=[],lpExcelUndoing=false,lpExcelLastSnapshot='';
@@ -2926,7 +2933,10 @@ function lpExcelPasteText(text){
       if(r<LOCAL_ENTRY_ROWS&&c<LP_EDITABLE_COLS.length)lpExcelSetValue(r,c,v)
     }))
   }
-  lpExcelUndoing=wasUndoing;lpExcelPaint()
+  lpExcelUndoing=wasUndoing;
+  lpExcelCopyRange=null;
+  $('#localEntryTable')?.querySelectorAll('.lp-excel-copy').forEach(x=>x.classList.remove('lp-excel-copy'));
+  lpExcelPaint()
 }
 function lpExcelFillDown(){
   const rect=lpExcelSelectionRect();if(!rect)return;
@@ -2956,6 +2966,11 @@ function lpExcelHandleKey(ev,el){
   const p=lpExcelPosFromEditor(el);if(!p)return;
   const autoOpen=el.closest('.purchase-auto-wrap')?.querySelector('.purchase-auto-list.open');
 
+  if(ev.key==='Escape'){
+    lpExcelCopyRange=null;
+    $('#localEntryTable')?.querySelectorAll('.lp-excel-copy').forEach(x=>x.classList.remove('lp-excel-copy'));
+    return
+  }
   if(ev.key==='F2'){
     ev.preventDefault();lpExcelSetSingle(el);
     if(el.tagName==='INPUT'&&!el.readOnly){const n=el.value.length;try{el.setSelectionRange(n,n)}catch(e){}}
@@ -3058,7 +3073,9 @@ function localEntryBind(){
     if(!lpExcelFocus)return;
     const text=lpExcelSelectionTSV();if(!text)return;
     ev.preventDefault();ev.clipboardData?.setData('text/plain',text);
-    lpExcelInternalClipboard=text;lpExcelCopyRange=lpExcelSelectionRect();lpExcelMarkCopy(lpExcelCopyRange);lpExcelClearSelection()
+    lpExcelInternalClipboard=text;lpExcelCopyRange=lpExcelSelectionRect();lpExcelMarkCopy(lpExcelCopyRange);lpExcelClearSelection();
+    lpExcelCopyRange=null;
+    $('#localEntryTable')?.querySelectorAll('.lp-excel-copy').forEach(x=>x.classList.remove('lp-excel-copy'))
   });
   body.addEventListener('paste',ev=>{
     if(!lpExcelFocus)return;
@@ -3555,7 +3572,7 @@ $('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEve
 }
 window.ERPPurchase={rows:purchaseRows,all:purchaseAllRows,render:purchaseRenderAll};
 window.ERP_LOCKED_BASELINE=Object.freeze({
-  version:'V14.14',
+  version:'V14.15',
   rule:'Approved features are preserved unless the user explicitly asks to change them.',
   locked:[
     'Design Studio shared core and sidebar placement',
@@ -3563,7 +3580,7 @@ window.ERP_LOCKED_BASELINE=Object.freeze({
     'Title Case plus uppercase Vehicle/Bill rule',
     'Purchase Entry dashboard approved structure',
     'Local Purchase 15-row entry structure',
-    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection'
+    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection','Clean multi-cell paste with blank calculated cells preserved'
   ],
   universalStandards:['Page Controller / Page Designer','Live Preview','Searchable Master Autofill','Audit','Access Control','Tenant Isolation']
 });
