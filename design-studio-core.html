@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.7</title>
+<title>ERP Design Studio Core V14.8</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -743,6 +743,82 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .purchase-page{--pp-width:100%;--pp-box-padding:14px;--pp-row-height:34px;--pp-head-align:left;--pp-data-align:left;--pp-wrap:normal;--pp-head-weight:800;--pp-head-style:normal;--pp-data-weight:400;--pp-data-style:normal;--pp-table-font:10px;--pp-header-font:9px}
 .purchase-page>.card{max-width:var(--pp-width);margin-left:auto;margin-right:auto}.purchase-page .purchase-box{padding:var(--pp-box-padding)}.purchase-page .purchase-table th,.purchase-page .purchase-table td{height:var(--pp-row-height);white-space:var(--pp-wrap);font-size:var(--pp-table-font)}.purchase-page .purchase-table th{text-align:var(--pp-head-align);font-size:var(--pp-header-font);font-weight:var(--pp-head-weight);font-style:var(--pp-head-style)}.purchase-page .purchase-table td{text-align:var(--pp-data-align);font-weight:var(--pp-data-weight);font-style:var(--pp-data-style)}
 @media(max-width:1100px){.purchase-layout{grid-template-columns:1fr}.purchase-entry-grid{grid-template-columns:1fr 1fr}.purchase-form{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.purchase-kpis,.purchase-entry-grid,.purchase-analysis-grid,.purchase-toolbar,.purchase-form,.purchase-pc-grid{grid-template-columns:1fr}.purchase-form .span2,.purchase-form .full{grid-column:auto}}
+
+/* V14.8 Purchase Entry powerful live Page Controller */
+#panel-purchase-entry{
+  --ppe-page-width:100%;
+  --ppe-card-cols:3;
+  --ppe-card-gap:12px;
+  --ppe-card-padding:16px;
+  --ppe-card-radius:14px;
+  --ppe-card-border:1px;
+  --ppe-card-title-size:14px;
+  --ppe-card-text-size:10px;
+  --ppe-card-align:left;
+  --ppe-card-title-weight:700;
+  --ppe-card-title-style:normal;
+  --ppe-card-text-weight:400;
+  --ppe-card-text-style:normal;
+  --ppe-kpi-gap:10px;
+  --ppe-kpi-padding:12px;
+  --ppe-kpi-radius:12px;
+  --ppe-section-gap:12px;
+}
+#panel-purchase-entry>.card{max-width:var(--ppe-page-width);margin-left:auto;margin-right:auto}
+#panel-purchase-entry .purchase-entry-grid{
+  grid-template-columns:repeat(var(--ppe-card-cols),minmax(0,1fr));
+  gap:var(--ppe-card-gap)
+}
+#panel-purchase-entry .purchase-launch{
+  padding:var(--ppe-card-padding);
+  border-radius:var(--ppe-card-radius);
+  border-width:var(--ppe-card-border);
+  text-align:var(--ppe-card-align)
+}
+#panel-purchase-entry .purchase-launch b{
+  font-size:var(--ppe-card-title-size);
+  font-weight:var(--ppe-card-title-weight);
+  font-style:var(--ppe-card-title-style)
+}
+#panel-purchase-entry .purchase-launch small{
+  font-size:var(--ppe-card-text-size);
+  font-weight:var(--ppe-card-text-weight);
+  font-style:var(--ppe-card-text-style)
+}
+#panel-purchase-entry .purchase-kpis{
+  gap:var(--ppe-kpi-gap)
+}
+#panel-purchase-entry .purchase-kpi{
+  padding:var(--ppe-kpi-padding);
+  border-radius:var(--ppe-kpi-radius)
+}
+#panel-purchase-entry .card>*+*{margin-top:var(--ppe-section-gap)}
+
+.purchase-pc-live-note{
+  grid-column:1/-1;
+  padding:9px 11px;
+  border-radius:9px;
+  background:color-mix(in srgb,var(--primary) 7%,var(--surface));
+  border:1px solid var(--border);
+  font-size:10px;
+  color:var(--muted)
+}
+.purchase-pc-section-title{grid-column:1/-1;border-top:1px solid var(--border);padding-top:11px;margin-top:3px}
+.purchase-pc-section-title h4{margin:0 0 7px}
+.purchase-pc-value{font-size:9px;color:var(--muted);margin-top:4px}
+.purchase-pc-grid .purchase-pc-field input[type=range]{width:100%}
+.purchase-pc-grid .purchase-pc-field select{
+  width:100%;height:38px;border:1px solid var(--border);border-radius:8px;
+  background:var(--surface);color:var(--text);padding:0 8px
+}
+@media(max-width:1100px){
+  #panel-purchase-entry .purchase-entry-grid{grid-template-columns:repeat(min(var(--ppe-card-cols),2),minmax(0,1fr))}
+}
+@media(max-width:650px){
+  #panel-purchase-entry .purchase-entry-grid{grid-template-columns:1fr}
+}
+
+#panel-purchase-entry #ppeInnerHeader[style*="display: none"] + .purchase-instruction{margin-top:0}
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -881,8 +957,8 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 
 <section class="panel purchase-page" id="panel-purchase-entry">
   <div class="card">
-    <div class="purchase-page-head">
-      <div><h2>Purchase Entry</h2><p id="ppeSubtitle">Choose the purchase register you want to work in.</p></div>
+    <div class="purchase-page-head" id="ppeInnerHeader">
+      <div><h2 id="ppeInnerTitle">Purchase Entry</h2><p id="ppeSubtitle">Choose the purchase register you want to work in.</p></div>
       <button class="btn purchase-controller-btn" data-purchase-controller="purchase-entry">⚙ Page Controller</button>
     </div>
     <div class="purchase-instruction" data-purchase-instruction="purchase-entry"><b>Purchase rule:</b> every purchase register uses the shared Masters, tenant/company ID, access permissions and Audit Trail.</div>
@@ -892,12 +968,12 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="purchase-kpi"><small>Zafar Purchases</small><strong id="ppeZafar">0</strong></div>
       <div class="purchase-kpi"><small>Board Purchases</small><strong id="ppeBoard">0</strong></div>
     </div>
-    <div class="purchase-entry-grid">
-      <button class="purchase-launch" data-go-purchase="local-purchase"><b>Local Purchase</b><small>Inventory, Mess and Cattle Farm local purchases.</small></button>
-      <button class="purchase-launch" data-go-purchase="zafar-purchase"><b>Zafar Purchase</b><small>Separate Zafar purchase register with the same ERP standards.</small></button>
-      <button class="purchase-launch" data-go-purchase="board-purchase"><b>Board Purchase</b><small>Package, weight, deduction, net weight and tax based purchases.</small></button>
-      <button class="purchase-launch" data-go-purchase="purchase-history"><b>Purchase History</b><small>Search all purchase registers together.</small></button>
-      <button class="purchase-launch" data-go-purchase="supplier-analysis"><b>Supplier Analysis</b><small>Supplier-wise quantity, value and purchase count.</small></button>
+    <div class="purchase-entry-grid" id="ppeModuleCards">
+      <button class="purchase-launch" data-go-purchase="local-purchase" data-ppe-card="local"><b>Local Purchase</b><small>Inventory, Mess and Cattle Farm local purchases.</small></button>
+      <button class="purchase-launch" data-go-purchase="zafar-purchase" data-ppe-card="zafar"><b>Zafar Purchase</b><small>Separate Zafar purchase register with the same ERP standards.</small></button>
+      <button class="purchase-launch" data-go-purchase="board-purchase" data-ppe-card="board"><b>Board Purchase</b><small>Package, weight, deduction, net weight and tax based purchases.</small></button>
+      <button class="purchase-launch" data-go-purchase="purchase-history" data-ppe-card="history"><b>Purchase History</b><small>Search all purchase registers together.</small></button>
+      <button class="purchase-launch" data-go-purchase="supplier-analysis" data-ppe-card="supplier"><b>Supplier Analysis</b><small>Supplier-wise quantity, value and purchase count.</small></button>
     </div>
   </div>
 </section>
@@ -1065,14 +1141,48 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   <div class="purchase-pc-box">
     <div class="purchase-pc-head"><h3 id="purchasePcTitle">Page Controller</h3><button class="btn" id="purchasePcClose">Close</button></div>
     <div class="purchase-pc-grid">
+      <div class="purchase-pc-live-note"><b>Live Preview:</b> every change below is applied immediately to the open page. <b>Save Page Settings</b> makes it permanent. <b>Cancel Changes</b> returns to the last saved design.</div>
+
+      <label>Show inner page title <input type="checkbox" id="ppcInnerTitle"></label>
       <label>Show subtitle <input type="checkbox" id="ppcSubtitle"></label>
       <label>Show instruction box <input type="checkbox" id="ppcInstruction"></label>
       <label>Show summary cards <input type="checkbox" id="ppcSummary"></label>
       <label>Show search / filters <input type="checkbox" id="ppcFilters"></label>
-      <div class="purchase-pc-section"><h4>Page & Table</h4></div>
-      <div class="purchase-pc-field"><label>Page Width</label><input type="range" id="ppcWidth" min="70" max="100" value="100"></div>
-      <div class="purchase-pc-field"><label>Box Padding</label><input type="range" id="ppcPadding" min="6" max="30" value="14"></div>
-      <div class="purchase-pc-field"><label>Row Height</label><input type="range" id="ppcRowHeight" min="24" max="64" value="34"></div>
+
+      <div id="ppeSpecialControls" style="display:contents">
+        <div class="purchase-pc-section-title"><h4>Purchase Entry Dashboard Cards</h4></div>
+        <label>Show Local Purchase <input type="checkbox" id="ppcCardLocal"></label>
+        <label>Show Zafar Purchase <input type="checkbox" id="ppcCardZafar"></label>
+        <label>Show Board Purchase <input type="checkbox" id="ppcCardBoard"></label>
+        <label>Show Purchase History <input type="checkbox" id="ppcCardHistory"></label>
+        <label>Show Supplier Analysis <input type="checkbox" id="ppcCardSupplier"></label>
+
+        <div class="purchase-pc-field"><label>Cards Per Row</label><select id="ppcCardCols"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+        <div class="purchase-pc-field"><label>Card Gap</label><input type="range" id="ppcCardGap" min="4" max="30" step="1"><div class="purchase-pc-value" id="ppcCardGapVal"></div></div>
+        <div class="purchase-pc-field"><label>Card Padding</label><input type="range" id="ppcCardPadding" min="6" max="32" step="1"><div class="purchase-pc-value" id="ppcCardPaddingVal"></div></div>
+        <div class="purchase-pc-field"><label>Card Radius</label><input type="range" id="ppcCardRadius" min="0" max="30" step="1"><div class="purchase-pc-value" id="ppcCardRadiusVal"></div></div>
+        <div class="purchase-pc-field"><label>Card Border Width</label><input type="range" id="ppcCardBorder" min="0" max="4" step="1"><div class="purchase-pc-value" id="ppcCardBorderVal"></div></div>
+        <div class="purchase-pc-field"><label>Card Alignment</label><select id="ppcCardAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+
+        <div class="purchase-pc-section-title"><h4>Dashboard Card Typography</h4></div>
+        <div class="purchase-pc-field"><label>Card Title Size</label><input type="range" id="ppcCardTitleSize" min="10" max="24" step="1"><div class="purchase-pc-value" id="ppcCardTitleSizeVal"></div></div>
+        <div class="purchase-pc-field"><label>Card Text Size</label><input type="range" id="ppcCardTextSize" min="8" max="18" step="1"><div class="purchase-pc-value" id="ppcCardTextSizeVal"></div></div>
+        <label>Card Title Bold <input type="checkbox" id="ppcCardTitleBold"></label>
+        <label>Card Title Italic <input type="checkbox" id="ppcCardTitleItalic"></label>
+        <label>Card Text Bold <input type="checkbox" id="ppcCardTextBold"></label>
+        <label>Card Text Italic <input type="checkbox" id="ppcCardTextItalic"></label>
+
+        <div class="purchase-pc-section-title"><h4>Summary / KPI Cards</h4></div>
+        <div class="purchase-pc-field"><label>KPI Gap</label><input type="range" id="ppcKpiGap" min="4" max="30" step="1"><div class="purchase-pc-value" id="ppcKpiGapVal"></div></div>
+        <div class="purchase-pc-field"><label>KPI Padding</label><input type="range" id="ppcKpiPadding" min="6" max="30" step="1"><div class="purchase-pc-value" id="ppcKpiPaddingVal"></div></div>
+        <div class="purchase-pc-field"><label>KPI Radius</label><input type="range" id="ppcKpiRadius" min="0" max="30" step="1"><div class="purchase-pc-value" id="ppcKpiRadiusVal"></div></div>
+        <div class="purchase-pc-field"><label>Section Vertical Gap</label><input type="range" id="ppcSectionGap" min="4" max="30" step="1"><div class="purchase-pc-value" id="ppcSectionGapVal"></div></div>
+      </div>
+
+      <div class="purchase-pc-section-title"><h4>Page & Table</h4></div>
+      <div class="purchase-pc-field"><label>Page Width</label><input type="range" id="ppcWidth" min="70" max="100" value="100"><div class="purchase-pc-value" id="ppcWidthVal"></div></div>
+      <div class="purchase-pc-field"><label>Box Padding</label><input type="range" id="ppcPadding" min="6" max="30" value="14"><div class="purchase-pc-value" id="ppcPaddingVal"></div></div>
+      <div class="purchase-pc-field"><label>Row Height</label><input type="range" id="ppcRowHeight" min="24" max="64" value="34"><div class="purchase-pc-value" id="ppcRowHeightVal"></div></div>
       <div class="purchase-pc-field"><label>Text Wrap</label><select id="ppcWrap"><option value="normal">Wrap</option><option value="nowrap">No Wrap / One Line</option></select></div>
       <div class="purchase-pc-field"><label>Header Alignment</label><select id="ppcHeadAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
       <div class="purchase-pc-field"><label>Data Alignment</label><select id="ppcDataAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
@@ -1081,7 +1191,12 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <label>Data Bold <input type="checkbox" id="ppcDataBold"></label>
       <label>Data Italic <input type="checkbox" id="ppcDataItalic"></label>
     </div>
-    <div class="purchase-actions"><button class="btn primary" id="purchasePcSave">Save Page Settings</button><button class="btn" id="purchasePcReset">Restore Defaults</button></div>
+
+    <div class="purchase-actions">
+      <button class="btn primary" id="purchasePcSave">Save Page Settings</button>
+      <button class="btn" id="purchasePcCancel">Cancel Changes</button>
+      <button class="btn" id="purchasePcReset">Restore Defaults</button>
+    </div>
   </div>
 </div>
 
@@ -2513,19 +2628,202 @@ function purchaseRenderSupplierAnalysis(){
 function purchaseRenderEntry(){const l=purchaseRows('local').length,z=purchaseRows('zafar').length,b=purchaseRows('board').length;$('#ppeTotal').textContent=l+z+b;$('#ppeLocal').textContent=l;$('#ppeZafar').textContent=z;$('#ppeBoard').textContent=b}
 function purchaseRenderAll(){purchaseRenderEntry();purchaseRenderLocal();purchaseRenderZafar();purchaseRenderBoard();purchaseRenderHistory();purchaseRenderSupplierAnalysis();PURCHASE_PAGE_IDS.forEach(purchaseApplyPc)}
 
-function purchasePcDefaults(){return{subtitle:true,instructions:true,summary:true,filters:true,width:100,padding:14,rowHeight:34,wrap:'normal',headAlign:'left',dataAlign:'left',headBold:true,headItalic:false,dataBold:false,dataItalic:false}}
-function purchasePcLoad(page){return window.ERPPageController?.load?.(page,purchasePcDefaults())||purchasePcDefaults()}
-function purchaseApplyPc(page){
-  const x=purchasePcLoad(page),panel=$('#panel-'+page);if(!panel)return;
-  const sub=panel.querySelector('.purchase-page-head p');if(sub)sub.style.display=x.subtitle?'':'none';
+function purchasePcDefaults(){
+  return{
+    innerTitle:false,
+    subtitle:true,instructions:true,summary:true,filters:true,
+    width:100,padding:14,rowHeight:34,wrap:'normal',
+    headAlign:'left',dataAlign:'left',headBold:true,headItalic:false,dataBold:false,dataItalic:false,
+    cardLocal:true,cardZafar:true,cardBoard:true,cardHistory:true,cardSupplier:true,
+    cardCols:3,cardGap:12,cardPadding:16,cardRadius:14,cardBorder:1,cardAlign:'left',
+    cardTitleSize:14,cardTextSize:10,cardTitleBold:true,cardTitleItalic:false,cardTextBold:false,cardTextItalic:false,
+    kpiGap:10,kpiPadding:12,kpiRadius:12,sectionGap:12
+  }
+}
+function purchasePcLoad(page){
+  return window.ERPPageController?.load?.(page,purchasePcDefaults())||purchasePcDefaults()
+}
+function purchaseApplyPcState(page,x){
+  const panel=$('#panel-'+page);if(!panel)return;
+
+  const innerTitle=panel.querySelector('#ppeInnerTitle');
+  if(innerTitle)innerTitle.style.display=x.innerTitle?'':'none';
+
+  const innerHeader=panel.querySelector('#ppeInnerHeader');
+  if(innerHeader && page==='purchase-entry'){
+    const hasTitle=!!x.innerTitle;
+    const hasSub=!!x.subtitle;
+    innerHeader.style.display=(hasTitle||hasSub)?'flex':'none';
+  }
+
+  const sub=panel.querySelector('.purchase-page-head p');
+  if(sub)sub.style.display=x.subtitle?'':'none';
+
   panel.querySelectorAll('[data-purchase-instruction]').forEach(e=>e.style.display=x.instructions?'':'none');
   panel.querySelectorAll('[data-purchase-summary]').forEach(e=>e.style.display=x.summary?'':'none');
   panel.querySelectorAll('[data-purchase-filters]').forEach(e=>e.style.display=x.filters?'grid':'none');
-  panel.style.setProperty('--pp-width',x.width+'%');panel.style.setProperty('--pp-box-padding',x.padding+'px');panel.style.setProperty('--pp-row-height',x.rowHeight+'px');panel.style.setProperty('--pp-wrap',x.wrap);panel.style.setProperty('--pp-head-align',x.headAlign);panel.style.setProperty('--pp-data-align',x.dataAlign);panel.style.setProperty('--pp-head-weight',x.headBold?'800':'400');panel.style.setProperty('--pp-head-style',x.headItalic?'italic':'normal');panel.style.setProperty('--pp-data-weight',x.dataBold?'700':'400');panel.style.setProperty('--pp-data-style',x.dataItalic?'italic':'normal')
-}
-function purchaseOpenPc(page){purchasePcPage=page;const x=purchasePcLoad(page);$('#purchasePcTitle').textContent='Page Controller — '+({'purchase-entry':'Purchase Entry','local-purchase':'Local Purchase','zafar-purchase':'Zafar Purchase','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[page]||page);$('#ppcSubtitle').checked=x.subtitle;$('#ppcInstruction').checked=x.instructions;$('#ppcSummary').checked=x.summary;$('#ppcFilters').checked=x.filters;$('#ppcWidth').value=x.width;$('#ppcPadding').value=x.padding;$('#ppcRowHeight').value=x.rowHeight;$('#ppcWrap').value=x.wrap;$('#ppcHeadAlign').value=x.headAlign;$('#ppcDataAlign').value=x.dataAlign;$('#ppcHeadBold').checked=x.headBold;$('#ppcHeadItalic').checked=x.headItalic;$('#ppcDataBold').checked=x.dataBold;$('#ppcDataItalic').checked=x.dataItalic;$('#purchasePcModal').classList.add('open')}
-function purchaseSavePc(){if(!purchasePcPage)return;const x={subtitle:$('#ppcSubtitle').checked,instructions:$('#ppcInstruction').checked,summary:$('#ppcSummary').checked,filters:$('#ppcFilters').checked,width:+$('#ppcWidth').value,padding:+$('#ppcPadding').value,rowHeight:+$('#ppcRowHeight').value,wrap:$('#ppcWrap').value,headAlign:$('#ppcHeadAlign').value,dataAlign:$('#ppcDataAlign').value,headBold:$('#ppcHeadBold').checked,headItalic:$('#ppcHeadItalic').checked,dataBold:$('#ppcDataBold').checked,dataItalic:$('#ppcDataItalic').checked};ERPPageController?.save?.(purchasePcPage,x);purchaseApplyPc(purchasePcPage);$('#purchasePcModal').classList.remove('open');toast('Page settings saved')}
 
+  panel.style.setProperty('--pp-width',x.width+'%');
+  panel.style.setProperty('--pp-box-padding',x.padding+'px');
+  panel.style.setProperty('--pp-row-height',x.rowHeight+'px');
+  panel.style.setProperty('--pp-wrap',x.wrap);
+  panel.style.setProperty('--pp-head-align',x.headAlign);
+  panel.style.setProperty('--pp-data-align',x.dataAlign);
+  panel.style.setProperty('--pp-head-weight',x.headBold?'800':'400');
+  panel.style.setProperty('--pp-head-style',x.headItalic?'italic':'normal');
+  panel.style.setProperty('--pp-data-weight',x.dataBold?'700':'400');
+  panel.style.setProperty('--pp-data-style',x.dataItalic?'italic':'normal');
+
+  if(page==='purchase-entry'){
+    panel.querySelector('[data-ppe-card="local"]')?.style.setProperty('display',x.cardLocal?'':'none');
+    panel.querySelector('[data-ppe-card="zafar"]')?.style.setProperty('display',x.cardZafar?'':'none');
+    panel.querySelector('[data-ppe-card="board"]')?.style.setProperty('display',x.cardBoard?'':'none');
+    panel.querySelector('[data-ppe-card="history"]')?.style.setProperty('display',x.cardHistory?'':'none');
+    panel.querySelector('[data-ppe-card="supplier"]')?.style.setProperty('display',x.cardSupplier?'':'none');
+
+    panel.style.setProperty('--ppe-page-width',x.width+'%');
+    panel.style.setProperty('--ppe-card-cols',x.cardCols);
+    panel.style.setProperty('--ppe-card-gap',x.cardGap+'px');
+    panel.style.setProperty('--ppe-card-padding',x.cardPadding+'px');
+    panel.style.setProperty('--ppe-card-radius',x.cardRadius+'px');
+    panel.style.setProperty('--ppe-card-border',x.cardBorder+'px');
+    panel.style.setProperty('--ppe-card-align',x.cardAlign);
+    panel.style.setProperty('--ppe-card-title-size',x.cardTitleSize+'px');
+    panel.style.setProperty('--ppe-card-text-size',x.cardTextSize+'px');
+    panel.style.setProperty('--ppe-card-title-weight',x.cardTitleBold?'800':'400');
+    panel.style.setProperty('--ppe-card-title-style',x.cardTitleItalic?'italic':'normal');
+    panel.style.setProperty('--ppe-card-text-weight',x.cardTextBold?'700':'400');
+    panel.style.setProperty('--ppe-card-text-style',x.cardTextItalic?'italic':'normal');
+    panel.style.setProperty('--ppe-kpi-gap',x.kpiGap+'px');
+    panel.style.setProperty('--ppe-kpi-padding',x.kpiPadding+'px');
+    panel.style.setProperty('--ppe-kpi-radius',x.kpiRadius+'px');
+    panel.style.setProperty('--ppe-section-gap',x.sectionGap+'px');
+  }
+}
+function purchaseApplyPc(page){purchaseApplyPcState(page,purchasePcLoad(page))}
+
+function purchasePcReadUi(){
+  return{
+    innerTitle:$('#ppcInnerTitle').checked,
+    subtitle:$('#ppcSubtitle').checked,
+    instructions:$('#ppcInstruction').checked,
+    summary:$('#ppcSummary').checked,
+    filters:$('#ppcFilters').checked,
+    width:+$('#ppcWidth').value,
+    padding:+$('#ppcPadding').value,
+    rowHeight:+$('#ppcRowHeight').value,
+    wrap:$('#ppcWrap').value,
+    headAlign:$('#ppcHeadAlign').value,
+    dataAlign:$('#ppcDataAlign').value,
+    headBold:$('#ppcHeadBold').checked,
+    headItalic:$('#ppcHeadItalic').checked,
+    dataBold:$('#ppcDataBold').checked,
+    dataItalic:$('#ppcDataItalic').checked,
+    cardLocal:$('#ppcCardLocal').checked,
+    cardZafar:$('#ppcCardZafar').checked,
+    cardBoard:$('#ppcCardBoard').checked,
+    cardHistory:$('#ppcCardHistory').checked,
+    cardSupplier:$('#ppcCardSupplier').checked,
+    cardCols:+$('#ppcCardCols').value,
+    cardGap:+$('#ppcCardGap').value,
+    cardPadding:+$('#ppcCardPadding').value,
+    cardRadius:+$('#ppcCardRadius').value,
+    cardBorder:+$('#ppcCardBorder').value,
+    cardAlign:$('#ppcCardAlign').value,
+    cardTitleSize:+$('#ppcCardTitleSize').value,
+    cardTextSize:+$('#ppcCardTextSize').value,
+    cardTitleBold:$('#ppcCardTitleBold').checked,
+    cardTitleItalic:$('#ppcCardTitleItalic').checked,
+    cardTextBold:$('#ppcCardTextBold').checked,
+    cardTextItalic:$('#ppcCardTextItalic').checked,
+    kpiGap:+$('#ppcKpiGap').value,
+    kpiPadding:+$('#ppcKpiPadding').value,
+    kpiRadius:+$('#ppcKpiRadius').value,
+    sectionGap:+$('#ppcSectionGap').value
+  }
+}
+function purchasePcValues(){
+  const pairs=[
+    ['ppcWidth','ppcWidthVal','%'],['ppcPadding','ppcPaddingVal',' px'],['ppcRowHeight','ppcRowHeightVal',' px'],
+    ['ppcCardGap','ppcCardGapVal',' px'],['ppcCardPadding','ppcCardPaddingVal',' px'],
+    ['ppcCardRadius','ppcCardRadiusVal',' px'],['ppcCardBorder','ppcCardBorderVal',' px'],
+    ['ppcCardTitleSize','ppcCardTitleSizeVal',' px'],['ppcCardTextSize','ppcCardTextSizeVal',' px'],
+    ['ppcKpiGap','ppcKpiGapVal',' px'],['ppcKpiPadding','ppcKpiPaddingVal',' px'],
+    ['ppcKpiRadius','ppcKpiRadiusVal',' px'],['ppcSectionGap','ppcSectionGapVal',' px']
+  ];
+  pairs.forEach(([a,b,suf])=>{const e=$('#'+a),v=$('#'+b);if(e&&v)v.textContent=e.value+suf})
+}
+function purchasePcPopulate(x){
+  $('#ppcInnerTitle').checked=!!x.innerTitle;
+  $('#ppcSubtitle').checked=!!x.subtitle;
+  $('#ppcInstruction').checked=!!x.instructions;
+  $('#ppcSummary').checked=!!x.summary;
+  $('#ppcFilters').checked=!!x.filters;
+  $('#ppcWidth').value=x.width;
+  $('#ppcPadding').value=x.padding;
+  $('#ppcRowHeight').value=x.rowHeight;
+  $('#ppcWrap').value=x.wrap;
+  $('#ppcHeadAlign').value=x.headAlign;
+  $('#ppcDataAlign').value=x.dataAlign;
+  $('#ppcHeadBold').checked=!!x.headBold;
+  $('#ppcHeadItalic').checked=!!x.headItalic;
+  $('#ppcDataBold').checked=!!x.dataBold;
+  $('#ppcDataItalic').checked=!!x.dataItalic;
+
+  $('#ppcCardLocal').checked=x.cardLocal!==false;
+  $('#ppcCardZafar').checked=x.cardZafar!==false;
+  $('#ppcCardBoard').checked=x.cardBoard!==false;
+  $('#ppcCardHistory').checked=x.cardHistory!==false;
+  $('#ppcCardSupplier').checked=x.cardSupplier!==false;
+  $('#ppcCardCols').value=x.cardCols;
+  $('#ppcCardGap').value=x.cardGap;
+  $('#ppcCardPadding').value=x.cardPadding;
+  $('#ppcCardRadius').value=x.cardRadius;
+  $('#ppcCardBorder').value=x.cardBorder;
+  $('#ppcCardAlign').value=x.cardAlign;
+  $('#ppcCardTitleSize').value=x.cardTitleSize;
+  $('#ppcCardTextSize').value=x.cardTextSize;
+  $('#ppcCardTitleBold').checked=!!x.cardTitleBold;
+  $('#ppcCardTitleItalic').checked=!!x.cardTitleItalic;
+  $('#ppcCardTextBold').checked=!!x.cardTextBold;
+  $('#ppcCardTextItalic').checked=!!x.cardTextItalic;
+  $('#ppcKpiGap').value=x.kpiGap;
+  $('#ppcKpiPadding').value=x.kpiPadding;
+  $('#ppcKpiRadius').value=x.kpiRadius;
+  $('#ppcSectionGap').value=x.sectionGap;
+  purchasePcValues()
+}
+function purchasePcLivePreview(){
+  if(!purchasePcPage)return;
+  purchaseApplyPcState(purchasePcPage,purchasePcReadUi());
+}
+function purchaseOpenPc(page){
+  purchasePcPage=page;
+  const x=purchasePcLoad(page);
+  purchasePcOriginal=JSON.parse(JSON.stringify(x));
+  $('#purchasePcTitle').textContent='Page Controller — '+({
+    'purchase-entry':'Purchase Entry','local-purchase':'Local Purchase','zafar-purchase':'Zafar Purchase',
+    'board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'
+  }[page]||page);
+  $('#ppeSpecialControls').style.display=page==='purchase-entry'?'contents':'none';
+  $('#ppcInnerTitle').closest('label').style.display=page==='purchase-entry'?'flex':'none';
+  purchasePcPopulate(x);
+  $('#purchasePcModal').classList.add('open')
+}
+let purchasePcOriginal=null;
+function purchaseSavePc(){
+  if(!purchasePcPage)return;
+  const x=purchasePcReadUi();
+  ERPPageController?.save?.(purchasePcPage,x);
+  purchasePcOriginal=JSON.parse(JSON.stringify(x));
+  purchaseApplyPcState(purchasePcPage,x);
+  $('#purchasePcModal').classList.remove('open');
+  toast('Page settings saved')
+}
+function purchaseCancelPc(){
+  if(purchasePcPage&&purchasePcOriginal)purchaseApplyPcState(purchasePcPage,purchasePcOriginal);
+  $('#purchasePcModal').classList.remove('open')
+}
 function purchaseOpenPanel(panel){
   const btn=$(`[data-panel="${panel}"]`);if(btn)btn.click();
 }
@@ -2534,7 +2832,23 @@ function purchaseBind(){
   $('#purchaseToggle')?.addEventListener('click',()=>{$('#purchaseGroup')?.classList.toggle('open');$('#designStudioGroup')?.classList.remove('open')});
   $$('[data-go-purchase]').forEach(x=>x.onclick=()=>purchaseOpenPanel(x.dataset.goPurchase));
   $$('[data-purchase-controller]').forEach(x=>x.onclick=()=>purchaseOpenPc(x.dataset.purchaseController));
-  $('#purchasePcClose')?.addEventListener('click',()=>$('#purchasePcModal').classList.remove('open'));$('#purchasePcModal')?.addEventListener('click',e=>{if(e.target===$('#purchasePcModal'))$('#purchasePcModal').classList.remove('open')});$('#purchasePcSave')?.addEventListener('click',purchaseSavePc);$('#purchasePcReset')?.addEventListener('click',()=>{if(!purchasePcPage)return;ERPPageController?.reset?.(purchasePcPage);purchaseApplyPc(purchasePcPage);purchaseOpenPc(purchasePcPage);toast('Page defaults restored')});
+  const pcLiveIds=['ppcInnerTitle','ppcSubtitle','ppcInstruction','ppcSummary','ppcFilters','ppcWidth','ppcPadding','ppcRowHeight','ppcWrap','ppcHeadAlign','ppcDataAlign','ppcHeadBold','ppcHeadItalic','ppcDataBold','ppcDataItalic','ppcCardLocal','ppcCardZafar','ppcCardBoard','ppcCardHistory','ppcCardSupplier','ppcCardCols','ppcCardGap','ppcCardPadding','ppcCardRadius','ppcCardBorder','ppcCardAlign','ppcCardTitleSize','ppcCardTextSize','ppcCardTitleBold','ppcCardTitleItalic','ppcCardTextBold','ppcCardTextItalic','ppcKpiGap','ppcKpiPadding','ppcKpiRadius','ppcSectionGap'];
+  pcLiveIds.forEach(id=>{
+    const e=$('#'+id);if(!e)return;
+    const ev=(e.type==='range')?'input':'change';
+    e.addEventListener(ev,()=>{purchasePcValues();purchasePcLivePreview()})
+  });
+  $('#purchasePcClose')?.addEventListener('click',purchaseCancelPc);
+  $('#purchasePcCancel')?.addEventListener('click',purchaseCancelPc);
+  $('#purchasePcModal')?.addEventListener('click',e=>{if(e.target===$('#purchasePcModal'))purchaseCancelPc()});
+  $('#purchasePcSave')?.addEventListener('click',purchaseSavePc);
+  $('#purchasePcReset')?.addEventListener('click',()=>{
+    if(!purchasePcPage)return;
+    const d=purchasePcDefaults();
+    purchasePcPopulate(d);
+    purchaseApplyPcState(purchasePcPage,d);
+    toast('Page defaults previewed — press Save Page Settings to keep them')
+  });
   ['plpQty','plpRate'].forEach(id=>$('#'+id)?.addEventListener('input',purchaseLocalCalc));['pzpQty','pzpRate'].forEach(id=>$('#'+id)?.addEventListener('input',purchaseZafarCalc));['pbpCount','pbpWeightItem','pbpDeduction','pbpRate','pbpTax'].forEach(id=>$('#'+id)?.addEventListener('input',purchaseBoardCalc));
   $('#plpSave')?.addEventListener('click',purchaseLocalSave);$('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEventListener('click',purchaseBoardSave);
   $('#plpClear')?.addEventListener('click',()=>purchaseClearInputs(['plpDate','plpSupplier','plpItem','plpSize','plpUnit','plpQty','plpRate','plpAmount','plpBill','plpIgp','plpVehicle','plpPurchasedBy','plpRemarks']));
