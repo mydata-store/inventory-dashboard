@@ -1206,6 +1206,85 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 @media(max-width:900px){.rgp-head-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.rgp-head-grid{grid-template-columns:1fr}.rgp-wide{grid-column:auto}}
 
+
+/* ===== V14.32 Gate Pass Management Dashboard ===== */
+.gate-dashboard-cards{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin:12px 0 16px;
+}
+.gate-main-card{
+  min-height:118px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  color:var(--text);
+  padding:16px;
+  display:grid;
+  grid-template-columns:54px 1fr auto;
+  align-items:center;
+  gap:12px;
+  text-align:left;
+  box-shadow:0 8px 22px rgba(0,0,0,.05);
+  transition:.15s ease;
+}
+.gate-main-card:hover{
+  transform:translateY(-2px);
+  border-color:var(--primary);
+  box-shadow:0 10px 24px rgba(0,0,0,.08);
+}
+.gate-card-icon{
+  width:54px;height:54px;border-radius:13px;
+  display:grid;place-items:center;
+  background:color-mix(in srgb,var(--primary) 12%,var(--surface));
+  color:var(--primary);
+  font-size:25px;font-weight:900;
+}
+.gate-card-copy strong{display:block;font-size:24px;line-height:1}
+.gate-card-copy small{display:block;margin-top:7px;color:var(--muted);font-size:11px;font-weight:700}
+.gate-card-count{
+  min-width:44px;height:34px;border-radius:999px;
+  display:grid;place-items:center;
+  background:color-mix(in srgb,var(--primary) 10%,var(--surface));
+  border:1px solid var(--border);
+  font-size:14px;font-weight:900;
+}
+.gate-recent-head{
+  display:flex;align-items:end;justify-content:space-between;gap:10px;
+  margin:4px 0 8px;
+}
+.gate-recent-head h3{margin:0;font-size:15px}
+.gate-recent-head p{margin:3px 0 0;color:var(--muted);font-size:9px}
+.gate-recent-actions{display:flex;gap:5px;flex-wrap:wrap}
+.gate-recent-table-wrap{
+  overflow:auto;border:1px solid var(--border);border-radius:10px;
+}
+.gate-recent-table{min-width:1250px}
+.gate-recent-table th,.gate-recent-table td{height:34px}
+.gate-recent-table td{padding:5px 7px;font-size:9px}
+.gate-type-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:40px;height:22px;border-radius:999px;
+  padding:0 7px;font-size:8px;font-weight:900;
+  border:1px solid var(--border);
+}
+.gate-type-badge.rgp{background:#ecfdf5;color:#166534}
+.gate-type-badge.ogp{background:#eff6ff;color:#1d4ed8}
+.gate-type-badge.cgp{background:#fff7ed;color:#9a3412}
+.gate-status-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:58px;height:22px;border-radius:999px;
+  background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;
+  font-size:8px;font-weight:900;
+}
+.gate-action-btn{
+  height:25px;border:1px solid var(--border);border-radius:6px;
+  background:var(--surface);color:var(--text);
+  padding:0 8px;font-size:8px;font-weight:900;
+}
+@media(max-width:900px){.gate-dashboard-cards{grid-template-columns:1fr}}
+
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -1234,6 +1313,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
     <div class="side-group gate-pass-group" id="gatePassGroup">
       <button class="side-group-toggle" id="gatePassToggle" type="button" title="Gate Pass Management"><span class="side-icon">◇</span><span>Gate Pass Management</span><span class="chev">⌃</span></button>
       <div class="side-submenu"><div class="side-submenu-inner">
+        <button class="side-subitem" data-panel="gate-pass-dashboard" title="Gate Pass Dashboard"><span>Dashboard</span></button>
         <button class="side-subitem" data-panel="rgp-entry" title="RGP Entry"><span>RGP Entry</span></button>
       </div></div>
     </div>
@@ -1610,6 +1690,85 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   </div>
 </section>
 
+
+
+<section class="panel purchase-page" id="panel-gate-pass-dashboard">
+  <div class="card">
+    <div class="purchase-page-head">
+      <div>
+        <h2>Gate Pass Management</h2>
+        <p>RGP • OGP • CGP • Recent Gate Pass activity.</p>
+      </div>
+      <button class="btn purchase-controller-btn" data-purchase-controller="gate-pass-dashboard">⚙ Page Controller</button>
+    </div>
+
+    <div class="purchase-instruction" data-purchase-instruction="gate-pass-dashboard">
+      Select the gate pass type you want to work with. Recent saved Gate Pass entries appear below automatically.
+    </div>
+
+    <div class="gate-dashboard-cards">
+      <button class="gate-main-card gate-rgp-card" type="button" data-gate-go="rgp-entry">
+        <span class="gate-card-icon">↔</span>
+        <span class="gate-card-copy">
+          <strong>RGP</strong>
+          <small>Returnable Gate Pass</small>
+        </span>
+        <span class="gate-card-count" id="gateRgpCount">0</span>
+      </button>
+
+      <button class="gate-main-card gate-ogp-card" type="button" data-gate-go="ogp-entry">
+        <span class="gate-card-icon">→</span>
+        <span class="gate-card-copy">
+          <strong>OGP</strong>
+          <small>Outward Gate Pass</small>
+        </span>
+        <span class="gate-card-count" id="gateOgpCount">0</span>
+      </button>
+
+      <button class="gate-main-card gate-cgp-card" type="button" data-gate-go="cgp-entry">
+        <span class="gate-card-icon">¤</span>
+        <span class="gate-card-copy">
+          <strong>CGP</strong>
+          <small>Cash Gate Pass</small>
+        </span>
+        <span class="gate-card-count" id="gateCgpCount">0</span>
+      </button>
+    </div>
+
+    <div class="gate-recent-head">
+      <div>
+        <h3>Recent Gate Pass Entries</h3>
+        <p>Latest saved Gate Pass appears on top.</p>
+      </div>
+      <div class="gate-recent-actions">
+        <button class="mini active" type="button" data-gate-filter="all">All</button>
+        <button class="mini" type="button" data-gate-filter="RGP">RGP</button>
+        <button class="mini" type="button" data-gate-filter="OGP">OGP</button>
+        <button class="mini" type="button" data-gate-filter="CGP">CGP</button>
+      </div>
+    </div>
+
+    <div class="gate-recent-table-wrap">
+      <table class="purchase-table gate-recent-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Type</th>
+            <th>Gate Pass No.</th>
+            <th>Date</th>
+            <th>Department / Party</th>
+            <th>Items</th>
+            <th>Total Qty</th>
+            <th>Status</th>
+            <th>Saved At</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="gateRecentBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <section class="panel purchase-page" id="panel-rgp-entry">
   <div class="card">
@@ -4600,7 +4759,7 @@ function purchaseOpenPc(page){
   purchasePcOriginal=JSON.parse(JSON.stringify(x));
   $('#purchasePcTitle').textContent='Page Controller — '+({
     'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Local Purchase','zafar-purchase':'Zafar Purchase',
-    'board-purchase':'Purchase Entry','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis','rgp-entry':'RGP Entry'
+    'board-purchase':'Purchase Entry','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis','gate-pass-dashboard':'Gate Pass Management','rgp-entry':'RGP Entry'
   }[page]||page);
   $('#ppeSpecialControls').style.display=page==='purchase-entry'?'contents':'none';
   $('#localDesignerControls').classList.toggle('show',page==='local-purchase');
@@ -5159,8 +5318,12 @@ function bind(){
  };
  $('#issueToggle')?.addEventListener('click',()=>toggleSideGroup('issueGroup'));
  $('#purchaseToggle')?.addEventListener('click',()=>toggleSideGroup('purchaseGroup'));
- $('#gatePassToggle')?.addEventListener('click',()=>toggleSideGroup('gatePassGroup'));
- $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['rgp-entry'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='RGP — Returnable Gate Pass';setTimeout(()=>rgpUpdateTotal(),0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
+ $('#gatePassToggle')?.addEventListener('click',()=>{
+   const wasOpen=$('#gatePassGroup')?.classList.contains('open');
+   toggleSideGroup('gatePassGroup');
+   if(!wasOpen)setTimeout(()=>document.querySelector('[data-panel="gate-pass-dashboard"]')?.click(),0)
+ });
+ $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-entry'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'RGP • OGP • CGP':'RGP — Returnable Gate Pass';setTimeout(()=>{if(panel==='gate-pass-dashboard')gateDashboardRender();else rgpUpdateTotal()},0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
 
 /* Shared Print Designer V1.0 */
 const PRINT_GALLERY_KEY='erpPrintDesignGalleryV1', PRINT_ASSIGN_KEY='erpPrintAssignmentsV1', PRINT_CONTRACT_KEY='erpPrintDataContractsV1';
@@ -5211,7 +5374,7 @@ function restoreLastStudioPanel(){
   $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===panel));
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));
   const designGroup=$('#designStudioGroup');
-  if(['masters','purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis','issue-entry','issue-history','rgp-entry'].includes(panel))designGroup?.classList.remove('open');
+  if(['masters','purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis','issue-entry','issue-history','gate-pass-dashboard','rgp-entry'].includes(panel))designGroup?.classList.remove('open');
   else designGroup?.classList.add('open');
   return panel;
 }
@@ -5236,6 +5399,7 @@ function erpStableStartup(){
   erpSafeCall('ccmpBind',()=>ccmpBind());
   erpSafeCall('masterBind',()=>masterBind());
   erpSafeCall('purchaseBind',()=>purchaseBind());
+  erpSafeCall('gateDashboardBind',()=>gateDashboardBind());
   erpSafeCall('rgpBind',()=>rgpBind());
   erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
   erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
@@ -5248,6 +5412,7 @@ function erpStableStartup(){
     erpSafeCall('account render',()=>maRender());
     if(restoredPanel==='masters'){erpSafeCall('masters render',()=>masterRenderAll());if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Central master data for the complete ERP.'}
     if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(restoredPanel)){erpSafeCall('purchase render',()=>purchaseRenderAll());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[restoredPanel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=restoredPanel==='purchase-indent'?'Purchase Request & Approval':restoredPanel==='local-purchase'?'Local Purchase':restoredPanel==='zafar-purchase'?'Zafar Purchase':restoredPanel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware'}
+    if(restoredPanel==='gate-pass-dashboard'){erpSafeCall('Gate Pass Dashboard render',()=>gateDashboardRender());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='RGP • OGP • CGP'}
     if(restoredPanel==='rgp-entry'){erpSafeCall('RGP render',()=>rgpUpdateTotal());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='RGP — Returnable Gate Pass'}
     if(restoredPanel==='company-control'){
       if(!ccmpTenantId)ccmpTenantId=tenantCurrentId();
@@ -5262,6 +5427,112 @@ function erpStableStartup(){
 erpStableStartup();
 
 
+
+
+
+/* ===== Gate Pass Management Dashboard operations ===== */
+const OGP_KEY='erpOgpRecordsV1';
+const CGP_KEY='erpCgpRecordsV1';
+let gateDashboardFilter='all';
+
+function gateSafeLoad(key){
+  try{
+    const a=JSON.parse(localStorage.getItem(key)||'[]');
+    return Array.isArray(a)?a:[]
+  }catch(e){return[]}
+}
+function gateRecordNo(type,r){
+  if(type==='RGP')return r.rgpNo||r.number||r.no||'';
+  if(type==='OGP')return r.ogpNo||r.number||r.no||'';
+  return r.cgpNo||r.gatePassNo||r.number||r.no||''
+}
+function gateRecordDate(r){return r.date||r.ogpDate||r.cgpDate||r.savedDate||''}
+function gateRecordParty(type,r){
+  if(type==='RGP')return r.workshop||r.department||'';
+  if(type==='OGP')return r.receiverParty||r.workshop||r.department||'';
+  return r.scrapper||r.party||r.department||r.location||''
+}
+function gateRecordItems(r){
+  if(Array.isArray(r.items))return r.items.length;
+  if(r.item||r.material||r.description)return 1;
+  return 0
+}
+function gateRecordQty(r){
+  if(Array.isArray(r.items))return r.items.reduce((n,x)=>n+purchaseNum(x.qty||x.quantity||0),0);
+  return purchaseNum(r.qty||r.quantity||0)
+}
+function gateAllRecent(){
+  return [
+    ...rgpLoad().map(r=>({...r,_gateType:'RGP'})),
+    ...gateSafeLoad(OGP_KEY).map(r=>({...r,_gateType:'OGP'})),
+    ...gateSafeLoad(CGP_KEY).map(r=>({...r,_gateType:'CGP'}))
+  ].sort((a,b)=>String(b.createdAt||b.savedAt||b.date||'').localeCompare(String(a.createdAt||a.savedAt||a.date||'')))
+}
+function gateFormatSavedAt(v){
+  if(!v)return'';
+  const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v);
+  return d.toLocaleString([],{
+    day:'2-digit',month:'short',year:'2-digit',
+    hour:'2-digit',minute:'2-digit'
+  }).replace(',','')
+}
+function gateDashboardRender(){
+  if(!$('#panel-gate-pass-dashboard'))return;
+  const rgps=rgpLoad(),ogps=gateSafeLoad(OGP_KEY),cgps=gateSafeLoad(CGP_KEY);
+  if($('#gateRgpCount'))$('#gateRgpCount').textContent=rgps.length;
+  if($('#gateOgpCount'))$('#gateOgpCount').textContent=ogps.length;
+  if($('#gateCgpCount'))$('#gateCgpCount').textContent=cgps.length;
+
+  let rows=gateAllRecent();
+  if(gateDashboardFilter!=='all')rows=rows.filter(r=>r._gateType===gateDashboardFilter);
+  rows=rows.slice(0,20);
+
+  const body=$('#gateRecentBody');if(!body)return;
+  body.innerHTML=rows.length?rows.map((r,i)=>{
+    const type=r._gateType;
+    const no=gateRecordNo(type,r);
+    const party=gateRecordParty(type,r);
+    const status=r.status||'Saved';
+    return `<tr>
+      <td>${i+1}</td>
+      <td><span class="gate-type-badge ${type.toLowerCase()}">${type}</span></td>
+      <td>${escHtml(no)}</td>
+      <td>${escHtml(gateRecordDate(r))}</td>
+      <td>${escHtml(party)}</td>
+      <td>${gateRecordItems(r)}</td>
+      <td>${purchaseMoney(gateRecordQty(r))}</td>
+      <td><span class="gate-status-badge">${escHtml(status)}</span></td>
+      <td>${escHtml(gateFormatSavedAt(r.createdAt||r.savedAt||''))}</td>
+      <td><button class="gate-action-btn" type="button" data-gate-open-type="${type}" data-gate-open-id="${escHtml(r.id||'')}">Open</button></td>
+    </tr>`
+  }).join(''):`<tr><td colspan="10" class="purchase-empty">No Gate Pass records saved yet.</td></tr>`;
+
+  body.querySelectorAll('[data-gate-open-type]').forEach(btn=>btn.addEventListener('click',()=>{
+    const type=btn.dataset.gateOpenType;
+    if(type==='RGP'){
+      document.querySelector('[data-panel="rgp-entry"]')?.click()
+    }else toast(type+' page will be connected when its module is created')
+  }))
+}
+function gateDashboardBind(){
+  document.querySelectorAll('[data-gate-go]').forEach(btn=>btn.addEventListener('click',()=>{
+    const target=btn.dataset.gateGo;
+    if(target==='rgp-entry'){
+      document.querySelector('[data-panel="rgp-entry"]')?.click()
+    }else if(target==='ogp-entry'){
+      toast('OGP is the next Gate Pass page to build')
+    }else if(target==='cgp-entry'){
+      toast('CGP will be built after OGP')
+    }
+  }));
+  document.querySelectorAll('[data-gate-filter]').forEach(btn=>btn.addEventListener('click',()=>{
+    gateDashboardFilter=btn.dataset.gateFilter;
+    document.querySelectorAll('[data-gate-filter]').forEach(x=>x.classList.toggle('active',x===btn));
+    gateDashboardRender()
+  }));
+  purchaseApplyPc('gate-pass-dashboard');
+  gateDashboardRender()
+}
 
 
 /* ===== Gate Pass Management — RGP Entry operations ===== */
@@ -5441,7 +5712,7 @@ function rgpSave(){
   };
   const all=rgpLoad();all.unshift(rec);rgpStore(all);
   try{ERPAudit?.log?.({module:'Gate Pass',page:'RGP Entry',action:'Add',recordId:rec.id,after:rec})}catch(e){}
-  rgpClear();toast('RGP saved')
+  rgpClear();gateDashboardRender();toast('RGP saved')
 }
 function rgpBind(){
   if(!$('#panel-rgp-entry'))return;
