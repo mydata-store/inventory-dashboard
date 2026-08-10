@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.5</title>
+<title>ERP Design Studio Core V14.6</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -1681,7 +1681,20 @@ function masterNextCode(type){
   const max=rows.reduce((m,r)=>Math.max(m,+String(r.code||'').replace(/\D/g,'')||0),0)+1;
   return `${cfg.code}-${String(max).padStart(5,'0')}`;
 }
-function masterCap(v){return String(v||'').trim().replace(/\s+/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
+function erpTitleCase(v){
+  return String(v??'')
+    .replace(/\s+/g,' ')
+    .replace(/(^|[\s\-\/\(\)\.])([A-Za-z])([A-Za-z]*)/g,(m,p,a,b)=>p+a.toUpperCase()+b.toLowerCase());
+}
+function erpIsUppercaseField(field,label=''){
+  const x=(String(field||'')+' '+String(label||'')).toLowerCase();
+  return x.includes('vehicle') || /\bbill\b/.test(x) || x.includes('bill no') || x.includes('bill number');
+}
+function erpFormatText(v,field='',label=''){
+  const raw=String(v??'').replace(/\s+/g,' ');
+  return erpIsUppercaseField(field,label) ? raw.toUpperCase() : erpTitleCase(raw);
+}
+function masterCap(v){return erpTitleCase(v)}
 function masterPageSettings(){
   const def={
     subtitle:true,instruction:true,summary:true,filters:true,compact:false,rowNumbers:true,
@@ -1860,6 +1873,38 @@ function masterCloseAuto(except=null){
   $$('.master-auto-list.open').forEach(x=>{if(x!==except)x.classList.remove('open')});
 }
 
+
+function masterBindTextFormatting(){
+  const cfg=MASTER_TYPES[masterCurrent];
+  $$('[data-master-field]').forEach(el=>{
+    const field=el.dataset.masterField;
+    const def=cfg.fields.find(x=>x[0]===field);
+    if(!def)return;
+    const [key,label,type]=def;
+    if(type==='select')return;
+
+    const formatNow=()=>{
+      const pos=typeof el.selectionStart==='number'?el.selectionStart:null;
+      el.value=erpFormatText(el.value,key,label);
+      if(pos!=null && document.activeElement===el){
+        const p=Math.min(pos,el.value.length);
+        try{el.setSelectionRange(p,p)}catch(e){}
+      }
+    };
+
+    el.addEventListener('blur',formatNow);
+    el.addEventListener('change',formatNow);
+
+    // Vehicle/Bill fields are forced uppercase immediately while typing.
+    if(erpIsUppercaseField(key,label)){
+      el.addEventListener('input',()=>{
+        const p=el.selectionStart;
+        el.value=String(el.value||'').toUpperCase();
+        if(p!=null)try{el.setSelectionRange(p,p)}catch(e){}
+      });
+    }
+  });
+}
 function masterBindAutofill(){
   $$('[data-master-autofill]').forEach(input=>{
     const field=input.dataset.masterAutofill,cfg=masterAutoConfig(field);
@@ -1893,7 +1938,8 @@ function masterBindAutofill(){
 
     const choose=i=>{
       const r=shown[i];if(!r)return;
-      input.value=masterAutoPrimary(r,cfg);
+      const def=MASTER_TYPES[masterCurrent].fields.find(x=>x[0]===field);
+      input.value=erpFormatText(masterAutoPrimary(r,cfg),field,def?.[1]||'');
       input.dataset.selectedMasterId=r.id||'';
       masterAutoFillRelated(field,r);
       list.classList.remove('open');
@@ -1960,6 +2006,7 @@ function masterRenderForm(){
     return `<div class="field"><label>${escHtml(label)}${required?' *':''}</label><input data-master-field="${key}" ${required?'required':''}></div>`;
   }).join('');
   masterBindAutofill();
+  masterBindTextFormatting();
 }
 function masterClearForm(){masterEditingId='';masterRenderForm()}
 function masterFilteredRows(){
@@ -1986,7 +2033,14 @@ function masterRenderSummary(){
 function masterRenderAll(){masterRenderTabs();masterRenderForm();masterRenderTable();masterRenderSummary();masterApplyPageSettings()}
 function masterReadForm(){
   const cfg=MASTER_TYPES[masterCurrent],o={};
-  for(const [key,label,type,required] of cfg.fields){const e=$(`[data-master-field="${key}"]`);let v=e?.value??'';if(type!=='select')v=masterCap(v);if(required&&!String(v).trim()){toast(label+' is required');return null}o[key]=v}
+  for(const [key,label,type,required] of cfg.fields){
+    const e=$(`[data-master-field="${key}"]`);
+    let v=e?.value??'';
+    if(type!=='select')v=erpFormatText(v,key,label);
+    if(e && type!=='select')e.value=v;
+    if(required&&!String(v).trim()){toast(label+' is required');return null}
+    o[key]=v;
+  }
   if(!o.status)o.status='active';
   return o;
 }
@@ -2056,6 +2110,15 @@ window.ERPMasters={list:(type)=>masterBucket(type),current:()=>masterCurrent,ren
 window.ERPSearchableDropdown={
   standard:{match:'contains-any-word',minTyping:1,keyboard:['ArrowUp','ArrowDown','Enter','Tab','Escape'],freeTyping:true},
   search:(rows,q)=>rows.filter(r=>masterAutoMatches(r,q))
+};
+window.ERPTextFormatting={
+  standard:{
+    normal:'Title Case — first letter of every word capital, remaining letters lowercase',
+    uppercaseFields:['vehicle','bill']
+  },
+  format:erpFormatText,
+  titleCase:erpTitleCase,
+  isUppercaseField:erpIsUppercaseField
 };
 
 /* ===== Hidden Multi-Tenant Core ===== */
