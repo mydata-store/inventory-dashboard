@@ -1166,6 +1166,20 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 }
 #issueEntryTable .issue-issuedto-auto .purchase-auto-list:empty{display:none!important}
 
+
+/* V14.30 — Issue Entry locked Excel-grid behavior */
+#issueEntryTable td.issue-excel-selected{
+  background:color-mix(in srgb,var(--primary) 8%,transparent)!important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 38%,transparent);
+}
+#issueEntryTable td.issue-excel-active{
+  box-shadow:inset 0 0 0 2px var(--primary)!important;
+}
+#issueEntryTable td.issue-excel-copy{
+  outline:2px dashed color-mix(in srgb,var(--primary) 75%,#fff);
+  outline-offset:-3px;
+}
+
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -4539,7 +4553,6 @@ function purchaseOpenPanel(panel){
 }
 function purchaseBind(){
   PURCHASE_PAGE_IDS.forEach(id=>ERPAccessControl?.registerPage?.({id,name:{'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Local Purchase','zafar-purchase':'Zafar Purchase','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[id],module:'purchase',actions:['view','add','edit','delete','print'],description:'Purchase module page'}));
-  $('#purchaseToggle')?.addEventListener('click',()=>{$('#purchaseGroup')?.classList.toggle('open');$('#designStudioGroup')?.classList.remove('open')});
   $$('[data-go-purchase]').forEach(x=>x.onclick=()=>purchaseOpenPanel(x.dataset.goPurchase));
   $$('[data-purchase-controller]').forEach(x=>x.onclick=()=>purchaseOpenPc(x.dataset.purchaseController));
   const pcLiveIds=['ppcInnerTitle','ppcSubtitle','ppcInstruction','ppcSummary','ppcFilters','ppcWidth','ppcPadding','ppcRowHeight','ppcWrap','ppcHeadAlign','ppcDataAlign','ppcHeadBold','ppcHeadItalic','ppcDataBold','ppcDataItalic','ppcCardLocal','ppcCardZafar','ppcCardBoard','ppcCardHistory','ppcCardSupplier','ppcCardCols','ppcCardGap','ppcCardPadding','ppcCardRadius','ppcCardBorder','ppcCardAlign','ppcCardTitleSize','ppcCardTextSize','ppcCardTitleBold','ppcCardTitleItalic','ppcCardTextBold','ppcCardTextItalic','ppcKpiGap','ppcKpiPadding','ppcKpiRadius','ppcSectionGap','lpdColVisible','lpdColWidth','lpdColWrap','lpdColHeadAlign','lpdColDataAlign','lpdColHeadFont','lpdColDataFont','lpdColHeadBold','lpdColHeadItalic','lpdColDataBold','lpdColDataItalic','lpdHeaderHeight','lpdCellPadding','lpdBorderWidth','lpdTableMinWidth','lpdHeaderFont','lpdDataFont','lpdHeaderAlign','lpdDataAlign','lpdTableWrap','lpdFreezeHeader','lpdHeaderBold','lpdHeaderItalic','lpdDataBold','lpdDataItalic','lpdShowSectionTotals','lpdShowStatus','lpdShowClear','lpdShowSave','lpdActionAlign','zpdColVisible','zpdColWidth','zpdColWrap','zpdColHeadAlign','zpdColDataAlign','zpdColHeadFont','zpdColDataFont','zpdColHeadBold','zpdColHeadItalic','zpdColDataBold','zpdColDataItalic','zpdHeaderHeight','zpdCellPadding','zpdBorderWidth','zpdTableMinWidth','zpdHeaderFont','zpdDataFont','zpdHeaderAlign','zpdDataAlign','zpdTableWrap','zpdFreezeHeader','zpdHeaderBold','zpdHeaderItalic','zpdDataBold','zpdDataItalic','zpdShowTotal','zpdShowStatus','zpdShowClear','zpdShowSave','zpdActionAlign','bpdColVisible','bpdColWidth','bpdColWrap','bpdColHeadAlign','bpdColDataAlign','bpdColHeadFont','bpdColDataFont','bpdColHeadBold','bpdColHeadItalic','bpdColDataBold','bpdColDataItalic','bpdHeaderHeight','bpdCellPadding','bpdBorderWidth','bpdTableMinWidth','bpdHeaderFont','bpdDataFont','bpdHeaderAlign','bpdDataAlign','bpdTableWrap','bpdFreezeHeader','bpdHeaderBold','bpdHeaderItalic','bpdDataBold','bpdDataItalic','bpdShowTabs','bpdShowTotal','bpdShowStatus','bpdShowClear','bpdShowSave','bpdActionAlign'];
@@ -5052,7 +5065,16 @@ const pc=$('#collapsedPreviewClock');if(pc){pc.style.display=c.collapsedShow?'bl
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem(LEGACY_KEY,JSON.stringify(state));localStorage.setItem('erpThemeSettingsV1',JSON.stringify(state.theme));localStorage.setItem('erpSidebarSettingsV1',JSON.stringify(state.sidebar));localStorage.setItem('erpProfileSettingsV1',JSON.stringify(state.profile));localStorage.setItem('erpClockSettingsV1',JSON.stringify(state.clock));localStorage.setItem('erpCompanyIdentityV1',JSON.stringify(state.company));$('#saveStatus').textContent='Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});toast('Design saved & applied')}
 const ACTIVE_STUDIO_PANEL_KEY='erpDesignStudioActivePanelV1';
-function bind(){ $('#issueToggle')?.addEventListener('click',()=>$('#issueGroup')?.classList.toggle('open')); $('#purchaseToggle')?.addEventListener('click',()=>$('#purchaseGroup')?.classList.toggle('open')); $('#designStudioToggle')?.addEventListener('click',()=>$('#designStudioGroup')?.classList.toggle('open')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
+function bind(){
+ const toggleSideGroup=id=>{
+   const active=$('#'+id);if(!active)return;
+   const willOpen=!active.classList.contains('open');
+   ['purchaseGroup','issueGroup','designStudioGroup'].forEach(g=>$('#'+g)?.classList.remove('open'));
+   if(willOpen)active.classList.add('open')
+ };
+ $('#issueToggle')?.addEventListener('click',()=>toggleSideGroup('issueGroup'));
+ $('#purchaseToggle')?.addEventListener('click',()=>toggleSideGroup('purchaseGroup'));
+ $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
 
 /* Shared Print Designer V1.0 */
 const PRINT_GALLERY_KEY='erpPrintDesignGalleryV1', PRINT_ASSIGN_KEY='erpPrintAssignmentsV1', PRINT_CONTRACT_KEY='erpPrintDataContractsV1';
@@ -5195,37 +5217,6 @@ function issueFillItemLinked(input,r){
   return true
 }
 
-function issueFixSidebarAccordion(){
-  const sb=document.querySelector('.sidebar');if(!sb)return;
-  const purchaseBtn=[...sb.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='Purchase');
-  const issueBtn=[...sb.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='Issue / Consumption');
-  const designBtn=[...sb.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='Design Studio');
-  const parents=[purchaseBtn,issueBtn,designBtn].filter(Boolean);
-
-  const closeOther=(active)=>{
-    parents.forEach(btn=>{
-      if(btn===active)return;
-      btn.classList.remove('active','open','expanded');
-      btn.setAttribute('aria-expanded','false');
-      const host=btn.closest('.side-group,.menu-group,.nav-group')||btn.parentElement;
-      if(host)host.classList.remove('open','expanded');
-      let n=btn.nextElementSibling;
-      while(n){
-        if(parents.includes(n))break;
-        if(n.matches?.('.side-submenu,.submenu,.nav-submenu,.sub-menu'))n.style.display='none';
-        n=n.nextElementSibling;
-      }
-    });
-  };
-  parents.forEach(btn=>{
-    if(btn.dataset.issueAccordionBound)return;
-    btn.dataset.issueAccordionBound='1';
-    btn.addEventListener('click',()=>setTimeout(()=>closeOther(btn),0));
-  });
-  if(issueBtn)closeOther(issueBtn);
-}
-
-
 function issueAutoSaveEmployeeName(name){
   const clean=purchaseFormatText(String(name||'').trim(),'employee','Employee');
   if(!clean)return;
@@ -5270,6 +5261,248 @@ function issueEnhanceItemDropdowns(){
   purchaseBindAutos($('#issueEntryTable')||document);
 }
 
+
+let issueExcelAnchor=null,issueExcelFocus=null,issueExcelUndo=[],issueExcelClipboard='',issueExcelCopyRange=null,issueExcelUndoing=false,issueExcelLast='';
+
+function issueExcelRows(){return [...document.querySelectorAll('#issueEntryTable tbody tr')]}
+function issueExcelPos(input){
+  const tr=input.closest('tr'),td=input.closest('td');
+  if(!tr||!td)return null;
+  return{row:issueExcelRows().indexOf(tr),col:[...tr.children].indexOf(td)-1}
+}
+function issueExcelCell(row,col){
+  const tr=issueExcelRows()[row];
+  return tr?.children[col+1]||null
+}
+function issueExcelInput(row,col){return issueExcelCell(row,col)?.querySelector('input')||null}
+function issueExcelClamp(p){
+  const rows=issueExcelRows(),cols=issueInputs()[0]?.length||0;
+  return{row:Math.max(0,Math.min(rows.length-1,p.row)),col:Math.max(0,Math.min(cols-1,p.col))}
+}
+function issueExcelRect(a,b){
+  a=issueExcelClamp(a);b=issueExcelClamp(b);
+  return{r1:Math.min(a.row,b.row),r2:Math.max(a.row,b.row),c1:Math.min(a.col,b.col),c2:Math.max(a.col,b.col)}
+}
+function issueExcelPaint(){
+  document.querySelectorAll('#issueEntryTable td.issue-excel-selected,#issueEntryTable td.issue-excel-active').forEach(td=>td.classList.remove('issue-excel-selected','issue-excel-active'));
+  if(!issueExcelFocus)return;
+  const z=issueExcelRect(issueExcelAnchor||issueExcelFocus,issueExcelFocus);
+  for(let r=z.r1;r<=z.r2;r++)for(let c=z.c1;c<=z.c2;c++)issueExcelCell(r,c)?.classList.add('issue-excel-selected');
+  issueExcelCell(issueExcelFocus.row,issueExcelFocus.col)?.classList.add('issue-excel-active')
+}
+function issueExcelSingle(input){
+  const p=issueExcelPos(input);if(!p)return;
+  issueExcelAnchor={...p};issueExcelFocus={...p};issueExcelPaint()
+}
+function issueExcelFocusCell(row,col,extend=false){
+  const p=issueExcelClamp({row,col}),input=issueExcelInput(p.row,p.col);if(!input)return;
+  const oldAnchor=issueExcelAnchor?{...issueExcelAnchor}:null;
+  issueExcelFocus={...p};
+  if(!extend)issueExcelAnchor={...p};
+  input.focus({preventScroll:true});
+  input.closest('td')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  if(extend&&oldAnchor)issueExcelAnchor=oldAnchor;
+  issueExcelPaint()
+}
+function issueExcelSelection(){
+  return issueExcelFocus?issueExcelRect(issueExcelAnchor||issueExcelFocus,issueExcelFocus):null
+}
+function issueExcelSnapshot(){
+  return issueInputs().map(row=>row.map(x=>x.value))
+}
+function issueExcelRemember(){
+  if(issueExcelUndoing)return;
+  const snap=issueExcelSnapshot(),key=JSON.stringify(snap);
+  if(key===issueExcelLast)return;
+  issueExcelUndo.push(snap);
+  if(issueExcelUndo.length>100)issueExcelUndo.shift();
+  issueExcelLast=key
+}
+function issueExcelRestore(snap){
+  if(!snap)return;
+  issueExcelUndoing=true;
+  issueInputs().forEach((row,r)=>row.forEach((x,c)=>{x.value=snap[r]?.[c]??''}));
+  issueExcelUndoing=false;
+  issueExcelLast=JSON.stringify(issueExcelSnapshot());
+  issueUpdateTotal();issueExcelPaint()
+}
+function issueExcelSet(row,col,value){
+  const input=issueExcelInput(row,col);if(!input||input.readOnly)return;
+  input.value=String(value??'');
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+  if(col===0)input.value=issueDate(input.value);
+  if(col===1)input.value=issueIr(input.value)
+}
+function issueExcelTSV(){
+  const z=issueExcelSelection();if(!z)return'';
+  const out=[];
+  for(let r=z.r1;r<=z.r2;r++){
+    const line=[];
+    for(let c=z.c1;c<=z.c2;c++)line.push(issueExcelInput(r,c)?.value||'');
+    out.push(line.join('\t'))
+  }
+  return out.join('\n')
+}
+function issueExcelMarkCopy(range){
+  document.querySelectorAll('#issueEntryTable td.issue-excel-copy').forEach(td=>td.classList.remove('issue-excel-copy'));
+  if(!range)return;
+  for(let r=range.r1;r<=range.r2;r++)for(let c=range.c1;c<=range.c2;c++)issueExcelCell(r,c)?.classList.add('issue-excel-copy')
+}
+function issueExcelClearSelection(){
+  const z=issueExcelSelection();if(!z)return;
+  issueExcelRemember();
+  issueExcelUndoing=true;
+  for(let r=z.r1;r<=z.r2;r++)for(let c=z.c1;c<=z.c2;c++)issueExcelSet(r,c,'');
+  issueExcelUndoing=false;
+  issueUpdateTotal()
+}
+function issueExcelPaste(text){
+  if(!issueExcelFocus)return;
+  issueExcelRemember();
+  const z=issueExcelSelection(),start=z?{row:z.r1,col:z.c1}:{...issueExcelFocus};
+  const data=String(text??'').replace(/\r/g,'').split('\n');
+  if(data.length&&data[data.length-1]==='')data.pop();
+  const matrix=data.map(x=>x.split('\t'));
+  issueExcelUndoing=true;
+  if(matrix.length===1&&matrix[0].length===1&&z&&(z.r2>z.r1||z.c2>z.c1)){
+    for(let r=z.r1;r<=z.r2;r++)for(let c=z.c1;c<=z.c2;c++)issueExcelSet(r,c,matrix[0][0])
+  }else{
+    matrix.forEach((line,ri)=>line.forEach((v,ci)=>{
+      if(start.row+ri<issueExcelRows().length&&(start.col+ci)<(issueInputs()[0]?.length||0))issueExcelSet(start.row+ri,start.col+ci,v)
+    }))
+  }
+  issueExcelUndoing=false;
+  issueExcelLast=JSON.stringify(issueExcelSnapshot());
+  issueUpdateTotal();issueExcelPaint()
+}
+function issueExcelFillDown(){
+  const z=issueExcelSelection();if(!z)return;
+  issueExcelRemember();issueExcelUndoing=true;
+  if(z.r1===z.r2&&z.r1>0){
+    for(let c=z.c1;c<=z.c2;c++)issueExcelSet(z.r1,c,issueExcelInput(z.r1-1,c)?.value||'')
+  }else{
+    for(let c=z.c1;c<=z.c2;c++){
+      const v=issueExcelInput(z.r1,c)?.value||'';
+      for(let r=z.r1+1;r<=z.r2;r++)issueExcelSet(r,c,v)
+    }
+  }
+  issueExcelUndoing=false;issueUpdateTotal();issueExcelPaint()
+}
+function issueExcelHandleKey(e,input){
+  const p=issueExcelPos(input);if(!p)return;
+  const list=input.closest('.purchase-auto-wrap')?.querySelector('.purchase-auto-list');
+  const autoOpen=!!list?.classList.contains('open');
+
+  // Dropdown owns Up/Down/Enter/Tab while it is actually open.
+  if(autoOpen&&['ArrowDown','ArrowUp','Enter','Tab','Escape'].includes(e.key))return;
+
+  if(e.ctrlKey&&e.key.toLowerCase()==='z'){
+    e.preventDefault();
+    const snap=issueExcelUndo.pop();if(snap)issueExcelRestore(snap);
+    return
+  }
+  if(e.ctrlKey&&e.key.toLowerCase()==='a'){
+    e.preventDefault();
+    issueExcelAnchor={row:0,col:0};
+    issueExcelFocus={row:issueExcelRows().length-1,col:(issueInputs()[0]?.length||1)-1};
+    issueExcelPaint();return
+  }
+  if(e.ctrlKey&&e.key.toLowerCase()==='d'){
+    e.preventDefault();issueExcelFillDown();return
+  }
+  if(e.key==='Delete'){
+    e.preventDefault();issueExcelClearSelection();return
+  }
+  if(e.key==='F2'){
+    e.preventDefault();
+    try{input.setSelectionRange(input.value.length,input.value.length)}catch(_){}
+    return
+  }
+
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+    e.preventDefault();
+    const cur=issueExcelFocus||p,target={...cur};
+    if(e.ctrlKey){
+      if(e.key==='ArrowUp')target.row=0;
+      if(e.key==='ArrowDown')target.row=issueExcelRows().length-1;
+      if(e.key==='ArrowLeft')target.col=0;
+      if(e.key==='ArrowRight')target.col=(issueInputs()[0]?.length||1)-1
+    }else{
+      if(e.key==='ArrowUp')target.row--;
+      if(e.key==='ArrowDown')target.row++;
+      if(e.key==='ArrowLeft')target.col--;
+      if(e.key==='ArrowRight')target.col++
+    }
+    const z=issueExcelClamp(target);
+    if(e.shiftKey){
+      if(!issueExcelAnchor)issueExcelAnchor={...cur};
+      issueExcelFocus={...z};
+      issueExcelFocusCell(z.row,z.col,true)
+    }else{
+      issueExcelFocusCell(z.row,z.col,false)
+    }
+    return
+  }
+
+  // ENTER = move UNDER the current cell, exactly like the approved Issue rule.
+  if(e.key==='Enter'){
+    e.preventDefault();
+    issueExcelFocusCell(p.row+1,p.col,false);
+    return
+  }
+
+  // TAB = next cell; Shift+Tab = previous cell.
+  // Searchable dropdown's own handler selects its option first, then browser/tab movement
+  // is replaced here only when the list is not open.
+  if(e.key==='Tab'){
+    e.preventDefault();
+    let row=p.row,col=p.col+(e.shiftKey?-1:1);
+    const cols=issueInputs()[0]?.length||1;
+    if(col>=cols){col=0;row++}
+    if(col<0){col=cols-1;row--}
+    issueExcelFocusCell(row,col,false);
+    return
+  }
+}
+function issueExcelBind(){
+  const body=document.querySelector('#issueEntryTable tbody');if(!body)return;
+
+  issueInputs().forEach(row=>row.forEach(input=>{
+    if(input.dataset.issueExcelBound)return;
+    input.dataset.issueExcelBound='1';
+    input.addEventListener('beforeinput',issueExcelRemember);
+    input.addEventListener('focus',()=>issueExcelSingle(input));
+    input.addEventListener('mousedown',()=>issueExcelSingle(input));
+    input.addEventListener('keydown',e=>issueExcelHandleKey(e,input))
+  }));
+
+  if(!body.dataset.issueExcelClipboardBound){
+    body.dataset.issueExcelClipboardBound='1';
+    body.addEventListener('copy',e=>{
+      if(!issueExcelFocus)return;
+      const text=issueExcelTSV();if(text==null)return;
+      e.preventDefault();e.clipboardData?.setData('text/plain',text);
+      issueExcelClipboard=text;issueExcelCopyRange=issueExcelSelection();issueExcelMarkCopy(issueExcelCopyRange)
+    });
+    body.addEventListener('cut',e=>{
+      if(!issueExcelFocus)return;
+      const text=issueExcelTSV();if(text==null)return;
+      e.preventDefault();e.clipboardData?.setData('text/plain',text);
+      issueExcelClipboard=text;issueExcelCopyRange=issueExcelSelection();issueExcelMarkCopy(issueExcelCopyRange);
+      issueExcelClearSelection()
+    });
+    body.addEventListener('paste',e=>{
+      if(!issueExcelFocus)return;
+      const text=e.clipboardData?.getData('text/plain')||issueExcelClipboard;
+      if(text==null)return;
+      e.preventDefault();issueExcelPaste(text)
+    })
+  }
+
+  issueExcelAnchor={row:0,col:0};issueExcelFocus={row:0,col:0};
+  issueExcelPaint();issueExcelUndo=[];issueExcelLast=JSON.stringify(issueExcelSnapshot())
+}
+
 function issueInputs(){return [...document.querySelectorAll('#issueEntryTable tbody tr')].map(tr=>[...tr.querySelectorAll('input')])}
 function issueUpdateTotal(){
   let t=0;
@@ -5284,5 +5517,5 @@ function issueClear(){issueInputs().forEach(a=>a.forEach(x=>x.value=''));issueUp
 function issueSave(){let recs=issueLoad(),added=0;issueInputs().forEach(a=>{if(!a.some(x=>x.value.trim()))return;if(a[9]?.value)issueAutoSaveEmployeeName(a[9].value);recs.unshift({id:'ISS-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),date:issueDate(a[0].value),ir:issueIr(a[1].value),item:a[2].value.trim(),size:a[3].value.trim(),qty:Number(a[4].value||0),remainingBalance:a[5].value.trim(),unit:a[6].value.trim(),stock:a[7].value.trim(),department:a[8].value.trim(),issuedTo:a[9].value.trim(),usedFor:a[10].value.trim(),remarks:a[11].value.trim(),savedAt:new Date().toISOString()});added++});if(!added)return toast('Enter at least one issue row');issueStore(recs);issueClear();issueRenderHistory();toast(added+' issue record'+(added>1?'s':'')+' saved')}
 function issueRenderHistory(){let box=$('#issueHistoryRows');if(!box)return;let q=($('#issueHistSearch')?.value||'').toLowerCase();let a=issueLoad().filter(r=>!q||Object.values(r).join(' ').toLowerCase().includes(q));box.innerHTML=a.length?a.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.ir)}</td><td>${escHtml(r.item)}</td><td>${escHtml(r.size)}</td><td>${escHtml(r.qty)}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.department)}</td><td>${escHtml(r.issuedTo)}</td><td>${escHtml(r.usedFor)}</td><td>${escHtml(r.remarks)}</td><td><button class="issue-mini" data-ie="${r.id}">Edit</button> <button class="issue-mini danger" data-idel="${r.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--muted)">No issue records found.</td></tr>';box.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{if(confirm('Delete this issue record?')){issueStore(issueLoad().filter(x=>x.id!==b.dataset.idel));issueRenderHistory();toast('Issue record deleted')}});box.querySelectorAll('[data-ie]').forEach(b=>b.onclick=()=>{let a=issueLoad(),r=a.find(x=>x.id===b.dataset.ie);if(!r)return;let vals=[r.date,r.ir,r.item,r.size,r.qty,r.remainingBalance??(purchaseNum(r.stock)-purchaseNum(r.qty)),r.unit,r.stock,r.department,r.issuedTo,r.usedFor,r.remarks],inp=issueInputs()[0];vals.forEach((v,i)=>inp[i].value=v??'');issueStore(a.filter(x=>x.id!==r.id));document.querySelector('[data-panel="issue-entry"]')?.click();issueUpdateTotal();toast('Record loaded for correction')})}
 function issuePrint(){let rows=[...document.querySelectorAll('#issueHistoryRows tr')].map(tr=>'<tr>'+[...tr.children].slice(0,10).map(td=>'<td>'+td.textContent+'</td>').join('')+'</tr>').join('');let w=open('','_blank');w.document.write('<html><head><title>Issue History</title><style>body{font-family:Arial;padding:25px}h2{margin:0 0 15px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px}th{background:#ffcc00}</style></head><body><h2>Issue History</h2><table><thead><tr><th>Date</th><th>IR No.</th><th>Item</th><th>Size</th><th>Qty</th><th>Unit</th><th>Department</th><th>Issued To</th><th>Used For</th><th>Remarks</th></tr></thead><tbody>'+rows+'</tbody></table><script>onload=()=>print()<\/script></body></html>');w.document.close()}
-document.addEventListener('DOMContentLoaded',()=>{issueFixSidebarAccordion();issueEnhanceItemDropdowns();issueInputs().forEach(row=>row.forEach((x,i)=>{x.addEventListener('blur',()=>{if(i===0)x.value=issueDate(x.value);if(i===1)x.value=issueIr(x.value);if(i===9){x.value=purchaseFormatText(x.value,'employee','Employee');issueAutoSaveEmployeeName(x.value)}});x.addEventListener('input',issueUpdateTotal);x.addEventListener('keydown',e=>{let td=x.closest('td'),tr=x.closest('tr'),ri=[...tr.parentNode.children].indexOf(tr),ci=[...tr.children].indexOf(td)-1;const autoOpen=x.closest('.purchase-auto-wrap')?.querySelector('.purchase-auto-list.open');if(autoOpen&&(e.key==='ArrowDown'||e.key==='ArrowUp'||e.key==='Enter'||e.key==='Tab'))return;if(e.key==='Enter'){e.preventDefault();let nextCi=ci+1,nextRi=ri;if(nextCi>=issueInputs()[ri].length){nextCi=0;nextRi=ri+1}issueInputs()[nextRi]?.[nextCi]?.focus();return}if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();let nr=ri+(e.key==='ArrowDown'?1:-1);issueInputs()[nr]?.[ci]?.focus()}else if(e.key==='ArrowRight'&&x.selectionStart===x.value.length){issueInputs()[ri]?.[ci+1]?.focus()}else if(e.key==='ArrowLeft'&&x.selectionStart===0){issueInputs()[ri]?.[ci-1]?.focus()}})}));$('#issueSaveBtn')?.addEventListener('click',issueSave);$('#issueClearBtn')?.addEventListener('click',issueClear);$('#issueHistSearch')?.addEventListener('input',issueRenderHistory);$('#issueHistClear')?.addEventListener('click',()=>{$('#issueHistSearch').value='';$('#issueHistFrom').value='';$('#issueHistTo').value='';issueRenderHistory()});$('#issuePrintBtn')?.addEventListener('click',issuePrint);issueRenderHistory()});
+document.addEventListener('DOMContentLoaded',()=>{issueEnhanceItemDropdowns();issueInputs().forEach(row=>row.forEach((x,i)=>{x.addEventListener('blur',()=>{if(i===0)x.value=issueDate(x.value);if(i===1)x.value=issueIr(x.value);if(i===9){x.value=purchaseFormatText(x.value,'employee','Employee');issueAutoSaveEmployeeName(x.value)}});x.addEventListener('input',issueUpdateTotal)}));issueExcelBind();$('#issueSaveBtn')?.addEventListener('click',issueSave);$('#issueClearBtn')?.addEventListener('click',issueClear);$('#issueHistSearch')?.addEventListener('input',issueRenderHistory);$('#issueHistClear')?.addEventListener('click',()=>{$('#issueHistSearch').value='';$('#issueHistFrom').value='';$('#issueHistTo').value='';issueRenderHistory()});$('#issuePrintBtn')?.addEventListener('click',issuePrint);issueRenderHistory()});
 </script></body></html>
