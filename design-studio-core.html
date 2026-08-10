@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.9</title>
+<title>ERP Design Studio Core V14.10</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -838,6 +838,13 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .local-entry-table .purchase-auto-list{min-width:260px;left:0;right:auto;width:max(100%,260px)}
 .local-entry-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}.local-entry-status{margin-right:auto;align-self:center;color:var(--muted);font-size:10px}
 .local-entry-table th:nth-child(1){width:55px}.local-entry-table th:nth-child(2){width:92px}.local-entry-table th:nth-child(3){width:100px}.local-entry-table th:nth-child(4){width:110px}.local-entry-table th:nth-child(5){width:190px}.local-entry-table th:nth-child(6){width:105px}.local-entry-table th:nth-child(7){width:90px}.local-entry-table th:nth-child(8){width:90px}.local-entry-table th:nth-child(9){width:90px}.local-entry-table th:nth-child(10){width:105px}.local-entry-table th:nth-child(11){width:190px}.local-entry-table th:nth-child(12){width:150px}.local-entry-table th:nth-child(13){width:125px}.local-entry-table th:nth-child(14){width:115px}.local-entry-table th:nth-child(15){width:215px}
+
+/* V14.10 Local Purchase quiet autofill */
+#panel-local-purchase .purchase-auto-arrow{display:none!important}
+#panel-local-purchase .purchase-auto-wrap input{padding-right:7px!important}
+#panel-local-purchase .local-entry-table input::placeholder{color:transparent!important}
+#panel-local-purchase .local-entry-table input,
+#panel-local-purchase .local-entry-table select{background-image:none!important}
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -1002,14 +1009,14 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
     <div class="purchase-page-head">
       <button class="btn purchase-controller-btn" data-purchase-controller="local-purchase">⚙ Page Controller</button>
     </div>
-    <div class="purchase-instruction" data-purchase-instruction="local-purchase">Type date like <b>25-6</b>. Item, Unit, Supplier and Purchase By use searchable Master dropdowns. Vehicle No. remains uppercase.</div>
+    <div class="purchase-instruction" data-purchase-instruction="local-purchase">Type date like <b>25-6</b>. Searchable autofill works quietly in linked Master fields. Selecting an Item fills Size and Unit automatically. Vehicle No. remains uppercase.</div>
     <div class="local-entry-wrap">
       <table class="local-entry-table" id="localEntryTable">
         <thead><tr><th>Sr No.</th><th>Date</th><th>IGP No.</th><th>Control No.</th><th>Item</th><th>Size</th><th>Quantity</th><th>Unit</th><th>Rate</th><th>Amount</th><th>Supplier</th><th>Purchase By</th><th>Purchase Section</th><th>Vehicle No.</th><th>Remarks</th></tr></thead>
         <tbody id="localEntryBody"></tbody>
       </table>
     </div>
-    <div class="local-entry-actions"><div class="local-entry-status" id="localEntryStatus">15 entry rows ready</div><button class="btn" id="localEntryClear" type="button">Clear Table</button><button class="btn primary" id="localEntrySave" type="button">Save Purchase</button></div>
+    <div class="local-entry-actions"><div class="local-entry-status" id="localEntryStatus">15 blank entry rows ready</div><button class="btn" id="localEntryClear" type="button">Clear Table</button><button class="btn primary" id="localEntrySave" type="button">Save Purchase</button></div>
   </div>
 </section>
 
@@ -2537,11 +2544,24 @@ function purchaseBindAutos(root=document){
       purchaseCloseAutos(list);list.classList.add('open');
     };
     const choose=i=>{
-      const r=shown[i];if(!r)return;input.value=purchaseFormatText(r.name||'',input.id,input.id);
-      input.dataset.masterId=r.id||'';list.classList.remove('open');
+      const r=shown[i];if(!r)return;
+      input.value=purchaseFormatText(r.name||'',input.id,input.id);
+      input.dataset.masterId=r.id||'';
+      list.classList.remove('open');
+
       if(type==='items'){
-        const prefix=input.id.startsWith('plp')?'plp':input.id.startsWith('pzp')?'pzp':'pbp';
-        const sz=$('#'+prefix+'Size'),un=$('#'+prefix+'Unit');if(sz)sz.value=r.size||'';if(un)un.value=r.unit||'';
+        const localRow=input.closest('#localEntryBody tr');
+        if(localRow){
+          const sz=localRow.querySelector('.lp-size');
+          const un=localRow.querySelector('.lp-unit');
+          if(sz)sz.value=r.size||'';
+          if(un)un.value=r.unit||'';
+        }else{
+          const prefix=input.id.startsWith('plp')?'plp':input.id.startsWith('pzp')?'pzp':'pbp';
+          const sz=$('#'+prefix+'Size'),un=$('#'+prefix+'Unit');
+          if(sz)sz.value=r.size||'';
+          if(un)un.value=r.unit||'';
+        }
       }
     };
     const paint=()=>{list.querySelectorAll('.purchase-auto-option').forEach((x,i)=>x.classList.toggle('active',i===active));if(active>=0)list.querySelector(`[data-pao="${active}"]`)?.scrollIntoView({block:'nearest'})};
@@ -2580,14 +2600,14 @@ function purchaseAllRows(){
 function purchaseClearInputs(ids){ids.forEach(id=>{const e=$('#'+id);if(!e)return;if(e.tagName==='SELECT')e.selectedIndex=0;else e.value=''});purchaseBindAutos();purchaseBindTextRules()}
 
 const LOCAL_ENTRY_ROWS=15;
-function localEntryAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><span class="purchase-auto-arrow">▼</span><div class="purchase-auto-list"></div></div>`}
-function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date" placeholder="25-6"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td><select class="lp-section"><option value=""></option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind()}
+function localEntryAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
+function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td><select class="lp-section"><option value=""></option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind()}
 function localEntryCalcRow(tr){const q=purchaseNum(tr.querySelector('.lp-qty')?.value),r=purchaseNum(tr.querySelector('.lp-rate')?.value),a=tr.querySelector('.lp-amount');if(a)a.value=(q*r||0).toFixed(2)}
 function localEntryBind(){const body=$('#localEntryBody');if(!body)return;purchaseBindAutos(body);body.querySelectorAll('tr').forEach(tr=>{tr.querySelectorAll('.lp-qty,.lp-rate').forEach(e=>e.addEventListener('input',()=>localEntryCalcRow(tr)));const dt=tr.querySelector('.lp-date');if(dt)dt.addEventListener('blur',()=>dt.value=purchaseFmtDate(dt.value));const veh=tr.querySelector('.lp-vehicle');if(veh)veh.addEventListener('input',()=>{const p=veh.selectionStart;veh.value=String(veh.value||'').toUpperCase();if(p!=null)try{veh.setSelectionRange(p,p)}catch(e){}});['.lp-item','.lp-size','.lp-unit','.lp-supplier','.lp-purchaseby','.lp-remarks'].forEach(sel=>{const e=tr.querySelector(sel);if(e)e.addEventListener('blur',()=>{e.value=purchaseFormatText(e.value,e.className,e.className)})});tr.querySelectorAll('input,select').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&!ev.defaultPrevented){ev.preventDefault();const all=[...body.querySelectorAll('input,select')],n=all.indexOf(e);all[n+1]?.focus()}}))})}
 function localEntryIsFilled(tr){return [...tr.querySelectorAll('input,select')].some(e=>!e.readOnly&&String(e.value||'').trim())}
 function localEntryReadRow(tr,index){const v=sel=>tr.querySelector(sel)?.value||'',section=v('.lp-section');return {...purchaseRecordBase('local'),srNo:index+1,date:purchaseFmtDate(v('.lp-date')),igp:String(v('.lp-igp')).toUpperCase(),controlNo:String(v('.lp-control')).trim(),item:purchaseFormatText(v('.lp-item'),'item','Item'),size:purchaseFormatText(v('.lp-size'),'size','Size'),qty:purchaseNum(v('.lp-qty')),unit:purchaseFormatText(v('.lp-unit'),'unit','Unit'),rate:purchaseNum(v('.lp-rate')),amount:purchaseNum(v('.lp-amount')),supplier:purchaseFormatText(v('.lp-supplier'),'supplier','Supplier'),purchasedBy:purchaseFormatText(v('.lp-purchaseby'),'purchasedBy','Purchase By'),section,vehicle:String(v('.lp-vehicle')).toUpperCase(),remarks:purchaseFormatText(v('.lp-remarks'),'remarks','Remarks'),bill:'',inventoryEffect:section==='Inventory'?'stock-in':'auto-issue'}}
-function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 entry rows ready`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
-function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 entry rows ready'}
+function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
+function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready'}
 function purchaseLocalCalc(){}
 function purchaseLocalSave(){localEntrySaveAll()}
 function purchaseZafarCalc(){const q=purchaseNum($('#pzpQty')?.value),r=purchaseNum($('#pzpRate')?.value);if($('#pzpAmount'))$('#pzpAmount').value=(q*r||0).toFixed(2)}
