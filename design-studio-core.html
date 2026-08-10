@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.13</title>
+<title>ERP Design Studio Core V14.14</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -2781,6 +2781,7 @@ function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.
 function localEntryCalcRow(tr){const q=purchaseNum(tr.querySelector('.lp-qty')?.value),r=purchaseNum(tr.querySelector('.lp-rate')?.value),a=tr.querySelector('.lp-amount');if(a)a.value=(q*r||0).toFixed(2)}
 const LP_EDITABLE_COLS=['date','igp','control','item','size','qty','unit','rate','amount','supplier','purchaseby','section','vehicle','remarks'];
 let lpExcelAnchor=null,lpExcelFocus=null,lpExcelCopyRange=null,lpExcelInternalClipboard='';
+let lpExcelUndoStack=[],lpExcelUndoing=false,lpExcelLastSnapshot='';
 
 function lpExcelBody(){return $('#localEntryBody')}
 function lpExcelRows(){return [...(lpExcelBody()?.querySelectorAll('tr')||[])]}
@@ -2837,7 +2838,41 @@ function lpExcelSelectionRect(){
 function lpExcelCellValue(r,c){
   const ed=lpExcelEditor(lpExcelCell(r,c));return ed?.value??''
 }
+
+function lpExcelSnapshot(){
+  return lpExcelRows().map(tr=>LP_EDITABLE_COLS.map((_,c)=>lpExcelCellValue(+tr.dataset.localRow,c)))
+}
+function lpExcelSnapshotKey(snap){try{return JSON.stringify(snap)}catch(e){return''}}
+function lpExcelRemember(){
+  if(lpExcelUndoing)return;
+  const snap=lpExcelSnapshot(),key=lpExcelSnapshotKey(snap);
+  if(key===lpExcelLastSnapshot)return;
+  lpExcelUndoStack.push(snap);
+  if(lpExcelUndoStack.length>100)lpExcelUndoStack.shift();
+  lpExcelLastSnapshot=key
+}
+function lpExcelRestoreSnapshot(snap){
+  if(!snap)return;
+  lpExcelUndoing=true;
+  snap.forEach((row,r)=>row.forEach((v,c)=>{
+    const ed=lpExcelEditor(lpExcelCell(r,c));
+    if(!ed||ed.readOnly)return;
+    ed.value=v??'';
+    ed.dispatchEvent(new Event('input',{bubbles:true}));
+    ed.dispatchEvent(new Event('change',{bubbles:true}))
+  }));
+  lpExcelRows().forEach(localEntryCalcRow);
+  lpExcelUndoing=false;
+  lpExcelLastSnapshot=lpExcelSnapshotKey(lpExcelSnapshot());
+  lpExcelPaint()
+}
+function lpExcelUndo(){
+  if(!lpExcelUndoStack.length)return;
+  const snap=lpExcelUndoStack.pop();
+  lpExcelRestoreSnapshot(snap)
+}
 function lpExcelSetValue(r,c,value){
+  lpExcelRemember();
   const cell=lpExcelCell(r,c),ed=lpExcelEditor(cell);if(!ed||ed.readOnly)return;
   const col=LP_EDITABLE_COLS[c];
   let v=String(value??'');
@@ -2853,10 +2888,12 @@ function lpExcelSetValue(r,c,value){
 }
 function lpExcelClearSelection(){
   const rect=lpExcelSelectionRect();if(!rect)return;
+  lpExcelRemember();const wasUndoing=lpExcelUndoing;lpExcelUndoing=true;
   for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++){
     if(LP_EDITABLE_COLS[c]==='amount')continue;
     lpExcelSetValue(r,c,'')
   }
+  lpExcelUndoing=wasUndoing
 }
 function lpExcelSelectionTSV(){
   const rect=lpExcelSelectionRect();if(!rect)return'';
@@ -2874,6 +2911,7 @@ function lpExcelMarkCopy(rect){
 }
 function lpExcelPasteText(text){
   if(!lpExcelFocus)return;
+  lpExcelRemember();const wasUndoing=lpExcelUndoing;lpExcelUndoing=true;
   const data=String(text??'').replace(/\r/g,'').split('\n').filter((x,i,a)=>!(i===a.length-1&&x==='')).map(line=>line.split('\t'));
   if(!data.length)return;
   const rect=lpExcelSelectionRect(),start=rect?{row:rect.r1,col:rect.c1}:lpExcelFocus;
@@ -2888,10 +2926,11 @@ function lpExcelPasteText(text){
       if(r<LOCAL_ENTRY_ROWS&&c<LP_EDITABLE_COLS.length)lpExcelSetValue(r,c,v)
     }))
   }
-  lpExcelPaint()
+  lpExcelUndoing=wasUndoing;lpExcelPaint()
 }
 function lpExcelFillDown(){
   const rect=lpExcelSelectionRect();if(!rect)return;
+  lpExcelRemember();const wasUndoing=lpExcelUndoing;lpExcelUndoing=true;
   if(rect.r1===rect.r2){
     // Excel-like Ctrl+D on a single cell: copy from the cell directly above.
     if(rect.r1>0)lpExcelSetValue(rect.r1,rect.c1,lpExcelCellValue(rect.r1-1,rect.c1));
@@ -2901,6 +2940,7 @@ function lpExcelFillDown(){
       for(let r=rect.r1+1;r<=rect.r2;r++)lpExcelSetValue(r,c,source)
     }
   }
+  lpExcelUndoing=wasUndoing
 }
 function lpExcelSelectAll(){
   lpExcelAnchor={row:0,col:0};lpExcelFocus={row:LOCAL_ENTRY_ROWS-1,col:LP_EDITABLE_COLS.length-1};lpExcelPaint();lpExcelFocusCell(0,0)
@@ -2924,6 +2964,9 @@ function lpExcelHandleKey(ev,el){
   if(ev.key==='Delete'){
     ev.preventDefault();lpExcelClearSelection();return
   }
+  if(ev.ctrlKey&&ev.key.toLowerCase()==='z'){
+    ev.preventDefault();lpExcelUndo();return
+  }
   if(ev.ctrlKey&&ev.key.toLowerCase()==='a'){
     ev.preventDefault();lpExcelSelectAll();return
   }
@@ -2938,25 +2981,32 @@ function lpExcelHandleKey(ev,el){
     if(autoOpen&&(ev.key==='ArrowUp'||ev.key==='ArrowDown'))return; // dropdown owns these while open
     ev.preventDefault();
     let target;
+    const current=lpExcelFocus||p;
     if(ev.ctrlKey){
-      target=lpExcelCtrlArrowTarget(p,ev.key);
-      if(!lpExcelAnchor)lpExcelAnchor={...p};
-      lpExcelFocus=target;
+      target=lpExcelCtrlArrowTarget(current,ev.key);
+      if(ev.shiftKey){
+        if(!lpExcelAnchor)lpExcelAnchor={...current};
+        lpExcelFocus=target
+      }else{
+        lpExcelAnchor={...target};lpExcelFocus={...target}
+      }
     }else{
-      target={...p};
+      target={...current};
       if(ev.key==='ArrowUp')target.row--;
       if(ev.key==='ArrowDown')target.row++;
       if(ev.key==='ArrowLeft')target.col--;
       if(ev.key==='ArrowRight')target.col++;
       target=lpExcelClamp(target);
       if(ev.shiftKey){
-        if(!lpExcelAnchor)lpExcelAnchor={...p};
+        if(!lpExcelAnchor)lpExcelAnchor={...current};
         lpExcelFocus=target
       }else{
         lpExcelAnchor={...target};lpExcelFocus={...target}
       }
     }
+    const keepAnchor=lpExcelAnchor?{...lpExcelAnchor}:null;
     lpExcelFocusCell(lpExcelFocus.row,lpExcelFocus.col);
+    if(ev.shiftKey&&keepAnchor){lpExcelAnchor=keepAnchor;lpExcelPaint()}
     return
   }
 
@@ -2989,6 +3039,8 @@ function localEntryBind(){
     });
 
     tr.querySelectorAll('input,select').forEach(e=>{
+      e.addEventListener('beforeinput',()=>lpExcelRemember());
+      e.addEventListener('change',()=>{ if(!lpExcelUndoing)lpExcelLastSnapshot=lpExcelSnapshotKey(lpExcelSnapshot()) });
       e.addEventListener('focus',()=>lpExcelSetSingle(e));
       e.addEventListener('mousedown',()=>lpExcelSetSingle(e));
       e.addEventListener('keydown',ev=>lpExcelHandleKey(ev,e))
@@ -3016,13 +3068,14 @@ function localEntryBind(){
   });
 
   // First cell becomes the logical grid anchor without forcing focus.
-  lpExcelAnchor={row:0,col:0};lpExcelFocus={row:0,col:0};lpExcelPaint()
+  lpExcelAnchor={row:0,col:0};lpExcelFocus={row:0,col:0};lpExcelPaint();
+  lpExcelUndoStack=[];lpExcelLastSnapshot=lpExcelSnapshotKey(lpExcelSnapshot())
 }
 
 function localEntryIsFilled(tr){return [...tr.querySelectorAll('input,select')].some(e=>!e.readOnly&&String(e.value||'').trim())}
 function localEntryReadRow(tr,index){const v=sel=>tr.querySelector(sel)?.value||'',section=v('.lp-section');return {...purchaseRecordBase('local'),srNo:index+1,date:purchaseFmtDate(v('.lp-date')),igp:String(v('.lp-igp')).toUpperCase(),controlNo:String(v('.lp-control')).trim(),item:purchaseFormatText(v('.lp-item'),'item','Item'),size:purchaseFormatText(v('.lp-size'),'size','Size'),qty:purchaseNum(v('.lp-qty')),unit:purchaseFormatText(v('.lp-unit'),'unit','Unit'),rate:purchaseNum(v('.lp-rate')),amount:purchaseNum(v('.lp-amount')),supplier:purchaseFormatText(v('.lp-supplier'),'supplier','Supplier'),purchasedBy:purchaseFormatText(v('.lp-purchaseby'),'purchasedBy','Purchase By'),section,vehicle:String(v('.lp-vehicle')).toUpperCase(),remarks:purchaseFormatText(v('.lp-remarks'),'remarks','Remarks'),bill:'',inventoryEffect:section==='Inventory'?'stock-in':'auto-issue'}}
-function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready • Excel keys active`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
-function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready • Excel keys active'}
+function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
+function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow'}
 function purchaseLocalCalc(){}
 function purchaseLocalSave(){localEntrySaveAll()}
 function purchaseZafarCalc(){const q=purchaseNum($('#pzpQty')?.value),r=purchaseNum($('#pzpRate')?.value);if($('#pzpAmount'))$('#pzpAmount').value=(q*r||0).toFixed(2)}
@@ -3502,7 +3555,7 @@ $('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEve
 }
 window.ERPPurchase={rows:purchaseRows,all:purchaseAllRows,render:purchaseRenderAll};
 window.ERP_LOCKED_BASELINE=Object.freeze({
-  version:'V14.13',
+  version:'V14.14',
   rule:'Approved features are preserved unless the user explicitly asks to change them.',
   locked:[
     'Design Studio shared core and sidebar placement',
@@ -3510,7 +3563,7 @@ window.ERP_LOCKED_BASELINE=Object.freeze({
     'Title Case plus uppercase Vehicle/Bill rule',
     'Purchase Entry dashboard approved structure',
     'Local Purchase 15-row entry structure',
-    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior'
+    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection'
   ],
   universalStandards:['Page Controller / Page Designer','Live Preview','Searchable Master Autofill','Audit','Access Control','Tenant Isolation']
 });
