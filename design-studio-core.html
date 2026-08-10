@@ -5743,15 +5743,64 @@ function rgpDashboardRender(){
     </tr>`
   }).join(''):`<tr><td colspan="6" class="purchase-empty">No RGP records saved yet.</td></tr>`
 }
+
+function gateOpenPanel(panel){
+  const target=document.querySelector('#panel-'+panel);
+  if(!target)return false;
+
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  target.classList.add('active');
+
+  try{localStorage.setItem('erpStudioLastPanel',panel)}catch(e){}
+
+  const gateGroup=$('#gatePassGroup');
+  ['purchaseGroup','issueGroup','designStudioGroup'].forEach(id=>$('#'+id)?.classList.remove('open'));
+  gateGroup?.classList.add('open');
+
+  document.querySelectorAll('#gatePassGroup .side-subitem').forEach(b=>b.classList.toggle('active',b.dataset.panel===panel));
+
+  if($('#workspaceTitle')){
+    $('#workspaceTitle').textContent=
+      panel==='gate-pass-dashboard'?'Gate Pass Management':
+      panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'?'RGP Management':
+      'Gate Pass Management';
+  }
+  if($('#workspaceSubtitle')){
+    $('#workspaceSubtitle').textContent=
+      panel==='gate-pass-dashboard'?'Gate Pass Dashboard — RGP, OGP and CGP control center.':
+      'Returnable Gate Pass dashboard and entry controls.';
+  }
+
+  if(panel==='gate-pass-dashboard')gateDashboardRender();
+  if(panel==='rgp-dashboard')rgpDashboardRender();
+  if(panel==='rgp-list')rgpRenderList();
+  if(panel==='rgp-entry'){rgpUpdateTotal();setTimeout(()=>rgpInputs()[0]?.[0]?.focus(),0)}
+
+  window.scrollTo({top:0,behavior:'auto'});
+  return true
+}
+
 function gateDashboardBind(){
+  document.querySelectorAll('#gatePassGroup [data-panel]').forEach(btn=>{
+    if(btn.dataset.gateDirectBound)return;
+    btn.dataset.gateDirectBound='1';
+    btn.addEventListener('click',e=>{
+      const panel=btn.dataset.panel;
+      if(['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry'].includes(panel)){
+        e.preventDefault();e.stopPropagation();gateOpenPanel(panel);
+      }
+    });
+  });
+
   document.querySelectorAll('[data-gate-go]').forEach(btn=>btn.addEventListener('click',()=>{
     const t=btn.dataset.gateGo;
-    if(t==='rgp-dashboard')document.querySelector('[data-panel="rgp-dashboard"]')?.click();
+    if(t==='rgp-dashboard')gateOpenPanel('rgp-dashboard');
     else if(t==='ogp-dashboard')toast('OGP Management dashboard will be built next');
     else if(t==='cgp-dashboard')toast('CGP Management dashboard will be built after OGP')
   }));
   document.querySelectorAll('[data-panel-jump]').forEach(btn=>btn.addEventListener('click',()=>{
-    document.querySelector(`[data-panel="${btn.dataset.panelJump}"]`)?.click()
+    const panel=btn.dataset.panelJump;
+    if(!gateOpenPanel(panel))document.querySelector(`[data-panel="${panel}"]`)?.click()
   }));
   document.querySelectorAll('[data-rgp-future]').forEach(btn=>btn.addEventListener('click',()=>{
     toast('Return Entry Form will be created next')
