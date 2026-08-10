@@ -1180,6 +1180,32 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   outline-offset:-3px;
 }
 
+
+/* ===== V14.31 Gate Pass Management — RGP Entry ===== */
+#panel-rgp-entry{width:100%;max-width:none;margin:0}
+.rgp-head-grid{display:grid!important;grid-template-columns:repeat(4,minmax(160px,1fr));gap:8px;margin:10px 0 12px}
+.rgp-head-grid label{display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.rgp-head-grid input{width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 9px}
+.rgp-wide{grid-column:span 2}
+.rgp-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
+.rgp-table{min-width:1000px;table-layout:fixed}
+.rgp-table th,.rgp-table td{height:34px}
+.rgp-table td{padding:0}
+.rgp-table td:first-child{text-align:center;font-size:10px;font-weight:800;color:var(--muted)}
+.rgp-table input{width:100%;height:33px;border:0;outline:0;background:transparent;color:var(--text);padding:0 7px;font-size:10px}
+.rgp-table .purchase-auto-wrap{height:33px}
+.rgp-table td.rgp-excel-selected{background:color-mix(in srgb,var(--primary) 8%,transparent)!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 40%,transparent)}
+.rgp-table td.rgp-excel-active{box-shadow:inset 0 0 0 2px var(--primary)!important}
+.rgp-table td.rgp-excel-copy{outline:2px dashed color-mix(in srgb,var(--primary) 75%,#fff);outline-offset:-3px}
+.rgp-footer{display:flex;align-items:center;gap:8px;margin-top:10px}
+.rgp-footer #rgpEntryStatus{font-size:9px;color:var(--muted)}
+.rgp-spacer{flex:1}
+.rgp-total{min-width:145px;border:1px solid var(--border);border-radius:9px;padding:7px 10px;text-align:right}
+.rgp-total small{display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+.rgp-total strong{font-size:14px}
+@media(max-width:900px){.rgp-head-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.rgp-head-grid{grid-template-columns:1fr}.rgp-wide{grid-column:auto}}
+
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -1203,6 +1229,12 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="side-submenu"><div class="side-submenu-inner">
         <button class="side-subitem" data-panel="issue-entry" title="Issue Entry"><span>Issue Entry</span></button>
         <button class="side-subitem" data-panel="issue-history" title="Issue History"><span>Issue History</span></button>
+      </div></div>
+    </div>
+    <div class="side-group gate-pass-group" id="gatePassGroup">
+      <button class="side-group-toggle" id="gatePassToggle" type="button" title="Gate Pass Management"><span class="side-icon">◇</span><span>Gate Pass Management</span><span class="chev">⌃</span></button>
+      <div class="side-submenu"><div class="side-submenu-inner">
+        <button class="side-subitem" data-panel="rgp-entry" title="RGP Entry"><span>RGP Entry</span></button>
       </div></div>
     </div>
     <div class="side-group" id="designStudioGroup">
@@ -1575,6 +1607,57 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="purchase-analysis-card"><small>Total Value</small><strong id="psaTotalValue">0</strong></div>
     </div>
     <div class="purchase-table-wrap" style="margin-top:12px"><table class="purchase-table"><thead><tr><th>Supplier</th><th>Purchase Count</th><th>Local</th><th>Zafar</th><th>Board</th><th>Qty / Weight</th><th>Total Value</th><th>Last Purchase</th></tr></thead><tbody id="psaRows"></tbody></table></div>
+  </div>
+</section>
+
+
+<section class="panel purchase-page" id="panel-rgp-entry">
+  <div class="card">
+    <div class="purchase-page-head">
+      <div><h2>RGP Entry</h2><p>Returnable Gate Pass • shared Masters • Excel-style item entry.</p></div>
+      <button class="btn purchase-controller-btn" data-purchase-controller="rgp-entry">⚙ Page Controller</button>
+    </div>
+
+    <div class="purchase-instruction" data-purchase-instruction="rgp-entry">
+      Type RGP number like <b>1</b> → <b>RGP-00001</b>. Type date like <b>25-6</b> → <b>25-Jun-26</b>. Search Master fields by typing 1–2 letters.
+    </div>
+
+    <div class="rgp-head-grid" data-purchase-filters="rgp-entry">
+      <div><label>RGP No.</label><input id="rgpNo" placeholder="1"></div>
+      <div><label>Date</label><input id="rgpDate" placeholder="25-6"></div>
+      <div><label>Due Date</label><input id="rgpDueDate" placeholder="30-6"></div>
+      <div><label>Department</label><div class="purchase-auto-wrap"><input id="rgpDepartment" data-purchase-auto="departments" autocomplete="off"><div class="purchase-auto-list"></div></div></div>
+
+      <div><label>Workshop / Party</label><div class="purchase-auto-wrap"><input id="rgpWorkshop" data-purchase-auto="workshops" autocomplete="off"><div class="purchase-auto-list"></div></div></div>
+      <div><label>Carrier</label><div class="purchase-auto-wrap"><input id="rgpCarrier" data-purchase-auto="carriers" autocomplete="off"><div class="purchase-auto-list"></div></div></div>
+      <div><label>Authorized By</label><div class="purchase-auto-wrap"><input id="rgpAuthorized" data-purchase-auto="authorization" autocomplete="off"><div class="purchase-auto-list"></div></div></div>
+      <div><label>Bill Detail</label><input id="rgpBillDetail"></div>
+
+      <div class="rgp-wide"><label>Purpose</label><input id="rgpPurpose"></div>
+      <div class="rgp-wide"><label>Remarks</label><input id="rgpHeaderRemarks"></div>
+    </div>
+
+    <div class="rgp-table-wrap">
+      <table class="purchase-table rgp-table" id="rgpEntryTable">
+        <thead><tr>
+          <th style="width:55px">Sr No.</th>
+          <th style="width:240px">Item</th>
+          <th style="width:115px">Size</th>
+          <th style="width:100px">Quantity</th>
+          <th style="width:100px">Unit</th>
+          <th style="width:280px">Remarks</th>
+        </tr></thead>
+        <tbody><tr data-rgp-row="0"><td>1</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="1"><td>2</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="2"><td>3</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="3"><td>4</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="4"><td>5</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="5"><td>6</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="6"><td>7</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="7"><td>8</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="8"><td>9</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="9"><td>10</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="10"><td>11</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="11"><td>12</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="12"><td>13</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="13"><td>14</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr><tr data-rgp-row="14"><td>15</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="rgp-footer">
+      <span id="rgpEntryStatus">15 blank entry rows ready • Excel keyboard keys active</span>
+      <span class="rgp-spacer"></span>
+      <div class="rgp-total"><small>Total Qty</small><strong id="rgpTotalQty">0</strong></div>
+      <button class="btn" id="rgpClearBtn">Clear Table</button>
+      <button class="btn primary" id="rgpSaveBtn">Save RGP</button>
+    </div>
   </div>
 </section>
 
@@ -3115,7 +3198,9 @@ function purchaseBindAutos(root=document){
       list.classList.remove('open');
 
       if(type==='items'){
-        const issueRow=input.closest('#issueEntryTable tbody tr');
+        const rgpRow=input.closest('#rgpEntryTable tbody tr');
+        if(rgpRow){rgpFillItemLinked(input,r);}
+        else {const issueRow=input.closest('#issueEntryTable tbody tr');
         if(issueRow){issueFillItemLinked(input,r);}
         else {const indentRow=input.closest('#piGridBody tr');
         if(indentRow){piFillItemLinked(input,r);}
@@ -3134,7 +3219,7 @@ function purchaseBindAutos(root=document){
           const sz=$('#'+prefix+'Size'),un=$('#'+prefix+'Unit');
           if(sz)sz.value=r.size||'';
           if(un)un.value=r.unit||'';
-        }}}}}
+        }}}}}}
       }
     };
     const paint=()=>{list.querySelectorAll('.purchase-auto-option').forEach((x,i)=>x.classList.toggle('active',i===active));if(active>=0)list.querySelector(`[data-pao="${active}"]`)?.scrollIntoView({block:'nearest'})};
@@ -4515,7 +4600,7 @@ function purchaseOpenPc(page){
   purchasePcOriginal=JSON.parse(JSON.stringify(x));
   $('#purchasePcTitle').textContent='Page Controller — '+({
     'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Local Purchase','zafar-purchase':'Zafar Purchase',
-    'board-purchase':'Purchase Entry','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'
+    'board-purchase':'Purchase Entry','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis','rgp-entry':'RGP Entry'
   }[page]||page);
   $('#ppeSpecialControls').style.display=page==='purchase-entry'?'contents':'none';
   $('#localDesignerControls').classList.toggle('show',page==='local-purchase');
@@ -5069,12 +5154,13 @@ function bind(){
  const toggleSideGroup=id=>{
    const active=$('#'+id);if(!active)return;
    const willOpen=!active.classList.contains('open');
-   ['purchaseGroup','issueGroup','designStudioGroup'].forEach(g=>$('#'+g)?.classList.remove('open'));
+   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(g=>$('#'+g)?.classList.remove('open'));
    if(willOpen)active.classList.add('open')
  };
  $('#issueToggle')?.addEventListener('click',()=>toggleSideGroup('issueGroup'));
  $('#purchaseToggle')?.addEventListener('click',()=>toggleSideGroup('purchaseGroup'));
- $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
+ $('#gatePassToggle')?.addEventListener('click',()=>toggleSideGroup('gatePassGroup'));
+ $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['rgp-entry'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='RGP — Returnable Gate Pass';setTimeout(()=>rgpUpdateTotal(),0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
 
 /* Shared Print Designer V1.0 */
 const PRINT_GALLERY_KEY='erpPrintDesignGalleryV1', PRINT_ASSIGN_KEY='erpPrintAssignmentsV1', PRINT_CONTRACT_KEY='erpPrintDataContractsV1';
@@ -5125,7 +5211,7 @@ function restoreLastStudioPanel(){
   $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===panel));
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));
   const designGroup=$('#designStudioGroup');
-  if(panel==='masters')designGroup?.classList.remove('open');
+  if(['masters','purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis','issue-entry','issue-history','rgp-entry'].includes(panel))designGroup?.classList.remove('open');
   else designGroup?.classList.add('open');
   return panel;
 }
@@ -5150,6 +5236,7 @@ function erpStableStartup(){
   erpSafeCall('ccmpBind',()=>ccmpBind());
   erpSafeCall('masterBind',()=>masterBind());
   erpSafeCall('purchaseBind',()=>purchaseBind());
+  erpSafeCall('rgpBind',()=>rgpBind());
   erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
   erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
   erpSafeCall('pdInit',()=>pdInit());
@@ -5161,6 +5248,7 @@ function erpStableStartup(){
     erpSafeCall('account render',()=>maRender());
     if(restoredPanel==='masters'){erpSafeCall('masters render',()=>masterRenderAll());if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Central master data for the complete ERP.'}
     if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(restoredPanel)){erpSafeCall('purchase render',()=>purchaseRenderAll());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[restoredPanel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=restoredPanel==='purchase-indent'?'Purchase Request & Approval':restoredPanel==='local-purchase'?'Local Purchase':restoredPanel==='zafar-purchase'?'Zafar Purchase':restoredPanel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware'}
+    if(restoredPanel==='rgp-entry'){erpSafeCall('RGP render',()=>rgpUpdateTotal());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='RGP — Returnable Gate Pass'}
     if(restoredPanel==='company-control'){
       if(!ccmpTenantId)ccmpTenantId=tenantCurrentId();
       if(ccmpTenantId)erpSafeCall('company control render',()=>ccmpRender());
@@ -5173,6 +5261,201 @@ function erpStableStartup(){
 }
 erpStableStartup();
 
+
+
+
+/* ===== Gate Pass Management — RGP Entry operations ===== */
+const RGP_KEY='erpRgpRecordsV1';
+let rgpAnchor=null,rgpFocus=null,rgpUndo=[],rgpClipboard='',rgpUndoing=false,rgpLastSnap='',rgpCopyRange=null;
+
+function rgpLoad(){try{return JSON.parse(localStorage.getItem(RGP_KEY)||'[]')||[]}catch(e){return[]}}
+function rgpStore(a){localStorage.setItem(RGP_KEY,JSON.stringify(a))}
+function rgpFormatNo(v){
+  const x=String(v||'').trim();if(!x)return'';
+  if(/^RGP-\d{5}$/i.test(x))return x.toUpperCase();
+  const n=parseInt(x.replace(/\D/g,''),10);
+  return Number.isFinite(n)?'RGP-'+String(n).padStart(5,'0'):x.toUpperCase()
+}
+function rgpFormatDate(v){return typeof purchaseFmtDate==='function'?purchaseFmtDate(v):v}
+function rgpInputs(){return [...document.querySelectorAll('#rgpEntryTable tbody tr')].map(tr=>[...tr.querySelectorAll('input')])}
+function rgpRows(){return [...document.querySelectorAll('#rgpEntryTable tbody tr')]}
+function rgpFillItemLinked(input,r){
+  const tr=input.closest('#rgpEntryTable tbody tr');if(!tr)return false;
+  const a=[...tr.querySelectorAll('input')];
+  input.value=purchaseFormatText(r.name||'','item','Item');
+  input.dataset.masterId=r.id||'';
+  if(a[1])a[1].value=r.size||'';
+  if(a[3])a[3].value=r.unit||'';
+  return true
+}
+function rgpEnhanceGridDropdowns(){
+  document.querySelectorAll('#rgpEntryTable tbody tr').forEach(tr=>{
+    [
+      {cell:1,type:'items',flag:'rgpItem',cls:'rgp-item-auto'},
+      {cell:4,type:'units',flag:'rgpUnit',cls:'rgp-unit-auto'}
+    ].forEach(cfg=>{
+      const td=tr.children[cfg.cell],input=td?.querySelector('input');
+      if(!td||!input||input.dataset[cfg.flag])return;
+      input.dataset[cfg.flag]='1';
+      input.setAttribute('autocomplete','off');
+      input.setAttribute('data-purchase-auto',cfg.type);
+      const wrap=document.createElement('div');wrap.className='purchase-auto-wrap '+cfg.cls;
+      const list=document.createElement('div');list.className='purchase-auto-list';
+      td.insertBefore(wrap,input);wrap.appendChild(input);wrap.appendChild(list)
+    })
+  });
+  purchaseBindAutos($('#rgpEntryTable')||document)
+}
+function rgpUpdateTotal(){
+  const total=rgpInputs().reduce((n,row)=>n+purchaseNum(row[2]?.value||0),0);
+  if($('#rgpTotalQty'))$('#rgpTotalQty').textContent=purchaseMoney(total)
+}
+function rgpPos(input){
+  const tr=input.closest('tr'),td=input.closest('td');if(!tr||!td)return null;
+  return{row:rgpRows().indexOf(tr),col:[...tr.children].indexOf(td)-1}
+}
+function rgpCell(row,col){return rgpRows()[row]?.children[col+1]||null}
+function rgpInput(row,col){return rgpCell(row,col)?.querySelector('input')||null}
+function rgpClamp(p){return{row:Math.max(0,Math.min(rgpRows().length-1,p.row)),col:Math.max(0,Math.min((rgpInputs()[0]?.length||1)-1,p.col))}}
+function rgpRect(a,b){a=rgpClamp(a);b=rgpClamp(b);return{r1:Math.min(a.row,b.row),r2:Math.max(a.row,b.row),c1:Math.min(a.col,b.col),c2:Math.max(a.col,b.col)}}
+function rgpPaint(){
+  document.querySelectorAll('#rgpEntryTable td.rgp-excel-selected,#rgpEntryTable td.rgp-excel-active').forEach(td=>td.classList.remove('rgp-excel-selected','rgp-excel-active'));
+  if(!rgpFocus)return;
+  const z=rgpRect(rgpAnchor||rgpFocus,rgpFocus);
+  for(let r=z.r1;r<=z.r2;r++)for(let c=z.c1;c<=z.c2;c++)rgpCell(r,c)?.classList.add('rgp-excel-selected');
+  rgpCell(rgpFocus.row,rgpFocus.col)?.classList.add('rgp-excel-active')
+}
+function rgpSingle(input){const p=rgpPos(input);if(!p)return;rgpAnchor={...p};rgpFocus={...p};rgpPaint()}
+function rgpFocusCell(row,col,extend=false){
+  const p=rgpClamp({row,col}),input=rgpInput(p.row,p.col);if(!input)return;
+  const keep=rgpAnchor?{...rgpAnchor}:null;rgpFocus={...p};if(!extend)rgpAnchor={...p};
+  input.focus({preventScroll:true});input.closest('td')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  if(extend&&keep)rgpAnchor=keep;rgpPaint()
+}
+function rgpSelection(){return rgpFocus?rgpRect(rgpAnchor||rgpFocus,rgpFocus):null}
+function rgpSnapshot(){return rgpInputs().map(row=>row.map(x=>x.value))}
+function rgpRemember(){
+  if(rgpUndoing)return;const snap=rgpSnapshot(),key=JSON.stringify(snap);
+  if(key===rgpLastSnap)return;rgpUndo.push(snap);if(rgpUndo.length>100)rgpUndo.shift();rgpLastSnap=key
+}
+function rgpRestore(snap){
+  if(!snap)return;rgpUndoing=true;rgpInputs().forEach((row,r)=>row.forEach((x,c)=>x.value=snap[r]?.[c]??''));rgpUndoing=false;
+  rgpLastSnap=JSON.stringify(rgpSnapshot());rgpUpdateTotal();rgpPaint()
+}
+function rgpSet(row,col,value){
+  const input=rgpInput(row,col);if(!input||input.readOnly)return;
+  input.value=String(value??'');input.dispatchEvent(new Event('input',{bubbles:true}))
+}
+function rgpTSV(){
+  const z=rgpSelection();if(!z)return'';const out=[];
+  for(let r=z.r1;r<=z.r2;r++){const line=[];for(let c=z.c1;c<=z.c2;c++)line.push(rgpInput(r,c)?.value||'');out.push(line.join('\t'))}
+  return out.join('\n')
+}
+function rgpMarkCopy(z){
+  document.querySelectorAll('#rgpEntryTable td.rgp-excel-copy').forEach(td=>td.classList.remove('rgp-excel-copy'));
+  if(!z)return;for(let r=z.r1;r<=z.r2;r++)for(let c=z.c1;c<=z.c2;c++)rgpCell(r,c)?.classList.add('rgp-excel-copy')
+}
+function rgpClearSelection(){
+  const z=rgpSelection();if(!z)return;rgpRemember();rgpUndoing=true;
+  for(let r=z.r1;r<=z.r2;r++)for(let c=z.c1;c<=z.c2;c++)rgpSet(r,c,'');
+  rgpUndoing=false;rgpUpdateTotal()
+}
+function rgpPaste(text){
+  if(!rgpFocus)return;rgpRemember();const z=rgpSelection(),start=z?{row:z.r1,col:z.c1}:{...rgpFocus};
+  const data=String(text??'').replace(/\r/g,'').split('\n');if(data.length&&data[data.length-1]==='')data.pop();
+  const matrix=data.map(x=>x.split('\t'));rgpUndoing=true;
+  if(matrix.length===1&&matrix[0].length===1&&z&&(z.r2>z.r1||z.c2>z.c1)){
+    for(let r=z.r1;r<=z.r2;r++)for(let c=z.c1;c<=z.c2;c++)rgpSet(r,c,matrix[0][0])
+  }else matrix.forEach((line,ri)=>line.forEach((v,ci)=>{if(start.row+ri<rgpRows().length&&start.col+ci<(rgpInputs()[0]?.length||0))rgpSet(start.row+ri,start.col+ci,v)}));
+  rgpUndoing=false;rgpLastSnap=JSON.stringify(rgpSnapshot());rgpUpdateTotal();rgpPaint()
+}
+function rgpFillDown(){
+  const z=rgpSelection();if(!z)return;rgpRemember();rgpUndoing=true;
+  if(z.r1===z.r2&&z.r1>0){for(let c=z.c1;c<=z.c2;c++)rgpSet(z.r1,c,rgpInput(z.r1-1,c)?.value||'')}
+  else for(let c=z.c1;c<=z.c2;c++){const v=rgpInput(z.r1,c)?.value||'';for(let r=z.r1+1;r<=z.r2;r++)rgpSet(r,c,v)}
+  rgpUndoing=false;rgpUpdateTotal();rgpPaint()
+}
+function rgpKey(e,input){
+  const p=rgpPos(input);if(!p)return;
+  const list=input.closest('.purchase-auto-wrap')?.querySelector('.purchase-auto-list');
+  const autoOpen=!!list?.classList.contains('open');
+  if(autoOpen&&['ArrowDown','ArrowUp','Enter','Tab','Escape'].includes(e.key))return;
+
+  if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();const snap=rgpUndo.pop();if(snap)rgpRestore(snap);return}
+  if(e.ctrlKey&&e.key.toLowerCase()==='a'){e.preventDefault();rgpAnchor={row:0,col:0};rgpFocus={row:rgpRows().length-1,col:(rgpInputs()[0]?.length||1)-1};rgpPaint();return}
+  if(e.ctrlKey&&e.key.toLowerCase()==='d'){e.preventDefault();rgpFillDown();return}
+  if(e.key==='Delete'){e.preventDefault();rgpClearSelection();return}
+  if(e.key==='F2'){e.preventDefault();try{input.setSelectionRange(input.value.length,input.value.length)}catch(_){}return}
+
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+    e.preventDefault();const cur=rgpFocus||p,t={...cur};
+    if(e.ctrlKey){if(e.key==='ArrowUp')t.row=0;if(e.key==='ArrowDown')t.row=rgpRows().length-1;if(e.key==='ArrowLeft')t.col=0;if(e.key==='ArrowRight')t.col=(rgpInputs()[0]?.length||1)-1}
+    else{if(e.key==='ArrowUp')t.row--;if(e.key==='ArrowDown')t.row++;if(e.key==='ArrowLeft')t.col--;if(e.key==='ArrowRight')t.col++}
+    rgpFocusCell(t.row,t.col,!!e.shiftKey);return
+  }
+  if(e.key==='Enter'){e.preventDefault();rgpFocusCell(p.row+1,p.col,false);return}
+  if(e.key==='Tab'){
+    e.preventDefault();let row=p.row,col=p.col+(e.shiftKey?-1:1),cols=rgpInputs()[0]?.length||1;
+    if(col>=cols){col=0;row++}if(col<0){col=cols-1;row--}rgpFocusCell(row,col,false);return
+  }
+}
+function rgpBindExcel(){
+  const body=$('#rgpEntryTable tbody');if(!body)return;
+  rgpInputs().forEach(row=>row.forEach((input,i)=>{
+    if(input.dataset.rgpExcelBound)return;input.dataset.rgpExcelBound='1';
+    input.addEventListener('beforeinput',rgpRemember);
+    input.addEventListener('focus',()=>rgpSingle(input));
+    input.addEventListener('mousedown',()=>rgpSingle(input));
+    input.addEventListener('keydown',e=>rgpKey(e,input));
+    input.addEventListener('input',rgpUpdateTotal);
+    input.addEventListener('blur',()=>{if([0,1,3,4].includes(i))input.value=purchaseFormatText(input.value,'rgp','RGP')})
+  }));
+  if(!body.dataset.rgpClipboardBound){
+    body.dataset.rgpClipboardBound='1';
+    body.addEventListener('copy',e=>{if(!rgpFocus)return;const text=rgpTSV();e.preventDefault();e.clipboardData?.setData('text/plain',text);rgpClipboard=text;rgpCopyRange=rgpSelection();rgpMarkCopy(rgpCopyRange)});
+    body.addEventListener('cut',e=>{if(!rgpFocus)return;const text=rgpTSV();e.preventDefault();e.clipboardData?.setData('text/plain',text);rgpClipboard=text;rgpCopyRange=rgpSelection();rgpMarkCopy(rgpCopyRange);rgpClearSelection()});
+    body.addEventListener('paste',e=>{if(!rgpFocus)return;e.preventDefault();rgpPaste(e.clipboardData?.getData('text/plain')||rgpClipboard)})
+  }
+  rgpAnchor={row:0,col:0};rgpFocus={row:0,col:0};rgpPaint();rgpUndo=[];rgpLastSnap=JSON.stringify(rgpSnapshot())
+}
+function rgpClear(){
+  ['rgpNo','rgpDate','rgpDueDate','rgpDepartment','rgpWorkshop','rgpCarrier','rgpAuthorized','rgpBillDetail','rgpPurpose','rgpHeaderRemarks'].forEach(id=>{if($('#'+id))$('#'+id).value=''});
+  rgpInputs().forEach(row=>row.forEach(x=>x.value=''));rgpUpdateTotal();rgpUndo=[];rgpLastSnap=JSON.stringify(rgpSnapshot())
+}
+function rgpSave(){
+  const filled=rgpRows().filter(tr=>[...tr.querySelectorAll('input')].some(x=>x.value.trim()));
+  if(!filled.length)return toast('Enter at least one RGP item');
+  const no=rgpFormatNo($('#rgpNo')?.value);if(!no)return toast('Enter RGP No.');
+  const items=filled.map(tr=>{const a=[...tr.querySelectorAll('input')];return{item:a[0].value.trim(),size:a[1].value.trim(),qty:purchaseNum(a[2].value),unit:a[3].value.trim(),remarks:a[4].value.trim()}});
+  const rec={
+    id:'RGP-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+    rgpNo:no,date:rgpFormatDate($('#rgpDate')?.value),dueDate:rgpFormatDate($('#rgpDueDate')?.value),
+    department:purchaseFormatText($('#rgpDepartment')?.value||'','department','Department'),
+    workshop:purchaseFormatText($('#rgpWorkshop')?.value||'','workshop','Workshop'),
+    carrier:purchaseFormatText($('#rgpCarrier')?.value||'','carrier','Carrier'),
+    authorizedBy:purchaseFormatText($('#rgpAuthorized')?.value||'','authorization','Authorized By'),
+    billDetail:String($('#rgpBillDetail')?.value||'').toUpperCase(),
+    purpose:purchaseFormatText($('#rgpPurpose')?.value||'','purpose','Purpose'),
+    remarks:purchaseFormatText($('#rgpHeaderRemarks')?.value||'','remarks','Remarks'),
+    items,createdAt:new Date().toISOString()
+  };
+  const all=rgpLoad();all.unshift(rec);rgpStore(all);
+  try{ERPAudit?.log?.({module:'Gate Pass',page:'RGP Entry',action:'Add',recordId:rec.id,after:rec})}catch(e){}
+  rgpClear();toast('RGP saved')
+}
+function rgpBind(){
+  if(!$('#panel-rgp-entry'))return;
+  purchaseBindAutos($('#panel-rgp-entry'));
+  rgpEnhanceGridDropdowns();rgpBindExcel();
+  $('#rgpNo')?.addEventListener('blur',e=>e.target.value=rgpFormatNo(e.target.value));
+  $('#rgpDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
+  $('#rgpDueDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
+  ['rgpDepartment','rgpWorkshop','rgpCarrier','rgpAuthorized','rgpPurpose','rgpHeaderRemarks'].forEach(id=>$('#'+id)?.addEventListener('blur',e=>e.target.value=purchaseFormatText(e.target.value,id,id)));
+  $('#rgpBillDetail')?.addEventListener('blur',e=>e.target.value=String(e.target.value||'').toUpperCase());
+  $('#rgpClearBtn')?.addEventListener('click',rgpClear);
+  $('#rgpSaveBtn')?.addEventListener('click',rgpSave);
+  purchaseApplyPc('rgp-entry')
+}
 
 
 /* Integrated Issue / Consumption operations */
