@@ -1135,6 +1135,15 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 
 /* Integrated Issue / Consumption V14.25 */
 #panel-issue-entry,#panel-issue-history{width:100%;max-width:none;margin:0}.issue-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px}.issue-table{width:100%;min-width:1500px;border-collapse:collapse;background:var(--surface);table-layout:fixed}.issue-table th,.issue-table td{border-right:1px solid #78dff5;border-bottom:1px solid #78dff5;height:34px;padding:0}.issue-table th{height:34px;background:#eefafa;font-size:9px;text-transform:uppercase;text-align:center;position:sticky;top:0;z-index:2}.issue-table td:first-child{width:50px;text-align:center;font-size:10px}.issue-table input{width:100%;height:33px;border:0;outline:0;background:transparent;padding:0 7px;font-size:11px}.issue-table input:focus{box-shadow:inset 0 0 0 2px var(--primary);background:#fff}.issue-footer{display:flex;gap:8px;align-items:center;margin-top:12px}.issue-footer .spacer{flex:1}.issue-total{min-width:150px;border:1px solid var(--border);border-radius:9px;padding:7px 10px;text-align:right}.issue-total small{display:block;font-size:8px;font-weight:900;color:var(--muted)}.issue-tools{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.issue-tools input,.issue-tools select{height:36px;border:1px solid var(--border);border-radius:8px;padding:0 9px;background:var(--surface)}.issue-history-table{width:100%;min-width:1400px;border-collapse:collapse}.issue-history-table th,.issue-history-table td{padding:8px;border-bottom:1px solid var(--border);font-size:10px;text-align:left}.issue-history-table th{background:#eefafa;text-transform:uppercase;font-size:9px;position:sticky;top:0}.issue-mini{height:27px;padding:0 8px;border:1px solid var(--border);border-radius:7px;background:var(--surface);font-size:9px;font-weight:800;cursor:pointer}.issue-mini.danger{color:#b91c1c;background:#fff7f7}.issue-note{padding:10px 12px;border-radius:9px;background:#fff6d7;border-left:4px solid var(--accent);margin-bottom:10px;font-size:11px}
+
+/* V14.26 Issue Item searchable Master dropdown */
+#issueEntryTable .issue-item-auto{height:33px;width:100%}
+#issueEntryTable .issue-item-auto>input{padding-right:7px!important}
+#issueEntryTable .issue-item-auto .purchase-auto-list{
+  left:0;right:auto;width:max(100%,300px);min-width:300px;max-height:230px;
+}
+#issueEntryTable .issue-item-auto .purchase-auto-list:empty{display:none!important}
+
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -3070,7 +3079,9 @@ function purchaseBindAutos(root=document){
       list.classList.remove('open');
 
       if(type==='items'){
-        const indentRow=input.closest('#piGridBody tr');
+        const issueRow=input.closest('#issueEntryTable tbody tr');
+        if(issueRow){issueFillItemLinked(input,r);}
+        else {const indentRow=input.closest('#piGridBody tr');
         if(indentRow){piFillItemLinked(input,r);}
         else {const boardRow=input.closest('#boardEntryBody tr');
         if(boardRow){input.value=[r.name,r.size].filter(Boolean).join(' ');const un=boardRow.querySelector('.bp-unit');if(un)un.value=r.unit||'';}
@@ -3087,7 +3098,7 @@ function purchaseBindAutos(root=document){
           const sz=$('#'+prefix+'Size'),un=$('#'+prefix+'Unit');
           if(sz)sz.value=r.size||'';
           if(un)un.value=r.unit||'';
-        }}}}
+        }}}}}
       }
     };
     const paint=()=>{list.querySelectorAll('.purchase-auto-option').forEach((x,i)=>x.classList.toggle('active',i===active));if(active>=0)list.querySelector(`[data-pao="${active}"]`)?.scrollIntoView({block:'nearest'})};
@@ -5126,11 +5137,62 @@ function issueLoad(){try{return JSON.parse(localStorage.getItem(ISSUE_KEY)||'[]'
 function issueStore(a){localStorage.setItem(ISSUE_KEY,JSON.stringify(a))}
 function issueDate(v){v=String(v||'').trim();let m=v.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);if(!m)return v;let d=+m[1],mo=+m[2],y=m[3]?+m[3]:new Date().getFullYear();if(y<100)y+=2000;let dt=new Date(y,mo-1,d);if(dt.getMonth()!=mo-1)return v;return String(d).padStart(2,'0')+'-'+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mo-1]+'-'+String(y).slice(-2)}
 function issueIr(v){v=String(v||'').trim();if(!v)return '';let n=v.match(/(?:IR-?)?(\d+)$/i);return n?'IR-'+String(+n[1]).padStart(5,'0'):v.toUpperCase()}
+
+function issueItemKey(name,size){return String(name||'').trim().toLowerCase()+'||'+String(size||'').trim().toLowerCase()}
+function issueAvailableStock(name,size){
+  const key=issueItemKey(name,size);
+  let incoming=0,returned=0,outgoing=0;
+  try{
+    purchaseAllRows().filter(r=>!r.deletedAt).forEach(r=>{
+      const effect=r.inventoryEffect||'stock-in';
+      if(effect!=='stock-in')return;
+      const ri=String(r.item||r.itemWithSize||'').trim();
+      const rs=String(r.size||'').trim();
+      const exact=issueItemKey(ri,rs)===key;
+      const boardLoose=!rs&&String(ri).toLowerCase().includes(String(name||'').toLowerCase())&&(!size||String(ri).toLowerCase().includes(String(size).toLowerCase()));
+      if(!exact&&!boardLoose)return;
+      incoming+=purchaseNum(r.qty||r.netWeight||0);
+      (r.returns||[]).forEach(x=>returned+=purchaseNum(x.qty||0));
+    });
+  }catch(e){}
+  issueLoad().forEach(r=>{
+    if(issueItemKey(r.item,r.size)===key)outgoing+=Number(r.qty||0);
+  });
+  return Math.max(0,incoming-returned-outgoing)
+}
+function issueFillItemLinked(input,r){
+  const tr=input.closest('#issueEntryTable tbody tr');if(!tr)return false;
+  const a=[...tr.querySelectorAll('input')];
+  input.value=purchaseFormatText(r.name||'','item','Item');
+  input.dataset.masterId=r.id||'';
+  if(a[3])a[3].value=r.size||'';
+  if(a[5])a[5].value=r.unit||'';
+  if(a[6])a[6].value=purchaseMoney(issueAvailableStock(r.name,r.size));
+  return true
+}
+function issueEnhanceItemDropdowns(){
+  document.querySelectorAll('#issueEntryTable tbody tr').forEach(tr=>{
+    const td=tr.children[3],input=td?.querySelector('input');
+    if(!td||!input||input.dataset.issueItemEnhanced)return;
+    input.dataset.issueItemEnhanced='1';
+    input.setAttribute('autocomplete','off');
+    input.setAttribute('data-purchase-auto','items');
+    const wrap=document.createElement('div');
+    wrap.className='purchase-auto-wrap issue-item-auto';
+    const list=document.createElement('div');
+    list.className='purchase-auto-list';
+    td.insertBefore(wrap,input);
+    wrap.appendChild(input);
+    wrap.appendChild(list);
+  });
+  purchaseBindAutos($('#issueEntryTable')||document);
+}
+
 function issueInputs(){return [...document.querySelectorAll('#issueEntryTable tbody tr')].map(tr=>[...tr.querySelectorAll('input')])}
 function issueUpdateTotal(){let t=0;issueInputs().forEach(a=>t+=Number(a[4]?.value||0));let el=$('#issueTotalQty');if(el)el.textContent=t.toLocaleString()}
 function issueClear(){issueInputs().forEach(a=>a.forEach(x=>x.value=''));issueUpdateTotal()}
 function issueSave(){let recs=issueLoad(),added=0;issueInputs().forEach(a=>{if(!a.some(x=>x.value.trim()))return;recs.unshift({id:'ISS-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),date:issueDate(a[0].value),ir:issueIr(a[1].value),item:a[2].value.trim(),size:a[3].value.trim(),qty:Number(a[4].value||0),unit:a[5].value.trim(),stock:a[6].value.trim(),department:a[7].value.trim(),issuedTo:a[8].value.trim(),usedFor:a[9].value.trim(),remarks:a[10].value.trim(),savedAt:new Date().toISOString()});added++});if(!added)return toast('Enter at least one issue row');issueStore(recs);issueClear();issueRenderHistory();toast(added+' issue record'+(added>1?'s':'')+' saved')}
 function issueRenderHistory(){let box=$('#issueHistoryRows');if(!box)return;let q=($('#issueHistSearch')?.value||'').toLowerCase();let a=issueLoad().filter(r=>!q||Object.values(r).join(' ').toLowerCase().includes(q));box.innerHTML=a.length?a.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.ir)}</td><td>${escHtml(r.item)}</td><td>${escHtml(r.size)}</td><td>${escHtml(r.qty)}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.department)}</td><td>${escHtml(r.issuedTo)}</td><td>${escHtml(r.usedFor)}</td><td>${escHtml(r.remarks)}</td><td><button class="issue-mini" data-ie="${r.id}">Edit</button> <button class="issue-mini danger" data-idel="${r.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--muted)">No issue records found.</td></tr>';box.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{if(confirm('Delete this issue record?')){issueStore(issueLoad().filter(x=>x.id!==b.dataset.idel));issueRenderHistory();toast('Issue record deleted')}});box.querySelectorAll('[data-ie]').forEach(b=>b.onclick=()=>{let a=issueLoad(),r=a.find(x=>x.id===b.dataset.ie);if(!r)return;let vals=[r.date,r.ir,r.item,r.size,r.qty,r.unit,r.stock,r.department,r.issuedTo,r.usedFor,r.remarks],inp=issueInputs()[0];vals.forEach((v,i)=>inp[i].value=v??'');issueStore(a.filter(x=>x.id!==r.id));document.querySelector('[data-panel="issue-entry"]')?.click();issueUpdateTotal();toast('Record loaded for correction')})}
 function issuePrint(){let rows=[...document.querySelectorAll('#issueHistoryRows tr')].map(tr=>'<tr>'+[...tr.children].slice(0,10).map(td=>'<td>'+td.textContent+'</td>').join('')+'</tr>').join('');let w=open('','_blank');w.document.write('<html><head><title>Issue History</title><style>body{font-family:Arial;padding:25px}h2{margin:0 0 15px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px}th{background:#ffcc00}</style></head><body><h2>Issue History</h2><table><thead><tr><th>Date</th><th>IR No.</th><th>Item</th><th>Size</th><th>Qty</th><th>Unit</th><th>Department</th><th>Issued To</th><th>Used For</th><th>Remarks</th></tr></thead><tbody>'+rows+'</tbody></table><script>onload=()=>print()<\/script></body></html>');w.document.close()}
-document.addEventListener('DOMContentLoaded',()=>{issueInputs().forEach(row=>row.forEach((x,i)=>{x.addEventListener('blur',()=>{if(i===0)x.value=issueDate(x.value);if(i===1)x.value=issueIr(x.value)});x.addEventListener('input',issueUpdateTotal);x.addEventListener('keydown',e=>{let td=x.closest('td'),tr=x.closest('tr'),ri=[...tr.parentNode.children].indexOf(tr),ci=[...tr.children].indexOf(td)-1;if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();let nr=ri+(e.key==='ArrowDown'?1:-1);issueInputs()[nr]?.[ci]?.focus()}else if(e.key==='ArrowRight'&&x.selectionStart===x.value.length){issueInputs()[ri]?.[ci+1]?.focus()}else if(e.key==='ArrowLeft'&&x.selectionStart===0){issueInputs()[ri]?.[ci-1]?.focus()}})}));$('#issueSaveBtn')?.addEventListener('click',issueSave);$('#issueClearBtn')?.addEventListener('click',issueClear);$('#issueHistSearch')?.addEventListener('input',issueRenderHistory);$('#issueHistClear')?.addEventListener('click',()=>{$('#issueHistSearch').value='';$('#issueHistFrom').value='';$('#issueHistTo').value='';issueRenderHistory()});$('#issuePrintBtn')?.addEventListener('click',issuePrint);issueRenderHistory()});
+document.addEventListener('DOMContentLoaded',()=>{issueEnhanceItemDropdowns();issueInputs().forEach(row=>row.forEach((x,i)=>{x.addEventListener('blur',()=>{if(i===0)x.value=issueDate(x.value);if(i===1)x.value=issueIr(x.value)});x.addEventListener('input',issueUpdateTotal);x.addEventListener('keydown',e=>{let td=x.closest('td'),tr=x.closest('tr'),ri=[...tr.parentNode.children].indexOf(tr),ci=[...tr.children].indexOf(td)-1;if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();let nr=ri+(e.key==='ArrowDown'?1:-1);issueInputs()[nr]?.[ci]?.focus()}else if(e.key==='ArrowRight'&&x.selectionStart===x.value.length){issueInputs()[ri]?.[ci+1]?.focus()}else if(e.key==='ArrowLeft'&&x.selectionStart===0){issueInputs()[ri]?.[ci-1]?.focus()}})}));$('#issueSaveBtn')?.addEventListener('click',issueSave);$('#issueClearBtn')?.addEventListener('click',issueClear);$('#issueHistSearch')?.addEventListener('input',issueRenderHistory);$('#issueHistClear')?.addEventListener('click',()=>{$('#issueHistSearch').value='';$('#issueHistFrom').value='';$('#issueHistTo').value='';issueRenderHistory()});$('#issuePrintBtn')?.addEventListener('click',issuePrint);issueRenderHistory()});
 </script></body></html>
