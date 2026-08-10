@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.4</title>
+<title>ERP Design Studio Core V14.5</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -684,6 +684,24 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   font-style:var(--mp-data-style)
 }
 @media(max-width:1050px){#panel-masters .master-layout{grid-template-columns:1fr}}
+
+/* V14.5 Searchable Autofill / Linked Master Dropdowns */
+.master-auto-wrap{position:relative}
+.master-auto-input{padding-right:30px!important}
+.master-auto-arrow{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted);pointer-events:none}
+.master-auto-list{
+  position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:1500;
+  display:none;max-height:230px;overflow:auto;background:var(--surface);
+  border:1px solid var(--border);border-radius:9px;box-shadow:0 12px 28px rgba(0,0,0,.16)
+}
+.master-auto-list.open{display:block}
+.master-auto-option{padding:8px 10px;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--border) 72%,transparent);font-size:10px}
+.master-auto-option:last-child{border-bottom:0}
+.master-auto-option:hover,.master-auto-option.active{background:color-mix(in srgb,var(--primary) 12%,var(--surface))}
+.master-auto-option b{display:block;font-size:11px}
+.master-auto-option small{display:block;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.master-auto-empty{padding:9px 10px;color:var(--muted);font-size:10px}
+.master-auto-hint{font-size:9px;color:var(--muted);margin-top:3px}
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -1750,19 +1768,210 @@ function masterRenderTabs(){
   $('#masterTabs').innerHTML=Object.entries(MASTER_TYPES).map(([id,x])=>`<button type="button" class="master-tab ${id===masterCurrent?'active':''}" data-master-type="${id}">${escHtml(x.name)}</button>`).join('');
   $$('[data-master-type]').forEach(b=>b.onclick=()=>{masterCurrent=b.dataset.masterType;masterEditingId='';masterClearForm();masterRenderAll()});
 }
+
+/* Linked master field map.
+   Each listed field reads values from another master table.
+   Search matches from any word/part of the record, not only the beginning. */
+const MASTER_AUTOFILL_MAP={
+  items:{
+    unit:{source:'units',value:'name',label:['name','shortName','code']},
+    category:{source:'categories',value:'name',label:['name','code']}
+  },
+  departments:{
+    signatureAuthority:{source:'authorization',value:'name',label:['name','designation','department','code']}
+  },
+  carriers:{
+    vehicleNo:{source:'vehicles',value:'name',label:['name','vehicleType','driver','code']}
+  },
+  authorization:{
+    department:{source:'departments',value:'name',label:['name','signatureAuthority','code']}
+  },
+  employees:{
+    department:{source:'departments',value:'name',label:['name','signatureAuthority','code']}
+  },
+  vehicles:{
+    driver:{source:'carriers',value:'name',label:['name','phone','vehicleNo','code']}
+  },
+  locations:{
+    department:{source:'departments',value:'name',label:['name','signatureAuthority','code']}
+  }
+};
+
+function masterAutoConfig(field){return MASTER_AUTOFILL_MAP[masterCurrent]?.[field]||null}
+
+function masterAutoSearchText(record){
+  return Object.values(record||{}).filter(v=>['string','number'].includes(typeof v)).join(' ').toLowerCase();
+}
+function masterAutoTokens(q){
+  return String(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
+}
+function masterAutoMatches(record,q){
+  const tokens=masterAutoTokens(q);
+  if(!tokens.length)return true;
+  const hay=masterAutoSearchText(record);
+  return tokens.every(t=>hay.includes(t));
+}
+function masterAutoLabel(record,cfg){
+  const parts=(cfg.label||[cfg.value||'name']).map(k=>record?.[k]).filter(v=>String(v??'').trim());
+  return parts.join(' • ');
+}
+function masterAutoPrimary(record,cfg){
+  return String(record?.[cfg.value||'name']??'');
+}
+function masterAutoSecondary(record,cfg){
+  const primary=masterAutoPrimary(record,cfg);
+  return (cfg.label||[]).map(k=>record?.[k]).filter(v=>String(v??'').trim()&&String(v)!==primary).join(' • ');
+}
+
+/* Optional linked field autofill when a selected master record contains useful related data. */
+function masterAutoFillRelated(field,record){
+  const set=(name,val)=>{
+    if(val==null||String(val).trim()==='')return;
+    const e=$(`[data-master-field="${name}"]`);
+    if(e && !String(e.value||'').trim()) e.value=val;
+  };
+  if(masterCurrent==='carriers' && field==='vehicleNo'){
+    set('vehicleNo',record.name);
+  }
+  if(masterCurrent==='departments' && field==='signatureAuthority'){
+    set('signatureAuthority',record.name);
+  }
+  if(masterCurrent==='authorization' && field==='department'){
+    set('department',record.name);
+  }
+  if(masterCurrent==='employees' && field==='department'){
+    set('department',record.name);
+  }
+  if(masterCurrent==='locations' && field==='department'){
+    set('department',record.name);
+  }
+  if(masterCurrent==='vehicles' && field==='driver'){
+    set('driver',record.name);
+  }
+  if(masterCurrent==='items' && field==='unit'){
+    set('unit',record.name);
+  }
+  if(masterCurrent==='items' && field==='category'){
+    set('category',record.name);
+  }
+}
+
+function masterCloseAuto(except=null){
+  $$('.master-auto-list.open').forEach(x=>{if(x!==except)x.classList.remove('open')});
+}
+
+function masterBindAutofill(){
+  $$('[data-master-autofill]').forEach(input=>{
+    const field=input.dataset.masterAutofill,cfg=masterAutoConfig(field);
+    if(!cfg)return;
+    const wrap=input.closest('.master-auto-wrap'),list=wrap?.querySelector('.master-auto-list');
+    if(!list)return;
+    let active=-1,shown=[];
+
+    const render=()=>{
+      const source=masterBucket(cfg.source).filter(r=>r.status!=='inactive');
+      const q=input.value||'';
+      shown=source.filter(r=>masterAutoMatches(r,q)).slice(0,60);
+      active=-1;
+      if(!shown.length){
+        list.innerHTML=`<div class="master-auto-empty">${source.length?'No matching record. You can continue typing.':'No records yet in '+escHtml(MASTER_TYPES[cfg.source]?.name||cfg.source)+'.'}</div>`;
+      }else{
+        list.innerHTML=shown.map((r,i)=>`
+          <div class="master-auto-option" data-auto-index="${i}">
+            <b>${escHtml(masterAutoPrimary(r,cfg))}</b>
+            ${masterAutoSecondary(r,cfg)?`<small>${escHtml(masterAutoSecondary(r,cfg))}</small>`:''}
+          </div>`).join('');
+        list.querySelectorAll('[data-auto-index]').forEach(opt=>{
+          opt.addEventListener('mousedown',e=>{
+            e.preventDefault();
+            choose(+opt.dataset.autoIndex);
+          });
+        });
+      }
+      masterCloseAuto(list);list.classList.add('open');
+    };
+
+    const choose=i=>{
+      const r=shown[i];if(!r)return;
+      input.value=masterAutoPrimary(r,cfg);
+      input.dataset.selectedMasterId=r.id||'';
+      masterAutoFillRelated(field,r);
+      list.classList.remove('open');
+      active=-1;
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    };
+
+    const paintActive=()=>{
+      list.querySelectorAll('.master-auto-option').forEach((x,i)=>x.classList.toggle('active',i===active));
+      if(active>=0)list.querySelector(`[data-auto-index="${active}"]`)?.scrollIntoView({block:'nearest'});
+    };
+
+    input.addEventListener('focus',render);
+    input.addEventListener('click',render);
+    input.addEventListener('input',()=>{
+      input.dataset.selectedMasterId='';
+      render();
+    });
+    input.addEventListener('keydown',e=>{
+      if(e.key==='ArrowDown'){
+        e.preventDefault();
+        if(!list.classList.contains('open'))render();
+        if(shown.length){active=(active+1)%shown.length;paintActive()}
+      }else if(e.key==='ArrowUp'){
+        e.preventDefault();
+        if(!list.classList.contains('open'))render();
+        if(shown.length){active=(active-1+shown.length)%shown.length;paintActive()}
+      }else if(e.key==='Enter'){
+        if(list.classList.contains('open')&&shown.length){
+          e.preventDefault();choose(active>=0?active:0);
+        }
+      }else if(e.key==='Tab'){
+        if(list.classList.contains('open')&&shown.length && (active>=0 || String(input.value).trim())){
+          choose(active>=0?active:0);
+        }
+        list.classList.remove('open');
+      }else if(e.key==='Escape'){
+        e.preventDefault();list.classList.remove('open');active=-1;
+      }
+    });
+    input.addEventListener('blur',()=>setTimeout(()=>list.classList.remove('open'),120));
+  });
+}
+document.addEventListener('mousedown',e=>{if(!e.target.closest('.master-auto-wrap'))masterCloseAuto()});
+
 function masterRenderForm(){
   const cfg=MASTER_TYPES[masterCurrent];
   $('#masterFormTitle').textContent=(masterEditingId?'Edit ':'Add ')+cfg.singular;
   $('#masterForm').innerHTML=cfg.fields.map(([key,label,type,required,options])=>{
     if(type==='select')return `<div class="field"><label>${escHtml(label)}${required?' *':''}</label><select data-master-field="${key}">${(options||[]).map(o=>`<option value="${escHtml(o)}">${escHtml(masterCap(o))}</option>`).join('')}</select></div>`;
     if(type==='textarea')return `<div class="field full"><label>${escHtml(label)}${required?' *':''}</label><textarea data-master-field="${key}"></textarea></div>`;
+    const auto=masterAutoConfig(key);
+    if(auto){
+      return `<div class="field">
+        <label>${escHtml(label)}${required?' *':''}</label>
+        <div class="master-auto-wrap">
+          <input class="master-auto-input" autocomplete="off" data-master-field="${key}" data-master-autofill="${key}" ${required?'required':''}>
+          <span class="master-auto-arrow">▼</span>
+          <div class="master-auto-list"></div>
+        </div>
+        <div class="master-auto-hint">Type 1–2 letters from any word to search ${escHtml(MASTER_TYPES[auto.source]?.name||'master')}.</div>
+      </div>`;
+    }
     return `<div class="field"><label>${escHtml(label)}${required?' *':''}</label><input data-master-field="${key}" ${required?'required':''}></div>`;
   }).join('');
+  masterBindAutofill();
 }
 function masterClearForm(){masterEditingId='';masterRenderForm()}
 function masterFilteredRows(){
-  const q=($('#masterSearch')?.value||'').toLowerCase().trim(),st=$('#masterStatusFilter')?.value||'';
-  return masterBucket().filter(r=>{if(st&&r.status!==st)return false;if(q&&!Object.values(r).join(' ').toLowerCase().includes(q))return false;return true}).sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))
+  const q=($('#masterSearch')?.value||'').toLowerCase().trim(),st=$('#masterStatusFilter')?.value||'',tokens=masterAutoTokens(q);
+  return masterBucket().filter(r=>{
+    if(st&&r.status!==st)return false;
+    if(tokens.length){
+      const hay=masterAutoSearchText(r);
+      if(!tokens.every(t=>hay.includes(t)))return false;
+    }
+    return true;
+  }).sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))
 }
 function masterRenderTable(){
   const cfg=MASTER_TYPES[masterCurrent],settings=masterPageSettings(),rows=masterFilteredRows();
@@ -1844,6 +2053,10 @@ function masterBind(){
   masterRenderAll()
 }
 window.ERPMasters={list:(type)=>masterBucket(type),current:()=>masterCurrent,render:masterRenderAll};
+window.ERPSearchableDropdown={
+  standard:{match:'contains-any-word',minTyping:1,keyboard:['ArrowUp','ArrowDown','Enter','Tab','Escape'],freeTyping:true},
+  search:(rows,q)=>rows.filter(r=>masterAutoMatches(r,q))
+};
 
 /* ===== Hidden Multi-Tenant Core ===== */
 const ERP_TENANT_KEY='erpTenantsV1',ERP_CURRENT_TENANT_KEY='erpCurrentTenantV1';
