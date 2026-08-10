@@ -1364,6 +1364,34 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 @media(max-width:1200px){.rgp-list-filters{grid-template-columns:repeat(3,1fr)}.rgp-entry-header-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:850px){.rgp-list-kpis{grid-template-columns:repeat(2,1fr)}.rgp-list-filters,.rgp-entry-header-grid{grid-template-columns:1fr}.rgp-span-2,.rgp-span-3{grid-column:auto}}
 
+
+/* V14.37 — RGP Entry dedicated searchable dropdowns */
+#panel-rgp-entry .purchase-auto-wrap{position:relative;width:100%;height:100%}
+#panel-rgp-entry .purchase-auto-list{
+  position:absolute!important;
+  z-index:10050!important;
+  left:0!important;
+  top:calc(100% + 2px)!important;
+  min-width:100%!important;
+  width:max(100%,280px)!important;
+  max-height:240px!important;
+  overflow:auto!important;
+  background:var(--surface)!important;
+  border:1px solid var(--border)!important;
+  border-radius:8px!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.16)!important;
+}
+#panel-rgp-entry .purchase-auto-option{padding:8px 10px!important;cursor:pointer}
+#panel-rgp-entry .purchase-auto-option.active,
+#panel-rgp-entry .purchase-auto-option:hover{
+  background:color-mix(in srgb,var(--primary) 12%,var(--surface))!important;
+}
+#panel-rgp-entry .purchase-auto-option b{display:block;font-size:10px}
+#panel-rgp-entry .purchase-auto-option small{display:block;margin-top:2px;font-size:8px;color:var(--muted)}
+#panel-rgp-entry .rgp-entry-form-box,
+#panel-rgp-entry .rgp-items-box,
+#panel-rgp-entry .rgp-table-wrap{overflow:visible!important}
+
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -5881,22 +5909,7 @@ function rgpFillItemLinked(input,r){
   return true
 }
 function rgpEnhanceGridDropdowns(){
-  document.querySelectorAll('#rgpEntryTable tbody tr').forEach(tr=>{
-    [
-      {cell:1,type:'items',flag:'rgpItem',cls:'rgp-item-auto'},
-      {cell:3,type:'units',flag:'rgpUnit',cls:'rgp-unit-auto'}
-    ].forEach(cfg=>{
-      const td=tr.children[cfg.cell],input=td?.querySelector('input');
-      if(!td||!input||input.dataset[cfg.flag])return;
-      input.dataset[cfg.flag]='1';
-      input.setAttribute('autocomplete','off');
-      input.setAttribute('data-purchase-auto',cfg.type);
-      const wrap=document.createElement('div');wrap.className='purchase-auto-wrap '+cfg.cls;
-      const list=document.createElement('div');list.className='purchase-auto-list';
-      td.insertBefore(wrap,input);wrap.appendChild(input);wrap.appendChild(list)
-    })
-  });
-  purchaseBindAutos($('#rgpEntryTable')||document)
+  rgpBindDedicatedDropdowns()
 }
 function rgpUpdateTotal(){
   let totalQty=0,totalValue=0,totalItems=0;
@@ -6024,7 +6037,7 @@ function rgpMakeRow(){
   const tr=document.createElement('tr');tr.dataset.rgpRow=i;
   tr.innerHTML=`<td>${i+1}</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td><td><input readonly></td><td><button type="button" class="rgp-delete-row">Delete</button></td>`;
   body.appendChild(tr);
-  rgpEnhanceGridDropdowns();rgpBindExcel();rgpBindDeleteRows();
+  rgpBindDedicatedDropdowns();rgpBindExcel();rgpBindDeleteRows();
   const rateInput=[...tr.querySelectorAll('input')][4];
   if(rateInput)rateInput.addEventListener('blur',()=>{rateInput.value=rgpFormatRate(rateInput.value);rgpUpdateTotal()});
   rgpUpdateTotal();
@@ -6050,7 +6063,7 @@ function rgpClear(){
   rgpHeaderClear();
   const body=$('#rgpEntryTable tbody');
   if(body){body.innerHTML='<tr data-rgp-row="0"><td>1</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td><td><input readonly></td><td><button type="button" class="rgp-delete-row">Delete</button></td></tr>'}
-  rgpEnhanceGridDropdowns();rgpBindExcel();rgpBindDeleteRows();rgpUpdateTotal();rgpUndo=[];rgpLastSnap=JSON.stringify(rgpSnapshot())
+  rgpBindDedicatedDropdowns();rgpBindExcel();rgpBindDeleteRows();rgpUpdateTotal();rgpUndo=[];rgpLastSnap=JSON.stringify(rgpSnapshot())
 }
 function rgpSave(){
   const filled=rgpRows().filter(tr=>[...tr.querySelectorAll('input')].some(x=>x.value.trim()));
@@ -6237,20 +6250,133 @@ function rgpBindList(){
 }
 
 
-function rgpPrepareHeaderDropdowns(){
-  // Header fields already use the shared quiet Master search engine.
-  purchaseBindAutos($('#panel-rgp-entry'));
 
-  // If Authorization Master has no records, allow Employee names as a fallback
-  // without changing any other page.
-  const auth=$('#rgpAuthorized');
-  if(auth){
-    try{
-      const authRows=purchaseAutoSource?.('authorization')||[];
-      if(!authRows.length)auth.setAttribute('data-purchase-auto','employees')
-    }catch(e){}
-  }
-  purchaseBindAutos($('#panel-rgp-entry'))
+function rgpMasterRows(type,q){
+  const query=String(q||'').trim().toLowerCase();
+  if(!query)return[];
+  let rows=[];
+  try{rows=window.ERPMasters?.list?.(type)||[]}catch(e){}
+  return rows.filter(r=>{
+    if(String(r.status||'').toLowerCase()==='inactive')return false;
+    const hay=[r.name,r.code,r.size,r.unit,r.category,r.phone,r.designation,r.department,r.contactPerson,r.vehicleNo,r.shortName]
+      .filter(Boolean).join(' ').toLowerCase();
+    return query.split(/\s+/).every(part=>hay.includes(part))
+  }).slice(0,50)
+}
+function rgpCloseSearch(except=null){
+  document.querySelectorAll('#panel-rgp-entry .purchase-auto-list.open').forEach(x=>{
+    if(x!==except)x.classList.remove('open')
+  })
+}
+function rgpBindSearchInput(input,type,onChoose){
+  if(!input)return;
+  const wrap=input.closest('.purchase-auto-wrap');if(!wrap)return;
+  const list=wrap.querySelector('.purchase-auto-list');if(!list)return;
+
+  // Override any earlier shared Purchase dropdown binding for RGP only.
+  input.dataset.rgpSearchBound='1';
+  let shown=[],active=-1;
+
+  const paint=()=>{
+    list.querySelectorAll('.purchase-auto-option').forEach((x,i)=>x.classList.toggle('active',i===active));
+    if(active>=0)list.querySelector(`[data-rgp-option="${active}"]`)?.scrollIntoView({block:'nearest'})
+  };
+  const choose=i=>{
+    const r=shown[i];if(!r)return false;
+    input.value=purchaseFormatText(r.name||'',input.id,input.id);
+    input.dataset.masterId=r.id||'';
+    list.classList.remove('open');
+    active=-1;
+    if(typeof onChoose==='function')onChoose(r,input);
+    return true
+  };
+  const draw=()=>{
+    const q=String(input.value||'').trim();
+    if(!q){
+      shown=[];active=-1;list.innerHTML='';list.classList.remove('open');return
+    }
+    shown=rgpMasterRows(type,q);active=-1;
+    list.innerHTML=shown.length
+      ?shown.map((r,i)=>`<div class="purchase-auto-option" data-rgp-option="${i}"><b>${escHtml(r.name||r.code||'')}</b><small>${escHtml([r.size,r.unit,r.code,r.phone,r.designation,r.department].filter(Boolean).join(' • '))}</small></div>`).join('')
+      :`<div class="purchase-empty">No matching ${escHtml(MASTER_TYPES?.[type]?.name||type)}.</div>`;
+    list.querySelectorAll('[data-rgp-option]').forEach(opt=>{
+      opt.onmousedown=e=>{e.preventDefault();e.stopPropagation();choose(+opt.dataset.rgpOption)}
+    });
+    rgpCloseSearch(list);list.classList.add('open')
+  };
+
+  input.onfocus=()=>{active=-1;list.classList.remove('open')};
+  input.oninput=()=>{
+    input.dataset.masterId='';
+    draw()
+  };
+  input.onkeydown=e=>{
+    const open=list.classList.contains('open');
+    if(e.key==='ArrowDown'&&open){
+      e.preventDefault();e.stopImmediatePropagation();
+      if(shown.length){active=(active+1)%shown.length;paint()}
+    }else if(e.key==='ArrowUp'&&open){
+      e.preventDefault();e.stopImmediatePropagation();
+      if(shown.length){active=(active<=0?shown.length-1:active-1);paint()}
+    }else if((e.key==='Enter'||e.key==='Tab')&&open&&shown.length){
+      e.preventDefault();e.stopImmediatePropagation();
+      choose(active>=0?active:0);
+      if(e.key==='Tab'){
+        const p=rgpPos(input);
+        if(p)setTimeout(()=>rgpFocusCell(p.row,p.col+1,false),0)
+      }
+    }else if(e.key==='Escape'&&open){
+      e.preventDefault();e.stopImmediatePropagation();list.classList.remove('open')
+    }
+  };
+  input.onblur=()=>setTimeout(()=>list.classList.remove('open'),120)
+}
+function rgpBindDedicatedDropdowns(){
+  // Header Master fields.
+  rgpBindSearchInput($('#rgpDepartment'),'departments');
+  rgpBindSearchInput($('#rgpWorkshop'),'workshops');
+  rgpBindSearchInput($('#rgpCarrier'),'carriers');
+  rgpBindSearchInput($('#rgpAuthorized'),'authorization');
+
+  // If Authorization Master is empty, use Employees instead.
+  try{
+    if(!(window.ERPMasters?.list?.('authorization')||[]).length){
+      rgpBindSearchInput($('#rgpAuthorized'),'employees')
+    }
+  }catch(e){}
+
+  // Grid fields.
+  document.querySelectorAll('#rgpEntryTable tbody tr').forEach(tr=>{
+    const inputs=[...tr.querySelectorAll('input')];
+    const itemInput=inputs[0],unitInput=inputs[2];
+
+    if(itemInput){
+      const td=itemInput.closest('td');
+      if(!itemInput.closest('.purchase-auto-wrap')){
+        const wrap=document.createElement('div');wrap.className='purchase-auto-wrap rgp-item-auto';
+        const list=document.createElement('div');list.className='purchase-auto-list';
+        td.insertBefore(wrap,itemInput);wrap.appendChild(itemInput);wrap.appendChild(list)
+      }
+      rgpBindSearchInput(itemInput,'items',(r,input)=>{
+        rgpFillItemLinked(input,r);
+        rgpUpdateTotal()
+      })
+    }
+
+    if(unitInput){
+      const td=unitInput.closest('td');
+      if(!unitInput.closest('.purchase-auto-wrap')){
+        const wrap=document.createElement('div');wrap.className='purchase-auto-wrap rgp-unit-auto';
+        const list=document.createElement('div');list.className='purchase-auto-list';
+        td.insertBefore(wrap,unitInput);wrap.appendChild(unitInput);wrap.appendChild(list)
+      }
+      rgpBindSearchInput(unitInput,'units')
+    }
+  })
+}
+
+function rgpPrepareHeaderDropdowns(){
+  rgpBindDedicatedDropdowns()
 }
 
 function rgpBind(){
