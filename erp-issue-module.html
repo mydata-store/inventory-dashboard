@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Issue Module V1.1</title>
+
+<script>
+(function(){
+  const root=document.documentElement;
+  root.classList.add('erp-safe-boot');
+  try{
+    const d=JSON.parse(localStorage.getItem('ERP_DESIGN_CORE_V1')||localStorage.getItem('erpDesignStudioV11')||'null');
+    const t=d?.theme||{}, sb=d?.sidebar||{}, c=d?.clock||{};
+    const vars={
+      '--bg':t.background,'--surface':t.surface,'--text':t.text,'--muted':t.muted,
+      '--primary':t.primary,'--accent':t.accent,'--border':t.border,
+      '--side-bg':t.sidebar,'--side-text':t.sidebarText,
+      '--side-active':t.sidebarActive,'--side-active-text':t.sidebarActiveText
+    };
+    Object.entries(vars).forEach(([k,v])=>v&&root.style.setProperty(k,v));
+    if(t.fontFamily)root.style.setProperty('--font',"'"+String(t.fontFamily).replace(/'/g,"")+"',Arial,sans-serif");
+    if(sb.width!=null)root.style.setProperty('--side-w',sb.width+'px');
+    if(sb.collapsedWidth!=null)root.style.setProperty('--side-cw',sb.collapsedWidth+'px');
+    if(sb.rowHeight!=null)root.style.setProperty('--side-row',sb.rowHeight+'px');
+    if(sb.subRowHeight!=null)root.style.setProperty('--side-subrow',sb.subRowHeight+'px');
+    if(sb.iconSize!=null)root.style.setProperty('--side-icon',sb.iconSize+'px');
+    if(sb.radius!=null)root.style.setProperty('--side-radius',sb.radius+'px');
+    if(sb.gap!=null)root.style.setProperty('--side-gap',sb.gap+'px');
+    if(c.background)root.style.setProperty('--clock-bg',c.background);
+  }catch(e){}
+  window.__issueBoot=setTimeout(()=>root.classList.remove('erp-safe-boot'),3000);
+})();
+</script>
+
+<style>
+html.erp-safe-boot body{visibility:hidden!important}
+html.erp-safe-boot::before{content:"";position:fixed;inset:0;background:var(--bg,#eef8f3);z-index:2147483647}
+:root{
+  --bg:#eef8f3;--surface:#fff;--text:#0e2b22;--muted:#58756c;--primary:#117a55;--accent:#f5a400;
+  --border:#b9d9cd;--shadow:0 12px 30px rgba(16,60,47,.10);--font:'Segoe UI',Arial,sans-serif;
+  --side-w:200px;--side-cw:58px;--side-row:42px;--side-subrow:30px;--side-icon:15px;--side-radius:9px;--side-gap:3px;
+  --side-bg:#0d5b42;--side-text:#fff;--side-active:#159b6a;--side-active-text:#fff;--clock-bg:#ffffff14
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;background:var(--side-bg);color:var(--side-text);padding:12px 9px;display:flex;flex-direction:column;overflow:hidden}
+.brand{display:flex;align-items:center;gap:9px;padding:7px 6px 14px}.brand-logo{width:38px;height:38px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#111;font-weight:900;flex:0 0 auto}.brand-copy{min-width:0}.brand-copy b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand-copy small{font-size:9px;opacity:.72}
+.menu{display:flex;flex-direction:column;gap:var(--side-gap)}.menu-btn{height:var(--side-row);border:0;border-radius:var(--side-radius);background:transparent;color:inherit;display:flex;align-items:center;gap:9px;padding:0 10px;text-align:left;font-weight:700}.menu-btn:hover{background:#ffffff18}.menu-btn.active{background:var(--side-active);color:var(--side-active-text)}.menu-btn .ico{width:20px;text-align:center}
+.submenu{display:flex;flex-direction:column;gap:2px;padding-left:28px}.sub-btn{height:var(--side-subrow);border:0;border-radius:7px;background:transparent;color:inherit;text-align:left;padding:0 8px;font-size:11px}.sub-btn:hover,.sub-btn.active{background:var(--side-active);color:var(--side-active-text)}
+.side-bottom{margin-top:auto}.clock{border:1px solid #ffffff30;background:var(--clock-bg);border-radius:11px;padding:9px;margin-bottom:8px}.clock b{display:block;font-size:13px}.clock small{font-size:9px;opacity:.75}.profile{display:flex;align-items:center;gap:8px;border:1px solid #ffffff30;background:#ffffff12;border-radius:13px;padding:8px}.avatar{width:40px;height:40px;border-radius:50%;border:2px solid var(--accent);object-fit:cover}.pcopy{min-width:0}.pcopy b,.pcopy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pcopy small{font-size:9px;opacity:.75}
+.page-shell{min-width:0}.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,white);border-bottom:1px solid var(--border);padding:17px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}.title h1{margin:0;font-size:25px}.title p{margin:4px 0 0;color:var(--muted);font-size:12px}.top-actions{display:flex;align-items:center;gap:7px}.btn{height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 11px;font-weight:800;font-size:10px}.btn.primary{background:var(--primary);border-color:var(--primary);color:white}.btn.danger{color:#b91c1c;border-color:#fecaca;background:#fff7f7}
+.content{padding:14px}.panel{display:none}.panel.active{display:block}.card{background:var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:var(--shadow);padding:13px}.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}.page-head h2{margin:0;font-size:20px}.page-head p{margin:3px 0 0;color:var(--muted);font-size:11px}.notice{background:#fff6d7;border-left:4px solid var(--accent);border-radius:9px;padding:10px 12px;margin:9px 0;font-size:10px}.muted{color:var(--muted)}
+.issue-grid-wrap,.history-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:9px}
+table{border-collapse:collapse;width:100%}
+.issue-grid{min-width:1650px;table-layout:fixed}
+.issue-grid th,.history-table th{position:sticky;top:0;z-index:3;background:color-mix(in srgb,var(--bg) 72%,var(--surface));font-size:9px;font-weight:900;text-transform:uppercase;border-right:1px solid var(--border);border-bottom:1px solid var(--border);height:32px;padding:5px;text-align:center;white-space:nowrap}
+.issue-grid td,.history-table td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);height:34px;padding:0;font-size:10px}
+.issue-grid td.sr{text-align:center;font-weight:800;color:var(--muted)}
+.issue-grid input{width:100%;height:100%;border:0;outline:0;background:transparent;color:var(--text);padding:0 7px;font-size:10px}
+.issue-grid input[readonly]{font-weight:800;color:var(--text)}
+.auto{position:relative;height:100%}.auto-list{display:none;position:absolute;left:0;top:100%;min-width:260px;max-width:420px;max-height:230px;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 24px rgba(0,0,0,.15);z-index:60}.auto-list.open{display:block}.auto-opt{padding:7px 9px;border-bottom:1px solid var(--border);font-size:10px}.auto-opt:last-child{border-bottom:0}.auto-opt.active,.auto-opt:hover{background:color-mix(in srgb,var(--primary) 10%,var(--surface))}.auto-opt b{display:block}.auto-opt small{display:block;color:var(--muted);margin-top:2px}
+td.sel{background:color-mix(in srgb,var(--primary) 8%,transparent)!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 45%,transparent)}td.active{box-shadow:inset 0 0 0 2px var(--primary)!important}.copy-mark{outline:2px dashed color-mix(in srgb,var(--primary) 75%,#fff);outline-offset:-3px}
+.entry-footer{display:flex;align-items:center;gap:7px;margin-top:9px}.entry-footer .status{font-size:9px;color:var(--muted);margin-right:auto}.summary-box{border:1px solid var(--border);border-radius:8px;padding:7px 10px;min-width:145px;text-align:right}.summary-box small{display:block;color:var(--muted);font-size:8px;font-weight:900;text-transform:uppercase}.summary-box strong{font-size:14px}
+.history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0}.history-tabs,.history-actions{display:flex;gap:5px;flex-wrap:wrap}.mini{height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 9px;font-size:9px;font-weight:900}.mini.active,.mini.primary{background:var(--primary);border-color:var(--primary);color:white}
+.filters{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px;margin:8px 0}.filters label{display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted);margin-bottom:4px}.filters input,.filters select{width:100%;height:36px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 8px}.wide2{grid-column:span 2}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}.kpi{border:1px solid var(--border);border-radius:9px;padding:9px 10px}.kpi small{display:block;color:var(--muted);font-size:8px;font-weight:900;text-transform:uppercase}.kpi strong{display:block;font-size:16px;margin-top:4px}
+.history-table{min-width:1750px}.history-table td{padding:6px 7px;height:31px;white-space:nowrap}.row-actions{display:flex;gap:4px}.row-actions button{height:25px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:8px;font-weight:900;padding:0 6px}.row-actions .danger{color:#b91c1c;border-color:#fecaca;background:#fff7f7}
+.empty{text-align:center!important;color:var(--muted);padding:18px!important}
+.modal{display:none;position:fixed;inset:0;background:rgba(7,22,30,.62);z-index:1000;align-items:center;justify-content:center;padding:18px}.modal.open{display:flex}.modal-box{width:min(950px,96vw);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:16px}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.modal-head h3{margin:0}.detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.detail{border:1px solid var(--border);border-radius:8px;padding:8px}.detail small{display:block;color:var(--muted);font-size:8px;font-weight:900;text-transform:uppercase}.detail b{display:block;margin-top:4px;font-size:11px;word-break:break-word}
+.controller{width:min(820px,96vw)}.controller-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.ctrl{border:1px solid var(--border);border-radius:8px;padding:9px}.ctrl label{display:flex;justify-content:space-between;gap:8px;font-size:9px;font-weight:800}.ctrl select,.ctrl input[type=range]{width:100%;margin-top:6px}.ctrl-full{grid-column:1/-1}.col-chips{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}.col-chip{height:27px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 8px;font-size:8px;font-weight:900}.col-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+@media(max-width:900px){.app{grid-template-columns:58px minmax(0,1fr)}.brand-copy,.menu-btn span:last-child,.submenu,.pcopy,.clock small{display:none}.sidebar{padding-left:8px;padding-right:8px}.menu-btn{justify-content:center;padding:0}.filters,.detail-grid{grid-template-columns:repeat(2,1fr)}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.filters,.detail-grid{grid-template-columns:1fr}.wide2{grid-column:auto}.controller-grid{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo" id="brandLogo">ERP</div>
+      <div class="brand-copy"><b id="companyName">ERP</b><small>Store Inventory ERP</small></div>
+    </div>
+
+    <div class="menu">
+      <button class="menu-btn" id="mastersLink"><span class="ico">▦</span><span>Masters</span></button>
+      <button class="menu-btn" id="purchaseLink"><span class="ico">▣</span><span>Purchase</span></button>
+      <button class="menu-btn active"><span class="ico">◆</span><span>Issue / Consumption</span></button>
+      <div class="submenu">
+        <button class="sub-btn active" data-page="entry">Issue Entry</button>
+        <button class="sub-btn" data-page="history">Issue History</button>
+      </div>
+    </div>
+
+    <div class="side-bottom">
+      <button class="menu-btn" id="designStudioLink"><span class="ico">◆</span><span>Design Studio</span></button>
+      <div class="clock"><b id="clockTime">--:--</b><small id="clockDate">--</small></div>
+      <div class="profile">
+        <img class="avatar" id="profileImage" alt="">
+        <div class="pcopy"><b id="profileName">ERP User</b><small id="profileRole">User</small></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="page-shell">
+    <header class="topbar">
+      <div class="title"><h1 id="pageTitle">Issue Entry</h1><p id="pageSubtitle">Store Issue</p></div>
+      <div class="top-actions"><span class="muted" id="readyText">Ready</span></div>
+    </header>
+
+    <div class="content">
+      <section class="panel active" id="panelEntry">
+        <div class="card">
+          <div class="page-head">
+            <div></div>
+            <button class="btn" data-controller="issue-entry">⚙ Page Controller</button>
+          </div>
+          <div class="notice" data-instruction="issue-entry">
+            Type dates like <b>25-6</b>. Type an IR number like <b>1</b> and it formats to <b>IR-00001</b>. Item search opens only after typing and fills Size, Unit and Available Stock.
+          </div>
+
+          <div class="issue-grid-wrap">
+            <table class="issue-grid" id="issueGrid">
+              <thead><tr>
+                <th data-col="sr">Sr No.</th>
+                <th data-col="date">Date</th>
+                <th data-col="ir">IR No.</th>
+                <th data-col="item">Item</th>
+                <th data-col="size">Size</th>
+                <th data-col="qty">Quantity</th>
+                <th data-col="unit">Unit</th>
+                <th data-col="stock">Available Stock</th>
+                <th data-col="department">Department</th>
+                <th data-col="issuedTo">Issued To</th>
+                <th data-col="purpose">Used For</th>
+                <th data-col="remarks">Remarks</th>
+              </tr></thead>
+              <tbody id="issueGridBody"></tbody>
+            </table>
+          </div>
+
+          <div class="entry-footer">
+            <span class="status">15 blank entry rows ready • Excel keyboard keys active</span>
+            <div class="summary-box"><small>Total Qty</small><strong id="entryTotalQty">0</strong></div>
+            <button class="btn" id="clearIssue">Clear Table</button>
+            <button class="btn primary" id="saveIssue">Save Issue</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panelHistory">
+        <div class="card">
+          <div class="page-head">
+            <div><h2>Issue History</h2><p data-subtitle="issue-history">Search, review, edit and print all saved issue records.</p></div>
+            <button class="btn" data-controller="issue-history">⚙ Page Controller</button>
+          </div>
+          <div class="notice" data-instruction="issue-history">
+            Whatever is visible after filtering is what <b>Print Results</b> and <b>Export Excel</b> will use.
+          </div>
+
+          <div class="history-toolbar">
+            <div class="history-tabs">
+              <button class="mini active" data-quick="">All</button>
+              <button class="mini" data-quick="today">Today</button>
+              <button class="mini" data-quick="month">This Month</button>
+            </div>
+            <div class="history-actions">
+              <button class="mini primary" id="historySearchBtn">Search</button>
+              <button class="mini" id="historyClear">Clear</button>
+              <button class="mini" id="historyPrint">Print Results</button>
+              <button class="mini" id="historyExport">Export Excel</button>
+            </div>
+          </div>
+
+          <div class="filters" data-filters="issue-history">
+            <div><label>From Date</label><input id="hFrom" placeholder="01-8-26"></div>
+            <div><label>To Date</label><input id="hTo" placeholder="31-8-26"></div>
+            <div><label>Month</label><input id="hMonth" placeholder="Aug-26"></div>
+            <div><label>IR No.</label><input id="hIR"></div>
+
+            <div><label>Item</label><div class="auto"><input id="hItem" autocomplete="off" data-auto="items"><div class="auto-list"></div></div></div>
+            <div><label>Department</label><div class="auto"><input id="hDepartment" autocomplete="off" data-auto="departments"><div class="auto-list"></div></div></div>
+            <div><label>Issued To</label><div class="auto"><input id="hIssuedTo" autocomplete="off" data-auto="employees"><div class="auto-list"></div></div></div>
+            <div><label>User</label><input id="hUser"></div>
+
+            <div class="wide2"><label>Used For</label><input id="hPurpose"></div>
+            <div class="wide2"><label>Any Word Search</label><input id="hAny" placeholder="Item, department, IR, employee, remarks..."></div>
+          </div>
+
+          <div class="kpis" data-summary="issue-history">
+            <div class="kpi"><small>Issue Records</small><strong id="kRecords">0</strong></div>
+            <div class="kpi"><small>Total Quantity</small><strong id="kQty">0</strong></div>
+            <div class="kpi"><small>Items</small><strong id="kItems">0</strong></div>
+            <div class="kpi"><small>Departments</small><strong id="kDepartments">0</strong></div>
+          </div>
+
+          <div class="history-table-wrap">
+            <table class="history-table" id="historyTable">
+              <thead><tr>
+                <th>#</th><th>Date</th><th>IR No.</th><th>Item</th><th>Size</th><th>Qty</th><th>Unit</th>
+                <th>Department</th><th>Issued To</th><th>Used For</th><th>Remarks</th><th>User</th><th>Action</th>
+              </tr></thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="detailModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="detailTitle">Issue Detail</h3><button class="btn" id="detailClose">Close</button></div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="controllerModal">
+  <div class="modal-box controller">
+    <div class="modal-head"><h3 id="controllerTitle">Page Controller</h3><button class="btn" id="controllerClose">Close</button></div>
+    <div class="notice">Live Preview: changes apply immediately. Save Page Settings makes them permanent for this page.</div>
+
+    <div class="controller-grid">
+      <div class="ctrl"><label>Show Subtitle <input type="checkbox" id="cSubtitle"></label></div>
+      <div class="ctrl"><label>Show Instruction Box <input type="checkbox" id="cInstruction"></label></div>
+      <div class="ctrl"><label>Show Filters <input type="checkbox" id="cFilters"></label></div>
+      <div class="ctrl"><label>Show Summary Cards <input type="checkbox" id="cSummary"></label></div>
+
+      <div class="ctrl"><label>Header Alignment</label><select id="cHeaderAlign"><option>Left</option><option selected>Center</option><option>Right</option></select></div>
+      <div class="ctrl"><label>Data Alignment</label><select id="cDataAlign"><option selected>Left</option><option>Center</option><option>Right</option></select></div>
+      <div class="ctrl"><label>Header Font Size</label><input type="range" id="cHeaderFont" min="8" max="18"><span id="cHeaderFontVal"></span></div>
+      <div class="ctrl"><label>Data Font Size</label><input type="range" id="cDataFont" min="8" max="18"><span id="cDataFontVal"></span></div>
+      <div class="ctrl"><label>Row Height</label><input type="range" id="cRowHeight" min="26" max="60"><span id="cRowHeightVal"></span></div>
+      <div class="ctrl"><label>Header Bold <input type="checkbox" id="cHeaderBold"></label></div>
+      <div class="ctrl"><label>Data Bold <input type="checkbox" id="cDataBold"></label></div>
+      <div class="ctrl"><label>Data Italic <input type="checkbox" id="cDataItalic"></label></div>
+
+      <div class="ctrl ctrl-full">
+        <label>Selected Column</label>
+        <div class="col-chips" id="columnChips"></div>
+        <select id="cColumn"></select>
+      </div>
+      <div class="ctrl"><label>Show Selected Column <input type="checkbox" id="cColVisible"></label></div>
+      <div class="ctrl"><label>Column Width</label><input type="range" id="cColWidth" min="45" max="360"><span id="cColWidthVal"></span></div>
+      <div class="ctrl"><label>Column Header Alignment</label><select id="cColHeaderAlign"><option value="">Use Table</option><option>Left</option><option>Center</option><option>Right</option></select></div>
+      <div class="ctrl"><label>Column Data Alignment</label><select id="cColDataAlign"><option value="">Use Table</option><option>Left</option><option>Center</option><option>Right</option></select></div>
+    </div>
+
+    <div class="entry-footer">
+      <span class="status"></span>
+      <button class="btn" id="controllerCancel">Cancel Changes</button>
+      <button class="btn" id="controllerReset">Restore Defaults</button>
+      <button class="btn primary" id="controllerSave">Save Page Settings</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const MASTER_DATA_KEY='erpMasterDataV1';
+const PURCHASE_DATA_KEY='erpPurchaseDataV1';
+const ISSUE_DATA_KEY='erpIssueDataV1';
+const TENANT_KEY='erpCurrentTenantV1';
+const USER_KEY='erpCoreActiveUserV2';
+const USERS_KEY='erpCoreUsersV2';
+const ROLES_KEY='erpCoreRolesV2';
+const REGISTRY_KEY='erpAccessPageRegistryV1';
+const AUDIT_KEY='erpAuditTrailV1';
+const PRINT_GALLERY_KEY='erpPrintDesignGalleryV1';
+const PRINT_ASSIGN_KEY='erpPrintAssignmentsV1';
+const PRINT_CONTRACT_KEY='erpPrintDataContractsV1';
+const PAGE_PREFIX='erpPageController:';
+
+const PAGE_COLS={
+  'issue-entry':[
+    ['sr','Sr No.',55],['date','Date',92],['ir','IR No.',105],['item','Item',210],['size','Size',100],['qty','Quantity',90],
+    ['unit','Unit',85],['stock','Available Stock',115],['department','Department',150],['issuedTo','Issued To',150],['purpose','Used For',210],['remarks','Remarks',220]
+  ],
+  'issue-history':[
+    ['sr','#',45],['date','Date',90],['ir','IR No.',105],['item','Item',190],['size','Size',95],['qty','Qty',80],['unit','Unit',80],
+    ['department','Department',140],['issuedTo','Issued To',140],['purpose','Used For',180],['remarks','Remarks',200],['user','User',130],['action','Action',210]
+  ]
+};
+
+function safeJSON(key,fb){
+  try{const x=JSON.parse(localStorage.getItem(key)||'');return x??fb}catch(e){return fb}
+}
+function tenantId(){
+  const x=safeJSON(TENANT_KEY,null);
+  if(typeof x==='string')return x;
+  if(x&&typeof x==='object')return x.id||x.tenantId||x.currentId||'local';
+  return localStorage.getItem(TENANT_KEY)||'local'
+}
+function userList(){
+  const x=safeJSON(USERS_KEY,{});
+  return Array.isArray(x)?x:Object.values(x||{})
+}
+function currentUser(){
+  const a=safeJSON(USER_KEY,null);
+  if(a&&typeof a==='object')return a;
+  const id=typeof a==='string'?a:localStorage.getItem(USER_KEY);
+  return userList().find(u=>u.id===id||u.email===id)||null
+}
+function roles(){return safeJSON(ROLES_KEY,{})||{}}
+function pageRegistry(){return safeJSON(REGISTRY_KEY,[])||[]}
+function registerPages(){
+  const a=pageRegistry();
+  const add=(id,name)=>{
+    if(!a.some(x=>x.id===id))a.push({id,name,module:'issue',actions:['view','add','edit','delete','print'],description:'Issue module page'})
+  };
+  add('issue-entry','Issue Entry');add('issue-history','Issue History');
+  localStorage.setItem(REGISTRY_KEY,JSON.stringify(a))
+}
+function canPage(page,action='view'){
+  const u=currentUser(),rs=roles();
+  if(!u||!Object.keys(rs).length)return true;
+  if(u.status==='disabled')return false;
+  const r=rs[u.role];
+  if(r?.protected)return true;
+  const ex=r?.pagePermissions?.[page];
+  if(ex&&Object.prototype.hasOwnProperty.call(ex,action))return !!ex[action];
+  const mod=r?.permissions?.issue||r?.permissions?.['issue / consumption']||r?.permissions?.['Issue / Consumption'];
+  if(mod&&Object.prototype.hasOwnProperty.call(mod,action))return !!mod[action];
+  return true
+}
+function audit(action,record,before=null){
+  try{
+    const a=safeJSON(AUDIT_KEY,[])||[],u=currentUser();
+    a.unshift({id:'AUD-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),at:new Date().toISOString(),userId:u?.id||'',userName:u?.name||'',role:u?.role||'',module:'Issue / Consumption',page:'Issue',action,recordId:record?.id||'',before,after:record});
+    if(a.length>5000)a.length=5000;
+    localStorage.setItem(AUDIT_KEY,JSON.stringify(a))
+  }catch(e){}
+}
+
+function mastersAll(){return safeJSON(MASTER_DATA_KEY,{})||{}}
+function master(type){
+  const all=mastersAll(),tid=tenantId();
+  return Array.isArray(all[tid]?.[type])?all[tid][type]:Array.isArray(all.local?.[type])?all.local[type]:[]
+}
+function titleCase(v){
+  return String(v??'').replace(/\s+/g,' ').replace(/(^|[\s\-\/().])([A-Za-z])([A-Za-z]*)/g,(m,p,a,b)=>p+a.toUpperCase()+b.toLowerCase())
+}
+function fmtText(v){return titleCase(v)}
+function num(v){const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0}
+function money(v){return num(v).toLocaleString(undefined,{maximumFractionDigits:2})}
+function fmtDate(raw){
+  const x=String(raw||'').trim();if(!x)return'';
+  if(/^\d{1,2}-[A-Za-z]{3}-\d{2}$/.test(x))return x;
+  const m=x.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/);if(!m)return x;
+  const day=+m[1],mon=+m[2];let yr=m[3]?+m[3]:new Date().getFullYear();if(yr<100)yr+=2000;
+  if(day<1||day>31||mon<1||mon>12)return x;
+  const d=new Date(yr,mon-1,day);
+  return `${String(day).padStart(2,'0')}-${d.toLocaleString('en',{month:'short'})}-${String(yr).slice(-2)}`
+}
+function fmtIR(raw){
+  const x=String(raw||'').trim();if(!x)return'';
+  if(/^IR-\d{5}$/i.test(x))return x.toUpperCase();
+  const n=parseInt(x.replace(/\D/g,''),10);return Number.isFinite(n)?`IR-${String(n).padStart(5,'0')}`:x.toUpperCase()
+}
+function parseDate(s){
+  const x=String(s||'').trim(),m=x.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/);if(!m)return null;
+  const mm={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}[m[2].toLowerCase()];
+  return mm==null?null:new Date(2000+(+m[3]),mm,+m[1])
+}
+function monthKey(s){
+  const d=parseDate(s);return d?d.toLocaleString('en',{month:'short'})+'-'+String(d.getFullYear()).slice(-2):''
+}
+
+function purchaseAll(){return safeJSON(PURCHASE_DATA_KEY,{})||{}}
+function purchaseRows(){
+  const d=purchaseAll(),t=tenantId(),bucket=d[t]||d.local||{};
+  return ['local','zafar','board'].flatMap(reg=>(bucket[reg]||[]).map(r=>({...r,register:reg})))
+}
+function issueAll(){return safeJSON(ISSUE_DATA_KEY,{})||{}}
+function issueRows(){
+  const d=issueAll(),t=tenantId();return Array.isArray(d[t])?d[t]:[]
+}
+function writeIssues(rows){
+  const d=issueAll(),t=tenantId();d[t]=rows;localStorage.setItem(ISSUE_DATA_KEY,JSON.stringify(d))
+}
+function itemKey(name,size){return (String(name||'').trim().toLowerCase()+'||'+String(size||'').trim().toLowerCase())}
+function purchaseQty(r){
+  if(r.register==='board')return num(r.netWeight||r.qty);
+  return num(r.qty)
+}
+function stockFor(name,size,excludeIssueId=''){
+  const key=itemKey(name,size);
+  let incoming=0,returns=0,outgoing=0;
+  purchaseRows().filter(r=>!r.deletedAt).forEach(r=>{
+    const rn=r.itemWithSize||r.item||'',rs=r.size||'';
+    const rk=itemKey(rn,rs);
+    const loose=!size&&String(rn).toLowerCase().includes(String(name||'').toLowerCase());
+    if(rk!==key&&!loose)return;
+    const effect=r.inventoryEffect || (r.register==='local'&&r.section&&String(r.section).toLowerCase()!=='inventory'?'auto-issue':'stock-in');
+    if(effect==='stock-in')incoming+=purchaseQty(r);
+    (r.returns||[]).forEach(x=>returns+=num(x.qty))
+  });
+  issueRows().filter(r=>!r.deletedAt&&r.id!==excludeIssueId).forEach(r=>{
+    if(itemKey(r.item,r.size)===key)outgoing+=num(r.qty)
+  });
+  return incoming-returns-outgoing
+}
+
+function bindAuto(root=document){
+  root.querySelectorAll('[data-auto]').forEach(input=>{
+    if(input.dataset.bound)return;input.dataset.bound='1';
+    const type=input.dataset.auto,list=input.closest('.auto')?.querySelector('.auto-list');if(!list)return;
+    let shown=[],active=-1;
+    const redraw=()=>{
+      const q=input.value.trim().toLowerCase();
+      if(!q){list.classList.remove('open');list.innerHTML='';return}
+      shown=master(type).filter(r=>r.status!=='inactive').filter(r=>Object.values(r).join(' ').toLowerCase().includes(q)).slice(0,30);
+      active=-1;
+      if(!shown.length){list.classList.remove('open');list.innerHTML='';return}
+      list.innerHTML=shown.map((r,i)=>`<div class="auto-opt" data-i="${i}"><b>${esc(r.name||'')}</b><small>${esc([r.size,r.unit,r.department,r.employeeCode].filter(Boolean).join(' • '))}</small></div>`).join('');
+      list.querySelectorAll('.auto-opt').forEach(o=>o.onmousedown=e=>{e.preventDefault();choose(+o.dataset.i)});
+      list.classList.add('open')
+    };
+    const choose=i=>{
+      const r=shown[i];if(!r)return;
+      input.value=r.name||'';list.classList.remove('open');
+      if(type==='items'){
+        const tr=input.closest('#issueGridBody tr');
+        if(tr){
+          tr.querySelector('.e-size').value=r.size||'';
+          tr.querySelector('.e-unit').value=r.unit||'';
+          tr.querySelector('.e-stock').value=money(stockFor(r.name,r.size));
+        }
+      }
+      input.dispatchEvent(new Event('change',{bubbles:true}))
+    };
+    input.addEventListener('focus',()=>list.classList.remove('open'));
+    input.addEventListener('input',redraw);
+    input.addEventListener('keydown',e=>{
+      if(!list.classList.contains('open'))return;
+      if(e.key==='ArrowDown'){e.preventDefault();active=Math.min(shown.length-1,active+1)}
+      else if(e.key==='ArrowUp'){e.preventDefault();active=Math.max(0,active-1)}
+      else if((e.key==='Enter'||e.key==='Tab')&&shown.length){if(e.key==='Enter')e.preventDefault();choose(active>=0?active:0)}
+      else if(e.key==='Escape')list.classList.remove('open');
+      list.querySelectorAll('.auto-opt').forEach((o,i)=>o.classList.toggle('active',i===active))
+    });
+    input.addEventListener('blur',()=>setTimeout(()=>list.classList.remove('open'),100))
+  })
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+const ENTRY_ROWS=15;
+const ENTRY_COLS=['date','ir','item','size','qty','unit','stock','department','issuedTo','purpose','remarks'];
+let selAnchor=null,selFocus=null,clip='',undo=[],undoing=false,lastSnap='';
+
+function autoCell(type,cls){return `<div class="auto"><input class="${cls}" autocomplete="off" data-auto="${type}"><div class="auto-list"></div></div>`}
+function buildEntry(snapshot=null){
+  const b=$('#issueGridBody');
+  b.innerHTML=Array.from({length:ENTRY_ROWS},(_,i)=>`<tr data-row="${i}">
+    <td class="sr">${i+1}</td>
+    <td><input class="e-date"></td>
+    <td><input class="e-ir"></td>
+    <td>${autoCell('items','e-item')}</td>
+    <td><input class="e-size"></td>
+    <td><input class="e-qty" inputmode="decimal"></td>
+    <td>${autoCell('units','e-unit')}</td>
+    <td><input class="e-stock" readonly></td>
+    <td>${autoCell('departments','e-department')}</td>
+    <td>${autoCell('employees','e-issuedTo')}</td>
+    <td><input class="e-purpose"></td>
+    <td><input class="e-remarks"></td>
+  </tr>`).join('');
+  bindAuto(b);bindEntryGrid();
+  if(snapshot)restoreEntry(snapshot);
+  updateEntryTotal();applyPageSettings('issue-entry')
+}
+function entryRows(){return [...$('#issueGridBody').querySelectorAll('tr')]}
+function entrySnapshot(){return entryRows().map(tr=>ENTRY_COLS.map(c=>tr.querySelector('.e-'+c)?.value||''))}
+function restoreEntry(snap){snap.forEach((row,r)=>row.forEach((v,c)=>{const e=entryRows()[r]?.querySelector('.e-'+ENTRY_COLS[c]);if(e)e.value=v||''}));updateEntryTotal()}
+function remember(){if(undoing)return;const s=entrySnapshot(),k=JSON.stringify(s);if(k===lastSnap)return;undo.push(s);if(undo.length>100)undo.shift();lastSnap=k}
+function pos(e){const tr=e.closest('tr'),td=e.closest('td');return tr&&td?{r:+tr.dataset.row,c:[...tr.children].indexOf(td)-1}:null}
+function cell(r,c){const tr=entryRows()[r];return tr?tr.children[c+1]||null:null}
+function editor(td){return td?.querySelector('input')||null}
+function clamp(p){return{r:Math.max(0,Math.min(ENTRY_ROWS-1,p.r)),c:Math.max(0,Math.min(ENTRY_COLS.length-1,p.c))}}
+function rect(a,b){a=clamp(a);b=clamp(b);return{r1:Math.min(a.r,b.r),r2:Math.max(a.r,b.r),c1:Math.min(a.c,b.c),c2:Math.max(a.c,b.c)}}
+function paint(){
+  $$('#issueGrid td.sel,#issueGrid td.active').forEach(x=>x.classList.remove('sel','active'));
+  if(!selFocus)return;const x=rect(selAnchor||selFocus,selFocus);
+  for(let r=x.r1;r<=x.r2;r++)for(let c=x.c1;c<=x.c2;c++)cell(r,c)?.classList.add('sel');
+  cell(selFocus.r,selFocus.c)?.classList.add('active')
+}
+function focusCell(r,c){
+  const p=clamp({r,c}),e=editor(cell(p.r,p.c));if(!e)return;
+  selFocus=p;if(!selAnchor)selAnchor={...p};e.focus({preventScroll:true});e.closest('td').scrollIntoView({block:'nearest',inline:'nearest'});paint()
+}
+function setSingle(e){const p=pos(e);if(!p)return;selAnchor={...p};selFocus={...p};paint()}
+function selection(){return selFocus?rect(selAnchor||selFocus,selFocus):null}
+function setVal(r,c,val){
+  remember();const e=editor(cell(r,c));if(!e||e.readOnly)return;
+  let v=String(val??''),col=ENTRY_COLS[c];
+  if(col==='ir')v=fmtIR(v);
+  else if(['item','size','unit','department','issuedTo','purpose','remarks'].includes(col))v=fmtText(v);
+  e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));refreshRow(e.closest('tr'))
+}
+function clearSelection(){
+  const x=selection();if(!x)return;remember();const old=undoing;undoing=true;
+  for(let r=x.r1;r<=x.r2;r++)for(let c=x.c1;c<=x.c2;c++)setVal(r,c,'');
+  undoing=old;updateEntryTotal()
+}
+function tsv(){
+  const x=selection();if(!x)return'';const lines=[];
+  for(let r=x.r1;r<=x.r2;r++){const row=[];for(let c=x.c1;c<=x.c2;c++)row.push(editor(cell(r,c))?.value||'');lines.push(row.join('\t'))}
+  return lines.join('\n')
+}
+function pasteText(text){
+  if(!selFocus)return;remember();const old=undoing;undoing=true;
+  const data=String(text??'').replace(/\r/g,'').split('\n').filter((x,i,a)=>!(i===a.length-1&&x==='')).map(x=>x.split('\t'));
+  const x=selection(),st=x?{r:x.r1,c:x.c1}:selFocus,rr=x?x.r2-x.r1+1:1,cc=x?x.c2-x.c1+1:1;
+  if(data.length===1&&data[0].length===1&&x&&(rr>1||cc>1)){
+    for(let r=x.r1;r<=x.r2;r++)for(let c=x.c1;c<=x.c2;c++)setVal(r,c,data[0][0])
+  }else data.forEach((row,ri)=>row.forEach((v,ci)=>{if(st.r+ri<ENTRY_ROWS&&st.c+ci<ENTRY_COLS.length)setVal(st.r+ri,st.c+ci,v)}));
+  undoing=old;paint();updateEntryTotal()
+}
+function fillDown(){
+  const x=selection();if(!x)return;remember();const old=undoing;undoing=true;
+  if(x.r1===x.r2){if(x.r1>0)setVal(x.r1,x.c1,editor(cell(x.r1-1,x.c1))?.value||'')}
+  else for(let c=x.c1;c<=x.c2;c++){const v=editor(cell(x.r1,c))?.value||'';for(let r=x.r1+1;r<=x.r2;r++)setVal(r,c,v)}
+  undoing=old
+}
+function keyHandler(ev,e){
+  const p=pos(e);if(!p)return;const open=e.closest('.auto')?.querySelector('.auto-list.open');
+  if(ev.key==='F2'){ev.preventDefault();const n=e.value.length;try{e.setSelectionRange(n,n)}catch(_){}return}
+  if(ev.key==='Delete'){ev.preventDefault();clearSelection();return}
+  if(ev.ctrlKey&&ev.key.toLowerCase()==='z'){ev.preventDefault();if(undo.length){undoing=true;restoreEntry(undo.pop());undoing=false;lastSnap=JSON.stringify(entrySnapshot());paint()}return}
+  if(ev.ctrlKey&&ev.key.toLowerCase()==='a'){ev.preventDefault();selAnchor={r:0,c:0};selFocus={r:ENTRY_ROWS-1,c:ENTRY_COLS.length-1};paint();return}
+  if(ev.ctrlKey&&ev.key.toLowerCase()==='d'){ev.preventDefault();fillDown();return}
+  if(ev.ctrlKey&&['c','x','v'].includes(ev.key.toLowerCase()))return;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.key)){
+    if(open&&(ev.key==='ArrowUp'||ev.key==='ArrowDown'))return;
+    ev.preventDefault();const cur=selFocus||p,t={...cur};
+    if(ev.ctrlKey){if(ev.key==='ArrowUp')t.r=0;if(ev.key==='ArrowDown')t.r=ENTRY_ROWS-1;if(ev.key==='ArrowLeft')t.c=0;if(ev.key==='ArrowRight')t.c=ENTRY_COLS.length-1}
+    else{if(ev.key==='ArrowUp')t.r--;if(ev.key==='ArrowDown')t.r++;if(ev.key==='ArrowLeft')t.c--;if(ev.key==='ArrowRight')t.c++}
+    const z=clamp(t);
+    if(ev.shiftKey){if(!selAnchor)selAnchor={...cur};selFocus=z}else{selAnchor={...z};selFocus={...z}}
+    const keep={...selAnchor};focusCell(z.r,z.c);if(ev.shiftKey){selAnchor=keep;paint()}return
+  }
+  if(ev.key==='Enter'&&!ev.defaultPrevented){ev.preventDefault();const z=clamp({r:p.r+1,c:p.c});selAnchor={...z};selFocus={...z};focusCell(z.r,z.c)}
+}
+function refreshRow(tr){
+  if(!tr)return;
+  const item=tr.querySelector('.e-item')?.value||'',size=tr.querySelector('.e-size')?.value||'';
+  if(item)tr.querySelector('.e-stock').value=money(stockFor(item,size));
+  updateEntryTotal()
+}
+function bindEntryGrid(){
+  entryRows().forEach(tr=>{
+    tr.querySelector('.e-date').addEventListener('blur',e=>e.target.value=fmtDate(e.target.value));
+    tr.querySelector('.e-ir').addEventListener('blur',e=>e.target.value=fmtIR(e.target.value));
+    ['.e-item','.e-size','.e-unit','.e-department','.e-issuedTo','.e-purpose','.e-remarks'].forEach(sel=>tr.querySelector(sel)?.addEventListener('blur',e=>e.target.value=fmtText(e.target.value)));
+    tr.querySelector('.e-qty').addEventListener('input',()=>refreshRow(tr));
+    tr.querySelectorAll('input').forEach(e=>{
+      e.addEventListener('beforeinput',remember);e.addEventListener('focus',()=>setSingle(e));e.addEventListener('mousedown',()=>setSingle(e));e.addEventListener('keydown',ev=>keyHandler(ev,e))
+    })
+  });
+  $('#issueGridBody').addEventListener('copy',ev=>{if(!selFocus)return;const x=tsv();if(!x)return;ev.preventDefault();ev.clipboardData?.setData('text/plain',x);clip=x});
+  $('#issueGridBody').addEventListener('cut',ev=>{if(!selFocus)return;const x=tsv();if(!x)return;ev.preventDefault();ev.clipboardData?.setData('text/plain',x);clip=x;clearSelection()});
+  $('#issueGridBody').addEventListener('paste',ev=>{if(!selFocus)return;ev.preventDefault();pasteText(ev.clipboardData?.getData('text/plain')||clip)});
+  selAnchor={r:0,c:0};selFocus={r:0,c:0};paint();undo=[];lastSnap=JSON.stringify(entrySnapshot())
+}
+function updateEntryTotal(){$('#entryTotalQty').textContent=money(entryRows().reduce((n,tr)=>n+num(tr.querySelector('.e-qty')?.value),0))}
+function rowFilled(tr){return ['.e-date','.e-ir','.e-item','.e-size','.e-qty','.e-unit','.e-department','.e-issuedTo','.e-purpose','.e-remarks'].some(sel=>String(tr.querySelector(sel)?.value||'').trim())}
+function readRow(tr){
+  const v=s=>tr.querySelector(s)?.value||'',u=currentUser();
+  return{
+    id:'ISS-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),tenantId:tenantId(),
+    date:fmtDate(v('.e-date')),ir:fmtIR(v('.e-ir')),item:fmtText(v('.e-item')),size:fmtText(v('.e-size')),
+    qty:num(v('.e-qty')),unit:fmtText(v('.e-unit')),availableStockBefore:num(v('.e-stock')),
+    department:fmtText(v('.e-department')),issuedTo:fmtText(v('.e-issuedTo')),purpose:fmtText(v('.e-purpose')),remarks:fmtText(v('.e-remarks')),
+    createdAt:new Date().toISOString(),createdBy:u?.id||'',createdByName:u?.name||''
+  }
+}
+function saveIssues(){
+  if(!canPage('issue-entry','add'))return alert('You do not have add permission.');
+  const rows=entryRows().filter(rowFilled);if(!rows.length)return alert('No issue data entered.');
+  const records=rows.map(readRow);
+  for(const r of records){
+    if(!r.item||r.qty<=0)return alert('Item and Quantity are required for every saved issue row.');
+    const stock=stockFor(r.item,r.size);
+    if(r.qty>stock)return alert(`Insufficient stock for ${r.item}${r.size?' '+r.size:''}. Available: ${money(stock)}`);
+  }
+  const batchUsed={};
+  for(const r of records){
+    const k=itemKey(r.item,r.size),stock=stockFor(r.item,r.size),used=batchUsed[k]||0;
+    if(r.qty>stock-used)return alert(`Insufficient stock for ${r.item}${r.size?' '+r.size:''}. Available for this batch: ${money(Math.max(0,stock-used))}`);
+    batchUsed[k]=used+r.qty
+  }
+  const all=issueRows();records.forEach(r=>{all.push(r);audit('Add',r)});writeIssues(all);buildEntry();renderHistory();alert(records.length+' issue row'+(records.length>1?'s':'')+' saved.')
+}
+
+let historyQuick='';
+function filteredIssues(){
+  const q=String($('#hAny').value||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const from=fmtDate($('#hFrom').value),to=fmtDate($('#hTo').value),fd=parseDate(from),td=parseDate(to);
+  const month=String($('#hMonth').value||'').trim().toLowerCase(),ir=String($('#hIR').value||'').toLowerCase().trim();
+  const item=String($('#hItem').value||'').toLowerCase().trim(),dep=String($('#hDepartment').value||'').toLowerCase().trim();
+  const ito=String($('#hIssuedTo').value||'').toLowerCase().trim(),purpose=String($('#hPurpose').value||'').toLowerCase().trim(),user=String($('#hUser').value||'').toLowerCase().trim();
+  const today=fmtDate(`${new Date().getDate()}-${new Date().getMonth()+1}-${new Date().getFullYear()}`);
+  const thisMonth=monthKey(today).toLowerCase();
+  return issueRows().filter(r=>!r.deletedAt).filter(r=>{
+    const d=parseDate(r.date);
+    if(historyQuick==='today'&&r.date!==today)return false;
+    if(historyQuick==='month'&&monthKey(r.date).toLowerCase()!==thisMonth)return false;
+    if(fd&&(!d||d<fd))return false;if(td&&(!d||d>td))return false;
+    if(month&&monthKey(r.date).toLowerCase()!==month)return false;
+    if(ir&&!String(r.ir||'').toLowerCase().includes(ir))return false;
+    if(item&&!String(r.item||'').toLowerCase().includes(item))return false;
+    if(dep&&!String(r.department||'').toLowerCase().includes(dep))return false;
+    if(ito&&!String(r.issuedTo||'').toLowerCase().includes(ito))return false;
+    if(purpose&&!String(r.purpose||'').toLowerCase().includes(purpose))return false;
+    if(user&&!String(r.createdByName||r.updatedByName||'').toLowerCase().includes(user))return false;
+    if(q.length){const hay=Object.values(r).filter(v=>typeof v!=='object').join(' ').toLowerCase();if(!q.every(x=>hay.includes(x)))return false}
+    return true
+  }).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))
+}
+function renderHistory(){
+  const a=filteredIssues();
+  $('#historyBody').innerHTML=a.length?a.map((r,i)=>`<tr>
+    <td>${i+1}</td><td>${esc(r.date)}</td><td>${esc(r.ir)}</td><td>${esc(r.item)}</td><td>${esc(r.size)}</td><td>${money(r.qty)}</td><td>${esc(r.unit)}</td>
+    <td>${esc(r.department)}</td><td>${esc(r.issuedTo)}</td><td>${esc(r.purpose)}</td><td>${esc(r.remarks)}</td><td>${esc(r.createdByName||'')}</td>
+    <td><div class="row-actions"><button onclick="detailIssue('${r.id}')">Detail</button><button onclick="editIssue('${r.id}')">Edit</button><button onclick="printOne('${r.id}')">Print</button><button class="danger" onclick="deleteIssue('${r.id}')">Delete</button></div></td>
+  </tr>`).join(''):'<tr><td colspan="13" class="empty">No matching issue records.</td></tr>';
+  $('#kRecords').textContent=a.length;$('#kQty').textContent=money(a.reduce((n,r)=>n+num(r.qty),0));$('#kItems').textContent=new Set(a.map(r=>itemKey(r.item,r.size))).size;$('#kDepartments').textContent=new Set(a.map(r=>r.department).filter(Boolean)).size;
+  registerPrintContract(a);applyPageSettings('issue-history')
+}
+window.detailIssue=id=>{
+  const r=issueRows().find(x=>x.id===id);if(!r)return;
+  $('#detailTitle').textContent='Issue Detail — '+(r.ir||'');
+  const pairs=[['Date',r.date],['IR No.',r.ir],['Item',r.item],['Size',r.size],['Quantity',money(r.qty)],['Unit',r.unit],['Department',r.department],['Issued To',r.issuedTo],['Used For',r.purpose],['Remarks',r.remarks],['Created By',r.createdByName],['Created At',r.createdAt]];
+  $('#detailBody').innerHTML=`<div class="detail-grid">${pairs.map(([k,v])=>`<div class="detail"><small>${esc(k)}</small><b>${esc(v||'')}</b></div>`).join('')}</div>`;
+  $('#detailModal').classList.add('open')
+};
+window.editIssue=id=>{
+  if(!canPage('issue-history','edit'))return alert('You do not have edit permission.');
+  const r=issueRows().find(x=>x.id===id);if(!r)return;
+  showPage('entry');buildEntry();
+  const tr=entryRows()[0];
+  tr.querySelector('.e-date').value=r.date||'';tr.querySelector('.e-ir').value=r.ir||'';tr.querySelector('.e-item').value=r.item||'';tr.querySelector('.e-size').value=r.size||'';tr.querySelector('.e-qty').value=r.qty||'';tr.querySelector('.e-unit').value=r.unit||'';tr.querySelector('.e-stock').value=money(stockFor(r.item,r.size,r.id));tr.querySelector('.e-department').value=r.department||'';tr.querySelector('.e-issuedTo').value=r.issuedTo||'';tr.querySelector('.e-purpose').value=r.purpose||'';tr.querySelector('.e-remarks').value=r.remarks||'';
+  tr.dataset.editId=id;
+  $('#saveIssue').textContent='Update Issue'
+};
+function updateIfEditing(){
+  const tr=entryRows()[0],id=tr?.dataset.editId;if(!id)return false;
+  const all=issueRows(),i=all.findIndex(x=>x.id===id);if(i<0)return false;
+  const before={...all[i]},n=readRow(tr);n.id=id;n.createdAt=before.createdAt;n.createdBy=before.createdBy;n.createdByName=before.createdByName;n.updatedAt=new Date().toISOString();n.updatedByName=currentUser()?.name||'';
+  const stock=stockFor(n.item,n.size,id);
+  if(!n.item||n.qty<=0){alert('Item and Quantity are required.');return true}
+  if(n.qty>stock){alert('Insufficient stock. Available: '+money(stock));return true}
+  all[i]=n;writeIssues(all);audit('Edit',n,before);buildEntry();$('#saveIssue').textContent='Save Issue';renderHistory();alert('Issue updated.');return true
+}
+window.deleteIssue=id=>{
+  if(!canPage('issue-history','delete'))return alert('You do not have delete permission.');
+  if(!confirm('Delete this issue record?'))return;
+  const a=issueRows(),i=a.findIndex(x=>x.id===id);if(i<0)return;const before={...a[i]};a[i].deletedAt=new Date().toISOString();a[i].deletedByName=currentUser()?.name||'';writeIssues(a);audit('Delete',a[i],before);renderHistory()
+};
+
+function clearHistory(){
+  ['hFrom','hTo','hMonth','hIR','hItem','hDepartment','hIssuedTo','hUser','hPurpose','hAny'].forEach(id=>$('#'+id).value='');
+  historyQuick='';$$('[data-quick]').forEach(b=>b.classList.toggle('active',b.dataset.quick===''));renderHistory()
+}
+function exportHistory(){
+  const a=filteredIssues();if(!a.length)return alert('No records to export.');
+  const rows=[['Date','IR No.','Item','Size','Quantity','Unit','Department','Issued To','Used For','Remarks','User']];
+  a.forEach(r=>rows.push([r.date,r.ir,r.item,r.size,r.qty,r.unit,r.department,r.issuedTo,r.purpose,r.remarks,r.createdByName]));
+  const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));link.download='issue-history.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)
+}
+
+function printContract(rows,title='Issue History Report'){
+  return{
+    id:'issue-history',name:'Issue History',module:'Inventory',title,subtitle:'Store Issue Register',
+    fields:[['date','Date'],['ir','IR No.'],['item','Item'],['size','Size'],['qty','Qty'],['unit','Unit'],['department','Department'],['issuedTo','Issued To'],['purpose','Used For'],['remarks','Remarks']],
+    rows:rows.map(r=>({date:r.date,ir:r.ir,item:r.item,size:r.size,qty:r.qty,unit:r.unit,department:r.department,issuedTo:r.issuedTo,purpose:r.purpose,remarks:r.remarks})),
+    totals:{qty:rows.reduce((n,r)=>n+num(r.qty),0)}
+  }
+}
+function registerPrintContract(rows){
+  try{const all=safeJSON(PRINT_CONTRACT_KEY,{})||{};all['issue-history']=printContract(rows);localStorage.setItem(PRINT_CONTRACT_KEY,JSON.stringify(all))}catch(e){}
+}
+function assignedDesign(){
+  const assignments=safeJSON(PRINT_ASSIGN_KEY,{})||{},gallery=safeJSON(PRINT_GALLERY_KEY,[])||[],id=assignments['issue-history'];
+  return gallery.find(x=>x.id===id)||null
+}
+function defaultDesign(contract){
+  return{id:'',theme:'Professional Orange',font:'Segoe UI',paper:'A4',orientation:'landscape',margin:'normal',showLogo:true,showCompany:true,showAddress:false,showDate:true,title:contract.title,subtitle:contract.subtitle,titleAlign:'Center',titleSize:20,fields:contract.fields.map(f=>({key:f[0],heading:f[1],headerAlign:'Center',dataAlign:['qty'].includes(f[0])?'Right':'Left',wrap:['item','purpose','remarks'].includes(f[0])?'wrap':'nowrap',width:['item','purpose','remarks'].includes(f[0])?15:9})),headerBg:'#ffcc00',headerText:'#111',borderColor:'#555',rowHeight:26,zebra:true,repeatHeader:true,tableAlign:'Center',bodySize:9,showTotals:true,pageNumbers:true,computerGenerated:true,footerText:'This is computer generated report.'}
+}
+function companyState(){return safeJSON('ERP_DESIGN_CORE_V1',{})?.company||{}}
+function printHtml(contract,design){
+  const d={...defaultDesign(contract),...(design||{})},co=companyState(),fields=(d.fields||defaultDesign(contract).fields).filter(f=>contract.fields.some(x=>x[0]===f.key));
+  const margin=d.margin==='narrow'?'6mm':d.margin==='wide'?'18mm':'10mm';
+  const logo=co.logo?`<img src="${co.logo}" style="max-width:50px;max-height:50px">`:'ERP';
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(contract.title)}</title><style>
+  @page{size:${d.paper||'A4'} ${d.orientation||'landscape'};margin:${margin}}*{box-sizing:border-box}body{font-family:${JSON.stringify(d.font||'Segoe UI')},Arial,sans-serif;color:#111;margin:0}.head{display:grid;grid-template-columns:60px 1fr 120px;align-items:center;border-bottom:2px solid ${d.headerBg||'#ffcc00'};padding-bottom:8px;margin-bottom:9px}.logo{font-weight:900}.center{text-align:${String(d.titleAlign||'Center').toLowerCase()}}.company{font-size:15px;font-weight:900}.title{font-size:${d.titleSize||20}px;font-weight:900}.sub{font-size:10px}.date{text-align:right;font-size:9px}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:${d.bodySize||9}px}th,td{border:1px solid ${d.borderColor||'#555'};padding:4px 5px;height:${d.rowHeight||26}px}th{background:${d.headerBg||'#ffcc00'};color:${d.headerText||'#111'};font-weight:900}${d.zebra!==false?'tbody tr:nth-child(even) td{background:#f7f8f9}':''}${d.repeatHeader!==false?'thead{display:table-header-group}':''}.total{margin-top:9px;text-align:right;font-weight:900}.footer{margin-top:10px;border-top:1px solid #bbb;padding-top:5px;font-size:8px;display:flex;justify-content:space-between}</style></head><body>
+  <div class="head"><div class="logo">${d.showLogo!==false?logo:''}</div><div class="center">${d.showCompany!==false?`<div class="company">${esc(co.companyName||'Company Name')}</div>`:''}<div class="title">${esc(contract.title)}</div><div class="sub">${esc(d.subtitle||contract.subtitle||'')}</div></div><div class="date">${d.showDate!==false?new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}).replace(/ /g,'-'):''}</div></div>
+  <table><thead><tr>${fields.map(f=>`<th style="width:${f.width||9}%;text-align:${String(f.headerAlign||'Center').toLowerCase()}">${esc(f.heading)}</th>`).join('')}</tr></thead><tbody>${contract.rows.map(r=>`<tr>${fields.map(f=>`<td style="text-align:${String(f.dataAlign||'Left').toLowerCase()};white-space:${f.wrap==='wrap'?'normal':'nowrap'}">${esc(typeof r[f.key]==='number'?money(r[f.key]):r[f.key]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table>
+  ${d.showTotals!==false?`<div class="total">Total Quantity: ${money(contract.totals.qty)}</div>`:''}<div class="footer"><span>${esc(d.footerText||'This is computer generated report.')}</span><span>${d.pageNumbers===false?'':'Page'}</span></div><script>window.onload=()=>setTimeout(()=>window.print(),150)<\/script></body></html>`
+}
+function printRows(rows,title){
+  if(!canPage('issue-history','print'))return alert('You do not have print permission.');
+  if(!rows.length)return alert('No records to print.');
+  const c=printContract(rows,title||smartPrintTitle());registerPrintContract(rows);const w=window.open('','_blank');if(!w)return alert('Popup blocked.');w.document.write(printHtml(c,assignedDesign()||defaultDesign(c)));w.document.close()
+}
+function smartPrintTitle(){
+  const item=$('#hItem').value.trim(),dep=$('#hDepartment').value.trim(),month=$('#hMonth').value.trim(),from=$('#hFrom').value.trim(),to=$('#hTo').value.trim();
+  let t=item?item+' Issue Report':dep?dep+' Issue Report':'Issue History Report';
+  const p=month||((from||to)?[from,to].filter(Boolean).join(' to '):'');return p?t+' — '+p:t
+}
+function printOne(id){const r=issueRows().find(x=>x.id===id);if(r)printRows([r],'Issue '+(r.ir||''))}
+
+let controllerPage='',controllerOriginal=null,controllerSelected='date';
+function pageDefaults(page){
+  const cols={};PAGE_COLS[page].forEach(([id,n,w])=>cols[id]={visible:true,width:w,headAlign:'',dataAlign:''});
+  return{subtitle:true,instruction:true,filters:true,summary:true,headerAlign:'Center',dataAlign:'Left',headerFont:9,dataFont:10,rowHeight:34,headerBold:true,dataBold:false,dataItalic:false,columns:cols}
+}
+function loadPageSettings(page){return{...pageDefaults(page),...(safeJSON(PAGE_PREFIX+page,{})||{}),columns:{...pageDefaults(page).columns,...((safeJSON(PAGE_PREFIX+page,{})||{}).columns||{})}}}
+function savePageSettings(page,x){localStorage.setItem(PAGE_PREFIX+page,JSON.stringify(x));audit('Save Page Settings',{id:page,settings:x})}
+function targetTable(page){return page==='issue-entry'?$('#issueGrid'):$('#historyTable')}
+function applyPageSettings(page,x=loadPageSettings(page)){
+  const table=targetTable(page);if(!table)return;
+  if(page==='issue-entry')$('[data-instruction="issue-entry"]').style.display=x.instruction?'':'none';
+  if(page==='issue-history'){
+    $('[data-subtitle="issue-history"]').style.display=x.subtitle?'':'none';$('[data-instruction="issue-history"]').style.display=x.instruction?'':'none';$('[data-filters="issue-history"]').style.display=x.filters?'grid':'none';$('[data-summary="issue-history"]').style.display=x.summary?'grid':'none'
+  }
+  table.querySelectorAll('th').forEach(th=>{th.style.textAlign=x.headerAlign.toLowerCase();th.style.fontSize=x.headerFont+'px';th.style.fontWeight=x.headerBold?'900':'400';th.style.height=x.rowHeight+'px'});
+  table.querySelectorAll('tbody td').forEach(td=>{td.style.textAlign=x.dataAlign.toLowerCase();td.style.fontSize=x.dataFont+'px';td.style.fontWeight=x.dataBold?'700':'400';td.style.fontStyle=x.dataItalic?'italic':'normal';td.style.height=x.rowHeight+'px'});
+  PAGE_COLS[page].forEach(([id],i)=>{
+    const c=x.columns[id]||{},n=i+1;
+    table.querySelectorAll(`tr>*:nth-child(${n})`).forEach((el,j)=>{el.style.display=c.visible===false?'none':'';el.style.width=(c.width||80)+'px';el.style.minWidth=(c.width||80)+'px';el.style.maxWidth=(c.width||80)+'px';if(j===0&&c.headAlign)el.style.textAlign=c.headAlign.toLowerCase();if(j>0&&c.dataAlign){el.style.textAlign=c.dataAlign.toLowerCase();el.querySelectorAll('input').forEach(inp=>inp.style.textAlign=c.dataAlign.toLowerCase())}})
+  })
+}
+function openController(page){
+  controllerPage=page;controllerOriginal=loadPageSettings(page);controllerSelected=PAGE_COLS[page][1]?.[0]||PAGE_COLS[page][0][0];
+  $('#controllerTitle').textContent='Page Controller — '+(page==='issue-entry'?'Issue Entry':'Issue History');
+  buildControllerColumns();populateController(controllerOriginal);$('#controllerModal').classList.add('open')
+}
+function buildControllerColumns(){
+  const cols=PAGE_COLS[controllerPage];$('#cColumn').innerHTML=cols.map(([id,n])=>`<option value="${id}">${esc(n)}</option>`).join('');$('#columnChips').innerHTML=cols.map(([id,n])=>`<button class="col-chip ${id===controllerSelected?'active':''}" data-colchip="${id}">${esc(n)}</button>`).join('');$('#cColumn').value=controllerSelected;$$('[data-colchip]').forEach(b=>b.onclick=()=>{controllerSelected=b.dataset.colchip;buildControllerColumns();populateColumn(readController())})
+}
+function populateController(x){
+  $('#cSubtitle').checked=x.subtitle!==false;$('#cInstruction').checked=x.instruction!==false;$('#cFilters').checked=x.filters!==false;$('#cSummary').checked=x.summary!==false;$('#cHeaderAlign').value=x.headerAlign;$('#cDataAlign').value=x.dataAlign;$('#cHeaderFont').value=x.headerFont;$('#cDataFont').value=x.dataFont;$('#cRowHeight').value=x.rowHeight;$('#cHeaderBold').checked=!!x.headerBold;$('#cDataBold').checked=!!x.dataBold;$('#cDataItalic').checked=!!x.dataItalic;populateColumn(x);controllerValues()
+}
+function populateColumn(x){const c=x.columns[controllerSelected]||{};$('#cColumn').value=controllerSelected;$('#cColVisible').checked=c.visible!==false;$('#cColWidth').value=c.width||80;$('#cColHeaderAlign').value=c.headAlign||'';$('#cColDataAlign').value=c.dataAlign||'';controllerValues()}
+function readController(){
+  const x=JSON.parse(JSON.stringify(controllerOriginal||pageDefaults(controllerPage))),c=x.columns[controllerSelected]||{};
+  x.subtitle=$('#cSubtitle').checked;x.instruction=$('#cInstruction').checked;x.filters=$('#cFilters').checked;x.summary=$('#cSummary').checked;x.headerAlign=$('#cHeaderAlign').value;x.dataAlign=$('#cDataAlign').value;x.headerFont=+$('#cHeaderFont').value;x.dataFont=+$('#cDataFont').value;x.rowHeight=+$('#cRowHeight').value;x.headerBold=$('#cHeaderBold').checked;x.dataBold=$('#cDataBold').checked;x.dataItalic=$('#cDataItalic').checked;c.visible=$('#cColVisible').checked;c.width=+$('#cColWidth').value;c.headAlign=$('#cColHeaderAlign').value;c.dataAlign=$('#cColDataAlign').value;x.columns[controllerSelected]=c;return x
+}
+function controllerValues(){$('#cHeaderFontVal').textContent=$('#cHeaderFont').value+' px';$('#cDataFontVal').textContent=$('#cDataFont').value+' px';$('#cRowHeightVal').textContent=$('#cRowHeight').value+' px';$('#cColWidthVal').textContent=$('#cColWidth').value+' px'}
+function liveController(){controllerValues();const x=readController();controllerOriginal=JSON.parse(JSON.stringify(x));applyPageSettings(controllerPage,x)}
+function closeController(save=false){
+  if(!save&&controllerOriginal)applyPageSettings(controllerPage,loadPageSettings(controllerPage));
+  $('#controllerModal').classList.remove('open')
+}
+
+function showPage(page){
+  if(!canPage(page==='entry'?'issue-entry':'issue-history','view'))return alert('You do not have view permission.');
+  $('#panelEntry').classList.toggle('active',page==='entry');$('#panelHistory').classList.toggle('active',page==='history');
+  $$('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  $('#pageTitle').textContent=page==='entry'?'Issue Entry':'Issue History';$('#pageSubtitle').textContent=page==='entry'?'Store Issue':'Search & Analysis';
+  if(page==='history')renderHistory()
+}
+function loadIdentity(){
+  const core=safeJSON('ERP_DESIGN_CORE_V1',{})||{},co=core.company||{},u=currentUser();
+  $('#companyName').textContent=co.companyName||co.shortName||'ERP';$('#brandLogo').textContent=(co.shortName||co.companyName||'ERP').slice(0,3).toUpperCase();
+  $('#profileName').textContent=u?.name||core.profile?.name||'ERP User';$('#profileRole').textContent=u?.role||core.profile?.designation||'User';
+  const img=u?.picture||u?.image||core.profile?.picture||core.profile?.image||'';if(img)$('#profileImage').src=img;else $('#profileImage').style.display='none'
+}
+function tick(){
+  const d=new Date();$('#clockTime').textContent=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});$('#clockDate').textContent=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}).replace(/ /g,'-')
+}
+function bind(){
+  registerPages();loadIdentity();tick();setInterval(tick,30000);buildEntry();bindAuto(document);renderHistory();
+  $$('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+  $('#saveIssue').onclick=()=>{if(!updateIfEditing())saveIssues()};
+  $('#clearIssue').onclick=()=>{buildEntry();$('#saveIssue').textContent='Save Issue'};
+  $('#detailClose').onclick=()=>$('#detailModal').classList.remove('open');$('#detailModal').onclick=e=>{if(e.target===$('#detailModal'))$('#detailModal').classList.remove('open')};
+  $$('[data-quick]').forEach(b=>b.onclick=()=>{historyQuick=b.dataset.quick;$$('[data-quick]').forEach(x=>x.classList.toggle('active',x===b));renderHistory()});
+  ['hFrom','hTo'].forEach(id=>$('#'+id).onblur=e=>{e.target.value=fmtDate(e.target.value);renderHistory()});
+  ['hMonth','hIR','hItem','hDepartment','hIssuedTo','hUser','hPurpose','hAny'].forEach(id=>$('#'+id).addEventListener('input',renderHistory));
+  $('#historySearchBtn').onclick=renderHistory;$('#historyClear').onclick=clearHistory;$('#historyPrint').onclick=()=>printRows(filteredIssues());$('#historyExport').onclick=exportHistory;
+  $$('[data-controller]').forEach(b=>b.onclick=()=>openController(b.dataset.controller));
+  $('#controllerClose').onclick=()=>closeController(false);$('#controllerCancel').onclick=()=>closeController(false);
+  $('#controllerSave').onclick=()=>{const x=readController();savePageSettings(controllerPage,x);applyPageSettings(controllerPage,x);$('#controllerModal').classList.remove('open')};
+  $('#controllerReset').onclick=()=>{localStorage.removeItem(PAGE_PREFIX+controllerPage);controllerOriginal=pageDefaults(controllerPage);populateController(controllerOriginal);applyPageSettings(controllerPage,controllerOriginal)};
+  ['cSubtitle','cInstruction','cFilters','cSummary','cHeaderAlign','cDataAlign','cHeaderFont','cDataFont','cRowHeight','cHeaderBold','cDataBold','cDataItalic','cColVisible','cColWidth','cColHeaderAlign','cColDataAlign'].forEach(id=>$('#'+id).addEventListener('input',liveController));
+  $('#cColumn').onchange=e=>{controllerSelected=e.target.value;buildControllerColumns();populateColumn(readController())};
+  $('#mastersLink').onclick=()=>alert('Masters remain in the locked Design Studio Core.');
+  $('#purchaseLink').onclick=()=>alert('Purchase remains in the locked Design Studio Core.');
+  $('#designStudioLink').onclick=()=>{location.href='./design-studio-core'};
+  applyPageSettings('issue-entry');applyPageSettings('issue-history');
+  document.documentElement.classList.remove('erp-safe-boot');clearTimeout(window.__issueBoot)
+}
+document.addEventListener('DOMContentLoaded',bind);
+</script>
+</body>
+</html>
