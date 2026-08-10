@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.15</title>
+<title>ERP Design Studio Core V14.16</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -934,6 +934,39 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   outline-offset:-3px
 }
 #panel-local-purchase .purchase-auto-list:empty{display:none!important}
+
+/* ===== V14.16 Local Purchase Section Totals ===== */
+#panel-local-purchase .local-section-totals{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(150px,1fr));
+  gap:10px;
+  margin-top:10px
+}
+#panel-local-purchase .local-section-total{
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  padding:10px 12px;
+  text-align:right
+}
+#panel-local-purchase .local-section-total small{
+  display:block;
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:4px
+}
+#panel-local-purchase .local-section-total strong{
+  display:block;
+  font-size:16px
+}
+#panel-local-purchase .local-section-total.grand{
+  border-width:2px
+}
+@media(max-width:800px){
+  #panel-local-purchase .local-section-totals{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -1105,7 +1138,13 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
         <tbody id="localEntryBody"></tbody>
       </table>
     </div>
-    <div class="local-entry-actions"><div class="local-entry-status" id="localEntryStatus">15 blank entry rows ready</div><button class="btn" id="localEntryClear" type="button">Clear Table</button><button class="btn primary" id="localEntrySave" type="button">Save Purchase</button></div>
+    <div class="local-section-totals" id="localSectionTotals">
+  <div class="local-section-total"><small>Inventory Total</small><strong id="localTotalInventory">0.00</strong></div>
+  <div class="local-section-total"><small>Mess Total</small><strong id="localTotalMess">0.00</strong></div>
+  <div class="local-section-total"><small>Cattle Farm Total</small><strong id="localTotalCattle">0.00</strong></div>
+  <div class="local-section-total grand"><small>Grand Total</small><strong id="localGrandTotal">0.00</strong></div>
+</div>
+<div class="local-entry-actions"><div class="local-entry-status" id="localEntryStatus">15 blank entry rows ready</div><button class="btn" id="localEntryClear" type="button">Clear Table</button><button class="btn primary" id="localEntrySave" type="button">Save Purchase</button></div>
   </div>
 </section>
 
@@ -1325,6 +1364,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
         <label>All Data Italic <input type="checkbox" id="lpdDataItalic"></label>
 
         <div class="purchase-pc-section-title"><h4>Page Actions</h4></div>
+        <label>Show Section Totals <input type="checkbox" id="lpdShowSectionTotals"></label>
         <label>Show Entry Status <input type="checkbox" id="lpdShowStatus"></label>
         <label>Show Clear Table Button <input type="checkbox" id="lpdShowClear"></label>
         <label>Show Save Purchase Button <input type="checkbox" id="lpdShowSave"></label>
@@ -2777,14 +2817,32 @@ function purchaseClearInputs(ids){ids.forEach(id=>{const e=$('#'+id);if(!e)retur
 
 const LOCAL_ENTRY_ROWS=15;
 function localEntryAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
-function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td><select class="lp-section"><option value=""></option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase')}
+function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td><select class="lp-section"><option value=""></option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase');localEntryUpdateSectionTotals()}
+
+function localEntryUpdateSectionTotals(){
+  let inventory=0,mess=0,cattle=0;
+  lpExcelRows().forEach(tr=>{
+    const section=String(tr.querySelector('.lp-section')?.value||'').trim().toLowerCase();
+    const amount=purchaseNum(tr.querySelector('.lp-amount')?.value);
+    if(!amount)return;
+    if(section==='inventory')inventory+=amount;
+    else if(section==='mess')mess+=amount;
+    else if(section==='cattle farm')cattle+=amount;
+  });
+  const grand=inventory+mess+cattle;
+  if($('#localTotalInventory'))$('#localTotalInventory').textContent=purchaseMoney(inventory);
+  if($('#localTotalMess'))$('#localTotalMess').textContent=purchaseMoney(mess);
+  if($('#localTotalCattle'))$('#localTotalCattle').textContent=purchaseMoney(cattle);
+  if($('#localGrandTotal'))$('#localGrandTotal').textContent=purchaseMoney(grand);
+}
 function localEntryCalcRow(tr){
   const qEl=tr.querySelector('.lp-qty'),rEl=tr.querySelector('.lp-rate'),a=tr.querySelector('.lp-amount');
   if(!a)return;
   const qRaw=String(qEl?.value??'').trim(),rRaw=String(rEl?.value??'').trim();
-  if(!qRaw||!rRaw){a.value='';return}
+  if(!qRaw||!rRaw){a.value='';localEntryUpdateSectionTotals();return}
   const q=purchaseNum(qRaw),r=purchaseNum(rRaw);
-  a.value=(q*r).toFixed(2)
+  a.value=(q*r).toFixed(2);
+  localEntryUpdateSectionTotals()
 }
 const LP_EDITABLE_COLS=['date','igp','control','item','size','qty','unit','rate','amount','supplier','purchaseby','section','vehicle','remarks'];
 let lpExcelAnchor=null,lpExcelFocus=null,lpExcelCopyRange=null,lpExcelInternalClipboard='';
@@ -3038,6 +3096,7 @@ function localEntryBind(){
 
   body.querySelectorAll('tr').forEach(tr=>{
     tr.querySelectorAll('.lp-qty,.lp-rate').forEach(e=>e.addEventListener('input',()=>localEntryCalcRow(tr)));
+    tr.querySelector('.lp-section')?.addEventListener('change',localEntryUpdateSectionTotals);
 
     const dt=tr.querySelector('.lp-date');
     if(dt)dt.addEventListener('blur',()=>dt.value=purchaseFmtDate(dt.value));
@@ -3145,7 +3204,7 @@ function purchasePcDefaults(){
     cardCols:3,cardGap:12,cardPadding:16,cardRadius:14,cardBorder:1,cardAlign:'left',
     cardTitleSize:14,cardTextSize:10,cardTitleBold:true,cardTitleItalic:false,cardTextBold:false,cardTextItalic:false,
     kpiGap:10,kpiPadding:12,kpiRadius:12,sectionGap:12,
-    localTable:{headerHeight:32,cellPadding:7,borderWidth:1,minWidth:1760,headerFont:9,dataFont:10,headerAlign:'center',dataAlign:'left',wrap:'nowrap',freezeHeader:true,headerBold:true,headerItalic:false,dataBold:false,dataItalic:false,showStatus:true,showClear:true,showSave:true,actionAlign:'right'},
+    localTable:{headerHeight:32,cellPadding:7,borderWidth:1,minWidth:1760,headerFont:9,dataFont:10,headerAlign:'center',dataAlign:'left',wrap:'nowrap',freezeHeader:true,headerBold:true,headerItalic:false,dataBold:false,dataItalic:false,showStatus:true,showClear:true,showSave:true,actionAlign:'right',showSectionTotals:true},
     localColumns:{sr:{visible:true,width:55,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},date:{visible:true,width:92,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},igp:{visible:true,width:100,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},control:{visible:true,width:110,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},item:{visible:true,width:190,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},size:{visible:true,width:105,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},qty:{visible:true,width:90,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},unit:{visible:true,width:90,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},rate:{visible:true,width:90,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},amount:{visible:true,width:105,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},supplier:{visible:true,width:190,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},purchaseby:{visible:true,width:150,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},section:{visible:true,width:125,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},vehicle:{visible:true,width:115,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false},remarks:{visible:true,width:215,headAlign:'inherit',dataAlign:'inherit',wrap:'inherit',headFont:9,dataFont:10,headBold:true,headItalic:false,dataBold:false,dataItalic:false}}
   }
 }
@@ -3231,6 +3290,8 @@ function localApplyDesigner(x){
   });
 
   const status=$('#localEntryStatus'),clear=$('#localEntryClear'),save=$('#localEntrySave'),actions=panel.querySelector('.local-entry-actions');
+  const sectionTotals=$('#localSectionTotals');
+  if(sectionTotals)sectionTotals.style.display=t.showSectionTotals===false?'none':'grid';
   if(status)status.style.display=t.showStatus?'':'none';
   if(clear)clear.style.display=t.showClear?'':'none';
   if(save)save.style.display=t.showSave?'':'none';
@@ -3277,6 +3338,7 @@ function localDesignerPopulateWhole(x){
   $('#lpdHeaderHeight').value=t.headerHeight;$('#lpdCellPadding').value=t.cellPadding;$('#lpdBorderWidth').value=t.borderWidth;$('#lpdTableMinWidth').value=t.minWidth;
   $('#lpdHeaderFont').value=t.headerFont;$('#lpdDataFont').value=t.dataFont;$('#lpdHeaderAlign').value=t.headerAlign;$('#lpdDataAlign').value=t.dataAlign;$('#lpdTableWrap').value=t.wrap;
   $('#lpdFreezeHeader').checked=!!t.freezeHeader;$('#lpdHeaderBold').checked=!!t.headerBold;$('#lpdHeaderItalic').checked=!!t.headerItalic;$('#lpdDataBold').checked=!!t.dataBold;$('#lpdDataItalic').checked=!!t.dataItalic;
+  $('#lpdShowSectionTotals').checked=t.showSectionTotals!==false;
   $('#lpdShowStatus').checked=t.showStatus!==false;$('#lpdShowClear').checked=t.showClear!==false;$('#lpdShowSave').checked=t.showSave!==false;$('#lpdActionAlign').value=t.actionAlign;
   localDesignerValues()
 }
@@ -3296,6 +3358,7 @@ function localDesignerReadInto(x){
   t.headerHeight=+$('#lpdHeaderHeight').value;t.cellPadding=+$('#lpdCellPadding').value;t.borderWidth=+$('#lpdBorderWidth').value;t.minWidth=+$('#lpdTableMinWidth').value;
   t.headerFont=+$('#lpdHeaderFont').value;t.dataFont=+$('#lpdDataFont').value;t.headerAlign=$('#lpdHeaderAlign').value;t.dataAlign=$('#lpdDataAlign').value;t.wrap=$('#lpdTableWrap').value;
   t.freezeHeader=$('#lpdFreezeHeader').checked;t.headerBold=$('#lpdHeaderBold').checked;t.headerItalic=$('#lpdHeaderItalic').checked;t.dataBold=$('#lpdDataBold').checked;t.dataItalic=$('#lpdDataItalic').checked;
+  t.showSectionTotals=$('#lpdShowSectionTotals').checked;
   t.showStatus=$('#lpdShowStatus').checked;t.showClear=$('#lpdShowClear').checked;t.showSave=$('#lpdShowSave').checked;t.actionAlign=$('#lpdActionAlign').value;
   return x
 }
@@ -3531,7 +3594,7 @@ function purchaseBind(){
   $('#purchaseToggle')?.addEventListener('click',()=>{$('#purchaseGroup')?.classList.toggle('open');$('#designStudioGroup')?.classList.remove('open')});
   $$('[data-go-purchase]').forEach(x=>x.onclick=()=>purchaseOpenPanel(x.dataset.goPurchase));
   $$('[data-purchase-controller]').forEach(x=>x.onclick=()=>purchaseOpenPc(x.dataset.purchaseController));
-  const pcLiveIds=['ppcInnerTitle','ppcSubtitle','ppcInstruction','ppcSummary','ppcFilters','ppcWidth','ppcPadding','ppcRowHeight','ppcWrap','ppcHeadAlign','ppcDataAlign','ppcHeadBold','ppcHeadItalic','ppcDataBold','ppcDataItalic','ppcCardLocal','ppcCardZafar','ppcCardBoard','ppcCardHistory','ppcCardSupplier','ppcCardCols','ppcCardGap','ppcCardPadding','ppcCardRadius','ppcCardBorder','ppcCardAlign','ppcCardTitleSize','ppcCardTextSize','ppcCardTitleBold','ppcCardTitleItalic','ppcCardTextBold','ppcCardTextItalic','ppcKpiGap','ppcKpiPadding','ppcKpiRadius','ppcSectionGap','lpdColVisible','lpdColWidth','lpdColWrap','lpdColHeadAlign','lpdColDataAlign','lpdColHeadFont','lpdColDataFont','lpdColHeadBold','lpdColHeadItalic','lpdColDataBold','lpdColDataItalic','lpdHeaderHeight','lpdCellPadding','lpdBorderWidth','lpdTableMinWidth','lpdHeaderFont','lpdDataFont','lpdHeaderAlign','lpdDataAlign','lpdTableWrap','lpdFreezeHeader','lpdHeaderBold','lpdHeaderItalic','lpdDataBold','lpdDataItalic','lpdShowStatus','lpdShowClear','lpdShowSave','lpdActionAlign'];
+  const pcLiveIds=['ppcInnerTitle','ppcSubtitle','ppcInstruction','ppcSummary','ppcFilters','ppcWidth','ppcPadding','ppcRowHeight','ppcWrap','ppcHeadAlign','ppcDataAlign','ppcHeadBold','ppcHeadItalic','ppcDataBold','ppcDataItalic','ppcCardLocal','ppcCardZafar','ppcCardBoard','ppcCardHistory','ppcCardSupplier','ppcCardCols','ppcCardGap','ppcCardPadding','ppcCardRadius','ppcCardBorder','ppcCardAlign','ppcCardTitleSize','ppcCardTextSize','ppcCardTitleBold','ppcCardTitleItalic','ppcCardTextBold','ppcCardTextItalic','ppcKpiGap','ppcKpiPadding','ppcKpiRadius','ppcSectionGap','lpdColVisible','lpdColWidth','lpdColWrap','lpdColHeadAlign','lpdColDataAlign','lpdColHeadFont','lpdColDataFont','lpdColHeadBold','lpdColHeadItalic','lpdColDataBold','lpdColDataItalic','lpdHeaderHeight','lpdCellPadding','lpdBorderWidth','lpdTableMinWidth','lpdHeaderFont','lpdDataFont','lpdHeaderAlign','lpdDataAlign','lpdTableWrap','lpdFreezeHeader','lpdHeaderBold','lpdHeaderItalic','lpdDataBold','lpdDataItalic','lpdShowSectionTotals','lpdShowStatus','lpdShowClear','lpdShowSave','lpdActionAlign'];
   pcLiveIds.forEach(id=>{
     const e=$('#'+id);if(!e)return;
     const ev=(e.type==='range')?'input':'change';
@@ -3572,7 +3635,7 @@ $('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEve
 }
 window.ERPPurchase={rows:purchaseRows,all:purchaseAllRows,render:purchaseRenderAll};
 window.ERP_LOCKED_BASELINE=Object.freeze({
-  version:'V14.15',
+  version:'V14.16',
   rule:'Approved features are preserved unless the user explicitly asks to change them.',
   locked:[
     'Design Studio shared core and sidebar placement',
@@ -3580,7 +3643,7 @@ window.ERP_LOCKED_BASELINE=Object.freeze({
     'Title Case plus uppercase Vehicle/Bill rule',
     'Purchase Entry dashboard approved structure',
     'Local Purchase 15-row entry structure',
-    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection','Clean multi-cell paste with blank calculated cells preserved'
+    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior','Ctrl+Z undo and Shift+Arrow range selection','Clean multi-cell paste with blank calculated cells preserved','Live Inventory/Mess/Cattle Farm totals and Grand Total'
   ],
   universalStandards:['Page Controller / Page Designer','Live Preview','Searchable Master Autofill','Audit','Access Control','Tenant Isolation']
 });
