@@ -5848,11 +5848,23 @@ function rgpLoad(){try{return JSON.parse(localStorage.getItem(RGP_KEY)||'[]')||[
 function rgpStore(a){localStorage.setItem(RGP_KEY,JSON.stringify(a))}
 function rgpFormatNo(v){
   const x=String(v||'').trim();if(!x)return'';
-  if(/^RGP-\d{5}$/i.test(x))return x.toUpperCase();
-  const n=parseInt(x.replace(/\D/g,''),10);
-  return Number.isFinite(n)?'RGP-'+String(n).padStart(5,'0'):x.toUpperCase()
+  const digits=x.replace(/\D/g,'');
+  if(!digits)return x.toUpperCase();
+  return 'RGP-'+String(parseInt(digits,10)).padStart(5,'0')
 }
-function rgpFormatDate(v){return typeof purchaseFmtDate==='function'?purchaseFmtDate(v):v}
+function rgpFormatDate(v){
+  const x=String(v||'').trim();if(!x)return'';
+  if(/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(x)){
+    return x.replace(/^(\d{2})-([A-Za-z]{3})-(\d{2})$/,(_,d,m,y)=>d+'-'+m.charAt(0).toUpperCase()+m.slice(1).toLowerCase()+'-'+y)
+  }
+  const m=x.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/);
+  if(!m)return x;
+  let d=parseInt(m[1],10),mo=parseInt(m[2],10),y=m[3]?parseInt(m[3],10):26;
+  if(y<100)y+=2000;
+  if(d<1||d>31||mo<1||mo>12)return x;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(d).padStart(2,'0')+'-'+months[mo-1]+'-'+String(y).slice(-2)
+}
 function rgpInputs(){return [...document.querySelectorAll('#rgpEntryTable tbody tr')].map(tr=>[...tr.querySelectorAll('input')])}
 function rgpRows(){return [...document.querySelectorAll('#rgpEntryTable tbody tr')]}
 
@@ -6386,6 +6398,15 @@ function rgpBind(){
   $('#rgpNo')?.addEventListener('blur',e=>e.target.value=rgpFormatNo(e.target.value));
   $('#rgpDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
   $('#rgpDueDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
+  [['rgpNo',rgpFormatNo],['rgpDate',rgpFormatDate],['rgpDueDate',rgpFormatDate]].forEach(([id,fmt])=>{
+    const el=$('#'+id);if(!el||el.dataset.rgpFormatKeyBound)return;
+    el.dataset.rgpFormatKeyBound='1';
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter'||e.key==='Tab'){
+        el.value=fmt(el.value)
+      }
+    })
+  });
   ['rgpDepartment','rgpWorkshop','rgpCarrier','rgpAuthorized','rgpPurpose','rgpHeaderRemarks'].forEach(id=>$('#'+id)?.addEventListener('blur',e=>e.target.value=purchaseFormatText(e.target.value,id,id)));
   ['rgpBillDetail','rgpVehicle'].forEach(id=>$('#'+id)?.addEventListener('blur',e=>e.target.value=String(e.target.value||'').toUpperCase()));
   rgpInputs().forEach(a=>{
