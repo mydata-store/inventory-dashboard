@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V14.12</title>
+<title>ERP Design Studio Core V14.13</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -919,6 +919,21 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 }
 .lpd-three{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media(max-width:700px){.lpd-three{grid-template-columns:1fr}}
+
+/* ===== V14.13 Local Purchase Excel-like keyboard behavior ===== */
+#panel-local-purchase .local-entry-table td.lp-excel-selected{
+  background:color-mix(in srgb,var(--primary) 8%,transparent)!important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 45%,transparent)
+}
+#panel-local-purchase .local-entry-table td.lp-excel-active{
+  background:color-mix(in srgb,var(--primary) 5%,transparent)!important;
+  box-shadow:inset 0 0 0 2px var(--primary)!important
+}
+#panel-local-purchase .local-entry-table td.lp-excel-copy{
+  outline:2px dashed color-mix(in srgb,var(--primary) 75%,#fff);
+  outline-offset:-3px
+}
+#panel-local-purchase .purchase-auto-list:empty{display:none!important}
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -2674,7 +2689,9 @@ function purchaseBindAutos(root=document){
     if(input.dataset.autoBound)return;input.dataset.autoBound='1';
     const type=input.dataset.purchaseAuto,wrap=input.closest('.purchase-auto-wrap'),list=wrap.querySelector('.purchase-auto-list');let shown=[],active=-1;
     const draw=()=>{
-      shown=purchaseMasterSearch(type,input.value).slice(0,60);active=-1;
+      const q=String(input.value||'').trim();
+      if(!q){shown=[];active=-1;list.innerHTML='';list.classList.remove('open');return}
+      shown=purchaseMasterSearch(type,q).slice(0,60);active=-1;
       list.innerHTML=shown.length?shown.map((r,i)=>`<div class="purchase-auto-option" data-pao="${i}"><b>${escHtml(r.name||r.code||'')}</b><small>${escHtml([r.size,r.unit,r.category,r.phone,r.code].filter(Boolean).join(' • '))}</small></div>`).join(''):`<div class="purchase-empty">No matching ${escHtml(MASTER_TYPES?.[type]?.name||type)}.</div>`;
       list.querySelectorAll('[data-pao]').forEach(x=>x.onmousedown=e=>{e.preventDefault();choose(+x.dataset.pao)});
       purchaseCloseAutos(list);list.classList.add('open');
@@ -2701,8 +2718,31 @@ function purchaseBindAutos(root=document){
       }
     };
     const paint=()=>{list.querySelectorAll('.purchase-auto-option').forEach((x,i)=>x.classList.toggle('active',i===active));if(active>=0)list.querySelector(`[data-pao="${active}"]`)?.scrollIntoView({block:'nearest'})};
-    input.onfocus=draw;input.onclick=draw;input.oninput=()=>{input.dataset.masterId='';draw()};
-    input.onkeydown=e=>{if(e.key==='ArrowDown'){e.preventDefault();if(!list.classList.contains('open'))draw();if(shown.length){active=(active+1)%shown.length;paint()}}else if(e.key==='ArrowUp'){e.preventDefault();if(!list.classList.contains('open'))draw();if(shown.length){active=(active-1+shown.length)%shown.length;paint()}}else if(e.key==='Enter'){if(list.classList.contains('open')&&shown.length){e.preventDefault();choose(active>=0?active:0)}}else if(e.key==='Tab'){if(list.classList.contains('open')&&shown.length&&String(input.value).trim())choose(active>=0?active:0);list.classList.remove('open')}else if(e.key==='Escape'){list.classList.remove('open')}};
+    input.onfocus=()=>{list.classList.remove('open');active=-1};
+    input.onclick=()=>{};
+    input.oninput=()=>{
+      input.dataset.masterId='';
+      const q=String(input.value||'').trim();
+      if(!q){shown=[];active=-1;list.classList.remove('open');list.innerHTML='';return}
+      draw()
+    };
+    input.onkeydown=e=>{
+      const open=list.classList.contains('open');
+      if(e.key==='ArrowDown'&&open){
+        e.preventDefault();
+        if(shown.length){active=(active+1)%shown.length;paint()}
+      }else if(e.key==='ArrowUp'&&open){
+        e.preventDefault();
+        if(shown.length){active=(active-1+shown.length)%shown.length;paint()}
+      }else if(e.key==='Enter'&&open&&shown.length){
+        e.preventDefault();choose(active>=0?active:0)
+      }else if(e.key==='Tab'){
+        if(open&&shown.length&&String(input.value).trim())choose(active>=0?active:0);
+        list.classList.remove('open')
+      }else if(e.key==='Escape'&&open){
+        e.preventDefault();list.classList.remove('open');active=-1
+      }
+    };
     input.onblur=()=>setTimeout(()=>list.classList.remove('open'),120);
   });
 }
@@ -2739,11 +2779,250 @@ const LOCAL_ENTRY_ROWS=15;
 function localEntryAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
 function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td><select class="lp-section"><option value=""></option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option></select></td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase')}
 function localEntryCalcRow(tr){const q=purchaseNum(tr.querySelector('.lp-qty')?.value),r=purchaseNum(tr.querySelector('.lp-rate')?.value),a=tr.querySelector('.lp-amount');if(a)a.value=(q*r||0).toFixed(2)}
-function localEntryBind(){const body=$('#localEntryBody');if(!body)return;purchaseBindAutos(body);body.querySelectorAll('tr').forEach(tr=>{tr.querySelectorAll('.lp-qty,.lp-rate').forEach(e=>e.addEventListener('input',()=>localEntryCalcRow(tr)));const dt=tr.querySelector('.lp-date');if(dt)dt.addEventListener('blur',()=>dt.value=purchaseFmtDate(dt.value));const veh=tr.querySelector('.lp-vehicle');if(veh)veh.addEventListener('input',()=>{const p=veh.selectionStart;veh.value=String(veh.value||'').toUpperCase();if(p!=null)try{veh.setSelectionRange(p,p)}catch(e){}});['.lp-item','.lp-size','.lp-unit','.lp-supplier','.lp-purchaseby','.lp-remarks'].forEach(sel=>{const e=tr.querySelector(sel);if(e)e.addEventListener('blur',()=>{e.value=purchaseFormatText(e.value,e.className,e.className)})});tr.querySelectorAll('input,select').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&!ev.defaultPrevented){ev.preventDefault();const all=[...body.querySelectorAll('input,select')],n=all.indexOf(e);all[n+1]?.focus()}}))})}
+const LP_EDITABLE_COLS=['date','igp','control','item','size','qty','unit','rate','amount','supplier','purchaseby','section','vehicle','remarks'];
+let lpExcelAnchor=null,lpExcelFocus=null,lpExcelCopyRange=null,lpExcelInternalClipboard='';
+
+function lpExcelBody(){return $('#localEntryBody')}
+function lpExcelRows(){return [...(lpExcelBody()?.querySelectorAll('tr')||[])]}
+function lpExcelCell(row,col){
+  const tr=lpExcelRows()[row];if(!tr)return null;
+  return tr.children[col+1]||null; // +1 skips Sr No.
+}
+function lpExcelEditor(cell){return cell?.querySelector('input,select')||null}
+function lpExcelPosFromEditor(el){
+  const tr=el?.closest('tr');if(!tr)return null;
+  const td=el.closest('td');if(!td)return null;
+  return {row:+tr.dataset.localRow,col:[...tr.children].indexOf(td)-1}
+}
+function lpExcelClamp(p){
+  return {row:Math.max(0,Math.min(LOCAL_ENTRY_ROWS-1,p.row)),col:Math.max(0,Math.min(LP_EDITABLE_COLS.length-1,p.col))}
+}
+function lpExcelRect(a,b){
+  a=lpExcelClamp(a);b=lpExcelClamp(b);
+  return {r1:Math.min(a.row,b.row),r2:Math.max(a.row,b.row),c1:Math.min(a.col,b.col),c2:Math.max(a.col,b.col)}
+}
+function lpExcelClearVisual(){
+  $('#localEntryTable')?.querySelectorAll('.lp-excel-selected,.lp-excel-active').forEach(x=>x.classList.remove('lp-excel-selected','lp-excel-active'))
+}
+function lpExcelPaint(){
+  lpExcelClearVisual();
+  if(!lpExcelFocus)return;
+  const a=lpExcelAnchor||lpExcelFocus,rect=lpExcelRect(a,lpExcelFocus);
+  for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)lpExcelCell(r,c)?.classList.add('lp-excel-selected');
+  lpExcelCell(lpExcelFocus.row,lpExcelFocus.col)?.classList.add('lp-excel-active')
+}
+function lpExcelFocusCell(row,col,{selectText=false}={}){
+  const p=lpExcelClamp({row,col}),cell=lpExcelCell(p.row,p.col),ed=lpExcelEditor(cell);
+  if(!ed)return;
+  lpExcelFocus=p;
+  if(!lpExcelAnchor)lpExcelAnchor={...p};
+  ed.focus({preventScroll:true});
+  cell.scrollIntoView({block:'nearest',inline:'nearest'});
+  if(selectText&&ed.tagName==='INPUT'&&!ed.readOnly)ed.select();
+  lpExcelPaint()
+}
+function lpExcelSetSingle(el){
+  const p=lpExcelPosFromEditor(el);if(!p)return;
+  lpExcelAnchor={...p};lpExcelFocus={...p};lpExcelPaint()
+}
+function lpExcelExtendTo(row,col){
+  if(!lpExcelAnchor&&lpExcelFocus)lpExcelAnchor={...lpExcelFocus};
+  if(!lpExcelAnchor)lpExcelAnchor={row:0,col:0};
+  lpExcelFocus=lpExcelClamp({row,col});lpExcelFocusCell(lpExcelFocus.row,lpExcelFocus.col)
+}
+function lpExcelSelectionRect(){
+  if(!lpExcelFocus)return null;
+  return lpExcelRect(lpExcelAnchor||lpExcelFocus,lpExcelFocus)
+}
+function lpExcelCellValue(r,c){
+  const ed=lpExcelEditor(lpExcelCell(r,c));return ed?.value??''
+}
+function lpExcelSetValue(r,c,value){
+  const cell=lpExcelCell(r,c),ed=lpExcelEditor(cell);if(!ed||ed.readOnly)return;
+  const col=LP_EDITABLE_COLS[c];
+  let v=String(value??'');
+  if(col==='vehicle')v=v.toUpperCase();
+  else if(['item','size','unit','supplier','purchaseby','remarks'].includes(col))v=purchaseFormatText(v,col,col);
+  if(ed.tagName==='SELECT'){
+    const opt=[...ed.options].find(o=>String(o.value).toLowerCase()===v.trim().toLowerCase()||String(o.text).toLowerCase()===v.trim().toLowerCase());
+    ed.value=opt?opt.value:v;
+  }else ed.value=v;
+  ed.dispatchEvent(new Event('input',{bubbles:true}));
+  ed.dispatchEvent(new Event('change',{bubbles:true}));
+  localEntryCalcRow(cell.closest('tr'))
+}
+function lpExcelClearSelection(){
+  const rect=lpExcelSelectionRect();if(!rect)return;
+  for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++){
+    if(LP_EDITABLE_COLS[c]==='amount')continue;
+    lpExcelSetValue(r,c,'')
+  }
+}
+function lpExcelSelectionTSV(){
+  const rect=lpExcelSelectionRect();if(!rect)return'';
+  const lines=[];
+  for(let r=rect.r1;r<=rect.r2;r++){
+    const vals=[];for(let c=rect.c1;c<=rect.c2;c++)vals.push(lpExcelCellValue(r,c));
+    lines.push(vals.join('\t'))
+  }
+  return lines.join('\n')
+}
+function lpExcelMarkCopy(rect){
+  $('#localEntryTable')?.querySelectorAll('.lp-excel-copy').forEach(x=>x.classList.remove('lp-excel-copy'));
+  if(!rect)return;
+  for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)lpExcelCell(r,c)?.classList.add('lp-excel-copy')
+}
+function lpExcelPasteText(text){
+  if(!lpExcelFocus)return;
+  const data=String(text??'').replace(/\r/g,'').split('\n').filter((x,i,a)=>!(i===a.length-1&&x==='')).map(line=>line.split('\t'));
+  if(!data.length)return;
+  const rect=lpExcelSelectionRect(),start=rect?{row:rect.r1,col:rect.c1}:lpExcelFocus;
+  const targetRows=rect?rect.r2-rect.r1+1:1,targetCols=rect?rect.c2-rect.c1+1:1;
+
+  // One copied value fills every selected cell, matching the requested multi-cell paste.
+  if(data.length===1&&data[0].length===1&&(targetRows>1||targetCols>1)){
+    for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)lpExcelSetValue(r,c,data[0][0]);
+  }else{
+    data.forEach((rowVals,ri)=>rowVals.forEach((v,ci)=>{
+      const r=start.row+ri,c=start.col+ci;
+      if(r<LOCAL_ENTRY_ROWS&&c<LP_EDITABLE_COLS.length)lpExcelSetValue(r,c,v)
+    }))
+  }
+  lpExcelPaint()
+}
+function lpExcelFillDown(){
+  const rect=lpExcelSelectionRect();if(!rect)return;
+  if(rect.r1===rect.r2){
+    // Excel-like Ctrl+D on a single cell: copy from the cell directly above.
+    if(rect.r1>0)lpExcelSetValue(rect.r1,rect.c1,lpExcelCellValue(rect.r1-1,rect.c1));
+  }else{
+    for(let c=rect.c1;c<=rect.c2;c++){
+      const source=lpExcelCellValue(rect.r1,c);
+      for(let r=rect.r1+1;r<=rect.r2;r++)lpExcelSetValue(r,c,source)
+    }
+  }
+}
+function lpExcelSelectAll(){
+  lpExcelAnchor={row:0,col:0};lpExcelFocus={row:LOCAL_ENTRY_ROWS-1,col:LP_EDITABLE_COLS.length-1};lpExcelPaint();lpExcelFocusCell(0,0)
+}
+function lpExcelCtrlArrowTarget(p,key){
+  // User-requested behavior: Ctrl+Arrow extends quickly toward the table edge.
+  if(key==='ArrowUp')return{row:0,col:p.col};
+  if(key==='ArrowDown')return{row:LOCAL_ENTRY_ROWS-1,col:p.col};
+  if(key==='ArrowLeft')return{row:p.row,col:0};
+  return{row:p.row,col:LP_EDITABLE_COLS.length-1}
+}
+function lpExcelHandleKey(ev,el){
+  const p=lpExcelPosFromEditor(el);if(!p)return;
+  const autoOpen=el.closest('.purchase-auto-wrap')?.querySelector('.purchase-auto-list.open');
+
+  if(ev.key==='F2'){
+    ev.preventDefault();lpExcelSetSingle(el);
+    if(el.tagName==='INPUT'&&!el.readOnly){const n=el.value.length;try{el.setSelectionRange(n,n)}catch(e){}}
+    return
+  }
+  if(ev.key==='Delete'){
+    ev.preventDefault();lpExcelClearSelection();return
+  }
+  if(ev.ctrlKey&&ev.key.toLowerCase()==='a'){
+    ev.preventDefault();lpExcelSelectAll();return
+  }
+  if(ev.ctrlKey&&ev.key.toLowerCase()==='d'){
+    ev.preventDefault();lpExcelFillDown();return
+  }
+
+  // Copy/cut/paste are handled by browser copy/cut/paste events below.
+  if(ev.ctrlKey&&['c','x','v'].includes(ev.key.toLowerCase()))return;
+
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.key)){
+    if(autoOpen&&(ev.key==='ArrowUp'||ev.key==='ArrowDown'))return; // dropdown owns these while open
+    ev.preventDefault();
+    let target;
+    if(ev.ctrlKey){
+      target=lpExcelCtrlArrowTarget(p,ev.key);
+      if(!lpExcelAnchor)lpExcelAnchor={...p};
+      lpExcelFocus=target;
+    }else{
+      target={...p};
+      if(ev.key==='ArrowUp')target.row--;
+      if(ev.key==='ArrowDown')target.row++;
+      if(ev.key==='ArrowLeft')target.col--;
+      if(ev.key==='ArrowRight')target.col++;
+      target=lpExcelClamp(target);
+      if(ev.shiftKey){
+        if(!lpExcelAnchor)lpExcelAnchor={...p};
+        lpExcelFocus=target
+      }else{
+        lpExcelAnchor={...target};lpExcelFocus={...target}
+      }
+    }
+    lpExcelFocusCell(lpExcelFocus.row,lpExcelFocus.col);
+    return
+  }
+
+  if(ev.key==='Enter'&&!ev.defaultPrevented){
+    ev.preventDefault();
+    const target=lpExcelClamp({row:p.row+1,col:p.col});
+    lpExcelAnchor={...target};lpExcelFocus={...target};lpExcelFocusCell(target.row,target.col)
+  }
+}
+
+function localEntryBind(){
+  const body=$('#localEntryBody');if(!body)return;
+  purchaseBindAutos(body);
+
+  body.querySelectorAll('tr').forEach(tr=>{
+    tr.querySelectorAll('.lp-qty,.lp-rate').forEach(e=>e.addEventListener('input',()=>localEntryCalcRow(tr)));
+
+    const dt=tr.querySelector('.lp-date');
+    if(dt)dt.addEventListener('blur',()=>dt.value=purchaseFmtDate(dt.value));
+
+    const veh=tr.querySelector('.lp-vehicle');
+    if(veh)veh.addEventListener('input',()=>{
+      const p=veh.selectionStart;veh.value=String(veh.value||'').toUpperCase();
+      if(p!=null)try{veh.setSelectionRange(p,p)}catch(e){}
+    });
+
+    ['.lp-item','.lp-size','.lp-unit','.lp-supplier','.lp-purchaseby','.lp-remarks'].forEach(sel=>{
+      const e=tr.querySelector(sel);
+      if(e)e.addEventListener('blur',()=>{e.value=purchaseFormatText(e.value,e.className,e.className)})
+    });
+
+    tr.querySelectorAll('input,select').forEach(e=>{
+      e.addEventListener('focus',()=>lpExcelSetSingle(e));
+      e.addEventListener('mousedown',()=>lpExcelSetSingle(e));
+      e.addEventListener('keydown',ev=>lpExcelHandleKey(ev,e))
+    })
+  });
+
+  // Excel-like clipboard events scoped to the Local Purchase grid.
+  body.addEventListener('copy',ev=>{
+    if(!lpExcelFocus)return;
+    const text=lpExcelSelectionTSV();if(!text)return;
+    ev.preventDefault();ev.clipboardData?.setData('text/plain',text);
+    lpExcelInternalClipboard=text;lpExcelCopyRange=lpExcelSelectionRect();lpExcelMarkCopy(lpExcelCopyRange)
+  });
+  body.addEventListener('cut',ev=>{
+    if(!lpExcelFocus)return;
+    const text=lpExcelSelectionTSV();if(!text)return;
+    ev.preventDefault();ev.clipboardData?.setData('text/plain',text);
+    lpExcelInternalClipboard=text;lpExcelCopyRange=lpExcelSelectionRect();lpExcelMarkCopy(lpExcelCopyRange);lpExcelClearSelection()
+  });
+  body.addEventListener('paste',ev=>{
+    if(!lpExcelFocus)return;
+    const text=ev.clipboardData?.getData('text/plain')||lpExcelInternalClipboard;
+    if(text==null)return;
+    ev.preventDefault();lpExcelPasteText(text)
+  });
+
+  // First cell becomes the logical grid anchor without forcing focus.
+  lpExcelAnchor={row:0,col:0};lpExcelFocus={row:0,col:0};lpExcelPaint()
+}
+
 function localEntryIsFilled(tr){return [...tr.querySelectorAll('input,select')].some(e=>!e.readOnly&&String(e.value||'').trim())}
 function localEntryReadRow(tr,index){const v=sel=>tr.querySelector(sel)?.value||'',section=v('.lp-section');return {...purchaseRecordBase('local'),srNo:index+1,date:purchaseFmtDate(v('.lp-date')),igp:String(v('.lp-igp')).toUpperCase(),controlNo:String(v('.lp-control')).trim(),item:purchaseFormatText(v('.lp-item'),'item','Item'),size:purchaseFormatText(v('.lp-size'),'size','Size'),qty:purchaseNum(v('.lp-qty')),unit:purchaseFormatText(v('.lp-unit'),'unit','Unit'),rate:purchaseNum(v('.lp-rate')),amount:purchaseNum(v('.lp-amount')),supplier:purchaseFormatText(v('.lp-supplier'),'supplier','Supplier'),purchasedBy:purchaseFormatText(v('.lp-purchaseby'),'purchasedBy','Purchase By'),section,vehicle:String(v('.lp-vehicle')).toUpperCase(),remarks:purchaseFormatText(v('.lp-remarks'),'remarks','Remarks'),bill:'',inventoryEffect:section==='Inventory'?'stock-in':'auto-issue'}}
-function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
-function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready'}
+function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready • Excel keys active`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
+function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready • Excel keys active'}
 function purchaseLocalCalc(){}
 function purchaseLocalSave(){localEntrySaveAll()}
 function purchaseZafarCalc(){const q=purchaseNum($('#pzpQty')?.value),r=purchaseNum($('#pzpRate')?.value);if($('#pzpAmount'))$('#pzpAmount').value=(q*r||0).toFixed(2)}
@@ -3223,7 +3502,7 @@ $('#pzpSave')?.addEventListener('click',purchaseZafarSave);$('#pbpSave')?.addEve
 }
 window.ERPPurchase={rows:purchaseRows,all:purchaseAllRows,render:purchaseRenderAll};
 window.ERP_LOCKED_BASELINE=Object.freeze({
-  version:'V14.11',
+  version:'V14.13',
   rule:'Approved features are preserved unless the user explicitly asks to change them.',
   locked:[
     'Design Studio shared core and sidebar placement',
@@ -3231,7 +3510,7 @@ window.ERP_LOCKED_BASELINE=Object.freeze({
     'Title Case plus uppercase Vehicle/Bill rule',
     'Purchase Entry dashboard approved structure',
     'Local Purchase 15-row entry structure',
-    'Quiet autofill and Item -> Size/Unit autofill'
+    'Quiet autofill and Item -> Size/Unit autofill','Local Purchase Excel-style keyboard behavior'
   ],
   universalStandards:['Page Controller / Page Designer','Live Preview','Searchable Master Autofill','Audit','Access Control','Tenant Isolation']
 });
