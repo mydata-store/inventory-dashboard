@@ -11222,6 +11222,45 @@ function stdSetups(){
   });
   return grouped
 }
+
+function fccFormatTypedDate(value){
+  const raw=ft(value);
+  if(!raw)return '';
+  // Preserve already formatted dates like 25-Jun-26
+  if(/^\d{1,2}-[A-Za-z]{3}-\d{2}$/.test(raw))return raw;
+
+  const p=raw.replace(/[/.]/g,'-').split('-').map(x=>x.trim()).filter(Boolean);
+  if(p.length<2 || p.length>3)return raw;
+
+  const day=parseInt(p[0],10);
+  const mon=parseInt(p[1],10);
+  if(!day || day<1 || day>31 || !mon || mon<1 || mon>12)return raw;
+
+  let yr;
+  if(p.length===3 && p[2]){
+    yr=parseInt(p[2],10);
+    if(!Number.isFinite(yr))return raw;
+    if(yr<100)yr+=2000;
+  }else{
+    yr=new Date().getFullYear();
+  }
+
+  const d=new Date(yr,mon-1,day);
+  if(d.getFullYear()!==yr || d.getMonth()!==mon-1 || d.getDate()!==day)return raw;
+
+  const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(day).padStart(2,'0')+'-'+mons[mon-1]+'-'+String(yr).slice(-2);
+}
+function bindFccTypedDate(input){
+  if(!input || input.dataset.fccDateBound==='1')return;
+  input.dataset.fccDateBound='1';
+  const format=()=>{ input.value=fccFormatTypedDate(input.value); };
+  input.addEventListener('blur',format);
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter' || e.key==='Tab')format();
+  });
+}
+
 function stdDepartmentOptions(selected=''){
   let rows=[];
   try{rows=masterBucket('departments').filter(x=>x.status!=='inactive')}catch(e){}
@@ -11318,7 +11357,7 @@ function renderStandards(){
     <td><b>${x.output||'—'}</b>${x.outputUnit?` <span class="fcc-badge">${x.outputUnit}</span>`:''}</td>
     <td>${(x.materials||[]).length}</td>
     <td>${(x.materials||[]).map(m=>`${m.inputMaterial}: ${m.totalConsumed||0} ${m.consumedUnit||''} × ${m.yieldPercent??m.value??0}% = ${m.expectedOutput??((fn(m.totalConsumed)*fn(m.yieldPercent??m.value))/100).toFixed(3)} ${m.productionUnit||x.outputUnit||''}`).join(', ')||'—'}</td>
-    <td>${x.effectiveDate||'—'}</td>
+    <td>${x.effectiveDate?fccFormatTypedDate(x.effectiveDate):'—'}</td>
     <td>${x.status||'Active'}</td>
     <td><div class="chem-actions">
       <button class="fcc-btn fcc-edit-stdset" data-id="${x.id}">Edit</button>
@@ -11335,7 +11374,7 @@ function saveStandard(){
   const process=ft(f$('#fccStdProcess').value);
   const output=ft(f$('#fccStdOutput').value);
   const outputUnit=ft(f$('#fccStdOutputUnit').value);
-  const effectiveDate=ft(f$('#fccStdEffective').value);
+  const effectiveDate=fccFormatTypedDate(f$('#fccStdEffective').value);
   const status=ft(f$('#fccStdStatus').value)||'Active';
   const materials=collectStdMaterials();
   if(!department)return toast('Department is required');
@@ -11367,7 +11406,7 @@ function editStandardSetup(id){
   f$('#fccStdOutput').value=x.output||'';
   f$('#fccStdOutputUnit').value=x.outputUnit||'';
   updateStdExpectedHeader();
-  f$('#fccStdEffective').value=x.effectiveDate||'';
+  f$('#fccStdEffective').value=x.effectiveDate?fccFormatTypedDate(x.effectiveDate):'';
   f$('#fccStdStatus').value=x.status||'Active';
   f$('#fccStdMaterialsBody').innerHTML='';
   (x.materials||[]).forEach(addStdMaterialRow);
@@ -11517,7 +11556,7 @@ function build(){
         <div><label>Production Process *</label><input id="fccStdProcess" class="fcc-master-control" placeholder="e.g. Pulp Production / Steam Generation"></div>
         <div><label>Output Product *</label><input id="fccStdOutput" class="fcc-master-control" placeholder="e.g. Pulp / Steam"></div>
         <div><label>Output Unit</label><input id="fccStdOutputUnit" class="fcc-master-control" placeholder="e.g. Ton"></div>
-        <div><label>Effective Date</label><input id="fccStdEffective" class="fcc-master-control" placeholder="25-6"></div>
+        <div><label>Date</label><input id="fccStdEffective" class="fcc-master-control" placeholder="Date"></div>
         <div><label>Status</label><select id="fccStdStatus" class="fcc-master-control"><option>Active</option><option>Inactive</option></select></div>
       </div>
     </div>
@@ -11573,7 +11612,7 @@ function build(){
       <div class="fcc-table-wrap">
         <table class="fcc-table">
           <thead><tr>
-            <th>Department</th><th>Process</th><th>Output</th><th>Materials</th><th>Material Standards</th><th>Effective</th><th>Status</th><th>Action</th>
+            <th>Department</th><th>Process</th><th>Output</th><th>Materials</th><th>Material Standards</th><th>Date</th><th>Status</th><th>Action</th>
           </tr></thead>
           <tbody id="fccStandardsBody"></tbody>
         </table>
@@ -11621,6 +11660,7 @@ function build(){
   f$('#fccAddStdMaterial').onclick=()=>addStdMaterialRow();
   f$('#fccStdClear').onclick=clearStandardSetup;
   f$('#fccStdCancelEdit').onclick=clearStandardSetup;
+  bindFccTypedDate(f$('#fccStdEffective'));
   f$('#fccStdOutput').oninput=updateStdExpectedHeader;
   f$('#fccStdOutputUnit').oninput=()=>document.querySelectorAll('#fccStdMaterialsBody tr').forEach(tr=>{const u=tr.querySelector('.fcc-std-production-unit');if(u&&!u.dataset.touched)u.value=f$('#fccStdOutputUnit').value});
   f$('#fccSaveMapping').onclick=saveMapping;
