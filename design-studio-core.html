@@ -1393,7 +1393,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 #panel-rgp-entry .rgp-table-wrap{overflow:visible!important}
 
 
-/* V14.42 Supplier Products + Workshop Specialized In */
+/* V14.43 Supplier Products + Workshop Specialized In */
 .master-tagbox{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:4px 6px}
 .master-taglist{display:flex;gap:4px;flex-wrap:wrap}
 .master-tag-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));font-size:8px;font-weight:700}
@@ -3069,7 +3069,7 @@ const MASTER_TYPES={
   ],columns:[['code','Code'],['name','Item Name'],['size','Size'],['unit','Unit'],['category','Category'],['status','Status']]},
   suppliers:{name:'Suppliers',singular:'Supplier',code:'SUP',fields:[
     ['name','Supplier Name','text',true],['proprietor','Proprietor','text',false],['phone','Phone','text',false],['products','Products','tags-items',false],['address','Address','textarea',false],['status','Status','select',false,['active','inactive']]
-  ],columns:[['code','Code'],['name','Supplier'],['proprietor','Proprietor'],['phone','Phone'],['products','Products'],['address','Address'],['status','Status']]},
+  ],columns:[['code','Code'],['name','Supplier'],['proprietor','Proprietor'],['phone','Phone'],['address','Address'],['status','Status']]},
   departments:{name:'Departments',singular:'Department',code:'DEP',fields:[
     ['name','Department Name','text',true],['signatureAuthority','Signature Authority','text',false],['status','Status','select',false,['active','inactive']]
   ],columns:[['code','Code'],['name','Department'],['signatureAuthority','Signature Authority'],['status','Status']]},
@@ -3443,7 +3443,7 @@ function masterTagFieldHtml(key,label,mode){
         <div class="master-tag-suggestions" data-master-tag-suggestions="${key}"></div>
       </div>
     </div>
-    <div class="master-auto-hint">${mode==='items'?'Select one or more products from Item Master.':'Select Item Master suggestions or type a manual workshop specialty.'}</div>
+    <div class="master-auto-hint">${mode==='items'?'Saved in background. Supplier search will match these products.':'Select Item Master suggestions or type a manual workshop specialty.'}</div>
   </div>`;
 }
 function masterTagValues(key){
@@ -3503,7 +3503,18 @@ function masterBindTagField(key,mode){
   input.addEventListener('keydown',e=>{
     const opts=[...pop.querySelectorAll('.master-tag-option')];
     if(!pop.classList.contains('open')){
-      if(e.key==='Enter'&&mode==='specialty'&&input.value.trim()){e.preventDefault();masterTagAdd(key,input.value);input.value=''}
+      if(e.key==='Enter'&&input.value.trim()){
+        e.preventDefault();
+        if(mode==='specialty'){masterTagAdd(key,input.value);input.value=''}
+        else{
+          const q=input.value.trim().toLowerCase(),tokens=q.split(/\s+/).filter(Boolean);
+          const hit=masterBucket('items').find(r=>{
+            const hay=[r.name,r.size,r.code,r.category,r.unit].filter(Boolean).join(' ').toLowerCase();
+            return tokens.every(t=>hay.includes(t))
+          });
+          if(hit){masterTagAdd(key,[hit.name,hit.size].filter(Boolean).join(' '));input.value=''}
+        }
+      }
       return
     }
     if(e.key==='ArrowDown'){e.preventDefault();active=opts.length?(active+1)%opts.length:-1}
@@ -3551,12 +3562,24 @@ function masterRenderForm(){
   });
 }
 function masterClearForm(){masterEditingId='';masterRenderForm()}
+
+function masterSearchHaystack(record){
+  const base=masterAutoSearchText(record);
+  if(masterCurrent==='suppliers' && Array.isArray(record?.products)){
+    return (base+' '+record.products.join(' ')).toLowerCase()
+  }
+  if(masterCurrent==='workshops' && Array.isArray(record?.specializedIn)){
+    return (base+' '+record.specializedIn.join(' ')).toLowerCase()
+  }
+  return base
+}
+
 function masterFilteredRows(){
   const q=($('#masterSearch')?.value||'').toLowerCase().trim(),st=$('#masterStatusFilter')?.value||'',tokens=masterAutoTokens(q);
   return masterBucket().filter(r=>{
     if(st&&r.status!==st)return false;
     if(tokens.length){
-      const hay=masterAutoSearchText(r);
+      const hay=masterSearchHaystack(r);
       if(!tokens.every(t=>hay.includes(t)))return false;
     }
     return true;
@@ -3573,13 +3596,38 @@ function masterRenderSummary(){
   $('#masterKpiCurrent').textContent=cfg.name;$('#masterKpiRecords').textContent=rows.length;$('#masterKpiActive').textContent=rows.filter(x=>x.status!=='inactive').length;$('#masterKpiCompany').textContent=tenant?.shortCode||tenant?.name||'Local';
 }
 function masterRenderAll(){masterRenderTabs();masterRenderForm();masterRenderTable();masterRenderSummary();masterApplyPageSettings()}
+
+function masterCommitPendingTagInput(key,type){
+  const input=$(`[data-master-tag-input="${key}"]`);
+  if(!input)return;
+  const q=String(input.value||'').trim();
+  if(!q)return;
+
+  if(type==='tags-items'){
+    const tokens=q.toLowerCase().split(/\s+/).filter(Boolean);
+    const matches=masterBucket('items').filter(r=>{
+      const hay=[r.name,r.size,r.code,r.category,r.unit].filter(Boolean).join(' ').toLowerCase();
+      return tokens.every(t=>hay.includes(t))
+    });
+    if(matches.length){
+      const r=matches[0];
+      masterTagAdd(key,[r.name,r.size].filter(Boolean).join(' '));
+      input.value=''
+    }
+  }else if(type==='tags-specialty'){
+    masterTagAdd(key,q);
+    input.value=''
+  }
+}
+
 function masterReadForm(){
   const cfg=MASTER_TYPES[masterCurrent],o={};
   for(const [key,label,type,required] of cfg.fields){
     if(type==='tags-items'||type==='tags-specialty'){
-      const v=masterTagValues(key);
+      masterCommitPendingTagInput(key,type);
+      const v=masterTagValues(key).map(x=>String(x||'').trim()).filter(Boolean);
       if(required&&!v.length){toast(label+' is required');return null}
-      o[key]=v;
+      o[key]=[...v];
       continue
     }
     const e=$(`[data-master-field="${key}"]`);
