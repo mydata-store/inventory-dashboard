@@ -1393,7 +1393,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 #panel-rgp-entry .rgp-table-wrap{overflow:visible!important}
 
 
-/* V14.44 Supplier Products + Workshop Specialized In */
+/* V14.45 Supplier Products + Workshop Specialized In */
 .master-tagbox{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:4px 6px}
 .master-taglist{display:flex;gap:4px;flex-wrap:wrap}
 .master-tag-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));font-size:8px;font-weight:700}
@@ -2046,7 +2046,12 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
         <div><label>Remarks</label><input id="rgpHeaderRemarks" placeholder="Additional instructions or remarks"></div>
 
         <div class="rgp-span-3"><label>Purpose</label><textarea id="rgpPurpose" placeholder="Repair, service, inspection..."></textarea></div>
-        <div><label>Vehicle Number</label><input id="rgpVehicle" placeholder="Optional vehicle number"></div>
+        <div><label>Vehicle Number</label>
+          <div class="purchase-auto-wrap">
+            <input id="rgpVehicle" data-purchase-auto="vehicles" autocomplete="off" placeholder="Type vehicle number...">
+            <div class="purchase-auto-list"></div>
+          </div>
+        </div>
         <div><label>Contact Number</label><input id="rgpContact" placeholder="Optional courier/workshop contact"></div>
       </div>
     </div>
@@ -2084,7 +2089,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <span class="rgp-entry-bottom-spacer"></span>
       <button class="btn" id="rgpDraftBtn">Save Draft</button>
       <button class="btn" id="rgpClearBtn">Clear</button>
-      <button class="btn primary" id="rgpSaveBtn">Save RGP</button>
+      <button class="btn primary" id="rgpSaveBtn" type="button" onclick="return rgpSave()">Save RGP</button>
     </div>
   </div>
 </section>
@@ -5796,14 +5801,27 @@ window.ERPPrintEngine={getContracts:printContracts,getGallery:printGallery,getAs
 function restoreLastStudioPanel(){
   let panel='theme';
   try{panel=localStorage.getItem(ACTIVE_STUDIO_PANEL_KEY)||'theme'}catch(e){}
-  const btn=$(`[data-panel="${panel}"]`);
   const target=$('#panel-'+panel);
-  if(!btn||!target){panel='theme'}
+  if(!target)panel='theme';
+
   $$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===panel));
   $$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));
-  const designGroup=$('#designStudioGroup');
-  if(['masters','purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis','issue-entry','issue-history','gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry'].includes(panel))designGroup?.classList.remove('open');
-  else designGroup?.classList.add('open');
+
+  const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');
+  const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];
+  const issuePages=['issue-entry','issue-history'];
+  const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry'];
+
+  designGroup?.classList.remove('open');
+  purchaseGroup?.classList.remove('open');
+  issueGroup?.classList.remove('open');
+  gatePassGroup?.classList.remove('open');
+
+  if(purchasePages.includes(panel))purchaseGroup?.classList.add('open');
+  else if(issuePages.includes(panel))issueGroup?.classList.add('open');
+  else if(gatePages.includes(panel))gatePassGroup?.classList.add('open');
+  else if(panel!=='masters')designGroup?.classList.add('open');
+
   return panel;
 }
 
@@ -5816,8 +5834,8 @@ function erpStableStartup(){
   erpSafeCall('applyThemeLinks',()=>applyThemeLinks());
   erpSafeCall('sync',()=>sync());
   erpSafeCall('bind',()=>bind());
-  const restoredPanel=erpSafeCall('restoreLastStudioPanel',()=>restoreLastStudioPanel())||'theme';
   erpSafeCall('render',()=>render());
+  const restoredPanel=erpSafeCall('restoreLastStudioPanel',()=>restoreLastStudioPanel())||'theme';
   erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
   erpSafeCall('uaInit',()=>uaInit());
   erpSafeCall('maBind',()=>maBind());
@@ -6359,7 +6377,10 @@ function rgpSave(){
     }
 
     // Persist first. Do not clear form until storage confirms.
-    rgpStore(all);
+    if(!rgpStore(all)){
+      toast('RGP could not be saved in browser storage');
+      return false
+    }
 
     const saved=rgpLoad();
     const verify=saved.some(x=>x.id===rec.id || String(x.rgpNo||'').toUpperCase()===no.toUpperCase());
@@ -6542,7 +6563,20 @@ function rgpMasterRows(type,q){
   const query=String(q||'').trim().toLowerCase();
   if(!query)return[];
   let rows=[];
-  try{rows=window.ERPMasters?.list?.(type)||[]}catch(e){}
+  try{
+    if(type==='authorized-combined'){
+      const a=window.ERPMasters?.list?.('authorization')||[];
+      const e=window.ERPMasters?.list?.('employees')||[];
+      const seen=new Set();
+      rows=[...a,...e].filter(r=>{
+        const k=String(r.name||'').trim().toLowerCase();
+        if(!k||seen.has(k))return false;
+        seen.add(k);return true
+      })
+    }else{
+      rows=window.ERPMasters?.list?.(type)||[]
+    }
+  }catch(e){}
   return rows.filter(r=>{
     if(String(r.status||'').toLowerCase()==='inactive')return false;
     const hay=[r.name,r.code,r.size,r.unit,r.category,r.phone,r.designation,r.department,r.contactPerson,r.vehicleNo,r.shortName]
@@ -6623,14 +6657,10 @@ function rgpBindDedicatedDropdowns(){
   rgpBindSearchInput($('#rgpDepartment'),'departments');
   rgpBindSearchInput($('#rgpWorkshop'),'workshops');
   rgpBindSearchInput($('#rgpCarrier'),'carriers');
-  rgpBindSearchInput($('#rgpAuthorized'),'authorization');
-
-  // If Authorization Master is empty, use Employees instead.
-  try{
-    if(!(window.ERPMasters?.list?.('authorization')||[]).length){
-      rgpBindSearchInput($('#rgpAuthorized'),'employees')
-    }
-  }catch(e){}
+  rgpBindSearchInput($('#rgpAuthorized'),'authorized-combined');
+  rgpBindSearchInput($('#rgpVehicle'),'vehicles',(r,input)=>{
+    input.value=String(r.name||r.vehicleNo||'').toUpperCase()
+  });
 
   // Grid fields.
   document.querySelectorAll('#rgpEntryTable tbody tr').forEach(tr=>{
@@ -6694,7 +6724,17 @@ function rgpBind(){
   rgpPrepareHeaderDropdowns();
   rgpEnhanceGridDropdowns();rgpBindExcel();rgpBindDeleteRows();
   ['rgpDepartment','rgpWorkshop','rgpCarrier','rgpAuthorized','rgpPurpose','rgpHeaderRemarks'].forEach(id=>$('#'+id)?.addEventListener('blur',e=>e.target.value=purchaseFormatText(e.target.value,id,id)));
-  ['rgpBillDetail','rgpVehicle'].forEach(id=>$('#'+id)?.addEventListener('blur',e=>e.target.value=String(e.target.value||'').toUpperCase()));
+  $('#rgpBillDetail')?.addEventListener('blur',e=>e.target.value=String(e.target.value||'').toUpperCase());
+  const rgpVeh=$('#rgpVehicle');
+  if(rgpVeh && !rgpVeh.dataset.upperBound){
+    rgpVeh.dataset.upperBound='1';
+    rgpVeh.addEventListener('input',e=>{
+      const start=e.target.selectionStart,end=e.target.selectionEnd;
+      e.target.value=String(e.target.value||'').toUpperCase();
+      try{e.target.setSelectionRange(start,end)}catch(_){}
+    });
+    rgpVeh.addEventListener('blur',e=>e.target.value=String(e.target.value||'').toUpperCase())
+  }
   rgpInputs().forEach(a=>{
     if(a[4] && !a[4].dataset.rateBlurBound){
       a[4].dataset.rateBlurBound='1';
@@ -6705,7 +6745,6 @@ function rgpBind(){
   $('#rgpAddRowBtn')?.addEventListener('click',rgpMakeRow);
   $('#rgpDraftBtn')?.addEventListener('click',()=>toast('RGP draft saved locally'));
   $('#rgpClearBtn')?.addEventListener('click',rgpClear);
-  $('#rgpSaveBtn')?.addEventListener('click',rgpSave);
   purchaseApplyPc('rgp-entry')
 }
 
