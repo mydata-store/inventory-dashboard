@@ -1532,6 +1532,8 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .ogp-entry-table input:focus{box-shadow:inset 0 0 0 2px var(--primary)}
 .ogp-entry-table .purchase-auto-wrap{height:100%}
 .ogp-entry-table .purchase-auto-list{z-index:15000}
+/* V14.51: OGP item suggestions escape the horizontally scrollable table wrapper */
+.ogp-entry-table .purchase-auto-list.ogp-fixed-list{position:fixed!important;left:auto;right:auto;top:auto;min-width:280px;max-width:min(520px,calc(100vw - 24px));z-index:2147483000}
 .ogp-entry-table td:nth-child(1){width:42px;text-align:center}
 .ogp-entry-table td:nth-child(2){min-width:250px}
 .ogp-entry-table td:nth-child(3){min-width:110px}
@@ -6711,7 +6713,7 @@ function ogpBindSearchInput(input,type,onChoose){
   input.dataset.ogpSearchBound='1';
   let shown=[],active=-1;
 
-  const close=()=>{list.classList.remove('open');active=-1};
+  const close=()=>{list.classList.remove('open','ogp-fixed-list');list.style.left=list.style.top=list.style.width='';active=-1};
   const paint=()=>{
     list.querySelectorAll('[data-ogp-opt]').forEach((x,i)=>x.classList.toggle('active',i===active));
     if(active>=0)list.querySelector(`[data-ogp-opt="${active}"]`)?.scrollIntoView({block:'nearest'})
@@ -6733,6 +6735,18 @@ function ogpBindSearchInput(input,type,onChoose){
       <small>${escHtml([r.size,r.unit,r.code,r.phone,r.designation,r.department,r.vehicleNo].filter(Boolean).join(' • '))}</small>
     </div>`).join(''):'<div class="purchase-empty">No matching record.</div>';
     list.querySelectorAll('[data-ogp-opt]').forEach(el=>el.onmousedown=e=>{e.preventDefault();choose(+el.dataset.ogpOpt)});
+    // Item cells live inside an overflow:auto table wrapper. A normal absolute
+    // dropdown gets clipped there, so place the visible list against the viewport.
+    if(input.classList.contains('ogp-item')){
+      const r=input.getBoundingClientRect();
+      list.classList.add('ogp-fixed-list');
+      list.style.left=Math.max(8,Math.min(r.left,window.innerWidth-Math.max(280,r.width)-8))+'px';
+      list.style.top=Math.min(r.bottom+4,window.innerHeight-240)+'px';
+      list.style.width=Math.max(280,r.width)+'px';
+    }else{
+      list.classList.remove('ogp-fixed-list');
+      list.style.left=list.style.top=list.style.width='';
+    }
     list.classList.add('open')
   };
   input.addEventListener('input',draw);
