@@ -11148,25 +11148,183 @@ function resetTitleController(){
   applyTitleSettings();
   openTitleController()
 }
+function stdSetups(){
+  const raw=standards();
+  if(!Array.isArray(raw))return [];
+  // New grouped setup records
+  const grouped=raw.filter(x=>x && Array.isArray(x.materials));
+  // Backward compatibility: convert old single-material rows into grouped setups in memory.
+  const legacy=raw.filter(x=>x && !Array.isArray(x.materials) && (x.inputMaterial||x.name));
+  legacy.forEach(x=>{
+    const department=x.department||'Unassigned';
+    const process=x.process||'Production';
+    const output=x.output||'Output';
+    const key=[department,process,output,x.effectiveDate||''].join('|').toLowerCase();
+    let g=grouped.find(z=>[z.department,z.process,z.output,z.effectiveDate||''].join('|').toLowerCase()===key);
+    if(!g){
+      g={id:'STDSET-LEGACY-'+grouped.length,department,process,output,outputUnit:x.outputUnit||'',effectiveDate:x.effectiveDate||'',status:x.status||'Active',materials:[]};
+      grouped.push(g)
+    }
+    g.materials.push({
+      inputMaterial:x.inputMaterial||x.name||'',
+      standardType:x.standardType||'Yield %',
+      value:fn(x.value),
+      unit:x.unit||'%',
+      notes:x.notes||''
+    })
+  });
+  return grouped
+}
+function stdDepartmentOptions(selected=''){
+  let rows=[];
+  try{rows=masterBucket('departments').filter(x=>x.status!=='inactive')}catch(e){}
+  const names=[...new Set(rows.map(x=>ft(x.name)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  return '<option value="">Select department</option>'+names.map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')
+}
+function stdItemOptions(selected=''){
+  let rows=[];
+  try{rows=masterBucket('items').filter(x=>x.status!=='inactive')}catch(e){}
+  const names=[...new Set(rows.map(x=>ft(x.name)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  return '<option value="">Select material</option>'+names.map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')
+}
+function addStdMaterialRow(data={}){
+  const body=f$('#fccStdMaterialsBody'); if(!body)return;
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td class="fcc-std-sr"></td>
+    <td><select class="fcc-std-material">${stdItemOptions(data.inputMaterial||'')}</select></td>
+    <td><select class="fcc-std-type">
+      ${['Yield %','Output per Input Unit','Consumption per Output Unit','Fixed Standard'].map(x=>`<option ${x===(data.standardType||'Yield %')?'selected':''}>${x}</option>`).join('')}
+    </select></td>
+    <td><input class="fcc-std-value" type="number" step="any" value="${data.value??''}" placeholder="0"></td>
+    <td><input class="fcc-std-unit" value="${data.unit||'%'}" placeholder="% / Ton Steam per Ton Fuel"></td>
+    <td><input class="fcc-std-notes" value="${data.notes||''}" placeholder="Optional"></td>
+    <td><button class="fcc-btn fcc-std-delete-row" type="button">Delete</button></td>`;
+  body.appendChild(tr);
+  tr.querySelector('.fcc-std-delete-row').onclick=()=>{tr.remove();renumberStdRows()};
+  tr.querySelector('.fcc-std-type').onchange=e=>{
+    const unit=tr.querySelector('.fcc-std-unit');
+    if(e.target.value==='Yield %' && (!unit.value || unit.value==='%'))unit.value='%';
+  };
+  renumberStdRows()
+}
+function renumberStdRows(){
+  document.querySelectorAll('#fccStdMaterialsBody tr').forEach((tr,i)=>tr.querySelector('.fcc-std-sr').textContent=i+1)
+}
+function collectStdMaterials(){
+  return [...document.querySelectorAll('#fccStdMaterialsBody tr')].map(tr=>({
+    inputMaterial:ft(tr.querySelector('.fcc-std-material').value),
+    standardType:ft(tr.querySelector('.fcc-std-type').value),
+    value:fn(tr.querySelector('.fcc-std-value').value),
+    unit:ft(tr.querySelector('.fcc-std-unit').value),
+    notes:ft(tr.querySelector('.fcc-std-notes').value)
+  })).filter(x=>x.inputMaterial)
+}
+function clearStandardSetup(){
+  f$('#fccStdSetupId').value='';
+  f$('#fccStdDepartment').value='';
+  f$('#fccStdProcess').value='';
+  f$('#fccStdOutput').value='';
+  f$('#fccStdOutputUnit').value='';
+  f$('#fccStdEffective').value='';
+  f$('#fccStdStatus').value='Active';
+  f$('#fccStdMaterialsBody').innerHTML='';
+  addStdMaterialRow();
+  f$('#fccSaveStandard').textContent='Save Department Standard';
+  if(f$('#fccStdEditBanner'))f$('#fccStdEditBanner').style.display='none'
+}
 function renderStandards(){
-  const rows=standards();
-  const body=f$('#fccStandardsBody'); if(!body)return;
+  const rows=stdSetups().slice().sort((a,b)=>
+    ft(a.department).localeCompare(ft(b.department)) ||
+    ft(a.process).localeCompare(ft(b.process)) ||
+    ft(a.output).localeCompare(ft(b.output))
+  );
+  const body=f$('#fccStandardsBody');
+  if(!body)return;
   body.innerHTML=rows.length?rows.map(x=>`<tr>
-    <td>${x.department||'—'}</td><td>${x.process||'—'}</td><td>${x.output||'—'}</td>
-    <td><b>${x.inputMaterial||x.name||'—'}</b></td><td>${x.standardType||'Yield %'}</td>
-    <td>${x.value??0}</td><td>${x.unit||'%'}</td><td>${x.effectiveDate||'—'}</td>
-    <td>${x.status||'Active'}</td><td><button class="fcc-btn fcc-del-std" data-id="${x.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="10" style="text-align:center;padding:25px">No department production standards saved yet.</td></tr>';
-  document.querySelectorAll('.fcc-del-std').forEach(b=>b.onclick=()=>{save(FCC_STANDARD_KEY,standards().filter(x=>x.id!==b.dataset.id));renderStandards();renderAsh()});
+    <td><b>${x.department||'—'}</b></td>
+    <td>${x.process||'—'}</td>
+    <td><b>${x.output||'—'}</b>${x.outputUnit?` <span class="fcc-badge">${x.outputUnit}</span>`:''}</td>
+    <td>${(x.materials||[]).length}</td>
+    <td>${(x.materials||[]).map(m=>`${m.inputMaterial} (${m.value} ${m.unit||''})`).join(', ')||'—'}</td>
+    <td>${x.effectiveDate||'—'}</td>
+    <td>${x.status||'Active'}</td>
+    <td><div class="chem-actions">
+      <button class="fcc-btn fcc-edit-stdset" data-id="${x.id}">Edit</button>
+      <button class="fcc-btn fcc-del-stdset" data-id="${x.id}">Delete</button>
+    </div></td>
+  </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:25px">No department production standards saved yet.</td></tr>';
+  document.querySelectorAll('.fcc-edit-stdset').forEach(b=>b.onclick=()=>editStandardSetup(b.dataset.id));
+  document.querySelectorAll('.fcc-del-stdset').forEach(b=>b.onclick=()=>deleteStandardSetup(b.dataset.id));
+  renderAsh()
 }
 function saveStandard(){
-  const department=ft(f$('#fccStdDepartment').value),process=ft(f$('#fccStdProcess').value),output=ft(f$('#fccStdOutput').value),inputMaterial=ft(f$('#fccStdInput').value),standardType=ft(f$('#fccStdType').value),value=fn(f$('#fccStdValue').value),unit=ft(f$('#fccStdUnit').value),effectiveDate=ft(f$('#fccStdEffective').value),status=ft(f$('#fccStdStatus').value);
-  if(!department)return toast('Department is required'); if(!process)return toast('Production process is required'); if(!output)return toast('Output product is required'); if(!inputMaterial)return toast('Input material is required');
-  save(FCC_STANDARD_KEY,[...standards(),{id:'STD-'+Date.now(),code:'STD-'+String(Date.now()).slice(-6),name:inputMaterial,department,process,output,inputMaterial,standardType,value,unit,effectiveDate,status}]);
-  ['#fccStdInput','#fccStdValue'].forEach(id=>f$(id).value=''); renderStandards();renderAsh();toast('Department production standard saved')
+  const setupId=ft(f$('#fccStdSetupId').value);
+  const department=ft(f$('#fccStdDepartment').value);
+  const process=ft(f$('#fccStdProcess').value);
+  const output=ft(f$('#fccStdOutput').value);
+  const outputUnit=ft(f$('#fccStdOutputUnit').value);
+  const effectiveDate=ft(f$('#fccStdEffective').value);
+  const status=ft(f$('#fccStdStatus').value)||'Active';
+  const materials=collectStdMaterials();
+  if(!department)return toast('Department is required');
+  if(!process)return toast('Production Process is required');
+  if(!output)return toast('Output Product is required');
+  if(!materials.length)return toast('Add at least one input material');
+
+  let rows=standards();
+  // Once this grouped editor is used, save a normalized grouped list.
+  let grouped=stdSetups().filter(x=>!String(x.id||'').startsWith('STDSET-LEGACY-'));
+  const payload={department,process,output,outputUnit,effectiveDate,status,materials};
+  if(setupId){
+    const i=grouped.findIndex(x=>x.id===setupId);
+    if(i>=0)grouped[i]={...grouped[i],...payload,updatedAt:new Date().toISOString()};
+    else grouped.push({id:setupId,...payload,updatedAt:new Date().toISOString()})
+  }else{
+    grouped.push({id:'STDSET-'+Date.now(),...payload,createdAt:new Date().toISOString()})
+  }
+  save(FCC_STANDARD_KEY,grouped);
+  clearStandardSetup();
+  renderStandards();
+  toast(setupId?'Department standard updated':'Department standard saved')
+}
+function editStandardSetup(id){
+  const x=stdSetups().find(r=>r.id===id);if(!x)return;
+  f$('#fccStdSetupId').value=x.id;
+  f$('#fccStdDepartment').value=x.department||'';
+  f$('#fccStdProcess').value=x.process||'';
+  f$('#fccStdOutput').value=x.output||'';
+  f$('#fccStdOutputUnit').value=x.outputUnit||'';
+  f$('#fccStdEffective').value=x.effectiveDate||'';
+  f$('#fccStdStatus').value=x.status||'Active';
+  f$('#fccStdMaterialsBody').innerHTML='';
+  (x.materials||[]).forEach(addStdMaterialRow);
+  if(!(x.materials||[]).length)addStdMaterialRow();
+  f$('#fccSaveStandard').textContent='Update Department Standard';
+  if(f$('#fccStdEditBanner')){
+    f$('#fccStdEditBanner').style.display='flex';
+    f$('#fccStdEditText').textContent=`${x.department} → ${x.process} → ${x.output}`
+  }
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+function deleteStandardSetup(id){
+  const x=stdSetups().find(r=>r.id===id);if(!x)return;
+  if(!confirm(`Delete ${x.department} → ${x.process} → ${x.output}?`))return;
+  const grouped=stdSetups().filter(r=>r.id!==id && !String(r.id||'').startsWith('STDSET-LEGACY-'));
+  save(FCC_STANDARD_KEY,grouped);
+  renderStandards();
+  toast('Department standard deleted')
 }
 function renderAsh(){
-  const std=standards().filter(x=>/ash|filler|pulp/i.test(x.name+' '+x.code));
-  f$('#fccAshBody').innerHTML=std.length?std.map(x=>`<tr><td>${x.code}</td><td>${x.name}</td><td>${x.value}</td><td>${x.unit}</td><td>${x.department||'—'}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:25px">Ash/Filler standards will appear here automatically.</td></tr>'
+  const rows=[];
+  stdSetups().forEach(setup=>{
+    (setup.materials||[]).forEach(m=>{
+      if(/ash|filler|pulp/i.test(`${setup.output} ${m.inputMaterial} ${m.standardType}`)){
+        rows.push({department:setup.department,process:setup.process,output:setup.output,material:m.inputMaterial,value:m.value,unit:m.unit,type:m.standardType})
+      }
+    })
+  });
+  const body=f$('#fccAshBody');if(!body)return;
+  body.innerHTML=rows.length?rows.map(x=>`<tr><td>${x.department}</td><td>${x.process}</td><td>${x.output}</td><td>${x.material}</td><td>${x.type}</td><td>${x.value}</td><td>${x.unit}</td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:25px">Pulp / filler / ash-related department standards will appear here automatically.</td></tr>'
 }
 function renderVersions(){
   const rows=versions().slice().reverse();
@@ -11255,26 +11413,68 @@ function build(){
    </div>
    <div class="fcc-section" data-fccsection="standards">
     <div class="fcc-card" style="margin-bottom:14px">
-      <div class="fcc-toolbar"><div><h3 style="margin:0">Department Production Standards</h3><div style="font-size:12px;color:#64748b;margin-top:4px">Attach each production standard to its department, process and output. The same raw material can have different standards in different departments.</div></div></div>
-      <div class="fcc-grid" style="margin-top:12px">
-        <div><label>Department *</label><input id="fccStdDepartment" placeholder="e.g. Pulp Mill / Boiler House"></div>
+      <div id="fccStdEditBanner" style="display:none;justify-content:space-between;align-items:center;gap:10px;background:#fff8db;border:1px solid #f1c75b;border-radius:8px;padding:9px 11px;margin-bottom:12px">
+        <div><b>Editing Department Standard:</b> <span id="fccStdEditText"></span></div>
+        <button class="fcc-btn" id="fccStdCancelEdit">Cancel Edit</button>
+      </div>
+      <input type="hidden" id="fccStdSetupId">
+      <div class="fcc-toolbar">
+        <div>
+          <h3 style="margin:0">Department Production Standards</h3>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Create one setup for a department/process/output, then add all approved input materials underneath it.</div>
+        </div>
+      </div>
+
+      <div class="fcc-grid">
+        <div><label>Department *</label><select id="fccStdDepartment">${stdDepartmentOptions()}</select></div>
         <div><label>Production Process *</label><input id="fccStdProcess" placeholder="e.g. Pulp Production / Steam Generation"></div>
         <div><label>Output Product *</label><input id="fccStdOutput" placeholder="e.g. Pulp / Steam"></div>
-        <div><label>Input Material *</label><input id="fccStdInput" placeholder="e.g. Wheat Straw / Bagasse / Rice Husk"></div>
-        <div><label>Standard Type</label><select id="fccStdType"><option>Yield %</option><option>Output per Input Unit</option><option>Consumption per Output Unit</option><option>Fixed Standard</option></select></div>
-        <div><label>Standard Value</label><input id="fccStdValue" type="number" step="any" placeholder="0"></div>
-        <div><label>Standard Unit</label><input id="fccStdUnit" placeholder="e.g. % / Ton Steam per Ton Fuel"></div>
+        <div><label>Output Unit</label><input id="fccStdOutputUnit" placeholder="e.g. Ton"></div>
         <div><label>Effective Date</label><input id="fccStdEffective" placeholder="25-6"></div>
         <div><label>Status</label><select id="fccStdStatus"><option>Active</option><option>Inactive</option></select></div>
       </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="fcc-btn dark" id="fccSaveStandard">Save Production Standard</button></div>
+
+      <div class="fcc-toolbar" style="margin-top:14px">
+        <div>
+          <b>Input Material Standards</b>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px">The same raw material can have a different standard in another department.</div>
+        </div>
+        <button class="fcc-btn dark" id="fccAddStdMaterial">+ Add Material</button>
+      </div>
+
+      <div class="fcc-table-wrap">
+        <table class="fcc-table">
+          <thead><tr>
+            <th>#</th><th>Input Material</th><th>Standard Type</th><th>Standard Value</th><th>Unit</th><th>Notes</th><th>Action</th>
+          </tr></thead>
+          <tbody id="fccStdMaterialsBody"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="fcc-btn" id="fccStdClear">Clear</button>
+        <button class="fcc-btn dark" id="fccSaveStandard">Save Department Standard</button>
+      </div>
     </div>
+
     <div class="fcc-card">
-      <div class="fcc-toolbar"><div><h3 style="margin:0">Saved Department Standards</h3><div style="font-size:12px;color:#64748b;margin-top:4px">Used later by Daily Consumption to calculate expected output, actual output variance and efficiency department-wise.</div></div></div>
-      <div class="fcc-table-wrap" style="margin-top:10px"><table class="fcc-table"><thead><tr><th>Department</th><th>Process</th><th>Output</th><th>Input Material</th><th>Standard Type</th><th>Value</th><th>Unit</th><th>Effective</th><th>Status</th><th>Action</th></tr></thead><tbody id="fccStandardsBody"></tbody></table></div>
+      <div class="fcc-toolbar">
+        <div>
+          <h3 style="margin:0">Saved Department Production Setups</h3>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Each row represents one department/process/output with all of its approved material standards.</div>
+        </div>
+      </div>
+      <div class="fcc-table-wrap">
+        <table class="fcc-table">
+          <thead><tr>
+            <th>Department</th><th>Process</th><th>Output</th><th>Materials</th><th>Material Standards</th><th>Effective</th><th>Status</th><th>Action</th>
+          </tr></thead>
+          <tbody id="fccStandardsBody"></tbody>
+        </table>
+      </div>
     </div>
    </div>
-   <div class="fcc-section" data-fccsection="ash"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Code</th><th>Ash / Filler Standard</th><th>Value</th><th>Unit</th><th>Department</th></tr></thead><tbody id="fccAshBody"></tbody></table></div></div>
+   <div class="fcc-section" data-fccsection="ash"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Department</th><th>Process</th><th>Output</th><th>Material</th><th>Standard Type</th><th>Value</th><th>Unit</th></tr></thead><tbody id="fccAshBody"></tbody></table></div></div>
    <div class="fcc-section" data-fccsection="versions"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>No.</th><th>Formula</th><th>Version</th><th>Previous Formula</th><th>Unit</th><th>Saved At</th></tr></thead><tbody id="fccVersionsBody"></tbody></table></div></div>
    <div class="fcc-section" data-fccsection="mapping"><div class="fcc-grid"><div class="fcc-span-2"><label>Formula</label><select id="fccMapFormula"></select></div><div><label>Cost Group</label><input id="fccMapGroup" placeholder="e.g. Raw Material / Production"></div><div><label>Department</label><input id="fccMapDepartment"></div><div class="fcc-span-2"><label>Report / Use</label><input id="fccMapReport" placeholder="e.g. Daily Costing / Ash Report"></div></div><button class="fcc-btn dark" id="fccSaveMapping" style="margin:10px 0">Save Mapping</button><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Formula</th><th>Cost Group</th><th>Department</th><th>Report / Use</th><th>Action</th></tr></thead><tbody id="fccMappingBody"></tbody></table></div></div>
   </div>
@@ -11312,6 +11512,9 @@ function build(){
   f$('#fccCalcAll').onclick=calculateAll;
   f$('#fccResetTest').onclick=resetTester;
   f$('#fccSaveStandard').onclick=saveStandard;
+  f$('#fccAddStdMaterial').onclick=()=>addStdMaterialRow();
+  f$('#fccStdClear').onclick=clearStandardSetup;
+  f$('#fccStdCancelEdit').onclick=clearStandardSetup;
   f$('#fccSaveMapping').onclick=saveMapping;
   f$('#fccCloseView').onclick=closeView;
   f$('#fccPageController').onclick=openTitleController;
@@ -11319,6 +11522,7 @@ function build(){
   f$('#fccTitleApply').onclick=saveTitleController;
   f$('#fccTitleReset').onclick=resetTitleController;
   clearEditor();
+  clearStandardSetup();
   calculateAll()
 }
 function renderAll(){
