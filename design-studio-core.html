@@ -10947,7 +10947,8 @@ body.erp-hide-theme-actions #saveBtn{
 #panel-formula-control-center .fcc-std-table th:nth-child(4){min-width:150px}
 #panel-formula-control-center .fcc-std-table th:nth-child(5){min-width:180px}
 #panel-formula-control-center .fcc-std-table th:nth-child(6){min-width:240px}
-#panel-formula-control-center .fcc-std-table th:nth-child(7){width:90px}
+#panel-formula-control-center .fcc-std-table th:nth-child(7){min-width:150px}
+#panel-formula-control-center .fcc-std-table th:nth-child(8){width:90px}
 #panel-formula-control-center .fcc-std-rule-note{
   margin-top:12px;
   padding:10px 12px;
@@ -11233,29 +11234,45 @@ function stdItemOptions(selected=''){
   const names=[...new Set(rows.map(x=>ft(x.name)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   return '<option value="">Select material</option>'+names.map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')
 }
+function stdMaterialNames(){
+  let rows=[]; try{rows=masterBucket('items').filter(x=>x.status!=='inactive')}catch(e){}
+  return [...new Set(rows.map(x=>ft(x.name)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+function updateStdExpectedHeader(){
+  const out=ft(f$('#fccStdOutput')?.value)||'Production';
+  const h=f$('#fccStdExpectedHead'); if(h)h.textContent='Expected '+out;
+  document.querySelectorAll('#fccStdMaterialsBody tr').forEach(calcStdRow);
+}
+function calcStdRow(tr){
+  const qty=fn(tr.querySelector('.fcc-std-consumed')?.value);
+  const y=fn(tr.querySelector('.fcc-std-yield')?.value);
+  const expected=qty*y/100;
+  const cell=tr.querySelector('.fcc-std-expected'); if(cell)cell.textContent=expected.toFixed(3);
+  const prod=tr.querySelector('.fcc-std-production-unit');
+  if(prod && !prod.dataset.touched) prod.value=ft(f$('#fccStdOutputUnit')?.value)||prod.value||'';
+}
 function addStdMaterialRow(data={}){
   const body=f$('#fccStdMaterialsBody'); if(!body)return;
   const tr=document.createElement('tr');
-  const type=data.standardType||'Yield %';
+  const material=data.inputMaterial||'';
+  const consumedUnit=data.consumedUnit||data.inputUnit||'Ton';
+  const totalConsumed=data.totalConsumed??data.consumedQty??'';
+  const yieldValue=data.yieldPercent??data.value??'';
+  const productionUnit=data.productionUnit||f$('#fccStdOutputUnit')?.value||'';
   tr.innerHTML=`<td class="fcc-std-sr"></td>
-    <td><select class="fcc-std-material fcc-master-control">${stdItemOptions(data.inputMaterial||'')}</select></td>
-    <td><select class="fcc-std-type fcc-master-control">
-      ${['Yield %','Output per Input Unit','Consumption per Output Unit','Fixed Standard'].map(x=>`<option ${x===type?'selected':''}>${x}</option>`).join('')}
-    </select></td>
-    <td><input class="fcc-std-value fcc-master-control" type="number" step="any" value="${data.value??''}" placeholder="0"></td>
-    <td><input class="fcc-std-unit fcc-master-control" value="${data.unit||(type==='Yield %'?'%':'')}" placeholder="% / Ton Steam per Ton Fuel"></td>
-    <td><input class="fcc-std-notes fcc-master-control" value="${data.notes||''}" placeholder="Optional standard note"></td>
+    <td><input class="fcc-std-material fcc-master-control" list="fccStdMaterialList" value="${material}" placeholder="Type or select material"></td>
+    <td><input class="fcc-std-consumed-unit fcc-master-control" value="${consumedUnit}" placeholder="Ton / Kg"></td>
+    <td><input class="fcc-std-consumed fcc-master-control" type="number" step="any" value="${totalConsumed}" placeholder="0"></td>
+    <td><input class="fcc-std-yield fcc-master-control" type="number" step="any" value="${yieldValue}" placeholder="0"></td>
+    <td class="fcc-std-expected">0.000</td>
+    <td><input class="fcc-std-production-unit fcc-master-control" value="${productionUnit}" placeholder="Ton"></td>
     <td><button class="fcc-btn fcc-std-delete-row" type="button">Delete</button></td>`;
   body.appendChild(tr);
-
   tr.querySelector('.fcc-std-delete-row').onclick=()=>{tr.remove();renumberStdRows()};
-  tr.querySelector('.fcc-std-type').onchange=e=>{
-    const unit=tr.querySelector('.fcc-std-unit');
-    if(e.target.value==='Yield %')unit.value='%';
-    else if(e.target.value==='Output per Input Unit' && (!unit.value || unit.value==='%'))unit.value='Output / Input';
-    else if(e.target.value==='Consumption per Output Unit' && (!unit.value || unit.value==='%'))unit.value='Input / Output';
-  };
-  renumberStdRows()
+  tr.querySelector('.fcc-std-consumed').oninput=()=>calcStdRow(tr);
+  tr.querySelector('.fcc-std-yield').oninput=()=>calcStdRow(tr);
+  tr.querySelector('.fcc-std-production-unit').oninput=e=>e.target.dataset.touched='1';
+  calcStdRow(tr); renumberStdRows(); updateStdExpectedHeader();
 }
 function renumberStdRows(){
   document.querySelectorAll('#fccStdMaterialsBody tr').forEach((tr,i)=>tr.querySelector('.fcc-std-sr').textContent=i+1)
@@ -11263,10 +11280,14 @@ function renumberStdRows(){
 function collectStdMaterials(){
   return [...document.querySelectorAll('#fccStdMaterialsBody tr')].map(tr=>({
     inputMaterial:ft(tr.querySelector('.fcc-std-material').value),
-    standardType:ft(tr.querySelector('.fcc-std-type').value),
-    value:fn(tr.querySelector('.fcc-std-value').value),
-    unit:ft(tr.querySelector('.fcc-std-unit').value),
-    notes:ft(tr.querySelector('.fcc-std-notes').value)
+    consumedUnit:ft(tr.querySelector('.fcc-std-consumed-unit').value),
+    totalConsumed:fn(tr.querySelector('.fcc-std-consumed').value),
+    standardType:'Yield %',
+    yieldPercent:fn(tr.querySelector('.fcc-std-yield').value),
+    value:fn(tr.querySelector('.fcc-std-yield').value),
+    unit:'%',
+    expectedOutput:fn(tr.querySelector('.fcc-std-expected').textContent),
+    productionUnit:ft(tr.querySelector('.fcc-std-production-unit').value)
   })).filter(x=>x.inputMaterial)
 }
 function clearStandardSetup(){
@@ -11277,6 +11298,7 @@ function clearStandardSetup(){
   f$('#fccStdOutputUnit').value='';
   f$('#fccStdEffective').value='';
   f$('#fccStdStatus').value='Active';
+  updateStdExpectedHeader();
   f$('#fccStdMaterialsBody').innerHTML='';
   addStdMaterialRow();
   f$('#fccSaveStandard').textContent='Save Department Standard';
@@ -11295,7 +11317,7 @@ function renderStandards(){
     <td>${x.process||'—'}</td>
     <td><b>${x.output||'—'}</b>${x.outputUnit?` <span class="fcc-badge">${x.outputUnit}</span>`:''}</td>
     <td>${(x.materials||[]).length}</td>
-    <td>${(x.materials||[]).map(m=>`${m.inputMaterial}: ${m.standardType} = ${m.value} ${m.unit||''}`).join(', ')||'—'}</td>
+    <td>${(x.materials||[]).map(m=>`${m.inputMaterial}: ${m.totalConsumed||0} ${m.consumedUnit||''} × ${m.yieldPercent??m.value??0}% = ${m.expectedOutput??((fn(m.totalConsumed)*fn(m.yieldPercent??m.value))/100).toFixed(3)} ${m.productionUnit||x.outputUnit||''}`).join(', ')||'—'}</td>
     <td>${x.effectiveDate||'—'}</td>
     <td>${x.status||'Active'}</td>
     <td><div class="chem-actions">
@@ -11344,6 +11366,7 @@ function editStandardSetup(id){
   f$('#fccStdProcess').value=x.process||'';
   f$('#fccStdOutput').value=x.output||'';
   f$('#fccStdOutputUnit').value=x.outputUnit||'';
+  updateStdExpectedHeader();
   f$('#fccStdEffective').value=x.effectiveDate||'';
   f$('#fccStdStatus').value=x.status||'Active';
   f$('#fccStdMaterialsBody').innerHTML='';
@@ -11510,15 +11533,17 @@ function build(){
         <button class="fcc-btn dark" id="fccAddStdMaterial">+ Add Material</button>
       </div>
 
+      <datalist id="fccStdMaterialList">${stdMaterialNames().map(x=>`<option value="${x}"></option>`).join('')}</datalist>
       <div class="fcc-table-wrap">
         <table class="fcc-table fcc-std-table">
           <thead><tr>
             <th>#</th>
-            <th>Input Material</th>
-            <th>Standard Type</th>
-            <th>Standard Value</th>
-            <th>Unit</th>
-            <th>Notes</th>
+            <th>Material</th>
+            <th>Unit Consumed</th>
+            <th>Total Consumed</th>
+            <th>Yield %</th>
+            <th id="fccStdExpectedHead">Expected Production</th>
+            <th>Unit Production</th>
             <th>Action</th>
           </tr></thead>
           <tbody id="fccStdMaterialsBody"></tbody>
@@ -11596,6 +11621,8 @@ function build(){
   f$('#fccAddStdMaterial').onclick=()=>addStdMaterialRow();
   f$('#fccStdClear').onclick=clearStandardSetup;
   f$('#fccStdCancelEdit').onclick=clearStandardSetup;
+  f$('#fccStdOutput').oninput=updateStdExpectedHeader;
+  f$('#fccStdOutputUnit').oninput=()=>document.querySelectorAll('#fccStdMaterialsBody tr').forEach(tr=>{const u=tr.querySelector('.fcc-std-production-unit');if(u&&!u.dataset.touched)u.value=f$('#fccStdOutputUnit').value});
   f$('#fccSaveMapping').onclick=saveMapping;
   f$('#fccCloseView').onclick=closeView;
   f$('#fccPageController').onclick=openTitleController;
