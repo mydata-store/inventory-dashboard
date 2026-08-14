@@ -11771,4 +11771,263 @@ window.ERPFormulaControl={open,refresh:renderAll,formulas};
 })();
 </script>
 
+
+<style id="productionConsumptionDashboardV1480Style">
+#panel-production-consumption{display:none}
+#panel-production-consumption.active{display:block}
+.pc-nav-cards{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+.pc-nav-card{
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--text);
+  border-radius:13px;
+  padding:16px 18px;
+  text-align:left;
+  cursor:pointer;
+  transition:.18s ease;
+  box-shadow:0 3px 12px rgba(0,0,0,.05);
+}
+.pc-nav-card:hover{
+  transform:translateY(-1px);
+  border-color:var(--primary);
+  box-shadow:0 6px 16px rgba(0,0,0,.08);
+}
+.pc-nav-card strong{display:block;font-size:14px;margin-bottom:5px}
+.pc-nav-card span{font-size:9px;color:var(--muted);line-height:1.45}
+.pc-nav-icon{
+  width:36px;height:36px;border-radius:10px;
+  display:grid;place-items:center;
+  background:color-mix(in srgb,var(--primary) 10%,var(--surface));
+  margin-bottom:10px;font-size:18px;
+}
+.pc-dashboard-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+.pc-period-panel{
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  overflow:hidden;
+}
+.pc-period-head{
+  padding:13px 15px;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb,var(--bg) 70%,var(--surface));
+}
+.pc-period-head strong{display:block;font-size:13px}
+.pc-period-head span{display:block;font-size:9px;color:var(--muted);margin-top:3px}
+.pc-metric-list{padding:8px 14px 12px}
+.pc-metric{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  padding:11px 0;
+  border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent);
+}
+.pc-metric:last-child{border-bottom:0}
+.pc-metric small{
+  font-size:8px;
+  font-weight:900;
+  color:var(--muted);
+  text-transform:uppercase;
+}
+.pc-metric strong{font-size:13px;text-align:right}
+.pc-dashboard-note{
+  margin-top:14px;
+  padding:10px 12px;
+  border-left:4px solid #f0aa00;
+  background:#fff7d8;
+  border-radius:9px;
+  font-size:9px;
+  line-height:1.5;
+}
+@media(max-width:1100px){
+  .pc-dashboard-grid,.pc-nav-cards{grid-template-columns:1fr}
+}
+</style>
+
+<script id="productionConsumptionDashboardV1480Script">
+(()=>{
+const PC_LAST_PAGE_KEY='erpProductionConsumptionPageV1';
+const pc$=s=>document.querySelector(s);
+const pcNum=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0};
+const pcMoney=v=>'PKR '+pcNum(v).toLocaleString(undefined,{maximumFractionDigits:2});
+
+function pcDateLabel(type){
+  const d=new Date();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(type==='today')return `${String(d.getDate()).padStart(2,'0')}-${months[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+  if(type==='month')return `${months[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+  const p=new Date(d.getFullYear(),d.getMonth()-1,1);
+  return `${months[p.getMonth()]}-${String(p.getFullYear()).slice(-2)}`
+}
+function pcMetricHtml(label,id,suffix=''){
+  return `<div class="pc-metric"><small>${label}</small><strong id="${id}">0${suffix}</strong></div>`
+}
+function pcBuild(){
+  if(pc$('#panel-production-consumption'))return;
+  const host=document.querySelector('main.content');if(!host)return;
+  const sec=document.createElement('section');
+  sec.className='panel purchase-page';
+  sec.id='panel-production-consumption';
+  sec.innerHTML=`<div class="card">
+    <div class="inv-page-head">
+      <div>
+        <h2>Production & Consumption</h2>
+        <p>Daily operations, production, electricity, ash, steam and cost overview.</p>
+      </div>
+      <button class="btn purchase-controller-btn" type="button">⚙ Page Controller</button>
+    </div>
+
+    <div class="pc-nav-cards">
+      <button class="pc-nav-card" type="button" data-pc-page="daily">
+        <div class="pc-nav-icon">▤</div>
+        <strong>Daily Data Entry</strong>
+        <span>Enter daily production, electricity, steam, materials and operating data.</span>
+      </button>
+      <button class="pc-nav-card" type="button" data-pc-page="month">
+        <div class="pc-nav-icon">▦</div>
+        <strong>Month Summary</strong>
+        <span>Open monthly production, energy, ash, steam and cost analysis.</span>
+      </button>
+      <button class="pc-nav-card" type="button" data-pc-page="year">
+        <div class="pc-nav-icon">▥</div>
+        <strong>Year Summary</strong>
+        <span>Open yearly totals, monthly comparison and annual performance.</span>
+      </button>
+    </div>
+
+    <div class="pc-dashboard-grid">
+      <div class="pc-period-panel">
+        <div class="pc-period-head">
+          <strong>Today's Production</strong>
+          <span id="pcTodayLabel">${pcDateLabel('today')}</span>
+        </div>
+        <div class="pc-metric-list">
+          ${pcMetricHtml('Production','pcTodayProduction')}
+          ${pcMetricHtml('Total Electricity','pcTodayElectricity')}
+          ${pcMetricHtml('Ash Average','pcTodayAsh','%')}
+          ${pcMetricHtml('Steam Production','pcTodaySteam')}
+          ${pcMetricHtml('Cost / Day','pcTodayCost')}
+        </div>
+      </div>
+
+      <div class="pc-period-panel">
+        <div class="pc-period-head">
+          <strong>Current Month</strong>
+          <span id="pcMonthLabel">${pcDateLabel('month')}</span>
+        </div>
+        <div class="pc-metric-list">
+          ${pcMetricHtml('Month Production','pcMonthProduction')}
+          ${pcMetricHtml('Total Electricity','pcMonthElectricity')}
+          ${pcMetricHtml('Ash Average','pcMonthAsh','%')}
+          ${pcMetricHtml('Steam Production','pcMonthSteam')}
+          ${pcMetricHtml('Month Cost','pcMonthCost')}
+        </div>
+      </div>
+
+      <div class="pc-period-panel">
+        <div class="pc-period-head">
+          <strong>Previous Month</strong>
+          <span id="pcPrevMonthLabel">${pcDateLabel('prev')}</span>
+        </div>
+        <div class="pc-metric-list">
+          ${pcMetricHtml('Previous Month Production','pcPrevProduction')}
+          ${pcMetricHtml('Total Electricity','pcPrevElectricity')}
+          ${pcMetricHtml('Ash Average','pcPrevAsh','%')}
+          ${pcMetricHtml('Steam Production','pcPrevSteam')}
+          ${pcMetricHtml('Previous Month Cost','pcPrevCost')}
+        </div>
+      </div>
+    </div>
+
+    <div class="pc-dashboard-note">
+      This dashboard is the main Production & Consumption home page. Daily Data Entry, Month Summary and Year Summary will open as separate pages when we build them next.
+    </div>
+  </div>`;
+  host.appendChild(sec);
+
+  sec.querySelectorAll('[data-pc-page]').forEach(b=>b.onclick=()=>{
+    const page=b.dataset.pcPage;
+    try{localStorage.setItem(PC_LAST_PAGE_KEY,page)}catch(e){}
+    if(page==='daily')toast('Daily Data Entry page will be built next');
+    else if(page==='month')toast('Month Summary page will be built after Daily Data Entry');
+    else toast('Year Summary page will be built after Month Summary')
+  })
+}
+function pcRefresh(){
+  if(!pc$('#panel-production-consumption'))return;
+  pc$('#pcTodayLabel').textContent=pcDateLabel('today');
+  pc$('#pcMonthLabel').textContent=pcDateLabel('month');
+  pc$('#pcPrevMonthLabel').textContent=pcDateLabel('prev');
+
+  // Dashboard values remain zero until Daily Data Entry / summaries are created.
+  // These IDs are deliberately stable so the next pages can feed them directly.
+  ['pcTodayProduction','pcTodayElectricity','pcTodayAsh','pcTodaySteam',
+   'pcMonthProduction','pcMonthElectricity','pcMonthAsh','pcMonthSteam',
+   'pcPrevProduction','pcPrevElectricity','pcPrevAsh','pcPrevSteam'].forEach(id=>{
+     const el=pc$('#'+id);if(el&&!el.dataset.boundValue)el.textContent=el.textContent||'0'
+  });
+  ['pcTodayCost','pcMonthCost','pcPrevCost'].forEach(id=>{
+    const el=pc$('#'+id);if(el&&!el.dataset.boundValue)el.textContent='PKR 0'
+  })
+}
+function pcOpen(){
+  pcBuild();
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  pc$('#panel-production-consumption').classList.add('active');
+  document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('[data-production-consumption-open]').forEach(x=>x.classList.add('active'));
+  ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
+  if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Production & Consumption';
+  if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Daily Operations • Month Summary • Year Summary';
+  try{
+    localStorage.setItem('erpStudioLastPanel','production-consumption');
+    localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'production-consumption')
+  }catch(e){}
+  pcRefresh()
+}
+function pcNav(){
+  const menu=document.getElementById('sideMenu')||document.querySelector('.side-menu');if(!menu)return;
+  let b=menu.querySelector('[data-production-consumption-open]');
+  if(!b){
+    b=document.createElement('button');
+    b.type='button';
+    b.className='side-item';
+    b.setAttribute('data-production-consumption-open','1');
+    b.innerHTML='<span class="side-icon">▧</span><span>Production & Consumption</span>';
+
+    const cost=menu.querySelector('[data-costing-open]');
+    const formula=menu.querySelector('[data-formula-control-open]');
+    const gate=document.getElementById('gatePassGroup');
+
+    if(cost&&cost.nextSibling)menu.insertBefore(b,cost.nextSibling);
+    else if(formula)menu.insertBefore(b,formula);
+    else if(gate)menu.insertBefore(b,gate);
+    else menu.appendChild(b)
+  }
+  b.onclick=e=>{e.preventDefault();e.stopPropagation();pcOpen()}
+}
+function pcStartup(){
+  try{
+    pcBuild();pcNav();
+    let last='';try{last=localStorage.getItem('erpStudioLastPanel')||''}catch(e){}
+    if(last==='production-consumption')setTimeout(pcOpen,120)
+  }catch(e){console.error('Production & Consumption dashboard startup error',e)}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',pcStartup);
+else pcStartup();
+
+window.ERPProductionConsumption={open:pcOpen,refresh:pcRefresh};
+})();
+</script>
+
 </body></html>
