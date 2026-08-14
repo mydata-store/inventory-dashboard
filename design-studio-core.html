@@ -12463,9 +12463,46 @@ function openPage(){
   renderHistory();
   recalc()
 }
+
+function bindEnterNavigation(){
+  const panel=$d('#panel-daily-data-entry');
+  if(!panel || panel.dataset.enterNavBound==='1')return;
+  panel.dataset.enterNavBound='1';
+
+  panel.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+
+    const target=e.target;
+    if(!target.matches('input,select,textarea'))return;
+    if(target.tagName==='TEXTAREA' && e.shiftKey)return;
+
+    e.preventDefault();
+
+    const fields=[...panel.querySelectorAll('input,select,textarea')]
+      .filter(el=>{
+        if(el.type==='hidden')return false;
+        if(el.disabled || el.readOnly)return false;
+        const st=getComputedStyle(el);
+        return st.display!=='none' && st.visibility!=='hidden' && el.offsetParent!==null;
+      });
+
+    const i=fields.indexOf(target);
+    if(i<0)return;
+
+    const next=fields[i+1];
+    if(next){
+      next.focus();
+      if(typeof next.select==='function' && next.tagName==='INPUT')next.select();
+    }else{
+      $d('#ddeSaveBtn')?.focus();
+    }
+  });
+}
+
 function init(){
   loadUnitNames();
   bindDate();
+  bindEnterNavigation();
   ['ddeProd1','ddeProd2','ddeProd3','ddeAsh1','ddeAsh2','ddeAsh3','ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
   [1,2,3].forEach(i=>$d('#ddeUnitName'+i)?.addEventListener('change',saveUnitNames));
