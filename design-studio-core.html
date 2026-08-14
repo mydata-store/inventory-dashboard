@@ -10964,6 +10964,7 @@ body.erp-hide-theme-actions #saveBtn{
 }
 </style>
 
+<style id="dailyProductionConsumptionV1477Style">#panel-formula-control-center .dpc-table th,#panel-formula-control-center .dpc-history-table th{white-space:nowrap}#panel-formula-control-center .dpc-table td{vertical-align:middle;white-space:nowrap}#panel-formula-control-center .dpc-table .fcc-master-control{min-width:125px}#panel-formula-control-center .dpc-summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:12px}#panel-formula-control-center .dpc-summary-grid>div{border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface)}#panel-formula-control-center .dpc-summary-grid small{display:block;color:var(--muted);text-transform:uppercase;font-size:8px;font-weight:800;margin-bottom:5px}#panel-formula-control-center .dpc-summary-grid strong{font-size:15px}#panel-formula-control-center .dpc-status{display:inline-block;border-radius:999px;padding:4px 8px;font-size:8px;font-weight:900;white-space:nowrap}#panel-formula-control-center .dpc-under{background:#fee2e2;color:#991b1b}#panel-formula-control-center .dpc-on{background:#dcfce7;color:#166534}#panel-formula-control-center .dpc-above{background:#dbeafe;color:#1d4ed8}@media(max-width:1200px){#panel-formula-control-center .dpc-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
 <style id="formulaControlTitleV1468Style">
 .fcc-title-controller{
   position:fixed; inset:0; z-index:10050; background:rgba(0,0,0,.42);
@@ -11426,29 +11427,23 @@ function deleteStandardSetup(id){
   renderStandards();
   toast('Department standard deleted')
 }
-function renderAsh(){
-  const rows=[];
-  stdSetups().forEach(setup=>{
-    (setup.materials||[]).forEach(m=>{
-      if(/ash|filler|pulp/i.test(`${setup.output} ${m.inputMaterial} ${m.standardType}`)){
-        rows.push({
-          department:setup.department,
-          process:setup.process,
-          output:setup.output,
-          material:m.inputMaterial,
-          value:m.value,
-          unit:m.unit,
-          type:m.standardType
-        })
-      }
-    })
-  });
-  const body=f$('#fccAshBody');if(!body)return;
-  body.innerHTML=rows.length?rows.map(x=>`<tr>
-    <td>${x.department}</td><td>${x.process}</td><td>${x.output}</td><td>${x.material}</td>
-    <td>${x.type}</td><td>${x.value}</td><td>${x.unit}</td>
-  </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:25px">Pulp / filler / ash-related department standards will appear here automatically.</td></tr>'
-}
+function dpcRecords(){const rows=load('erpDailyProductionConsumptionV1');return Array.isArray(rows)?rows:[]}
+function saveDpcRecords(rows){save('erpDailyProductionConsumptionV1',rows)}
+function dpcSetupOptions(){return stdSetups().filter(x=>(x.status||'Active')==='Active').slice().sort((a,b)=>ft(a.department).localeCompare(ft(b.department))||ft(a.process).localeCompare(ft(b.process)))}
+function renderDpcSetupOptions(){const sel=f$('#fccDpcSetup');if(!sel)return;const current=sel.value;const rows=dpcSetupOptions();sel.innerHTML='<option value="">Select department / process</option>'+rows.map(x=>`<option value="${x.id}">${x.department} — ${x.process} — ${x.output}</option>`).join('');if(rows.some(x=>x.id===current))sel.value=current}
+function dpcSelectedSetup(){return dpcSetupOptions().find(x=>x.id===f$('#fccDpcSetup').value)}
+function dpcExpectedFromStandard(consumed,material){const val=fn(material.value),type=ft(material.standardType||'Yield %');if(type==='Yield %')return consumed*val/100;if(type==='Output per Input Unit')return consumed*val;if(type==='Consumption per Output Unit')return val?consumed/val:0;if(type==='Fixed Standard')return val;return 0}
+function dpcStandardRequired(actualOutput,material){const val=fn(material.value),type=ft(material.standardType||'Yield %');if(type==='Yield %')return val?actualOutput/(val/100):0;if(type==='Output per Input Unit')return val?actualOutput/val:0;if(type==='Consumption per Output Unit')return actualOutput*val;if(type==='Fixed Standard')return val;return 0}
+function dpcActualYield(actualOutput,consumed,material){if(!consumed)return 0;return ft(material.standardType||'Yield %')==='Yield %'?actualOutput/consumed*100:actualOutput/consumed}
+function dpcStatus(actualYield,material){const std=fn(material.value),eps=.000001;if(Math.abs(actualYield-std)<=eps)return 'On Standard';return actualYield<std?'Under Standard':'Above Standard'}
+function dpcStatusBadge(status){const cls=status==='On Standard'?'dpc-on':status==='Under Standard'?'dpc-under':'dpc-above';return `<span class="dpc-status ${cls}">${status}</span>`}
+function loadDpcSetup(){const setup=dpcSelectedSetup(),body=f$('#fccDpcMaterialsBody');if(!body)return;body.innerHTML='';if(!setup){['fccDpcDepartment','fccDpcProcess','fccDpcOutput','fccDpcOutputUnit'].forEach(id=>f$('#'+id).value='');renderDpcSummary();return}f$('#fccDpcDepartment').value=setup.department||'';f$('#fccDpcProcess').value=setup.process||'';f$('#fccDpcOutput').value=setup.output||'';f$('#fccDpcOutputUnit').value=setup.outputUnit||'Ton';(setup.materials||[]).forEach((mat,i)=>{const tr=document.createElement('tr');tr.dataset.index=i;tr.innerHTML=`<td>${i+1}</td><td><b>${mat.inputMaterial||'—'}</b></td><td>${mat.unitConsumed||mat.unit||'Ton'}</td><td><input class="dpc-consumed fcc-master-control" type="number" step="any" placeholder="0"></td><td><input class="dpc-actual-output fcc-master-control" type="number" step="any" placeholder="0"></td><td class="dpc-actual-yield">0.00</td><td class="dpc-standard">${fn(mat.value).toFixed(2)}${(mat.standardType||'Yield %')==='Yield %'?'%':''}</td><td class="dpc-expected">0.000</td><td class="dpc-output-diff">0.000</td><td class="dpc-standard-required">0.000</td><td class="dpc-material-variance">0.000</td><td class="dpc-row-status">${dpcStatusBadge('On Standard')}</td>`;body.appendChild(tr);tr.querySelector('.dpc-consumed').oninput=recalcDpc;tr.querySelector('.dpc-actual-output').oninput=recalcDpc});recalcDpc()}
+function recalcDpc(){const setup=dpcSelectedSetup();if(!setup)return renderDpcSummary();let tc=0,te=0,ta=0,tod=0,tsr=0,tmv=0;[...document.querySelectorAll('#fccDpcMaterialsBody tr')].forEach(tr=>{const mat=(setup.materials||[])[Number(tr.dataset.index||0)]||{},consumed=fn(tr.querySelector('.dpc-consumed').value),actual=fn(tr.querySelector('.dpc-actual-output').value),ay=dpcActualYield(actual,consumed,mat),expected=dpcExpectedFromStandard(consumed,mat),od=actual-expected,sr=dpcStandardRequired(actual,mat),mv=consumed-sr,status=dpcStatus(ay,mat);tr.querySelector('.dpc-actual-yield').textContent=(mat.standardType||'Yield %')==='Yield %'?ay.toFixed(2)+'%':ay.toFixed(3);tr.querySelector('.dpc-expected').textContent=expected.toFixed(3);tr.querySelector('.dpc-output-diff').textContent=od.toFixed(3);tr.querySelector('.dpc-standard-required').textContent=sr.toFixed(3);tr.querySelector('.dpc-material-variance').textContent=mv.toFixed(3);tr.querySelector('.dpc-row-status').innerHTML=dpcStatusBadge(status);tc+=consumed;te+=expected;ta+=actual;tod+=od;tsr+=sr;tmv+=mv});f$('#fccDpcTotalConsumed').textContent=tc.toFixed(3);f$('#fccDpcExpectedOutput').textContent=te.toFixed(3);f$('#fccDpcActualOutput').textContent=ta.toFixed(3);f$('#fccDpcOutputVariance').textContent=tod.toFixed(3);f$('#fccDpcStandardRequired').textContent=tsr.toFixed(3);f$('#fccDpcMaterialVariance').textContent=tmv.toFixed(3)}
+function renderDpcSummary(){['fccDpcTotalConsumed','fccDpcExpectedOutput','fccDpcActualOutput','fccDpcOutputVariance','fccDpcStandardRequired','fccDpcMaterialVariance'].forEach(id=>{const el=f$('#'+id);if(el)el.textContent='0.000'})}
+function saveDpcEntry(){const setup=dpcSelectedSetup();if(!setup)return toast('Select department / process');const date=fccFormatTypedDate(f$('#fccDpcDate').value);if(!date)return toast('Date is required');const rows=[];[...document.querySelectorAll('#fccDpcMaterialsBody tr')].forEach(tr=>{const mat=(setup.materials||[])[Number(tr.dataset.index||0)]||{},consumed=fn(tr.querySelector('.dpc-consumed').value),actual=fn(tr.querySelector('.dpc-actual-output').value);if(!consumed&&!actual)return;const ay=dpcActualYield(actual,consumed,mat),expected=dpcExpectedFromStandard(consumed,mat),sr=dpcStandardRequired(actual,mat);rows.push({material:mat.inputMaterial||'',unitConsumed:mat.unitConsumed||mat.unit||'Ton',consumed,actualOutput:actual,actualYield:ay,standardType:mat.standardType||'Yield %',standardValue:fn(mat.value),expectedOutput:expected,outputDifference:actual-expected,standardMaterialRequired:sr,materialVariance:consumed-sr,status:dpcStatus(ay,mat)})});if(!rows.length)return toast('Enter daily consumption / production');const all=dpcRecords();all.unshift({id:'DPC-'+Date.now(),date,setupId:setup.id,department:setup.department,process:setup.process,output:setup.output,outputUnit:setup.outputUnit||'Ton',rows,createdAt:new Date().toISOString()});saveDpcRecords(all);renderDpcHistory();toast('Daily production & consumption saved')}
+function clearDpcEntry(){f$('#fccDpcDate').value='';f$('#fccDpcSetup').value='';loadDpcSetup()}
+function renderDpcHistory(){const body=f$('#fccDpcHistoryBody');if(!body)return;let q=ft(f$('#fccDpcSearch')?.value).toLowerCase(),rows=dpcRecords().slice();if(q)rows=rows.filter(r=>[r.date,r.department,r.process,r.output,...(r.rows||[]).flatMap(x=>[x.material,x.status])].join(' ').toLowerCase().includes(q));const flat=[];rows.forEach(r=>(r.rows||[]).forEach(x=>flat.push({...x,date:r.date,department:r.department,process:r.process,output:r.output,outputUnit:r.outputUnit})));body.innerHTML=flat.length?flat.map(x=>`<tr><td>${x.date}</td><td>${x.department}</td><td>${x.process}</td><td>${x.material}</td><td>${Number(x.consumed||0).toFixed(3)}</td><td>${Number(x.actualOutput||0).toFixed(3)}</td><td>${Number(x.actualYield||0).toFixed(2)}${x.standardType==='Yield %'?'%':''}</td><td>${Number(x.standardValue||0).toFixed(2)}${x.standardType==='Yield %'?'%':''}</td><td>${Number(x.expectedOutput||0).toFixed(3)}</td><td>${Number(x.outputDifference||0).toFixed(3)}</td><td>${Number(x.standardMaterialRequired||0).toFixed(3)}</td><td>${Number(x.materialVariance||0).toFixed(3)}</td><td>${dpcStatusBadge(x.status||'On Standard')}</td></tr>`).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px">No daily production & consumption records saved yet.</td></tr>'}
+function renderAsh(){renderDpcSetupOptions();renderDpcHistory()}
 function renderVersions(){
   const rows=versions().slice().reverse();
   f$('#fccVersionsBody').innerHTML=rows.length?rows.map(x=>`<tr><td>${x.no}</td><td>${x.name}</td><td>v${x.version}</td><td><div class="fcc-formula-box">${x.formula}</div></td><td>${x.unit}</td><td>${new Date(x.savedAt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:25px">No previous versions yet.</td></tr>'
@@ -11472,7 +11467,7 @@ function build(){
   const host=document.querySelector('main.content');if(!host)return;
   const sec=document.createElement('section');sec.className='panel purchase-page';sec.id='panel-formula-control-center';
   sec.innerHTML=`<div class="fcc-topbar">
-    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Ash Reporting</button><button class="fcc-tab" data-fcctab="versions">Version History</button></div><div style="display:flex;gap:8px">
+    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Daily Production & Consumption</button><button class="fcc-tab" data-fcctab="versions">Version History</button></div><div style="display:flex;gap:8px">
       <button class="fcc-btn" id="fccPageController">⚙ Page Controller</button>
       <button class="fcc-btn dark" data-fcctab="mapping">Cost Group Mapping</button>
     </div></div>
@@ -11619,8 +11614,15 @@ function build(){
       </div>
     </div>
    </div>
-   <div class="fcc-section" data-fccsection="ash"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Department</th><th>Process</th><th>Output</th><th>Material</th><th>Standard Type</th><th>Value</th><th>Unit</th></tr></thead><tbody id="fccAshBody"></tbody></table></div></div>
-   <div class="fcc-section" data-fccsection="versions"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>No.</th><th>Formula</th><th>Version</th><th>Previous Formula</th><th>Unit</th><th>Saved At</th></tr></thead><tbody id="fccVersionsBody"></tbody></table></div></div>
+   <div class="fcc-section" data-fccsection="ash">
+<div class="fcc-card" style="margin-bottom:14px"><div class="fcc-toolbar"><div><h3 style="margin:0">Daily Production & Consumption</h3><div style="font-size:10px;color:var(--muted);margin-top:4px">Enter actual material consumed and actual output achieved. Saved department standards are loaded automatically.</div></div></div>
+<div class="fcc-grid"><div><label>Date *</label><input id="fccDpcDate" class="fcc-master-control" placeholder="Date"></div><div class="fcc-span-2"><label>Department / Process *</label><select id="fccDpcSetup" class="fcc-master-control"><option value="">Select department / process</option></select></div><div><label>Department</label><input id="fccDpcDepartment" class="fcc-master-control" readonly></div><div><label>Production Process</label><input id="fccDpcProcess" class="fcc-master-control" readonly></div><div><label>Output Product</label><input id="fccDpcOutput" class="fcc-master-control" readonly></div><div><label>Unit Production</label><input id="fccDpcOutputUnit" class="fcc-master-control" readonly></div></div>
+<div class="fcc-table-wrap" style="margin-top:14px"><table class="fcc-table dpc-table"><thead><tr><th>#</th><th>Material</th><th>Unit</th><th>Material Consumed</th><th>Actual Output</th><th>Actual Yield</th><th>Standard Yield</th><th>Expected Output</th><th>Production Difference</th><th>Standard Material Required</th><th>Extra / Saved Material</th><th>Status</th></tr></thead><tbody id="fccDpcMaterialsBody"><tr><td colspan="12" style="text-align:center;padding:24px">Select a department / process to load its approved materials and standards.</td></tr></tbody></table></div>
+<div class="dpc-summary-grid"><div><small>Total Material Consumed</small><strong id="fccDpcTotalConsumed">0.000</strong></div><div><small>Expected Output</small><strong id="fccDpcExpectedOutput">0.000</strong></div><div><small>Actual Output</small><strong id="fccDpcActualOutput">0.000</strong></div><div><small>Production Variance</small><strong id="fccDpcOutputVariance">0.000</strong></div><div><small>Standard Material Required</small><strong id="fccDpcStandardRequired">0.000</strong></div><div><small>Extra / Saved Material</small><strong id="fccDpcMaterialVariance">0.000</strong></div></div>
+<div class="fcc-std-rule-note" style="margin-top:12px"><b>Working rule:</b> Actual Yield = Actual Output ÷ Material Consumed. Expected Output = Material Consumed × Standard Yield %. Standard Material Required = Actual Output ÷ Standard Yield %. Status compares Actual Yield with Standard Yield.</div>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="fcc-btn" id="fccDpcClear">Clear</button><button class="fcc-btn dark" id="fccDpcSave">Save Daily Record</button></div></div>
+<div class="fcc-card"><div class="fcc-toolbar"><div><h3 style="margin:0">Daily Production & Consumption History</h3><div style="font-size:10px;color:var(--muted);margin-top:4px">Search by date, department, process, material or status.</div></div><input id="fccDpcSearch" class="fcc-master-control" style="max-width:330px" placeholder="Search history..."></div><div class="fcc-table-wrap"><table class="fcc-table dpc-history-table"><thead><tr><th>Date</th><th>Department</th><th>Process</th><th>Material</th><th>Consumed</th><th>Actual Output</th><th>Actual Yield</th><th>Standard</th><th>Expected Output</th><th>Output Difference</th><th>Standard Material Required</th><th>Extra / Saved Material</th><th>Status</th></tr></thead><tbody id="fccDpcHistoryBody"></tbody></table></div></div>
+</div><div class="fcc-section" data-fccsection="versions"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>No.</th><th>Formula</th><th>Version</th><th>Previous Formula</th><th>Unit</th><th>Saved At</th></tr></thead><tbody id="fccVersionsBody"></tbody></table></div></div>
    <div class="fcc-section" data-fccsection="mapping"><div class="fcc-grid"><div class="fcc-span-2"><label>Formula</label><select id="fccMapFormula"></select></div><div><label>Cost Group</label><input id="fccMapGroup" placeholder="e.g. Raw Material / Production"></div><div><label>Department</label><input id="fccMapDepartment"></div><div class="fcc-span-2"><label>Report / Use</label><input id="fccMapReport" placeholder="e.g. Daily Costing / Ash Report"></div></div><button class="fcc-btn dark" id="fccSaveMapping" style="margin:10px 0">Save Mapping</button><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Formula</th><th>Cost Group</th><th>Department</th><th>Report / Use</th><th>Action</th></tr></thead><tbody id="fccMappingBody"></tbody></table></div></div>
   </div>
   
@@ -11660,6 +11662,11 @@ function build(){
   f$('#fccAddStdMaterial').onclick=()=>addStdMaterialRow();
   f$('#fccStdClear').onclick=clearStandardSetup;
   f$('#fccStdCancelEdit').onclick=clearStandardSetup;
+  bindFccTypedDate(f$('#fccDpcDate'));
+  f$('#fccDpcSetup').onchange=loadDpcSetup;
+  f$('#fccDpcSave').onclick=saveDpcEntry;
+  f$('#fccDpcClear').onclick=clearDpcEntry;
+  f$('#fccDpcSearch').oninput=renderDpcHistory;
   bindFccTypedDate(f$('#fccStdEffective'));
   f$('#fccStdOutput').oninput=updateStdExpectedHeader;
   f$('#fccStdOutputUnit').oninput=()=>document.querySelectorAll('#fccStdMaterialsBody tr').forEach(tr=>{const u=tr.querySelector('.fcc-std-production-unit');if(u&&!u.dataset.touched)u.value=f$('#fccStdOutputUnit').value});
@@ -11671,6 +11678,7 @@ function build(){
   f$('#fccTitleReset').onclick=resetTitleController;
   clearEditor();
   clearStandardSetup();
+  renderAsh();
   calculateAll()
 }
 function renderAll(){
