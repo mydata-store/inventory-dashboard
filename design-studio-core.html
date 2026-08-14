@@ -1532,7 +1532,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .ogp-entry-table input:focus{box-shadow:inset 0 0 0 2px var(--primary)}
 .ogp-entry-table .purchase-auto-wrap{height:100%}
 .ogp-entry-table .purchase-auto-list{z-index:15000}
-/* V14.53: OGP item suggestions escape the horizontally scrollable table wrapper */
+/* V14.54: OGP item suggestions escape the horizontally scrollable table wrapper */
 .ogp-entry-table .purchase-auto-list.ogp-fixed-list{position:fixed!important;left:auto;right:auto;top:auto;min-width:280px;max-width:min(520px,calc(100vw - 24px));z-index:2147483000}
 .ogp-entry-table td:nth-child(1){width:42px;text-align:center}
 .ogp-entry-table td:nth-child(2){min-width:250px}
@@ -1553,7 +1553,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 @media(max-width:650px){.ogp-entry-header-grid{grid-template-columns:1fr}.ogp-entry-footer{flex-wrap:wrap}.ogp-entry-footer-actions{margin-left:0}}
 
 
-/* V14.53 OGP Detail */
+/* V14.54 OGP Detail */
 .ogp-detail-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}
 .ogp-detail-title-row h3{margin:0;font-size:14px}.ogp-detail-title-row p{margin:4px 0 0;color:var(--muted);font-size:9px}
 .ogp-detail-actions{display:flex;gap:7px}
@@ -1568,7 +1568,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 @media(max-width:620px){.ogp-detail-info-grid{grid-template-columns:1fr}.ogp-detail-wide{grid-column:auto}.ogp-detail-title-row{flex-direction:column}}
 
 
-/* ===== V14.53 Returnable Container Management ===== */
+/* ===== V14.54 Returnable Container Management ===== */
 .container-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
 .container-kpi{border:1px solid var(--border);border-radius:11px;background:var(--surface);padding:12px}
 .container-kpi small{display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted)}
@@ -1593,6 +1593,18 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .container-status.ok{background:#dcfce7;color:#166534}.container-status.warn{background:#fef3c7;color:#92400e}.container-status.extra{background:#dbeafe;color:#1d4ed8}
 @media(max-width:1100px){.container-two-col{grid-template-columns:1fr}.container-kpi-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.container-kpi-grid,.container-form-grid{grid-template-columns:1fr}.container-span-2{grid-column:auto}.container-filter-row{min-width:0;width:100%;flex-direction:column}}
+
+
+/* ===== V14.54 Automated Container Ledger ===== */
+.container-auto-note{
+  margin-top:10px;padding:10px 12px;border-left:4px solid var(--primary);border-radius:8px;
+  background:color-mix(in srgb,var(--primary) 7%,var(--surface));font-size:9px;line-height:1.5
+}
+.container-setup-grid{grid-template-columns:repeat(4,minmax(150px,1fr))}
+.container-position-table{min-width:1650px}
+.container-ledger-table{min-width:1750px}
+@media(max-width:1200px){.container-setup-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.container-setup-grid{grid-template-columns:1fr}}
 
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
@@ -2074,12 +2086,13 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 
 
 
+
 <section class="panel purchase-page" id="panel-container-ledger">
   <div class="card">
     <div class="purchase-page-head">
       <div>
         <h2>Returnable Container Management</h2>
-        <p>Party-wise cylinders, drums, containers, crates and other returnable packing ledger.</p>
+        <p>Automatic party-wise cylinder, drum, crate and returnable packing control from Purchase and OGP.</p>
       </div>
       <div class="gate-top-actions">
         <button class="btn" type="button" data-panel-jump="gate-pass-dashboard">← Gate Pass Dashboard</button>
@@ -2094,133 +2107,163 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="container-kpi"><small>Extra Containers With Us</small><strong id="containerKpiExtraUs">0</strong></div>
     </div>
 
+    <div class="container-box">
+      <div class="container-box-head">
+        <div>
+          <h3>Party Container Automation Setup</h3>
+          <p>Set the opening balance once. After that Purchase adds containers IN and OGP sends containers OUT automatically.</p>
+        </div>
+        <button class="btn" type="button" id="containerSetupClearBtn">Clear</button>
+      </div>
+
+      <div class="container-auto-note">
+        <b>Automation rule:</b> Opening Qty is entered once. Purchase source item + supplier creates automatic IN.
+        OGP return item + receiver party creates automatic OUT. Manual Adjustment is only for corrections, loss, damage or opening changes.
+      </div>
+
+      <div class="container-form-grid container-setup-grid">
+        <div>
+          <label>Party / Supplier *</label>
+          <div class="purchase-auto-wrap">
+            <input id="containerSetupParty" autocomplete="off" placeholder="Type supplier / party...">
+            <div class="purchase-auto-list"></div>
+          </div>
+        </div>
+        <div>
+          <label>Product / Purchased Material *</label>
+          <div class="purchase-auto-wrap">
+            <input id="containerSetupProduct" autocomplete="off" placeholder="Oxygen Gas / Chemical / Material">
+            <div class="purchase-auto-list"></div>
+          </div>
+        </div>
+        <div>
+          <label>Returnable Container Type *</label>
+          <input id="containerSetupType" placeholder="Cylinder / Drum / Container / Crate">
+        </div>
+        <div>
+          <label>Opening Qty With Us *</label>
+          <input id="containerSetupOpeningQty" inputmode="decimal" placeholder="0">
+        </div>
+        <div>
+          <label>Unit</label>
+          <input id="containerSetupUnit" placeholder="Nos">
+        </div>
+        <div>
+          <label>OGP Return Item *</label>
+          <div class="purchase-auto-wrap">
+            <input id="containerSetupOgpItem" autocomplete="off" placeholder="Empty Oxygen Cylinder / Empty Drum">
+            <div class="purchase-auto-list"></div>
+          </div>
+        </div>
+        <div>
+          <label>Purchase Source</label>
+          <select id="containerSetupPurchaseSource">
+            <option value="ALL">All Purchase Registers</option>
+            <option value="LOCAL">Local Purchase</option>
+            <option value="ZAFAR">Zafar Purchase</option>
+            <option value="BOARD">Board Purchase</option>
+            <option value="PAPER">Paper Purchase</option>
+            <option value="BOARD3">Board III</option>
+          </select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="containerSetupStatus">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="container-span-2">
+          <label>Remarks</label>
+          <input id="containerSetupRemarks" placeholder="Optional setup remarks">
+        </div>
+      </div>
+
+      <div class="container-actions">
+        <button class="btn primary" type="button" id="containerSetupSaveBtn">Save Automation Setup</button>
+      </div>
+    </div>
+
     <div class="container-two-col">
       <div class="container-box">
         <div class="container-box-head">
-          <div><h3>Party Container Setup</h3><p>Define the normal quantity of returnable containers belonging to each party.</p></div>
-          <button class="btn" type="button" id="containerSetupClearBtn">Clear</button>
-        </div>
-        <div class="container-form-grid">
-          <div>
-            <label>Party *</label>
-            <div class="purchase-auto-wrap">
-              <input id="containerSetupParty" autocomplete="off" placeholder="Type supplier / party...">
-              <div class="purchase-auto-list"></div>
-            </div>
-          </div>
-          <div>
-            <label>Product / Material *</label>
-            <div class="purchase-auto-wrap">
-              <input id="containerSetupProduct" autocomplete="off" placeholder="Oxygen Gas, Chemical, etc.">
-              <div class="purchase-auto-list"></div>
-            </div>
-          </div>
-          <div>
-            <label>Container Type *</label>
-            <input id="containerSetupType" placeholder="Cylinder / Drum / Container">
-          </div>
-          <div>
-            <label>Normal Holding Qty *</label>
-            <input id="containerSetupNormalQty" inputmode="decimal" placeholder="0">
-          </div>
-          <div>
-            <label>Unit</label>
-            <input id="containerSetupUnit" placeholder="Nos">
-          </div>
-          <div>
-            <label>Remarks</label>
-            <input id="containerSetupRemarks" placeholder="Optional setup remarks">
+          <div><h3>Current Party Container Position</h3><p>Live balance calculated from Opening + Purchases − OGP returns ± adjustments.</p></div>
+          <div class="container-filter-row">
+            <input id="containerPositionSearch" placeholder="Search party, product or container...">
+            <button class="btn" type="button" id="containerPositionClearBtn">Clear</button>
           </div>
         </div>
-        <div class="container-actions">
-          <button class="btn primary" type="button" id="containerSetupSaveBtn">Save Setup</button>
+        <div class="gate-recent-table-wrap">
+          <table class="purchase-table container-position-table">
+            <thead><tr>
+              <th>Party</th><th>Purchased Material</th><th>Container</th><th>Opening</th>
+              <th>Purchase IN</th><th>OGP OUT</th><th>Adjustments</th><th>With Us</th>
+              <th>With Party</th><th>Extra With Us</th><th>Status</th><th>Action</th>
+            </tr></thead>
+            <tbody id="containerPositionBody"></tbody>
+          </table>
         </div>
       </div>
 
       <div class="container-box">
         <div class="container-box-head">
-          <div><h3>Container Movement Entry</h3><p>Record containers coming in or going out against IGP, OGP or a manual adjustment.</p></div>
-          <button class="btn" type="button" id="containerMoveClearBtn">Clear</button>
+          <div><h3>Manual Adjustment</h3><p>Use only for exceptional corrections, damaged/lost containers or opening reconciliation.</p></div>
+          <button class="btn" type="button" id="containerAdjustClearBtn">Clear</button>
         </div>
         <div class="container-form-grid">
           <div>
             <label>Date *</label>
-            <input id="containerMoveDate" placeholder="Date">
+            <input id="containerAdjustDate" placeholder="Date">
           </div>
           <div>
             <label>Party / Container Setup *</label>
-            <select id="containerMoveSetup"><option value="">Select setup</option></select>
+            <select id="containerAdjustSetup"><option value="">Select setup</option></select>
           </div>
           <div>
-            <label>Reference Type</label>
-            <select id="containerMoveRefType">
-              <option>IGP</option><option>OGP</option><option>RGP</option><option>Manual</option>
+            <label>Adjustment Type</label>
+            <select id="containerAdjustType">
+              <option value="IN">Add Containers With Us</option>
+              <option value="OUT">Reduce Containers With Us</option>
             </select>
           </div>
           <div>
-            <label>Pass / Reference No.</label>
-            <input id="containerMoveRefNo" placeholder="IGP / OGP / Manual Ref">
-          </div>
-          <div>
-            <label>Filled / Container In</label>
-            <input id="containerMoveFilledIn" inputmode="decimal" placeholder="0">
-          </div>
-          <div>
-            <label>Empty / Container Out</label>
-            <input id="containerMoveEmptyOut" inputmode="decimal" placeholder="0">
-          </div>
-          <div>
-            <label>Other In</label>
-            <input id="containerMoveOtherIn" inputmode="decimal" placeholder="0">
-          </div>
-          <div>
-            <label>Other Out</label>
-            <input id="containerMoveOtherOut" inputmode="decimal" placeholder="0">
+            <label>Quantity *</label>
+            <input id="containerAdjustQty" inputmode="decimal" placeholder="0">
           </div>
           <div class="container-span-2">
-            <label>Remarks</label>
-            <input id="containerMoveRemarks" placeholder="Exchange / extra pickup / adjustment / remarks">
+            <label>Reason / Remarks *</label>
+            <input id="containerAdjustRemarks" placeholder="Opening correction / lost / damaged / manual reconciliation">
           </div>
         </div>
-        <div class="container-live-position" id="containerMovePosition">Select a party/container setup to see its current position.</div>
         <div class="container-actions">
-          <button class="btn primary" type="button" id="containerMoveSaveBtn">Save Movement</button>
+          <button class="btn primary" type="button" id="containerAdjustSaveBtn">Save Adjustment</button>
         </div>
       </div>
     </div>
 
     <div class="container-box">
       <div class="container-box-head">
-        <div><h3>Party Container Position</h3><p>Current balance for every party and container type.</p></div>
-        <div class="container-filter-row">
-          <input id="containerPositionSearch" placeholder="Search party, product or container...">
-          <button class="btn" type="button" id="containerPositionClearBtn">Clear</button>
+        <div>
+          <h3>Automatic Movement Ledger</h3>
+          <p>Each line comes from its original Purchase, OGP or Manual Adjustment source.</p>
         </div>
-      </div>
-      <div class="gate-recent-table-wrap">
-        <table class="purchase-table container-position-table">
-          <thead><tr>
-            <th>Party</th><th>Product / Material</th><th>Container Type</th><th>Normal Holding</th>
-            <th>With Us</th><th>With Party</th><th>Extra With Us</th><th>Last Movement</th><th>Status</th><th>Action</th>
-          </tr></thead>
-          <tbody id="containerPositionBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="container-box">
-      <div class="container-box-head">
-        <div><h3>Movement Ledger</h3><p>Complete inward and outward history of returnable containers.</p></div>
         <div class="container-filter-row">
           <select id="containerLedgerSetup"><option value="">All Party Containers</option></select>
+          <select id="containerLedgerSource">
+            <option value="">All Sources</option>
+            <option value="OPENING">Opening</option>
+            <option value="PURCHASE">Purchase</option>
+            <option value="OGP">OGP</option>
+            <option value="ADJUSTMENT">Adjustment</option>
+          </select>
           <button class="btn" type="button" id="containerLedgerPrintBtn">Print</button>
         </div>
       </div>
       <div class="gate-recent-table-wrap">
         <table class="purchase-table container-ledger-table">
           <thead><tr>
-            <th>#</th><th>Date</th><th>Reference</th><th>Party</th><th>Product</th><th>Container</th>
-            <th>In</th><th>Out</th><th>Balance With Us</th><th>Normal Holding</th><th>Position</th><th>Remarks</th><th>Action</th>
+            <th>#</th><th>Date</th><th>Source</th><th>Reference</th><th>Party</th><th>Material</th><th>Container</th>
+            <th>IN</th><th>OUT</th><th>Balance With Us</th><th>Opening / Normal</th><th>Position</th><th>Remarks</th>
           </tr></thead>
           <tbody id="containerLedgerBody"></tbody>
         </table>
@@ -5151,7 +5194,7 @@ function localEntryReadRow(tr,index){
   const inventoryEffect=(sectionRec?.stockTreatment||'non-inventory')==='inventory'?'stock-in':'auto-issue';
   return {...purchaseRecordBase('local'),srNo:index+1,date:purchaseFmtDate(v('.lp-date')),igp:String(v('.lp-igp')).toUpperCase(),controlNo:String(v('.lp-control')).trim(),item:purchaseFormatText(v('.lp-item'),'item','Item'),size:purchaseFormatText(v('.lp-size'),'size','Size'),qty:purchaseNum(v('.lp-qty')),unit:purchaseFormatText(v('.lp-unit'),'unit','Unit'),rate:purchaseNum(v('.lp-rate')),amount:purchaseNum(v('.lp-amount')),supplier:purchaseFormatText(v('.lp-supplier'),'supplier','Supplier'),purchasedBy:purchaseFormatText(v('.lp-purchaseby'),'purchasedBy','Purchase By'),section,vehicle:String(v('.lp-vehicle')).toUpperCase(),remarks:purchaseFormatText(v('.lp-remarks'),'remarks','Remarks'),bill:'',inventoryEffect}}
 
-function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
+function localEntrySaveAll(){if(!ERPAccessControl?.canPage?.('local-purchase','add'))return toast('You do not have add permission');const trs=[...$('#localEntryBody').querySelectorAll('tr')],filled=trs.filter(localEntryIsFilled);if(!filled.length)return toast('Enter at least one purchase row');const existing=purchaseRows('local'),added=[];filled.forEach(tr=>{const rec=localEntryReadRow(tr,+tr.dataset.localRow);existing.push(rec);added.push(rec);purchaseAudit('Add',rec)});purchaseWrite('local',existing);localEntryBuild();$('#localEntryStatus').textContent=`${added.length} row${added.length===1?'':'s'} saved • 15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow`;purchaseRenderEntry();purchaseRenderHistory();purchaseRenderSupplierAnalysis();try{containerRenderAll()}catch(e){};toast(`${added.length} Local Purchase row${added.length===1?'':'s'} saved`)}
 function localEntryClear(){if(!confirm('Clear all 15 unsaved entry rows?'))return;localEntryBuild();$('#localEntryStatus').textContent='15 blank entry rows ready • Excel keys active • Ctrl+Z + Shift+Arrow'}
 function purchaseLocalCalc(){}
 function purchaseLocalSave(){localEntrySaveAll()}
@@ -6682,7 +6725,7 @@ function bind(){
    toggleSideGroup('gatePassGroup');
    if(!wasOpen)setTimeout(()=>document.querySelector('[data-panel="gate-pass-dashboard"]')?.click(),0)
  });
- $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry','ogp-detail','container-ledger'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':panel==='container-ledger'?'Returnable Container Management':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Dashboard — RGP, OGP and CGP control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='container-ledger'?'Party-wise returnable cylinders, drums and container ledger.':'Returnable Gate Pass dashboard and entry controls.';setTimeout(()=>{if(panel==='gate-pass-dashboard')gateDashboardRender();else if(panel==='rgp-dashboard')rgpDashboardRender();else if(panel==='rgp-list')rgpRenderList();else if(panel==='rgp-return')rgpRenderReturn();else if(panel==='ogp-dashboard')ogpDashboardRender();else if(panel==='ogp-list'){ogpBindList();ogpRenderList()}else if(panel==='ogp-detail'){ogpBindDetail();ogpRenderDetail()}else if(panel==='container-ledger'){containerBind();containerRenderAll()}
+ $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry','ogp-detail','container-ledger'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':panel==='container-ledger'?'Returnable Container Management':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Dashboard — RGP, OGP and CGP control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='container-ledger'?'Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.':'Returnable Gate Pass dashboard and entry controls.';setTimeout(()=>{if(panel==='gate-pass-dashboard')gateDashboardRender();else if(panel==='rgp-dashboard')rgpDashboardRender();else if(panel==='rgp-list')rgpRenderList();else if(panel==='rgp-return')rgpRenderReturn();else if(panel==='ogp-dashboard')ogpDashboardRender();else if(panel==='ogp-list'){ogpBindList();ogpRenderList()}else if(panel==='ogp-detail'){ogpBindDetail();ogpRenderDetail()}else if(panel==='container-ledger'){containerBind();containerRenderAll()}
   if(panel==='ogp-entry'){ogpBindEntry();ogpUpdateTotals()}else if(panel==='ogp-entry'){ogpBindEntry();ogpUpdateTotals()}else rgpUpdateTotal()},0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
 
 /* Shared Print Designer V1.0 */
@@ -6791,7 +6834,7 @@ function erpStableStartup(){
     erpSafeCall('account render',()=>maRender());
     if(restoredPanel==='masters'){erpSafeCall('masters render',()=>masterRenderAll());if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Central master data for the complete ERP.'}
     if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(restoredPanel)){erpSafeCall('purchase render',()=>purchaseRenderAll());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[restoredPanel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=restoredPanel==='purchase-indent'?'Purchase Request & Approval':restoredPanel==='local-purchase'?'Local Purchase':restoredPanel==='zafar-purchase'?'Zafar Purchase':restoredPanel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware'}
-    if(restoredPanel==='container-ledger'){erpSafeCall('Container Ledger render',()=>{containerBind();containerRenderAll()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Returnable Container Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Party-wise returnable cylinders, drums and container ledger.'}
+    if(restoredPanel==='container-ledger'){erpSafeCall('Container Ledger render',()=>{containerBind();containerRenderAll()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Returnable Container Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.'}
     if(restoredPanel==='ogp-detail'){erpSafeCall('OGP Detail render',()=>{ogpLoadDetailContext();ogpBindDetail();ogpRenderDetail()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='OGP Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Out Gate Pass dashboard and permanent outward material controls.'}
     if(restoredPanel==='ogp-entry'){erpSafeCall('OGP Entry render',()=>{ogpBindEntry();ogpUpdateTotals()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='OGP Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Out Gate Pass dashboard and permanent outward material controls.'}
     if(restoredPanel==='ogp-list'){erpSafeCall('OGP List render',()=>{ogpBindList();ogpRenderList()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='OGP Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Out Gate Pass dashboard and permanent outward material controls.'}
@@ -7272,7 +7315,7 @@ function ogpSave(){
     if(!verify){toast('OGP could not be verified after saving');return false}
 
     try{ERPAudit?.log?.({module:'Gate Pass',page:'OGP Entry',action:editId?'Edit':'Add',recordId:rec.id,after:rec})}catch(e){}
-    ogpDashboardRender();ogpRenderList();gateDashboardRender();
+    ogpDashboardRender();ogpRenderList();gateDashboardRender();try{containerRenderAll()}catch(e){}
     ogpClearEntry();
     toast(editId?'OGP updated successfully':'OGP saved successfully');
     gateOpenPanel('ogp-list');
@@ -7583,8 +7626,9 @@ function ogpDashboardRender(){
 }
 
 
-const CONTAINER_SETUP_KEY='erpReturnableContainerSetupsV1';
-const CONTAINER_MOVE_KEY='erpReturnableContainerMovementsV1';
+
+const CONTAINER_SETUP_KEY='erpReturnableContainerSetupsV2';
+const CONTAINER_ADJUST_KEY='erpReturnableContainerAdjustmentsV2';
 
 function containerLoad(key){
   try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[]}catch(e){return[]}
@@ -7593,17 +7637,14 @@ function containerStore(key,rows){
   try{localStorage.setItem(key,JSON.stringify(rows));return true}catch(e){console.error(e);return false}
 }
 function containerSetups(){return containerLoad(CONTAINER_SETUP_KEY)}
-function containerMoves(){return containerLoad(CONTAINER_MOVE_KEY)}
+function containerAdjustments(){return containerLoad(CONTAINER_ADJUST_KEY)}
 
 function containerPartyRows(q){
   const query=String(q||'').trim().toLowerCase();if(!query)return[];
-  let rows=[];
-  try{
-    rows=[...(window.ERPMasters?.list?.('suppliers')||[]),...(window.ERPMasters?.list?.('workshops')||[])];
-  }catch(e){}
+  let rows=[];try{rows=[...(window.ERPMasters?.list?.('suppliers')||[]),...(window.ERPMasters?.list?.('workshops')||[])]}catch(e){}
   const seen=new Set();
   return rows.filter(r=>{
-    const name=String(r.name||'').trim(), k=name.toLowerCase();
+    const name=String(r.name||'').trim(),k=name.toLowerCase();
     if(!name||seen.has(k)||String(r.status||'').toLowerCase()==='inactive')return false;
     seen.add(k);
     const hay=[r.name,r.code,r.phone,r.address,r.products,r.specializedIn].filter(Boolean).join(' ').toLowerCase();
@@ -7617,19 +7658,17 @@ function containerItemRows(q){
     if(String(r.status||'').toLowerCase()==='inactive')return false;
     const hay=[r.name,r.size,r.code,r.category].filter(Boolean).join(' ').toLowerCase();
     return query.split(/\s+/).every(t=>hay.includes(t))
-  }).slice(0,40)
+  }).slice(0,50)
 }
 function containerBindSearch(input,source,onChoose){
   if(!input||input.dataset.containerSearchBound)return;
   const wrap=input.closest('.purchase-auto-wrap'),list=wrap?.querySelector('.purchase-auto-list');if(!wrap||!list)return;
-  input.dataset.containerSearchBound='1';
-  let shown=[],active=-1;
+  input.dataset.containerSearchBound='1';let shown=[],active=-1;
   const close=()=>{list.classList.remove('open');active=-1};
   const choose=i=>{
     const r=shown[i];if(!r)return;
-    input.value=purchaseFormatText(r.name||'',input.id,input.id);
-    input.dataset.masterId=r.id||'';
-    close();if(onChoose)onChoose(r,input)
+    input.value=purchaseFormatText(r.name||'',input.id,input.id);input.dataset.masterId=r.id||'';close();
+    if(onChoose)onChoose(r,input)
   };
   const draw=()=>{
     const q=String(input.value||'').trim();if(!q){list.innerHTML='';return close()}
@@ -7652,28 +7691,125 @@ function containerBindSearch(input,source,onChoose){
   });
   input.addEventListener('blur',()=>setTimeout(close,120))
 }
-function containerSetupLabel(x){
-  return `${x.party} — ${x.product} — ${x.containerType}`
+function containerSetupLabel(x){return `${x.party} — ${x.product} — ${x.containerType}`}
+
+function containerNormalize(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ')}
+function containerSameText(a,b){
+  const A=containerNormalize(a),B=containerNormalize(b);
+  return !!A&&!!B&&(A===B||A.includes(B)||B.includes(A))
 }
-function containerNormal(setup){return purchaseNum(setup?.normalQty||0)}
+function containerQtyFromPurchaseRow(row){
+  return purchaseNum(row?.qty||row?.quantity||row?.netWeight||row?.noOfItem||row?.no_of_item||0)
+}
+function containerPurchaseRegisters(){
+  const rows=[];
+  const push=(key,label)=>{
+    let data=[];try{data=gateSafeLoad(key)}catch(e){}
+    data.forEach(rec=>rows.push({register:label,rec}))
+  };
+  // Core purchase registers already used by this ERP.
+  push(PURCHASE_LOCAL_KEY,'Local Purchase');
+  push(PURCHASE_ZAFAR_KEY,'Zafar Purchase');
+  push(PURCHASE_BOARD_KEY,'Board Purchase');
+  // extra keys may exist in older versions; safely try them
+  ['erpPurchasePaperV1','erpPurchaseBoard3V1','purchases_paper','purchases_board3'].forEach((k,i)=>{
+    let data=[];try{data=gateSafeLoad(k)}catch(e){}
+    data.forEach(rec=>rows.push({register:i<2?(i===0?'Paper Purchase':'Board III'):'Purchase',rec}))
+  });
+  return rows
+}
+function containerPurchaseItems(rec){
+  if(Array.isArray(rec?.items)&&rec.items.length)return rec.items;
+  if(Array.isArray(rec?.rows)&&rec.rows.length)return rec.rows;
+  return [rec]
+}
+function containerSourceAllowed(setup,register){
+  const s=String(setup.purchaseSource||'ALL').toUpperCase();
+  if(s==='ALL')return true;
+  if(s==='LOCAL')return /local/i.test(register);
+  if(s==='ZAFAR')return /zafar/i.test(register);
+  if(s==='BOARD')return /board purchase/i.test(register);
+  if(s==='PAPER')return /paper/i.test(register);
+  if(s==='BOARD3')return /board iii|board 3/i.test(register);
+  return true
+}
+function containerAutomaticPurchaseEvents(setup){
+  const out=[];
+  containerPurchaseRegisters().forEach(({register,rec})=>{
+    if(!containerSourceAllowed(setup,register))return;
+    const supplier=rec.supplier||rec.party||rec.vendor||'';
+    if(!containerSameText(supplier,setup.party))return;
+    containerPurchaseItems(rec).forEach((it,index)=>{
+      const item=it.item||it.itemName||it.material||it.product||rec.item||rec.itemName||'';
+      if(!containerSameText(item,setup.product))return;
+      const qty=containerQtyFromPurchaseRow(it);
+      if(qty<=0)return;
+      const ref=rec.controlNo||rec.grnNo||rec.igpNo||rec.billNo||rec.bill||rec.id||`${register}-${index+1}`;
+      out.push({
+        id:`AUTO-PUR-${setup.id}-${String(rec.id||ref)}-${index}`,
+        setupId:setup.id,date:rec.date||it.date||'',source:'PURCHASE',sourceType:register,
+        refNo:String(ref||''),inQty:qty,outQty:0,
+        remarks:`Automatic IN from ${register}`,
+        sortKey:String(rec.createdAt||rec.savedAt||rec.date||'')
+      })
+    })
+  });
+  return out
+}
+function containerAutomaticOgpEvents(setup){
+  const out=[];
+  ogpRecords().forEach(rec=>{
+    const party=rec.receiverParty||rec.workshop||rec.party||'';
+    if(!containerSameText(party,setup.party))return;
+    ogpItemRows(rec).forEach((it,index)=>{
+      const item=[it.item||it.material||'',it.size||''].filter(Boolean).join(' ');
+      const raw=it.item||it.material||'';
+      if(!(containerSameText(raw,setup.ogpItem)||containerSameText(item,setup.ogpItem)))return;
+      const qty=purchaseNum(it.qty||it.quantity||0);if(qty<=0)return;
+      out.push({
+        id:`AUTO-OGP-${setup.id}-${String(rec.id||rec.ogpNo||rec.gatePassNo)}-${index}`,
+        setupId:setup.id,date:rec.date||'',source:'OGP',sourceType:'OGP',
+        refNo:String(rec.ogpNo||rec.gatePassNo||rec.id||''),inQty:0,outQty:qty,
+        remarks:'Automatic OUT from OGP',
+        sortKey:String(rec.createdAt||rec.savedAt||rec.date||'')
+      })
+    })
+  });
+  return out
+}
+function containerAdjustmentEvents(setup){
+  return containerAdjustments().filter(a=>a.setupId===setup.id).map(a=>({
+    id:a.id,setupId:a.setupId,date:a.date||'',source:'ADJUSTMENT',sourceType:'Manual Adjustment',
+    refNo:a.refNo||'',inQty:a.type==='IN'?purchaseNum(a.qty):0,outQty:a.type==='OUT'?purchaseNum(a.qty):0,
+    remarks:a.remarks||'',sortKey:String(a.createdAt||a.date||'')
+  }))
+}
+function containerEventsForSetup(setup){
+  const opening={
+    id:`OPENING-${setup.id}`,setupId:setup.id,date:setup.createdDate||setup.createdAtDate||'',
+    source:'OPENING',sourceType:'Opening Balance',refNo:'Opening',inQty:purchaseNum(setup.openingQty||0),outQty:0,
+    remarks:'Opening quantity with us',sortKey:'0000'
+  };
+  return [opening,...containerAutomaticPurchaseEvents(setup),...containerAutomaticOgpEvents(setup),...containerAdjustmentEvents(setup)]
+}
 function containerPosition(setupId){
   const setup=containerSetups().find(x=>x.id===setupId);if(!setup)return null;
-  const moves=containerMoves().filter(x=>x.setupId===setupId).sort((a,b)=>String(a.createdAt||a.date).localeCompare(String(b.createdAt||b.date)));
-  let withUs=0;
-  moves.forEach(m=>withUs += purchaseNum(m.filledIn)+purchaseNum(m.otherIn)-purchaseNum(m.emptyOut)-purchaseNum(m.otherOut));
-  const normal=containerNormal(setup);
-  return {
-    setup,moves,withUs,normal,
-    withParty:Math.max(0,normal-withUs),
-    extraWithUs:Math.max(0,withUs-normal),
-    last:moves.length?moves[moves.length-1]:null
-  }
+  const events=containerEventsForSetup(setup);
+  const purchaseIn=events.filter(e=>e.source==='PURCHASE').reduce((n,e)=>n+purchaseNum(e.inQty),0);
+  const ogpOut=events.filter(e=>e.source==='OGP').reduce((n,e)=>n+purchaseNum(e.outQty),0);
+  const adjustments=events.filter(e=>e.source==='ADJUSTMENT').reduce((n,e)=>n+purchaseNum(e.inQty)-purchaseNum(e.outQty),0);
+  const opening=purchaseNum(setup.openingQty||0);
+  const withUs=opening+purchaseIn-ogpOut+adjustments;
+  const withParty=Math.max(0,opening-withUs);
+  const extraWithUs=Math.max(0,withUs-opening);
+  return {setup,events,opening,purchaseIn,ogpOut,adjustments,withUs,withParty,extraWithUs}
 }
-function containerAllPositions(){return containerSetups().map(x=>containerPosition(x.id)).filter(Boolean)}
+function containerAllPositions(){return containerSetups().filter(x=>x.status!=='inactive').map(x=>containerPosition(x.id)).filter(Boolean)}
+
 function containerRefreshSetupSelects(){
-  const setups=containerSetups();
-  const options='<option value="">Select setup</option>'+setups.map(x=>`<option value="${escHtml(x.id)}">${escHtml(containerSetupLabel(x))}</option>`).join('');
-  if($('#containerMoveSetup'))$('#containerMoveSetup').innerHTML=options;
+  const setups=containerSetups().filter(x=>x.status!=='inactive');
+  const opts='<option value="">Select setup</option>'+setups.map(x=>`<option value="${escHtml(x.id)}">${escHtml(containerSetupLabel(x))}</option>`).join('');
+  if($('#containerAdjustSetup'))$('#containerAdjustSetup').innerHTML=opts;
   if($('#containerLedgerSetup'))$('#containerLedgerSetup').innerHTML='<option value="">All Party Containers</option>'+setups.map(x=>`<option value="${escHtml(x.id)}">${escHtml(containerSetupLabel(x))}</option>`).join('')
 }
 function containerRenderKpis(){
@@ -7685,8 +7821,8 @@ function containerRenderKpis(){
 }
 function containerRenderPosition(){
   const body=$('#containerPositionBody');if(!body)return;
-  const q=String($('#containerPositionSearch')?.value||'').trim().toLowerCase();
-  const rows=containerAllPositions().filter(x=>!q||[x.setup.party,x.setup.product,x.setup.containerType].join(' ').toLowerCase().includes(q));
+  const q=containerNormalize($('#containerPositionSearch')?.value||'');
+  const rows=containerAllPositions().filter(x=>!q||containerNormalize([x.setup.party,x.setup.product,x.setup.containerType,x.setup.ogpItem].join(' ')).includes(q));
   body.innerHTML=rows.length?rows.map(x=>{
     let status='Balanced',cls='ok';
     if(x.withParty>0){status=`${purchaseMoney(x.withParty)} with party`;cls='warn'}
@@ -7695,144 +7831,152 @@ function containerRenderPosition(){
       <td><b>${escHtml(x.setup.party)}</b></td>
       <td>${escHtml(x.setup.product)}</td>
       <td>${escHtml(x.setup.containerType)}</td>
-      <td>${purchaseMoney(x.normal)} ${escHtml(x.setup.unit||'Nos')}</td>
-      <td>${purchaseMoney(x.withUs)}</td>
+      <td>${purchaseMoney(x.opening)} ${escHtml(x.setup.unit||'Nos')}</td>
+      <td>${purchaseMoney(x.purchaseIn)}</td>
+      <td>${purchaseMoney(x.ogpOut)}</td>
+      <td>${x.adjustments>=0?'+':''}${purchaseMoney(x.adjustments)}</td>
+      <td><b>${purchaseMoney(x.withUs)}</b></td>
       <td>${purchaseMoney(x.withParty)}</td>
       <td>${purchaseMoney(x.extraWithUs)}</td>
-      <td>${escHtml(x.last?.date||'—')}</td>
       <td><span class="container-status ${cls}">${escHtml(status)}</span></td>
       <td><button class="btn" type="button" data-container-ledger="${escHtml(x.setup.id)}">Ledger</button></td>
     </tr>`
-  }).join(''):'<tr><td colspan="10" class="purchase-empty">No party/container setup saved yet.</td></tr>';
+  }).join(''):'<tr><td colspan="12" class="purchase-empty">No automation setup saved yet.</td></tr>';
   body.querySelectorAll('[data-container-ledger]').forEach(b=>b.onclick=()=>{
-    if($('#containerLedgerSetup'))$('#containerLedgerSetup').value=b.dataset.containerLedger;
-    containerRenderLedger();
+    $('#containerLedgerSetup').value=b.dataset.containerLedger;containerRenderLedger();
     $('#containerLedgerBody')?.closest('.container-box')?.scrollIntoView({behavior:'smooth',block:'start'})
+  })
+}
+function containerBuildLedgerEvents(){
+  let events=[];
+  containerSetups().filter(x=>x.status!=='inactive').forEach(setup=>{
+    let bal=0;
+    const ev=containerEventsForSetup(setup).slice().sort((a,b)=>{
+      const da=ogpDateComparable(a.date)||'0000-00-00',db=ogpDateComparable(b.date)||'0000-00-00';
+      if(da!==db)return da.localeCompare(db);
+      return String(a.sortKey||'').localeCompare(String(b.sortKey||''))
+    });
+    ev.forEach(e=>{
+      bal += purchaseNum(e.inQty)-purchaseNum(e.outQty);
+      events.push({...e,setup,balance:bal})
+    })
+  });
+  return events.sort((a,b)=>{
+    const da=ogpDateComparable(a.date)||'0000-00-00',db=ogpDateComparable(b.date)||'0000-00-00';
+    if(da!==db)return db.localeCompare(da);
+    return String(b.sortKey||'').localeCompare(String(a.sortKey||''))
   })
 }
 function containerRenderLedger(){
   const body=$('#containerLedgerBody');if(!body)return;
-  const selected=$('#containerLedgerSetup')?.value||'';
-  const setups=new Map(containerSetups().map(x=>[x.id,x]));
-  let moves=containerMoves().slice().sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
-  if(selected)moves=moves.filter(x=>x.setupId===selected);
-
-  const running={};
-  const chronological=containerMoves().slice().sort((a,b)=>String(a.createdAt||a.date).localeCompare(String(b.createdAt||b.date)));
-  const balances={};
-  chronological.forEach(m=>{
-    const delta=purchaseNum(m.filledIn)+purchaseNum(m.otherIn)-purchaseNum(m.emptyOut)-purchaseNum(m.otherOut);
-    balances[m.id]=(running[m.setupId]||0)+delta;
-    running[m.setupId]=balances[m.id]
-  });
-
-  body.innerHTML=moves.length?moves.map((m,i)=>{
-    const setup=setups.get(m.setupId)||{};
-    const bal=purchaseNum(balances[m.id]||0),normal=containerNormal(setup);
+  const selected=$('#containerLedgerSetup')?.value||'',source=$('#containerLedgerSource')?.value||'';
+  let events=containerBuildLedgerEvents();
+  if(selected)events=events.filter(e=>e.setupId===selected);
+  if(source)events=events.filter(e=>e.source===source);
+  body.innerHTML=events.length?events.map((e,i)=>{
+    const opening=purchaseNum(e.setup.openingQty||0);
     let position='Balanced';
-    if(bal<normal)position=`${purchaseMoney(normal-bal)} with party`;
-    else if(bal>normal)position=`${purchaseMoney(bal-normal)} extra with us`;
-    const incoming=purchaseNum(m.filledIn)+purchaseNum(m.otherIn);
-    const outgoing=purchaseNum(m.emptyOut)+purchaseNum(m.otherOut);
+    if(e.balance<opening)position=`${purchaseMoney(opening-e.balance)} with party`;
+    else if(e.balance>opening)position=`${purchaseMoney(e.balance-opening)} extra with us`;
     return `<tr>
-      <td>${i+1}</td><td>${escHtml(m.date||'')}</td>
-      <td>${escHtml([m.refType,m.refNo].filter(Boolean).join(' - '))}</td>
-      <td>${escHtml(setup.party||'')}</td><td>${escHtml(setup.product||'')}</td><td>${escHtml(setup.containerType||'')}</td>
-      <td>${purchaseMoney(incoming)}</td><td>${purchaseMoney(outgoing)}</td><td>${purchaseMoney(bal)}</td>
-      <td>${purchaseMoney(normal)}</td><td>${escHtml(position)}</td><td>${escHtml(m.remarks||'')}</td>
-      <td><button class="btn ogp-entry-delete" type="button" data-container-delete="${escHtml(m.id)}">Delete</button></td>
+      <td>${i+1}</td><td>${escHtml(e.date||'—')}</td><td><b>${escHtml(e.source)}</b><small style="display:block">${escHtml(e.sourceType||'')}</small></td>
+      <td>${escHtml(e.refNo||'')}</td><td>${escHtml(e.setup.party||'')}</td><td>${escHtml(e.setup.product||'')}</td><td>${escHtml(e.setup.containerType||'')}</td>
+      <td>${purchaseMoney(e.inQty||0)}</td><td>${purchaseMoney(e.outQty||0)}</td><td><b>${purchaseMoney(e.balance)}</b></td>
+      <td>${purchaseMoney(opening)}</td><td>${escHtml(position)}</td><td>${escHtml(e.remarks||'')}</td>
     </tr>`
-  }).join(''):'<tr><td colspan="13" class="purchase-empty">No container movements saved yet.</td></tr>';
-  body.querySelectorAll('[data-container-delete]').forEach(b=>b.onclick=()=>{
-    const rows=containerMoves().filter(x=>x.id!==b.dataset.containerDelete);
-    if(containerStore(CONTAINER_MOVE_KEY,rows)){containerRenderAll();toast('Movement deleted')}
-  })
+  }).join(''):'<tr><td colspan="13" class="purchase-empty">No automatic container movements found.</td></tr>'
 }
-function containerUpdateLivePosition(){
-  const id=$('#containerMoveSetup')?.value||'',box=$('#containerMovePosition');if(!box)return;
-  if(!id){box.className='container-live-position';box.textContent='Select a party/container setup to see its current position.';return}
-  const p=containerPosition(id);if(!p)return;
-  const incoming=purchaseNum($('#containerMoveFilledIn')?.value)+purchaseNum($('#containerMoveOtherIn')?.value);
-  const outgoing=purchaseNum($('#containerMoveEmptyOut')?.value)+purchaseNum($('#containerMoveOtherOut')?.value);
-  const after=p.withUs+incoming-outgoing;
-  const withParty=Math.max(0,p.normal-after),extra=Math.max(0,after-p.normal);
-  box.className='container-live-position '+(withParty?'warn':'good');
-  box.textContent=`Current: ${purchaseMoney(p.withUs)} with us • Normal: ${purchaseMoney(p.normal)} • After this movement: ${purchaseMoney(after)} with us`+
-    (withParty?` • ${purchaseMoney(withParty)} with party`:extra?` • ${purchaseMoney(extra)} extra with us`:' • Balanced')
-}
+
 function containerSaveSetup(){
   const party=purchaseFormatText($('#containerSetupParty')?.value||'','party','Party');
   const product=purchaseFormatText($('#containerSetupProduct')?.value||'','product','Product');
   const type=purchaseFormatText($('#containerSetupType')?.value||'','container','Container');
-  const normal=purchaseNum($('#containerSetupNormalQty')?.value||0);
+  const ogpItem=purchaseFormatText($('#containerSetupOgpItem')?.value||'','item','Item');
+  const opening=purchaseNum($('#containerSetupOpeningQty')?.value||0);
   const unit=purchaseFormatText($('#containerSetupUnit')?.value||'Nos','unit','Unit')||'Nos';
-  if(!party)return toast('Party is required');
-  if(!product)return toast('Product / Material is required');
-  if(!type)return toast('Container Type is required');
-  if(normal<0)return toast('Normal Holding Qty cannot be negative');
+  if(!party)return toast('Party / Supplier is required');
+  if(!product)return toast('Product / Purchased Material is required');
+  if(!type)return toast('Returnable Container Type is required');
+  if(!ogpItem)return toast('OGP Return Item is required');
+  if(opening<0)return toast('Opening Qty cannot be negative');
+
   const rows=containerSetups();
-  const duplicate=rows.find(x=>x.party.toLowerCase()===party.toLowerCase()&&x.product.toLowerCase()===product.toLowerCase()&&x.containerType.toLowerCase()===type.toLowerCase());
-  if(duplicate)return toast('This party / product / container setup already exists');
-  rows.push({id:'CONTSET-'+Date.now(),party,product,containerType:type,normalQty:normal,unit,remarks:purchaseFormatText($('#containerSetupRemarks')?.value||'','remarks','Remarks'),createdAt:new Date().toISOString()});
-  if(!containerStore(CONTAINER_SETUP_KEY,rows))return toast('Setup could not be saved');
-  containerClearSetup();containerRenderAll();toast('Party container setup saved')
-}
-function containerSaveMovement(){
-  const setupId=$('#containerMoveSetup')?.value||'';
-  const date=rgpFormatDate($('#containerMoveDate')?.value||'');
-  if($('#containerMoveDate'))$('#containerMoveDate').value=date;
-  if(!date)return toast('Date is required');
-  if(!setupId)return toast('Party / Container Setup is required');
-  const filledIn=purchaseNum($('#containerMoveFilledIn')?.value||0),emptyOut=purchaseNum($('#containerMoveEmptyOut')?.value||0),
-        otherIn=purchaseNum($('#containerMoveOtherIn')?.value||0),otherOut=purchaseNum($('#containerMoveOtherOut')?.value||0);
-  if(filledIn+emptyOut+otherIn+otherOut<=0)return toast('Enter at least one movement quantity');
-  const rows=containerMoves();
+  const duplicate=rows.find(x=>containerSameText(x.party,party)&&containerSameText(x.product,product)&&containerSameText(x.containerType,type)&&containerSameText(x.ogpItem,ogpItem));
+  if(duplicate)return toast('This automation setup already exists');
+
   rows.push({
-    id:'CONTMOV-'+Date.now(),setupId,date,
-    refType:$('#containerMoveRefType')?.value||'Manual',
-    refNo:String($('#containerMoveRefNo')?.value||'').toUpperCase(),
-    filledIn,emptyOut,otherIn,otherOut,
-    remarks:purchaseFormatText($('#containerMoveRemarks')?.value||'','remarks','Remarks'),
+    id:'CONTSET-'+Date.now(),party,product,containerType:type,openingQty:opening,unit,ogpItem,
+    purchaseSource:$('#containerSetupPurchaseSource')?.value||'ALL',
+    status:$('#containerSetupStatus')?.value||'active',
+    remarks:purchaseFormatText($('#containerSetupRemarks')?.value||'','remarks','Remarks'),
     createdAt:new Date().toISOString()
   });
-  if(!containerStore(CONTAINER_MOVE_KEY,rows))return toast('Movement could not be saved');
-  containerClearMovement();containerRenderAll();toast('Container movement saved')
+  if(!containerStore(CONTAINER_SETUP_KEY,rows))return toast('Setup could not be saved');
+  containerClearSetup();containerRenderAll();toast('Automatic container setup saved')
+}
+function containerSaveAdjustment(){
+  const setupId=$('#containerAdjustSetup')?.value||'',date=rgpFormatDate($('#containerAdjustDate')?.value||'');
+  if($('#containerAdjustDate'))$('#containerAdjustDate').value=date;
+  const qty=purchaseNum($('#containerAdjustQty')?.value||0),remarks=String($('#containerAdjustRemarks')?.value||'').trim();
+  if(!date)return toast('Adjustment date is required');
+  if(!setupId)return toast('Party / Container Setup is required');
+  if(qty<=0)return toast('Adjustment quantity must be greater than zero');
+  if(!remarks)return toast('Adjustment reason is required');
+  const rows=containerAdjustments();
+  rows.push({
+    id:'CONTADJ-'+Date.now(),setupId,date,type:$('#containerAdjustType')?.value||'IN',qty,
+    remarks:purchaseFormatText(remarks,'remarks','Remarks'),createdAt:new Date().toISOString()
+  });
+  if(!containerStore(CONTAINER_ADJUST_KEY,rows))return toast('Adjustment could not be saved');
+  containerClearAdjustment();containerRenderAll();toast('Container adjustment saved')
 }
 function containerClearSetup(){
-  ['containerSetupParty','containerSetupProduct','containerSetupType','containerSetupNormalQty','containerSetupUnit','containerSetupRemarks'].forEach(id=>{if($('#'+id))$('#'+id).value=''})
+  ['containerSetupParty','containerSetupProduct','containerSetupType','containerSetupOpeningQty','containerSetupUnit','containerSetupOgpItem','containerSetupRemarks']
+    .forEach(id=>{if($('#'+id))$('#'+id).value=''});
+  if($('#containerSetupPurchaseSource'))$('#containerSetupPurchaseSource').value='ALL';
+  if($('#containerSetupStatus'))$('#containerSetupStatus').value='active'
 }
-function containerClearMovement(){
-  ['containerMoveDate','containerMoveRefNo','containerMoveFilledIn','containerMoveEmptyOut','containerMoveOtherIn','containerMoveOtherOut','containerMoveRemarks'].forEach(id=>{if($('#'+id))$('#'+id).value=''});
-  if($('#containerMoveSetup'))$('#containerMoveSetup').value='';
-  if($('#containerMoveRefType'))$('#containerMoveRefType').value='IGP';
-  containerUpdateLivePosition()
+function containerClearAdjustment(){
+  ['containerAdjustDate','containerAdjustQty','containerAdjustRemarks'].forEach(id=>{if($('#'+id))$('#'+id).value=''});
+  if($('#containerAdjustSetup'))$('#containerAdjustSetup').value='';
+  if($('#containerAdjustType'))$('#containerAdjustType').value='IN'
 }
 function containerPrintLedger(){
-  const selected=$('#containerLedgerSetup')?.value||'';
-  const setup=containerSetups().find(x=>x.id===selected);
-  const rows=containerMoves().filter(x=>!selected||x.setupId===selected);
-  if(!rows.length)return toast('No container movements to print');
+  const events=containerBuildLedgerEvents().filter(e=>{
+    const sid=$('#containerLedgerSetup')?.value||'',source=$('#containerLedgerSource')?.value||'';
+    return (!sid||e.setupId===sid)&&(!source||e.source===source)
+  });
+  if(!events.length)return toast('No container ledger records to print');
   const w=window.open('','_blank');if(!w)return toast('Popup blocked');
-  const title=setup?containerSetupLabel(setup):'Returnable Container Ledger';
-  w.document.write(`<html><head><title>${escHtml(title)}</title><style>body{font-family:Arial;padding:20px}h2{margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px}th{background:#ffcc00}</style></head><body><h2>${escHtml(title)}</h2><table><thead><tr><th>Date</th><th>Reference</th><th>In</th><th>Out</th><th>Remarks</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${escHtml(m.date)}</td><td>${escHtml([m.refType,m.refNo].filter(Boolean).join(' - '))}</td><td>${purchaseMoney(purchaseNum(m.filledIn)+purchaseNum(m.otherIn))}</td><td>${purchaseMoney(purchaseNum(m.emptyOut)+purchaseNum(m.otherOut))}</td><td>${escHtml(m.remarks||'')}</td></tr>`).join('')}</tbody></table><script>onload=()=>print()<\/script></body></html>`);w.document.close()
+  w.document.write(`<html><head><title>Returnable Container Ledger</title><style>
+    body{font-family:Arial;padding:20px}h2{margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:9px}
+    th,td{border:1px solid #555;padding:5px}th{background:#ffcc00}
+  </style></head><body><h2>Returnable Container Ledger</h2><table><thead><tr>
+    <th>Date</th><th>Source</th><th>Reference</th><th>Party</th><th>Material</th><th>Container</th><th>IN</th><th>OUT</th><th>Balance</th><th>Remarks</th>
+  </tr></thead><tbody>${events.map(e=>`<tr><td>${escHtml(e.date||'')}</td><td>${escHtml(e.source)}</td><td>${escHtml(e.refNo||'')}</td>
+    <td>${escHtml(e.setup.party)}</td><td>${escHtml(e.setup.product)}</td><td>${escHtml(e.setup.containerType)}</td>
+    <td>${purchaseMoney(e.inQty)}</td><td>${purchaseMoney(e.outQty)}</td><td>${purchaseMoney(e.balance)}</td><td>${escHtml(e.remarks||'')}</td></tr>`).join('')}
+  </tbody></table><script>onload=()=>print()<\/script></body></html>`);w.document.close()
 }
 function containerRenderAll(){
-  containerRefreshSetupSelects();containerRenderKpis();containerRenderPosition();containerRenderLedger();containerUpdateLivePosition()
+  containerRefreshSetupSelects();containerRenderKpis();containerRenderPosition();containerRenderLedger()
 }
 function containerBind(){
   const panel=$('#panel-container-ledger');if(!panel||panel.dataset.containerBound)return;
   panel.dataset.containerBound='1';
   containerBindSearch($('#containerSetupParty'),containerPartyRows);
   containerBindSearch($('#containerSetupProduct'),containerItemRows,(r,input)=>input.value=purchaseFormatText(r.name||'','product','Product'));
+  containerBindSearch($('#containerSetupOgpItem'),containerItemRows,(r,input)=>input.value=purchaseFormatText(r.name||'','item','Item'));
+
   $('#containerSetupSaveBtn')?.addEventListener('click',containerSaveSetup);
   $('#containerSetupClearBtn')?.addEventListener('click',containerClearSetup);
-  $('#containerMoveSaveBtn')?.addEventListener('click',containerSaveMovement);
-  $('#containerMoveClearBtn')?.addEventListener('click',containerClearMovement);
-  $('#containerMoveDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
-  ['containerMoveSetup','containerMoveFilledIn','containerMoveEmptyOut','containerMoveOtherIn','containerMoveOtherOut'].forEach(id=>$('#'+id)?.addEventListener(id==='containerMoveSetup'?'change':'input',containerUpdateLivePosition));
+  $('#containerAdjustSaveBtn')?.addEventListener('click',containerSaveAdjustment);
+  $('#containerAdjustClearBtn')?.addEventListener('click',containerClearAdjustment);
+  $('#containerAdjustDate')?.addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));
   $('#containerPositionSearch')?.addEventListener('input',containerRenderPosition);
   $('#containerPositionClearBtn')?.addEventListener('click',()=>{$('#containerPositionSearch').value='';containerRenderPosition()});
   $('#containerLedgerSetup')?.addEventListener('change',containerRenderLedger);
+  $('#containerLedgerSource')?.addEventListener('change',containerRenderLedger);
   $('#containerLedgerPrintBtn')?.addEventListener('click',containerPrintLedger);
   containerRenderAll()
 }
@@ -7864,7 +8008,7 @@ function gateOpenPanel(panel){
   if($('#workspaceSubtitle')){
     $('#workspaceSubtitle').textContent=
       panel==='gate-pass-dashboard'?'Gate Pass Dashboard — RGP, OGP and CGP control center.':
-      panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='container-ledger'?'Party-wise returnable cylinders, drums and container ledger.':'Returnable Gate Pass dashboard and entry controls.';
+      panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='container-ledger'?'Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.':'Returnable Gate Pass dashboard and entry controls.';
   }
 
   if(panel==='gate-pass-dashboard')gateDashboardRender();
