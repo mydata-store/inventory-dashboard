@@ -11150,13 +11150,19 @@ function resetTitleController(){
 }
 function renderStandards(){
   const rows=standards();
-  f$('#fccStandardsBody').innerHTML=rows.length?rows.map(x=>`<tr><td>${x.code}</td><td>${x.name}</td><td>${x.value}</td><td>${x.unit}</td><td>${x.department||'—'}</td><td><button class="fcc-btn fcc-del-std" data-id="${x.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:25px">No standards saved yet.</td></tr>';
-  document.querySelectorAll('.fcc-del-std').forEach(b=>b.onclick=()=>{save(FCC_STANDARD_KEY,standards().filter(x=>x.id!==b.dataset.id));renderStandards()})
+  const body=f$('#fccStandardsBody'); if(!body)return;
+  body.innerHTML=rows.length?rows.map(x=>`<tr>
+    <td>${x.department||'—'}</td><td>${x.process||'—'}</td><td>${x.output||'—'}</td>
+    <td><b>${x.inputMaterial||x.name||'—'}</b></td><td>${x.standardType||'Yield %'}</td>
+    <td>${x.value??0}</td><td>${x.unit||'%'}</td><td>${x.effectiveDate||'—'}</td>
+    <td>${x.status||'Active'}</td><td><button class="fcc-btn fcc-del-std" data-id="${x.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="10" style="text-align:center;padding:25px">No department production standards saved yet.</td></tr>';
+  document.querySelectorAll('.fcc-del-std').forEach(b=>b.onclick=()=>{save(FCC_STANDARD_KEY,standards().filter(x=>x.id!==b.dataset.id));renderStandards();renderAsh()});
 }
 function saveStandard(){
-  const code=ft(f$('#fccStdCode').value),name=ft(f$('#fccStdName').value),value=fn(f$('#fccStdValue').value),unit=ft(f$('#fccStdUnit').value),department=ft(f$('#fccStdDepartment').value);
-  if(!name)return toast('Standard name is required');
-  save(FCC_STANDARD_KEY,[...standards(),{id:'STD-'+Date.now(),code,name,value,unit,department}]);f$('#fccStdCode').value='';f$('#fccStdName').value='';f$('#fccStdValue').value='';f$('#fccStdUnit').value='';renderStandards()
+  const department=ft(f$('#fccStdDepartment').value),process=ft(f$('#fccStdProcess').value),output=ft(f$('#fccStdOutput').value),inputMaterial=ft(f$('#fccStdInput').value),standardType=ft(f$('#fccStdType').value),value=fn(f$('#fccStdValue').value),unit=ft(f$('#fccStdUnit').value),effectiveDate=ft(f$('#fccStdEffective').value),status=ft(f$('#fccStdStatus').value);
+  if(!department)return toast('Department is required'); if(!process)return toast('Production process is required'); if(!output)return toast('Output product is required'); if(!inputMaterial)return toast('Input material is required');
+  save(FCC_STANDARD_KEY,[...standards(),{id:'STD-'+Date.now(),code:'STD-'+String(Date.now()).slice(-6),name:inputMaterial,department,process,output,inputMaterial,standardType,value,unit,effectiveDate,status}]);
+  ['#fccStdInput','#fccStdValue'].forEach(id=>f$(id).value=''); renderStandards();renderAsh();toast('Department production standard saved')
 }
 function renderAsh(){
   const std=standards().filter(x=>/ash|filler|pulp/i.test(x.name+' '+x.code));
@@ -11247,7 +11253,27 @@ function build(){
       </div>
     </div>
    </div>
-   <div class="fcc-section" data-fccsection="standards"><div class="fcc-grid"><div><label>Code</label><input id="fccStdCode"></div><div><label>Standard Name</label><input id="fccStdName"></div><div><label>Value</label><input id="fccStdValue"></div><div><label>Unit</label><input id="fccStdUnit"></div><div class="fcc-span-2"><label>Department</label><input id="fccStdDepartment"></div></div><button class="fcc-btn dark" id="fccSaveStandard" style="margin:10px 0">Save Standard</button><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Code</th><th>Standard</th><th>Value</th><th>Unit</th><th>Department</th><th>Action</th></tr></thead><tbody id="fccStandardsBody"></tbody></table></div></div>
+   <div class="fcc-section" data-fccsection="standards">
+    <div class="fcc-card" style="margin-bottom:14px">
+      <div class="fcc-toolbar"><div><h3 style="margin:0">Department Production Standards</h3><div style="font-size:12px;color:#64748b;margin-top:4px">Attach each production standard to its department, process and output. The same raw material can have different standards in different departments.</div></div></div>
+      <div class="fcc-grid" style="margin-top:12px">
+        <div><label>Department *</label><input id="fccStdDepartment" placeholder="e.g. Pulp Mill / Boiler House"></div>
+        <div><label>Production Process *</label><input id="fccStdProcess" placeholder="e.g. Pulp Production / Steam Generation"></div>
+        <div><label>Output Product *</label><input id="fccStdOutput" placeholder="e.g. Pulp / Steam"></div>
+        <div><label>Input Material *</label><input id="fccStdInput" placeholder="e.g. Wheat Straw / Bagasse / Rice Husk"></div>
+        <div><label>Standard Type</label><select id="fccStdType"><option>Yield %</option><option>Output per Input Unit</option><option>Consumption per Output Unit</option><option>Fixed Standard</option></select></div>
+        <div><label>Standard Value</label><input id="fccStdValue" type="number" step="any" placeholder="0"></div>
+        <div><label>Standard Unit</label><input id="fccStdUnit" placeholder="e.g. % / Ton Steam per Ton Fuel"></div>
+        <div><label>Effective Date</label><input id="fccStdEffective" placeholder="25-6"></div>
+        <div><label>Status</label><select id="fccStdStatus"><option>Active</option><option>Inactive</option></select></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="fcc-btn dark" id="fccSaveStandard">Save Production Standard</button></div>
+    </div>
+    <div class="fcc-card">
+      <div class="fcc-toolbar"><div><h3 style="margin:0">Saved Department Standards</h3><div style="font-size:12px;color:#64748b;margin-top:4px">Used later by Daily Consumption to calculate expected output, actual output variance and efficiency department-wise.</div></div></div>
+      <div class="fcc-table-wrap" style="margin-top:10px"><table class="fcc-table"><thead><tr><th>Department</th><th>Process</th><th>Output</th><th>Input Material</th><th>Standard Type</th><th>Value</th><th>Unit</th><th>Effective</th><th>Status</th><th>Action</th></tr></thead><tbody id="fccStandardsBody"></tbody></table></div>
+    </div>
+   </div>
    <div class="fcc-section" data-fccsection="ash"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Code</th><th>Ash / Filler Standard</th><th>Value</th><th>Unit</th><th>Department</th></tr></thead><tbody id="fccAshBody"></tbody></table></div></div>
    <div class="fcc-section" data-fccsection="versions"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>No.</th><th>Formula</th><th>Version</th><th>Previous Formula</th><th>Unit</th><th>Saved At</th></tr></thead><tbody id="fccVersionsBody"></tbody></table></div></div>
    <div class="fcc-section" data-fccsection="mapping"><div class="fcc-grid"><div class="fcc-span-2"><label>Formula</label><select id="fccMapFormula"></select></div><div><label>Cost Group</label><input id="fccMapGroup" placeholder="e.g. Raw Material / Production"></div><div><label>Department</label><input id="fccMapDepartment"></div><div class="fcc-span-2"><label>Report / Use</label><input id="fccMapReport" placeholder="e.g. Daily Costing / Ash Report"></div></div><button class="fcc-btn dark" id="fccSaveMapping" style="margin:10px 0">Save Mapping</button><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Formula</th><th>Cost Group</th><th>Department</th><th>Report / Use</th><th>Action</th></tr></thead><tbody id="fccMappingBody"></tbody></table></div></div>
