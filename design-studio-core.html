@@ -1532,7 +1532,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .ogp-entry-table input:focus{box-shadow:inset 0 0 0 2px var(--primary)}
 .ogp-entry-table .purchase-auto-wrap{height:100%}
 .ogp-entry-table .purchase-auto-list{z-index:15000}
-/* V14.51: OGP item suggestions escape the horizontally scrollable table wrapper */
+/* V14.52: OGP item suggestions escape the horizontally scrollable table wrapper */
 .ogp-entry-table .purchase-auto-list.ogp-fixed-list{position:fixed!important;left:auto;right:auto;top:auto;min-width:280px;max-width:min(520px,calc(100vw - 24px));z-index:2147483000}
 .ogp-entry-table td:nth-child(1){width:42px;text-align:center}
 .ogp-entry-table td:nth-child(2){min-width:250px}
@@ -1551,6 +1551,21 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 .ogp-entry-delete{border-color:#fecaca!important;color:#b91c1c!important}
 @media(max-width:1050px){.ogp-entry-header-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.ogp-entry-header-grid{grid-template-columns:1fr}.ogp-entry-footer{flex-wrap:wrap}.ogp-entry-footer-actions{margin-left:0}}
+
+
+/* V14.52 OGP Detail */
+.ogp-detail-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}
+.ogp-detail-title-row h3{margin:0;font-size:14px}.ogp-detail-title-row p{margin:4px 0 0;color:var(--muted);font-size:9px}
+.ogp-detail-actions{display:flex;gap:7px}
+.ogp-detail-info-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}
+.ogp-detail-info{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px 11px;min-height:58px}
+.ogp-detail-info small{display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+.ogp-detail-info strong{display:block;margin-top:5px;font-size:12px;word-break:break-word}.ogp-detail-wide{grid-column:span 4}
+.ogp-detail-items-box{margin-top:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}
+.ogp-detail-table{min-width:1050px}.ogp-detail-table td{padding:7px;font-size:9px;white-space:nowrap}
+.ogp-detail-summary{display:flex;gap:9px;margin-top:12px}
+@media(max-width:1000px){.ogp-detail-info-grid{grid-template-columns:repeat(2,1fr)}.ogp-detail-wide{grid-column:span 2}}
+@media(max-width:620px){.ogp-detail-info-grid{grid-template-columns:1fr}.ogp-detail-wide{grid-column:auto}.ogp-detail-title-row{flex-direction:column}}
 
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
@@ -2024,6 +2039,75 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 
 
 
+
+
+<section class="panel purchase-page" id="panel-ogp-detail">
+  <div class="card">
+    <div class="purchase-page-head">
+      <div>
+        <h2>OGP Management</h2>
+        <p>Out Gate Pass dashboard and permanent outward material controls.</p>
+      </div>
+      <div class="gate-top-actions">
+        <button class="btn" type="button" id="ogpDetailBackBtn">← OGP List</button>
+        <button class="btn purchase-controller-btn" data-purchase-controller="ogp-detail">⚙ Page Controller</button>
+      </div>
+    </div>
+
+    <div class="ogp-management-nav">
+      <button class="ogp-management-card" type="button" data-panel-jump="ogp-dashboard">
+        <span class="ogp-nav-icon">⌂</span><span><strong>OGP Dashboard</strong><small>Overview of outward gate passes</small></span>
+      </button>
+      <button class="ogp-management-card" type="button" data-panel-jump="ogp-list">
+        <span class="ogp-nav-icon">☷</span><span><strong>OGP List</strong><small>Search, view and print OGP records</small></span>
+      </button>
+      <button class="ogp-management-card" type="button" data-panel-jump="ogp-entry">
+        <span class="ogp-nav-icon">＋</span><span><strong>OGP Entry Form</strong><small>Create a new outward gate pass</small></span>
+      </button>
+      <button class="ogp-management-card active" type="button" disabled>
+        <span class="ogp-nav-icon">≡</span><span><strong>OGP Detail</strong><small>Complete selected OGP information</small></span>
+      </button>
+    </div>
+
+    <div class="ogp-detail-title-row">
+      <div><h3>OGP Detail</h3><p>Complete information for the selected outward gate pass.</p></div>
+      <div class="ogp-detail-actions">
+        <button class="btn" type="button" id="ogpDetailEditBtn">Edit OGP</button>
+        <button class="btn primary" type="button" id="ogpDetailPrintBtn">Print PDF</button>
+      </div>
+    </div>
+
+    <div class="ogp-detail-info-grid">
+      <div class="ogp-detail-info"><small>OGP No.</small><strong id="ogpDetailNo">—</strong></div>
+      <div class="ogp-detail-info"><small>Date</small><strong id="ogpDetailDate">—</strong></div>
+      <div class="ogp-detail-info"><small>Department</small><strong id="ogpDetailDepartment">—</strong></div>
+      <div class="ogp-detail-info"><small>Receiver Party</small><strong id="ogpDetailParty">—</strong></div>
+      <div class="ogp-detail-info"><small>Carrier</small><strong id="ogpDetailCarrier">—</strong></div>
+      <div class="ogp-detail-info"><small>Vehicle No.</small><strong id="ogpDetailVehicle">—</strong></div>
+      <div class="ogp-detail-info"><small>Authorized By</small><strong id="ogpDetailAuthorized">—</strong></div>
+      <div class="ogp-detail-info"><small>Status</small><strong id="ogpDetailStatus">—</strong></div>
+      <div class="ogp-detail-info ogp-detail-wide"><small>Remarks</small><strong id="ogpDetailRemarks">—</strong></div>
+    </div>
+
+    <div class="ogp-detail-items-box">
+      <div class="ogp-register-head"><div><h3>OGP Items</h3><p>All items saved under this OGP number.</p></div></div>
+      <div class="gate-recent-table-wrap">
+        <table class="purchase-table ogp-detail-table">
+          <thead><tr>
+            <th>#</th><th>Item Code</th><th>Item Name</th><th>Size</th><th>Quantity</th><th>Unit</th><th>Rate</th><th>Item Total Value</th>
+          </tr></thead>
+          <tbody id="ogpDetailBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ogp-detail-summary">
+      <div class="ogp-entry-total-card"><small>Total Items</small><strong id="ogpDetailTotalItems">0</strong></div>
+      <div class="ogp-entry-total-card"><small>Total Quantity</small><strong id="ogpDetailTotalQty">0</strong></div>
+      <div class="ogp-entry-total-card"><small>Total Value</small><strong id="ogpDetailTotalValue">PKR 0</strong></div>
+    </div>
+  </div>
+</section>
 
 <section class="panel purchase-page" id="panel-ogp-entry">
   <div class="card">
@@ -5846,7 +5930,7 @@ function purchaseOpenPc(page){
   purchasePcOriginal=JSON.parse(JSON.stringify(x));
   $('#purchasePcTitle').textContent='Page Controller — '+({
     'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Local Purchase','zafar-purchase':'Zafar Purchase',
-    'board-purchase':'Purchase Entry','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis','gate-pass-dashboard':'Gate Pass Management','ogp-dashboard':'OGP Management','ogp-list':'OGP List','ogp-entry':'OGP Entry','rgp-dashboard':'RGP Management','rgp-list':'RGP List','rgp-entry':'RGP Entry','rgp-return':'RGP Return Entry'
+    'board-purchase':'Purchase Entry','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis','gate-pass-dashboard':'Gate Pass Management','ogp-dashboard':'OGP Management','ogp-list':'OGP List','ogp-entry':'OGP Entry','ogp-detail':'OGP Detail','rgp-dashboard':'RGP Management','rgp-list':'RGP List','rgp-entry':'RGP Entry','rgp-return':'RGP Return Entry'
   }[page]||page);
   $('#ppeSpecialControls').style.display=page==='purchase-entry'?'contents':'none';
   $('#localDesignerControls').classList.toggle('show',page==='local-purchase');
@@ -6410,7 +6494,7 @@ function bind(){
    toggleSideGroup('gatePassGroup');
    if(!wasOpen)setTimeout(()=>document.querySelector('[data-panel="gate-pass-dashboard"]')?.click(),0)
  });
- $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'?'OGP Management':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Dashboard — RGP, OGP and CGP control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'?'Out Gate Pass dashboard and permanent outward material controls.':'Returnable Gate Pass dashboard and entry controls.';setTimeout(()=>{if(panel==='gate-pass-dashboard')gateDashboardRender();else if(panel==='rgp-dashboard')rgpDashboardRender();else if(panel==='rgp-list')rgpRenderList();else if(panel==='rgp-return')rgpRenderReturn();else if(panel==='ogp-dashboard')ogpDashboardRender();else if(panel==='ogp-list'){ogpBindList();ogpRenderList()}
+ $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry','ogp-detail'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}setTimeout(()=>masterRenderAll(),0)}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';setTimeout(()=>purchaseRenderAll(),0)}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';setTimeout(()=>issueRenderHistory(),0)}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Dashboard — RGP, OGP and CGP control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':'Returnable Gate Pass dashboard and entry controls.';setTimeout(()=>{if(panel==='gate-pass-dashboard')gateDashboardRender();else if(panel==='rgp-dashboard')rgpDashboardRender();else if(panel==='rgp-list')rgpRenderList();else if(panel==='rgp-return')rgpRenderReturn();else if(panel==='ogp-dashboard')ogpDashboardRender();else if(panel==='ogp-list'){ogpBindList();ogpRenderList()}else if(panel==='ogp-detail'){ogpBindDetail();ogpRenderDetail()}
   if(panel==='ogp-entry'){ogpBindEntry();ogpUpdateTotals()}else if(panel==='ogp-entry'){ogpBindEntry();ogpUpdateTotals()}else rgpUpdateTotal()},0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
 
 /* Shared Print Designer V1.0 */
@@ -6465,7 +6549,7 @@ function restoreLastStudioPanel(){
   const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');
   const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];
   const issuePages=['issue-entry','issue-history'];
-  const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry'];
+  const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry','ogp-detail'];
 
   designGroup?.classList.remove('open');
   purchaseGroup?.classList.remove('open');
@@ -6505,6 +6589,7 @@ function erpStableStartup(){
   erpSafeCall('rgpReturnBind',()=>rgpReturnBind());
   erpSafeCall('ogpBindList',()=>ogpBindList());
   erpSafeCall('ogpBindEntry',()=>ogpBindEntry());
+  erpSafeCall('ogpBindDetail',()=>ogpBindDetail());
   erpSafeCall('rgpBind',()=>rgpBind());
   erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
   erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
@@ -6517,6 +6602,7 @@ function erpStableStartup(){
     erpSafeCall('account render',()=>maRender());
     if(restoredPanel==='masters'){erpSafeCall('masters render',()=>masterRenderAll());if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Central master data for the complete ERP.'}
     if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(restoredPanel)){erpSafeCall('purchase render',()=>purchaseRenderAll());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.add('open');const nm={'purchase-entry':'Purchase Entry','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[restoredPanel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=restoredPanel==='purchase-indent'?'Purchase Request & Approval':restoredPanel==='local-purchase'?'Local Purchase':restoredPanel==='zafar-purchase'?'Zafar Purchase':restoredPanel==='board-purchase'?('Board Purchase — '+boardRegisterType):'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware'}
+    if(restoredPanel==='ogp-detail'){erpSafeCall('OGP Detail render',()=>{ogpLoadDetailContext();ogpBindDetail();ogpRenderDetail()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='OGP Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Out Gate Pass dashboard and permanent outward material controls.'}
     if(restoredPanel==='ogp-entry'){erpSafeCall('OGP Entry render',()=>{ogpBindEntry();ogpUpdateTotals()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='OGP Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Out Gate Pass dashboard and permanent outward material controls.'}
     if(restoredPanel==='ogp-list'){erpSafeCall('OGP List render',()=>{ogpBindList();ogpRenderList()});$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='OGP Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Out Gate Pass dashboard and permanent outward material controls.'}
     if(restoredPanel==='ogp-dashboard'){erpSafeCall('OGP Dashboard render',()=>ogpDashboardRender());$('#designStudioGroup')?.classList.remove('open');$('#purchaseGroup')?.classList.remove('open');$('#issueGroup')?.classList.remove('open');$('#gatePassGroup')?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='OGP Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Out Gate Pass dashboard and permanent outward material controls.'}
@@ -7044,6 +7130,84 @@ function ogpBindEntry(){
   ogpRows().forEach(ogpBindRow);ogpBindExcel();ogpUpdateTotals()
 }
 
+
+const OGP_DETAIL_CONTEXT_KEY='erpOgpDetailContextV1';
+let ogpDetailId='';
+
+function ogpSaveDetailContext(id){
+  ogpDetailId=String(id||'');
+  try{localStorage.setItem(OGP_DETAIL_CONTEXT_KEY,ogpDetailId)}catch(e){}
+}
+function ogpLoadDetailContext(){
+  if(ogpDetailId)return ogpDetailId;
+  try{ogpDetailId=String(localStorage.getItem(OGP_DETAIL_CONTEXT_KEY)||'')}catch(e){ogpDetailId=''}
+  return ogpDetailId
+}
+function ogpFindRecord(id){
+  const key=String(id||'');
+  const rows=ogpRecords();
+  return rows.find(r=>String(r.id||r.ogpNo||r.gatePassNo||'')===key)||
+         rows.find(r=>String(r.ogpNo||r.gatePassNo||'')===key)
+}
+function ogpOpenDetail(id){
+  const rec=ogpFindRecord(id);
+  if(!rec)return toast('OGP record could not be opened');
+  ogpSaveDetailContext(rec.id||rec.ogpNo||rec.gatePassNo||id);
+  gateOpenPanel('ogp-detail');
+  ogpRenderDetail()
+}
+function ogpRenderDetail(){
+  if(!$('#panel-ogp-detail'))return;
+  const rec=ogpFindRecord(ogpLoadDetailContext());
+  const body=$('#ogpDetailBody');
+
+  if(!rec){
+    if(body)body.innerHTML='<tr><td colspan="8" class="purchase-empty">Open OGP Detail from the Detail button in OGP List.</td></tr>';
+    return
+  }
+
+  $('#ogpDetailNo').textContent=rec.ogpNo||rec.gatePassNo||'—';
+  $('#ogpDetailDate').textContent=rec.date||'—';
+  $('#ogpDetailDepartment').textContent=rec.department||'—';
+  $('#ogpDetailParty').textContent=rec.receiverParty||rec.workshop||rec.party||'—';
+  $('#ogpDetailCarrier').textContent=rec.carrier||rec.courier||'—';
+  $('#ogpDetailVehicle').textContent=String(rec.vehicleNo||rec.vehicle||'—').toUpperCase();
+  $('#ogpDetailAuthorized').textContent=rec.authorizedBy||rec.authorized||'—';
+  $('#ogpDetailStatus').textContent=rec.status||'Completed';
+  $('#ogpDetailRemarks').textContent=rec.remarks||'—';
+
+  const items=ogpItemRows(rec);
+  let tq=0,tv=0;
+  body.innerHTML=items.length?items.map((it,i)=>{
+    const qty=purchaseNum(it.qty||it.quantity||0),rate=purchaseNum(it.rate||0);
+    const amount=purchaseNum(it.amount||it.totalValue||0)||(qty*rate);
+    tq+=qty;tv+=amount;
+    return `<tr>
+      <td>${i+1}</td><td>${escHtml(it.itemCode||it.code||'')}</td><td>${escHtml(it.item||it.material||'')}</td>
+      <td>${escHtml(it.size||'')}</td><td>${purchaseMoney(qty)}</td><td>${escHtml(it.unit||'')}</td>
+      <td>${rate?('PKR '+purchaseMoney(rate)):'—'}</td><td>PKR ${purchaseMoney(amount)}</td>
+    </tr>`
+  }).join(''):'<tr><td colspan="8" class="purchase-empty">No item rows saved under this OGP.</td></tr>';
+
+  $('#ogpDetailTotalItems').textContent=items.length;
+  $('#ogpDetailTotalQty').textContent=purchaseMoney(tq);
+  $('#ogpDetailTotalValue').textContent='PKR '+purchaseMoney(tv)
+}
+function ogpBindDetail(){
+  const panel=$('#panel-ogp-detail');if(!panel||panel.dataset.ogpDetailBound)return;
+  panel.dataset.ogpDetailBound='1';
+  $('#ogpDetailBackBtn')?.addEventListener('click',()=>gateOpenPanel('ogp-list'));
+  $('#ogpDetailEditBtn')?.addEventListener('click',()=>{
+    const rec=ogpFindRecord(ogpLoadDetailContext());if(!rec)return toast('OGP record not found');
+    ogpLoadForEdit(rec.id||rec.ogpNo||rec.gatePassNo)
+  });
+  $('#ogpDetailPrintBtn')?.addEventListener('click',()=>{
+    const rec=ogpFindRecord(ogpLoadDetailContext());if(!rec)return toast('OGP record not found');
+    ogpPrintRows([String(rec.id||rec.ogpNo||rec.gatePassNo||'')])
+  });
+  ogpRenderDetail()
+}
+
 function ogpFlatten(){
   const out=[];
   ogpRecords().forEach(rec=>{
@@ -7124,7 +7288,7 @@ function ogpRenderList(){
     </tr>`
   }).join(''):`<tr><td colspan="13" class="purchase-empty">No OGP records found.</td></tr>`;
 
-  body?.querySelectorAll('[data-ogp-detail]').forEach(b=>b.onclick=()=>toast('OGP Detail page will be built after OGP Entry'));
+  body?.querySelectorAll('[data-ogp-detail]').forEach(b=>b.onclick=()=>ogpOpenDetail(b.dataset.ogpDetail));
   body?.querySelectorAll('[data-ogp-edit]').forEach(b=>b.onclick=()=>ogpLoadForEdit(b.dataset.ogpEdit));
   body?.querySelectorAll('[data-ogp-print]').forEach(b=>b.onclick=()=>ogpPrintRows([b.dataset.ogpPrint]))
 }
@@ -7250,12 +7414,12 @@ function gateOpenPanel(panel){
     $('#workspaceTitle').textContent=
       panel==='gate-pass-dashboard'?'Gate Pass Management':
       panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'?'RGP Management':
-      panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'?'OGP Management':'Gate Pass Management';
+      panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':'Gate Pass Management';
   }
   if($('#workspaceSubtitle')){
     $('#workspaceSubtitle').textContent=
       panel==='gate-pass-dashboard'?'Gate Pass Dashboard — RGP, OGP and CGP control center.':
-      panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'?'Out Gate Pass dashboard and permanent outward material controls.':'Returnable Gate Pass dashboard and entry controls.';
+      panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':'Returnable Gate Pass dashboard and entry controls.';
   }
 
   if(panel==='gate-pass-dashboard')gateDashboardRender();
@@ -7264,6 +7428,7 @@ function gateOpenPanel(panel){
   if(panel==='rgp-entry'){rgpUpdateTotal();setTimeout(()=>rgpInputs()[0]?.[0]?.focus(),0)}
   if(panel==='rgp-return'){rgpReturnBind();rgpRenderReturn()}
   if(panel==='ogp-dashboard')ogpDashboardRender()
+  if(panel==='ogp-detail'){ogpBindDetail();ogpRenderDetail()}
 
   window.scrollTo({top:0,behavior:'auto'});
   return true
@@ -7275,7 +7440,7 @@ function gateDashboardBind(){
     btn.dataset.gateDirectBound='1';
     btn.addEventListener('click',e=>{
       const panel=btn.dataset.panel;
-      if(['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry'].includes(panel)){
+      if(['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','ogp-dashboard','ogp-list','ogp-entry','ogp-detail'].includes(panel)){
         e.preventDefault();e.stopPropagation();gateOpenPanel(panel);
       }
     });
@@ -7302,6 +7467,7 @@ function gateDashboardBind(){
   purchaseApplyPc('ogp-dashboard');
   purchaseApplyPc('ogp-list');
   purchaseApplyPc('ogp-entry');
+  purchaseApplyPc('ogp-detail');
   gateDashboardRender();rgpDashboardRender();ogpDashboardRender()
 }
 
