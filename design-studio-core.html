@@ -1392,6 +1392,21 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 #panel-rgp-entry .rgp-items-box,
 #panel-rgp-entry .rgp-table-wrap{overflow:visible!important}
 
+
+/* V14.42 Supplier Products + Workshop Specialized In */
+.master-tagbox{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:4px 6px}
+.master-taglist{display:flex;gap:4px;flex-wrap:wrap}
+.master-tag-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));font-size:8px;font-weight:700}
+.master-tag-pill button{border:0;background:transparent;color:inherit;font-weight:900;cursor:pointer;padding:0}
+.master-tag-search-wrap{position:relative}
+.master-tag-search-wrap>input{width:100%;height:28px;border:0!important;outline:0;background:transparent!important;padding:0 3px!important}
+.master-tag-suggestions{display:none;position:absolute;left:0;right:0;top:100%;z-index:12000;max-height:230px;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 25px rgba(0,0,0,.14)}
+.master-tag-suggestions.open{display:block}
+.master-tag-option{padding:8px 9px;cursor:pointer}
+.master-tag-option:hover,.master-tag-option.active{background:color-mix(in srgb,var(--primary) 11%,var(--surface))}
+.master-tag-option b{display:block;font-size:9px}.master-tag-option small{display:block;margin-top:2px;font-size:8px;color:var(--muted)}
+.master-tag-manual{border-top:1px dashed var(--border)}
+
 </style></head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -3053,8 +3068,8 @@ const MASTER_TYPES={
     ['name','Item Name','text',true],['size','Size','text',false],['unit','Unit','text',false],['category','Category','text',false],['status','Status','select',false,['active','inactive']]
   ],columns:[['code','Code'],['name','Item Name'],['size','Size'],['unit','Unit'],['category','Category'],['status','Status']]},
   suppliers:{name:'Suppliers',singular:'Supplier',code:'SUP',fields:[
-    ['name','Supplier Name','text',true],['proprietor','Proprietor','text',false],['phone','Phone','text',false],['address','Address','textarea',false],['status','Status','select',false,['active','inactive']]
-  ],columns:[['code','Code'],['name','Supplier'],['proprietor','Proprietor'],['phone','Phone'],['address','Address'],['status','Status']]},
+    ['name','Supplier Name','text',true],['proprietor','Proprietor','text',false],['phone','Phone','text',false],['products','Products','tags-items',false],['address','Address','textarea',false],['status','Status','select',false,['active','inactive']]
+  ],columns:[['code','Code'],['name','Supplier'],['proprietor','Proprietor'],['phone','Phone'],['products','Products'],['address','Address'],['status','Status']]},
   departments:{name:'Departments',singular:'Department',code:'DEP',fields:[
     ['name','Department Name','text',true],['signatureAuthority','Signature Authority','text',false],['status','Status','select',false,['active','inactive']]
   ],columns:[['code','Code'],['name','Department'],['signatureAuthority','Signature Authority'],['status','Status']]},
@@ -3062,8 +3077,8 @@ const MASTER_TYPES={
     ['name','Unit Name','text',true],['shortName','Short Name','text',false],['status','Status','select',false,['active','inactive']]
   ],columns:[['code','Code'],['name','Unit Name'],['shortName','Short Name'],['status','Status']]},
   workshops:{name:'Workshops / Parties',singular:'Workshop / Party',code:'WSP',fields:[
-    ['name','Workshop / Party Name','text',true],['contactPerson','Contact Person','text',false],['phone','Phone','text',false],['address','Address','textarea',false],['status','Status','select',false,['active','inactive']]
-  ],columns:[['code','Code'],['name','Workshop / Party'],['contactPerson','Contact Person'],['phone','Phone'],['address','Address'],['status','Status']]},
+    ['name','Workshop / Party Name','text',true],['contactPerson','Contact Person','text',false],['phone','Phone','text',false],['specializedIn','Specialized In','tags-specialty',false],['address','Address','textarea',false],['status','Status','select',false,['active','inactive']]
+  ],columns:[['code','Code'],['name','Workshop / Party'],['contactPerson','Contact Person'],['phone','Phone'],['specializedIn','Specialized In'],['address','Address'],['status','Status']]},
   categories:{name:'Categories',singular:'Category',code:'CAT',fields:[
     ['name','Category Name','text',true],['status','Status','select',false,['active','inactive']]
   ],columns:[['code','Code'],['name','Category'],['status','Status']]},
@@ -3242,7 +3257,10 @@ const MASTER_AUTOFILL_MAP={
 function masterAutoConfig(field){return MASTER_AUTOFILL_MAP[masterCurrent]?.[field]||null}
 
 function masterAutoSearchText(record){
-  return Object.values(record||{}).filter(v=>['string','number'].includes(typeof v)).join(' ').toLowerCase();
+  return Object.values(record||{}).flatMap(v=>{
+    if(Array.isArray(v))return v;
+    return ['string','number'].includes(typeof v)?[v]:[];
+  }).join(' ').toLowerCase();
 }
 function masterAutoTokens(q){
   return String(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -3414,11 +3432,102 @@ function masterBindAutofill(){
 }
 document.addEventListener('mousedown',e=>{if(!e.target.closest('.master-auto-wrap'))masterCloseAuto()});
 
+
+function masterTagFieldHtml(key,label,mode){
+  return `<div class="field">
+    <label>${escHtml(label)}</label>
+    <div class="master-tagbox" data-master-tagbox="${key}">
+      <div class="master-taglist" data-master-taglist="${key}"></div>
+      <div class="master-tag-search-wrap">
+        <input autocomplete="off" data-master-tag-input="${key}" placeholder="${mode==='items'?'Type item name...':'Type specialty or item...'}">
+        <div class="master-tag-suggestions" data-master-tag-suggestions="${key}"></div>
+      </div>
+    </div>
+    <div class="master-auto-hint">${mode==='items'?'Select one or more products from Item Master.':'Select Item Master suggestions or type a manual workshop specialty.'}</div>
+  </div>`;
+}
+function masterTagValues(key){
+  const box=$(`[data-master-tagbox="${key}"]`);
+  if(!box)return[];
+  try{return JSON.parse(box.dataset.values||'[]')}catch(e){return[]}
+}
+function masterTagSetValues(key,values){
+  const box=$(`[data-master-tagbox="${key}"]`);if(!box)return;
+  box.dataset.values=JSON.stringify(Array.isArray(values)?values:[]);
+  masterTagPaint(key)
+}
+function masterTagPaint(key){
+  const list=$(`[data-master-taglist="${key}"]`),vals=masterTagValues(key);
+  if(!list)return;
+  list.innerHTML=vals.map((v,i)=>`<span class="master-tag-pill">${escHtml(v)}<button type="button" data-master-tag-remove="${key}" data-index="${i}">×</button></span>`).join('');
+  list.querySelectorAll('[data-master-tag-remove]').forEach(b=>b.onclick=()=>{
+    const a=masterTagValues(key);a.splice(+b.dataset.index,1);masterTagSetValues(key,a)
+  })
+}
+function masterTagAdd(key,value){
+  const v=erpTitleCase(String(value||'').trim());if(!v)return;
+  const a=masterTagValues(key);
+  if(!a.some(x=>String(x).toLowerCase()===v.toLowerCase()))a.push(v);
+  masterTagSetValues(key,a)
+}
+function masterBindTagField(key,mode){
+  const input=$(`[data-master-tag-input="${key}"]`),pop=$(`[data-master-tag-suggestions="${key}"]`);
+  if(!input||!pop)return;
+  let rows=[],active=-1;
+  const close=()=>{pop.classList.remove('open');active=-1};
+  const choose=(index,manual=false)=>{
+    if(manual){masterTagAdd(key,input.value)}
+    else{
+      const r=rows[index];if(!r)return;
+      masterTagAdd(key,[r.name,r.size].filter(Boolean).join(' '))
+    }
+    input.value='';close()
+  };
+  const draw=()=>{
+    const q=input.value.trim().toLowerCase();
+    if(!q){pop.innerHTML='';return close()}
+    const tokens=q.split(/\s+/).filter(Boolean);
+    rows=masterBucket('items').filter(r=>{
+      const hay=[r.name,r.size,r.code,r.category,r.unit].filter(Boolean).join(' ').toLowerCase();
+      return tokens.every(t=>hay.includes(t))
+    }).slice(0,30);
+    pop.innerHTML=rows.map((r,i)=>`<div class="master-tag-option" data-tag-option="${i}"><b>${escHtml([r.name,r.size].filter(Boolean).join(' '))}</b><small>${escHtml([r.code,r.unit,r.category].filter(Boolean).join(' • '))}</small></div>`).join('');
+    if(mode==='specialty'){
+      pop.innerHTML+=`<div class="master-tag-option master-tag-manual" data-tag-manual="1"><b>Add "${escHtml(input.value.trim())}"</b><small>Manual specialty</small></div>`
+    }
+    pop.querySelectorAll('[data-tag-option]').forEach(el=>el.onmousedown=e=>{e.preventDefault();choose(+el.dataset.tagOption,false)});
+    pop.querySelector('[data-tag-manual]')?.addEventListener('mousedown',e=>{e.preventDefault();choose(0,true)});
+    active=-1;pop.classList.add('open')
+  };
+  input.addEventListener('input',draw);
+  input.addEventListener('keydown',e=>{
+    const opts=[...pop.querySelectorAll('.master-tag-option')];
+    if(!pop.classList.contains('open')){
+      if(e.key==='Enter'&&mode==='specialty'&&input.value.trim()){e.preventDefault();masterTagAdd(key,input.value);input.value=''}
+      return
+    }
+    if(e.key==='ArrowDown'){e.preventDefault();active=opts.length?(active+1)%opts.length:-1}
+    else if(e.key==='ArrowUp'){e.preventDefault();active=opts.length?(active<=0?opts.length-1:active-1):-1}
+    else if(e.key==='Enter'||e.key==='Tab'){
+      if(opts.length){
+        e.preventDefault();
+        const el=opts[active>=0?active:0];
+        if(el?.hasAttribute('data-tag-manual'))choose(0,true);
+        else if(el)choose(+el.dataset.tagOption,false)
+      }
+    }else if(e.key==='Escape'){close();return}else return;
+    opts.forEach((x,i)=>x.classList.toggle('active',i===active))
+  });
+  input.addEventListener('blur',()=>setTimeout(close,120))
+}
+
 function masterRenderForm(){
   const cfg=MASTER_TYPES[masterCurrent];
   $('#masterFormTitle').textContent=(masterEditingId?'Edit ':'Add ')+cfg.singular;
   $('#masterForm').innerHTML=cfg.fields.map(([key,label,type,required,options])=>{
     if(type==='select')return `<div class="field"><label>${escHtml(label)}${required?' *':''}</label><select data-master-field="${key}">${(options||[]).map(o=>`<option value="${escHtml(o)}">${escHtml(masterCap(o))}</option>`).join('')}</select></div>`;
+    if(type==='tags-items')return masterTagFieldHtml(key,label,'items');
+    if(type==='tags-specialty')return masterTagFieldHtml(key,label,'specialty');
     if(type==='textarea')return `<div class="field full"><label>${escHtml(label)}${required?' *':''}</label><textarea data-master-field="${key}"></textarea></div>`;
     const auto=masterAutoConfig(key);
     if(auto){
@@ -3436,6 +3545,10 @@ function masterRenderForm(){
   }).join('');
   masterBindAutofill();
   masterBindTextFormatting();
+  cfg.fields.forEach(([key,label,type])=>{
+    if(type==='tags-items'){masterTagSetValues(key,[]);masterBindTagField(key,'items')}
+    if(type==='tags-specialty'){masterTagSetValues(key,[]);masterBindTagField(key,'specialty')}
+  });
 }
 function masterClearForm(){masterEditingId='';masterRenderForm()}
 function masterFilteredRows(){
@@ -3453,7 +3566,7 @@ function masterRenderTable(){
   const cfg=MASTER_TYPES[masterCurrent],settings=masterPageSettings(),rows=masterFilteredRows();
   $('#masterListTitle').textContent=cfg.name+' List';
   $('#masterTableHead').innerHTML='<tr>'+(settings.rowNumbers?'<th>#</th>':'')+cfg.columns.map(c=>`<th>${escHtml(c[1])}</th>`).join('')+'<th>Action</th></tr>';
-  $('#masterTableBody').innerHTML=rows.length?rows.map((r,i)=>'<tr>'+(settings.rowNumbers?`<td>${i+1}</td>`:'')+cfg.columns.map(([k])=>`<td>${escHtml(r[k]??'')}</td>`).join('')+`<td><div class="master-row-actions"><button class="master-mini" onclick="masterEdit('${r.id}')">Edit</button><button class="master-mini danger" onclick="masterDelete('${r.id}')">Delete</button></div></td></tr>`).join(''):`<tr><td class="master-empty" colspan="${cfg.columns.length+(settings.rowNumbers?2:1)}">No ${escHtml(cfg.name.toLowerCase())} records found.</td></tr>`;
+  $('#masterTableBody').innerHTML=rows.length?rows.map((r,i)=>'<tr>'+(settings.rowNumbers?`<td>${i+1}</td>`:'')+cfg.columns.map(([k])=>`<td>${escHtml(Array.isArray(r[k])?r[k].join(', '):(r[k]??''))}</td>`).join('')+`<td><div class="master-row-actions"><button class="master-mini" onclick="masterEdit('${r.id}')">Edit</button><button class="master-mini danger" onclick="masterDelete('${r.id}')">Delete</button></div></td></tr>`).join(''):`<tr><td class="master-empty" colspan="${cfg.columns.length+(settings.rowNumbers?2:1)}">No ${escHtml(cfg.name.toLowerCase())} records found.</td></tr>`;
 }
 function masterRenderSummary(){
   const cfg=MASTER_TYPES[masterCurrent],rows=masterBucket(),tenant=window.ERPTenant?.current?.();
@@ -3463,6 +3576,12 @@ function masterRenderAll(){masterRenderTabs();masterRenderForm();masterRenderTab
 function masterReadForm(){
   const cfg=MASTER_TYPES[masterCurrent],o={};
   for(const [key,label,type,required] of cfg.fields){
+    if(type==='tags-items'||type==='tags-specialty'){
+      const v=masterTagValues(key);
+      if(required&&!v.length){toast(label+' is required');return null}
+      o[key]=v;
+      continue
+    }
     const e=$(`[data-master-field="${key}"]`);
     let v=e?.value??'';
     if(type!=='select')v=erpFormatText(v,key,label);
@@ -3493,7 +3612,10 @@ function masterSave(){
 }
 function masterEdit(id){
   if(!window.ERPAccessControl?.canPage?.('all-masters','edit'))return toast('You do not have edit permission');
-  const r=masterBucket().find(x=>x.id===id);if(!r)return;masterEditingId=id;masterRenderForm();MASTER_TYPES[masterCurrent].fields.forEach(([k])=>{const e=$(`[data-master-field="${k}"]`);if(e)e.value=r[k]??''});$('#masterFormTitle').textContent='Edit '+MASTER_TYPES[masterCurrent].singular;window.scrollTo({top:0,behavior:'smooth'})
+  const r=masterBucket().find(x=>x.id===id);if(!r)return;masterEditingId=id;masterRenderForm();MASTER_TYPES[masterCurrent].fields.forEach(([k,label,type])=>{
+    if(type==='tags-items'||type==='tags-specialty'){masterTagSetValues(k,Array.isArray(r[k])?r[k]:[]);return}
+    const e=$(`[data-master-field="${k}"]`);if(e)e.value=r[k]??''
+  });$('#masterFormTitle').textContent='Edit '+MASTER_TYPES[masterCurrent].singular;window.scrollTo({top:0,behavior:'smooth'})
 }
 function masterDelete(id){
   if(!window.ERPAccessControl?.canPage?.('all-masters','delete'))return toast('You do not have delete permission');
