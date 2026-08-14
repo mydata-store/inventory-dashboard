@@ -10965,6 +10965,67 @@ body.erp-hide-theme-actions #saveBtn{
 </style>
 
 <style id="dailyProductionConsumptionV1477Style">#panel-formula-control-center .dpc-table th,#panel-formula-control-center .dpc-history-table th{white-space:nowrap}#panel-formula-control-center .dpc-table td{vertical-align:middle;white-space:nowrap}#panel-formula-control-center .dpc-table .fcc-master-control{min-width:125px}#panel-formula-control-center .dpc-summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:12px}#panel-formula-control-center .dpc-summary-grid>div{border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface)}#panel-formula-control-center .dpc-summary-grid small{display:block;color:var(--muted);text-transform:uppercase;font-size:8px;font-weight:800;margin-bottom:5px}#panel-formula-control-center .dpc-summary-grid strong{font-size:15px}#panel-formula-control-center .dpc-status{display:inline-block;border-radius:999px;padding:4px 8px;font-size:8px;font-weight:900;white-space:nowrap}#panel-formula-control-center .dpc-under{background:#fee2e2;color:#991b1b}#panel-formula-control-center .dpc-on{background:#dcfce7;color:#166534}#panel-formula-control-center .dpc-above{background:#dbeafe;color:#1d4ed8}@media(max-width:1200px){#panel-formula-control-center .dpc-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
+
+<style id="dailyMaterialConsumptionV1478Style">
+#panel-formula-control-center .dmc-section-title{
+  margin:14px 0 8px;
+  font-size:12px;
+  font-weight:900;
+  color:var(--text);
+}
+#panel-formula-control-center .dmc-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+#panel-formula-control-center .dmc-electric-grid{
+  display:grid;
+  grid-template-columns:.85fr 1.65fr;
+  gap:12px;
+}
+#panel-formula-control-center .dmc-subcard{
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px;
+  background:var(--surface);
+}
+#panel-formula-control-center .dmc-subcard h4{
+  margin:0 0 10px;
+  font-size:11px;
+}
+#panel-formula-control-center .dmc-solar-grid{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+}
+#panel-formula-control-center .dmc-summary-row{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:10px;
+}
+#panel-formula-control-center .dmc-summary-row>div{
+  border:1px solid var(--border);
+  border-radius:9px;
+  padding:10px 12px;
+  background:var(--surface);
+}
+#panel-formula-control-center .dmc-summary-row small{
+  display:block;
+  font-size:8px;
+  font-weight:800;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+#panel-formula-control-center .dmc-summary-row strong{
+  font-size:14px;
+}
+@media(max-width:1200px){
+  #panel-formula-control-center .dmc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #panel-formula-control-center .dmc-electric-grid{grid-template-columns:1fr}
+  #panel-formula-control-center .dmc-solar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+</style>
+
 <style id="formulaControlTitleV1468Style">
 .fcc-title-controller{
   position:fixed; inset:0; z-index:10050; background:rgba(0,0,0,.42);
@@ -11344,6 +11405,74 @@ function clearStandardSetup(){
   f$('#fccSaveStandard').textContent='Save Department Standard';
   if(f$('#fccStdEditBanner'))f$('#fccStdEditBanner').style.display='none'
 }
+
+const FCC_DMC_KEY='erpDailyMaterialConsumptionV1';
+function dmcRows(){
+  const r=load(FCC_DMC_KEY);
+  return Array.isArray(r)?r:[]
+}
+function dmcSaveRows(rows){save(FCC_DMC_KEY,rows)}
+function dmcVal(id){return fn(f$('#'+id)?.value)}
+function recalcDmc(){
+  const wapda=dmcVal('fccDmcWapdaPaper')+dmcVal('fccDmcWapdaBoard');
+  const solar=dmcVal('fccDmcSolar1')+dmcVal('fccDmcSolar2')+dmcVal('fccDmcSolar3')+dmcVal('fccDmcSolar4')+dmcVal('fccDmcSolar5');
+  const totalElec=wapda+solar;
+  const cons=dmcVal('fccDmcConsPulp')+dmcVal('fccDmcConsMachine')+dmcVal('fccDmcConsBoiler');
+  const bal=totalElec-cons;
+  if(f$('#fccDmcTotalWapda'))f$('#fccDmcTotalWapda').textContent=wapda.toFixed(3);
+  if(f$('#fccDmcTotalSolar'))f$('#fccDmcTotalSolar').textContent=solar.toFixed(3);
+  if(f$('#fccDmcTotalElectricity'))f$('#fccDmcTotalElectricity').textContent=totalElec.toFixed(3);
+  if(f$('#fccDmcTotalConsumption'))f$('#fccDmcTotalConsumption').textContent=cons.toFixed(3);
+  if(f$('#fccDmcElectricityBalance'))f$('#fccDmcElectricityBalance').textContent=bal.toFixed(3);
+}
+function saveDmcRecord(){
+  const date=fccFormatTypedDate(f$('#fccDmcDate').value);
+  if(!date)return toast('Date is required');
+  const row={
+    id:'DMC-'+Date.now(),date,
+    prod1:dmcVal('fccDmcProd1'),prod2:dmcVal('fccDmcProd2'),prod3:dmcVal('fccDmcProd3'),
+    wapdaPaper:dmcVal('fccDmcWapdaPaper'),wapdaBoard:dmcVal('fccDmcWapdaBoard'),
+    solar1:dmcVal('fccDmcSolar1'),solar2:dmcVal('fccDmcSolar2'),solar3:dmcVal('fccDmcSolar3'),
+    solar4:dmcVal('fccDmcSolar4'),solar5:dmcVal('fccDmcSolar5'),
+    consPulp:dmcVal('fccDmcConsPulp'),consMachine:dmcVal('fccDmcConsMachine'),consBoiler:dmcVal('fccDmcConsBoiler'),
+    createdAt:new Date().toISOString()
+  };
+  row.totalWapda=row.wapdaPaper+row.wapdaBoard;
+  row.totalSolar=row.solar1+row.solar2+row.solar3+row.solar4+row.solar5;
+  row.totalElectricity=row.totalWapda+row.totalSolar;
+  row.totalConsumption=row.consPulp+row.consMachine+row.consBoiler;
+  row.balance=row.totalElectricity-row.totalConsumption;
+  const rows=dmcRows();rows.unshift(row);dmcSaveRows(rows);
+  renderDmcHistory();toast('Daily material consumption saved')
+}
+function clearDmcRecord(){
+  ['fccDmcDate','fccDmcProd1','fccDmcProd2','fccDmcProd3','fccDmcWapdaPaper','fccDmcWapdaBoard',
+   'fccDmcSolar1','fccDmcSolar2','fccDmcSolar3','fccDmcSolar4','fccDmcSolar5',
+   'fccDmcConsPulp','fccDmcConsMachine','fccDmcConsBoiler'].forEach(id=>{const el=f$('#'+id);if(el)el.value=''});
+  recalcDmc()
+}
+function deleteDmcRecord(id){
+  if(!confirm('Delete this daily record?'))return;
+  dmcSaveRows(dmcRows().filter(x=>x.id!==id));renderDmcHistory();toast('Daily record deleted')
+}
+function renderDmcHistory(){
+  const body=f$('#fccDmcHistoryBody');if(!body)return;
+  const q=ft(f$('#fccDmcSearch')?.value).toLowerCase();
+  let rows=dmcRows();
+  if(q)rows=rows.filter(x=>String(x.date||'').toLowerCase().includes(q));
+  body.innerHTML=rows.length?rows.map(x=>`<tr>
+    <td><b>${x.date||''}</b></td>
+    <td>${fn(x.prod1).toFixed(3)}</td><td>${fn(x.prod2).toFixed(3)}</td><td>${fn(x.prod3).toFixed(3)}</td>
+    <td>${fn(x.wapdaPaper).toFixed(3)}</td><td>${fn(x.wapdaBoard).toFixed(3)}</td>
+    <td>${fn(x.solar1).toFixed(3)}</td><td>${fn(x.solar2).toFixed(3)}</td><td>${fn(x.solar3).toFixed(3)}</td>
+    <td>${fn(x.solar4).toFixed(3)}</td><td>${fn(x.solar5).toFixed(3)}</td>
+    <td>${fn(x.consPulp).toFixed(3)}</td><td>${fn(x.consMachine).toFixed(3)}</td><td>${fn(x.consBoiler).toFixed(3)}</td>
+    <td>${fn(x.totalElectricity).toFixed(3)}</td><td>${fn(x.totalConsumption).toFixed(3)}</td><td>${fn(x.balance).toFixed(3)}</td>
+    <td><button class="fcc-btn dmc-delete" data-id="${x.id}">Delete</button></td>
+  </tr>`).join(''):'<tr><td colspan="18" style="text-align:center;padding:24px">No daily material consumption records saved yet.</td></tr>';
+  document.querySelectorAll('.dmc-delete').forEach(b=>b.onclick=()=>deleteDmcRecord(b.dataset.id))
+}
+
 function renderStandards(){
   const rows=stdSetups().slice().sort((a,b)=>
     ft(a.department).localeCompare(ft(b.department)) ||
@@ -11467,7 +11596,7 @@ function build(){
   const host=document.querySelector('main.content');if(!host)return;
   const sec=document.createElement('section');sec.className='panel purchase-page';sec.id='panel-formula-control-center';
   sec.innerHTML=`<div class="fcc-topbar">
-    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Daily Production & Consumption</button><button class="fcc-tab" data-fcctab="versions">Version History</button></div><div style="display:flex;gap:8px">
+    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Daily Production & Consumption</button><button class="fcc-tab" data-fcctab="versions">Daily Material Consumption</button></div><div style="display:flex;gap:8px">
       <button class="fcc-btn" id="fccPageController">⚙ Page Controller</button>
       <button class="fcc-btn dark" data-fcctab="mapping">Cost Group Mapping</button>
     </div></div>
@@ -11622,9 +11751,101 @@ function build(){
 <div class="fcc-std-rule-note" style="margin-top:12px"><b>Working rule:</b> Actual Yield = Actual Output ÷ Material Consumed. Expected Output = Material Consumed × Standard Yield %. Standard Material Required = Actual Output ÷ Standard Yield %. Status compares Actual Yield with Standard Yield.</div>
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="fcc-btn" id="fccDpcClear">Clear</button><button class="fcc-btn dark" id="fccDpcSave">Save Daily Record</button></div></div>
 <div class="fcc-card"><div class="fcc-toolbar"><div><h3 style="margin:0">Daily Production & Consumption History</h3><div style="font-size:10px;color:var(--muted);margin-top:4px">Search by date, department, process, material or status.</div></div><input id="fccDpcSearch" class="fcc-master-control" style="max-width:330px" placeholder="Search history..."></div><div class="fcc-table-wrap"><table class="fcc-table dpc-history-table"><thead><tr><th>Date</th><th>Department</th><th>Process</th><th>Material</th><th>Consumed</th><th>Actual Output</th><th>Actual Yield</th><th>Standard</th><th>Expected Output</th><th>Output Difference</th><th>Standard Material Required</th><th>Extra / Saved Material</th><th>Status</th></tr></thead><tbody id="fccDpcHistoryBody"></tbody></table></div></div>
-</div><div class="fcc-section" data-fccsection="versions"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>No.</th><th>Formula</th><th>Version</th><th>Previous Formula</th><th>Unit</th><th>Saved At</th></tr></thead><tbody id="fccVersionsBody"></tbody></table></div></div>
-   <div class="fcc-section" data-fccsection="mapping"><div class="fcc-grid"><div class="fcc-span-2"><label>Formula</label><select id="fccMapFormula"></select></div><div><label>Cost Group</label><input id="fccMapGroup" placeholder="e.g. Raw Material / Production"></div><div><label>Department</label><input id="fccMapDepartment"></div><div class="fcc-span-2"><label>Report / Use</label><input id="fccMapReport" placeholder="e.g. Daily Costing / Ash Report"></div></div><button class="fcc-btn dark" id="fccSaveMapping" style="margin:10px 0">Save Mapping</button><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Formula</th><th>Cost Group</th><th>Department</th><th>Report / Use</th><th>Action</th></tr></thead><tbody id="fccMappingBody"></tbody></table></div></div>
-  </div>
+</div><div class="fcc-section" data-fccsection="versions">
+    <div class="fcc-card" style="margin-bottom:14px">
+      <div class="fcc-toolbar">
+        <div>
+          <h3 style="margin:0">Daily Material Consumption</h3>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">
+            Enter one daily record for production, electricity generation/source and department consumption.
+          </div>
+        </div>
+      </div>
+
+      <div class="dmc-section-title">1. Daily Production</div>
+      <div class="dmc-grid dmc-prod-grid">
+        <div><label>Date *</label><input id="fccDmcDate" class="fcc-master-control" placeholder="Date"></div>
+        <div><label>Production Unit 1</label><input id="fccDmcProd1" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+        <div><label>Production Unit 2</label><input id="fccDmcProd2" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+        <div><label>Production Unit 3</label><input id="fccDmcProd3" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+      </div>
+
+      <div class="dmc-section-title">2. Electricity</div>
+      <div class="dmc-electric-grid">
+        <div class="dmc-subcard">
+          <h4>WAPDA</h4>
+          <div class="dmc-grid">
+            <div><label>Paper</label><input id="fccDmcWapdaPaper" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Board</label><input id="fccDmcWapdaBoard" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+          </div>
+        </div>
+
+        <div class="dmc-subcard">
+          <h4>Solar</h4>
+          <div class="dmc-grid dmc-solar-grid">
+            <div><label>Ground 1</label><input id="fccDmcSolar1" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Ground 2</label><input id="fccDmcSolar2" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Ground 3</label><input id="fccDmcSolar3" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Ground 4</label><input id="fccDmcSolar4" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Ground 5</label><input id="fccDmcSolar5" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dmc-summary-row">
+        <div><small>Total WAPDA</small><strong id="fccDmcTotalWapda">0.000</strong></div>
+        <div><small>Total Solar</small><strong id="fccDmcTotalSolar">0.000</strong></div>
+        <div><small>Total Electricity</small><strong id="fccDmcTotalElectricity">0.000</strong></div>
+      </div>
+
+      <div class="dmc-section-title">3. Electricity Consumption</div>
+      <div class="dmc-grid">
+        <div><label>Pulp Mill</label><input id="fccDmcConsPulp" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+        <div><label>Machine Hall</label><input id="fccDmcConsMachine" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+        <div><label>Boiler House</label><input id="fccDmcConsBoiler" class="fcc-master-control" type="number" step="any" placeholder="0"></div>
+      </div>
+
+      <div class="dmc-summary-row">
+        <div><small>Total Consumption</small><strong id="fccDmcTotalConsumption">0.000</strong></div>
+        <div><small>Electricity Balance</small><strong id="fccDmcElectricityBalance">0.000</strong></div>
+      </div>
+
+      <div class="fcc-std-rule-note" style="margin-top:12px">
+        Steam section will be added separately after this Production + Electricity + Consumption structure is finalized.
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="fcc-btn" id="fccDmcClear">Clear</button>
+        <button class="fcc-btn dark" id="fccDmcSave">Save Daily Record</button>
+      </div>
+    </div>
+
+    <div class="fcc-card">
+      <div class="fcc-toolbar">
+        <div>
+          <h3 style="margin:0">Daily Material Consumption History</h3>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">
+            Latest daily records appear first.
+          </div>
+        </div>
+        <input id="fccDmcSearch" class="fcc-master-control" style="max-width:320px" placeholder="Search date...">
+      </div>
+      <div class="fcc-table-wrap">
+        <table class="fcc-table">
+          <thead><tr>
+            <th>Date</th>
+            <th>Prod 1</th><th>Prod 2</th><th>Prod 3</th>
+            <th>WAPDA Paper</th><th>WAPDA Board</th>
+            <th>Solar 1</th><th>Solar 2</th><th>Solar 3</th><th>Solar 4</th><th>Solar 5</th>
+            <th>Pulp Mill</th><th>Machine Hall</th><th>Boiler House</th>
+            <th>Total Electricity</th><th>Total Consumption</th><th>Balance</th>
+            <th>Action</th>
+          </tr></thead>
+          <tbody id="fccDmcHistoryBody"></tbody>
+        </table>
+      </div>
+    </div>
+   </div>
   
   <div id="fccTitleController" class="fcc-title-controller">
     <div class="fcc-title-panel">
@@ -11667,6 +11888,15 @@ function build(){
   f$('#fccDpcSave').onclick=saveDpcEntry;
   f$('#fccDpcClear').onclick=clearDpcEntry;
   f$('#fccDpcSearch').oninput=renderDpcHistory;
+  bindFccTypedDate(f$('#fccDmcDate'));
+  ['fccDmcProd1','fccDmcProd2','fccDmcProd3','fccDmcWapdaPaper','fccDmcWapdaBoard',
+   'fccDmcSolar1','fccDmcSolar2','fccDmcSolar3','fccDmcSolar4','fccDmcSolar5',
+   'fccDmcConsPulp','fccDmcConsMachine','fccDmcConsBoiler'].forEach(id=>{
+      const el=f$('#'+id);if(el)el.oninput=recalcDmc
+   });
+  f$('#fccDmcSave').onclick=saveDmcRecord;
+  f$('#fccDmcClear').onclick=clearDmcRecord;
+  f$('#fccDmcSearch').oninput=renderDmcHistory;
   bindFccTypedDate(f$('#fccStdEffective'));
   f$('#fccStdOutput').oninput=updateStdExpectedHeader;
   f$('#fccStdOutputUnit').oninput=()=>document.querySelectorAll('#fccStdMaterialsBody tr').forEach(tr=>{const u=tr.querySelector('.fcc-std-production-unit');if(u&&!u.dataset.touched)u.value=f$('#fccStdOutputUnit').value});
@@ -11679,6 +11909,8 @@ function build(){
   clearEditor();
   clearStandardSetup();
   renderAsh();
+  renderDmcHistory();
+  recalcDmc();
   calculateAll()
 }
 function renderAll(){
