@@ -11190,22 +11190,33 @@ function stdItemOptions(selected=''){
 function addStdMaterialRow(data={}){
   const body=f$('#fccStdMaterialsBody'); if(!body)return;
   const tr=document.createElement('tr');
+  const type=data.standardType||'Yield %';
   tr.innerHTML=`<td class="fcc-std-sr"></td>
     <td><select class="fcc-std-material">${stdItemOptions(data.inputMaterial||'')}</select></td>
+    <td><input class="fcc-std-consumed" type="number" step="any" value="${data.consumedQty??''}" placeholder="0"></td>
     <td><select class="fcc-std-type">
-      ${['Yield %','Output per Input Unit','Consumption per Output Unit','Fixed Standard'].map(x=>`<option ${x===(data.standardType||'Yield %')?'selected':''}>${x}</option>`).join('')}
+      ${['Yield %','Output per Input Unit','Consumption per Output Unit','Fixed Standard'].map(x=>`<option ${x===type?'selected':''}>${x}</option>`).join('')}
     </select></td>
     <td><input class="fcc-std-value" type="number" step="any" value="${data.value??''}" placeholder="0"></td>
-    <td><input class="fcc-std-unit" value="${data.unit||'%'}" placeholder="% / Ton Steam per Ton Fuel"></td>
+    <td><input class="fcc-std-unit" value="${data.unit||(type==='Yield %'?'%':'')}" placeholder="% / Ton Steam per Ton Fuel"></td>
+    <td class="fcc-std-expected">0.000</td>
     <td><input class="fcc-std-notes" value="${data.notes||''}" placeholder="Optional"></td>
     <td><button class="fcc-btn fcc-std-delete-row" type="button">Delete</button></td>`;
   body.appendChild(tr);
-  tr.querySelector('.fcc-std-delete-row').onclick=()=>{tr.remove();renumberStdRows()};
+
+  const recalc=()=>recalcStdSetup();
+  tr.querySelector('.fcc-std-delete-row').onclick=()=>{tr.remove();renumberStdRows();recalcStdSetup()};
+  tr.querySelector('.fcc-std-consumed').oninput=recalc;
+  tr.querySelector('.fcc-std-value').oninput=recalc;
   tr.querySelector('.fcc-std-type').onchange=e=>{
     const unit=tr.querySelector('.fcc-std-unit');
-    if(e.target.value==='Yield %' && (!unit.value || unit.value==='%'))unit.value='%';
+    if(e.target.value==='Yield %')unit.value='%';
+    else if(e.target.value==='Output per Input Unit' && !unit.value)unit.value='Output / Input';
+    recalcStdSetup()
   };
-  renumberStdRows()
+  tr.querySelector('.fcc-std-unit').oninput=recalc;
+  renumberStdRows();
+  recalcStdSetup()
 }
 function renumberStdRows(){
   document.querySelectorAll('#fccStdMaterialsBody tr').forEach((tr,i)=>tr.querySelector('.fcc-std-sr').textContent=i+1)
@@ -11213,11 +11224,33 @@ function renumberStdRows(){
 function collectStdMaterials(){
   return [...document.querySelectorAll('#fccStdMaterialsBody tr')].map(tr=>({
     inputMaterial:ft(tr.querySelector('.fcc-std-material').value),
+    consumedQty:fn(tr.querySelector('.fcc-std-consumed').value),
     standardType:ft(tr.querySelector('.fcc-std-type').value),
     value:fn(tr.querySelector('.fcc-std-value').value),
     unit:ft(tr.querySelector('.fcc-std-unit').value),
+    expectedOutput:fn(tr.querySelector('.fcc-std-expected').textContent),
     notes:ft(tr.querySelector('.fcc-std-notes').value)
   })).filter(x=>x.inputMaterial)
+}
+function recalcStdSetup(){
+  let totalInput=0,totalExpected=0;
+  document.querySelectorAll('#fccStdMaterialsBody tr').forEach(tr=>{
+    const consumed=fn(tr.querySelector('.fcc-std-consumed').value);
+    const type=ft(tr.querySelector('.fcc-std-type').value);
+    const value=fn(tr.querySelector('.fcc-std-value').value);
+    let expected=0;
+    if(type==='Yield %') expected=consumed*value/100;
+    else if(type==='Output per Input Unit') expected=consumed*value;
+    else if(type==='Consumption per Output Unit') expected=value ? consumed/value : 0;
+    else if(type==='Fixed Standard') expected=value;
+    tr.querySelector('.fcc-std-expected').textContent=expected.toFixed(3);
+    totalInput+=consumed;
+    totalExpected+=expected;
+  });
+  const combined=totalInput ? (totalExpected/totalInput)*100 : 0;
+  if(f$('#fccStdTotalInput'))f$('#fccStdTotalInput').textContent=totalInput.toFixed(3);
+  if(f$('#fccStdCombined'))f$('#fccStdCombined').textContent=combined.toFixed(2)+'%';
+  if(f$('#fccStdExpectedTotal'))f$('#fccStdExpectedTotal').textContent=totalExpected.toFixed(3);
 }
 function clearStandardSetup(){
   f$('#fccStdSetupId').value='';
@@ -11229,6 +11262,7 @@ function clearStandardSetup(){
   f$('#fccStdStatus').value='Active';
   f$('#fccStdMaterialsBody').innerHTML='';
   addStdMaterialRow();
+  recalcStdSetup();
   f$('#fccSaveStandard').textContent='Save Department Standard';
   if(f$('#fccStdEditBanner'))f$('#fccStdEditBanner').style.display='none'
 }
@@ -11245,14 +11279,15 @@ function renderStandards(){
     <td>${x.process||'—'}</td>
     <td><b>${x.output||'—'}</b>${x.outputUnit?` <span class="fcc-badge">${x.outputUnit}</span>`:''}</td>
     <td>${(x.materials||[]).length}</td>
-    <td>${(x.materials||[]).map(m=>`${m.inputMaterial} (${m.value} ${m.unit||''})`).join(', ')||'—'}</td>
+    <td>${(x.materials||[]).map(m=>`${m.inputMaterial}: ${m.consumedQty||0} × ${m.value} ${m.unit||''} → ${(m.expectedOutput||0).toFixed?m.expectedOutput.toFixed(3):m.expectedOutput||0}`).join(', ')||'—'}</td>
+    <td><b>${(x.combinedStandard||0).toFixed?x.combinedStandard.toFixed(2):x.combinedStandard||0}%</b><br><span style="font-size:8px;color:var(--muted)">Expected: ${(x.totalExpected||0).toFixed?x.totalExpected.toFixed(3):x.totalExpected||0} ${x.outputUnit||''}</span></td>
     <td>${x.effectiveDate||'—'}</td>
     <td>${x.status||'Active'}</td>
     <td><div class="chem-actions">
       <button class="fcc-btn fcc-edit-stdset" data-id="${x.id}">Edit</button>
       <button class="fcc-btn fcc-del-stdset" data-id="${x.id}">Delete</button>
     </div></td>
-  </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:25px">No department production standards saved yet.</td></tr>';
+  </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;padding:25px">No department production standards saved yet.</td></tr>';
   document.querySelectorAll('.fcc-edit-stdset').forEach(b=>b.onclick=()=>editStandardSetup(b.dataset.id));
   document.querySelectorAll('.fcc-del-stdset').forEach(b=>b.onclick=()=>deleteStandardSetup(b.dataset.id));
   renderAsh()
@@ -11274,7 +11309,10 @@ function saveStandard(){
   let rows=standards();
   // Once this grouped editor is used, save a normalized grouped list.
   let grouped=stdSetups().filter(x=>!String(x.id||'').startsWith('STDSET-LEGACY-'));
-  const payload={department,process,output,outputUnit,effectiveDate,status,materials};
+  const totalInput=materials.reduce((a,x)=>a+fn(x.consumedQty),0);
+  const totalExpected=materials.reduce((a,x)=>a+fn(x.expectedOutput),0);
+  const combinedStandard=totalInput ? (totalExpected/totalInput)*100 : 0;
+  const payload={department,process,output,outputUnit,effectiveDate,status,materials,totalInput,totalExpected,combinedStandard};
   if(setupId){
     const i=grouped.findIndex(x=>x.id===setupId);
     if(i>=0)grouped[i]={...grouped[i],...payload,updatedAt:new Date().toISOString()};
@@ -11299,6 +11337,7 @@ function editStandardSetup(id){
   f$('#fccStdMaterialsBody').innerHTML='';
   (x.materials||[]).forEach(addStdMaterialRow);
   if(!(x.materials||[]).length)addStdMaterialRow();
+  recalcStdSetup();
   f$('#fccSaveStandard').textContent='Update Department Standard';
   if(f$('#fccStdEditBanner')){
     f$('#fccStdEditBanner').style.display='flex';
@@ -11437,7 +11476,7 @@ function build(){
       <div class="fcc-toolbar" style="margin-top:14px">
         <div>
           <b>Input Material Standards</b>
-          <div style="font-size:9px;color:var(--muted);margin-top:3px">The same raw material can have a different standard in another department.</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px">The same raw material can have a different standard in another department. For Yield %, Expected Output = Consumed Qty × Standard % ÷ 100.</div>
         </div>
         <button class="fcc-btn dark" id="fccAddStdMaterial">+ Add Material</button>
       </div>
@@ -11445,10 +11484,16 @@ function build(){
       <div class="fcc-table-wrap">
         <table class="fcc-table">
           <thead><tr>
-            <th>#</th><th>Input Material</th><th>Standard Type</th><th>Standard Value</th><th>Unit</th><th>Notes</th><th>Action</th>
+            <th>#</th><th>Input Material</th><th>Consumed Qty</th><th>Standard Type</th><th>Standard Value</th><th>Unit</th><th>Expected Output</th><th>Notes</th><th>Action</th>
           </tr></thead>
           <tbody id="fccStdMaterialsBody"></tbody>
         </table>
+      </div>
+
+      <div class="chem-summary" style="margin-top:10px">
+        <div><small>Total Input</small><strong id="fccStdTotalInput">0.000</strong></div>
+        <div><small>Combined Standard</small><strong id="fccStdCombined">0.00%</strong></div>
+        <div><small>Total Expected Output</small><strong id="fccStdExpectedTotal">0.000</strong></div>
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
@@ -11467,7 +11512,7 @@ function build(){
       <div class="fcc-table-wrap">
         <table class="fcc-table">
           <thead><tr>
-            <th>Department</th><th>Process</th><th>Output</th><th>Materials</th><th>Material Standards</th><th>Effective</th><th>Status</th><th>Action</th>
+            <th>Department</th><th>Process</th><th>Output</th><th>Materials</th><th>Material Standards</th><th>Combined / Expected</th><th>Effective</th><th>Status</th><th>Action</th>
           </tr></thead>
           <tbody id="fccStandardsBody"></tbody>
         </table>
