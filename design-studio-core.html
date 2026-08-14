@@ -1393,7 +1393,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 #panel-rgp-entry .rgp-table-wrap{overflow:visible!important}
 
 
-/* V14.43 Supplier Products + Workshop Specialized In */
+/* V14.44 Supplier Products + Workshop Specialized In */
 .master-tagbox{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:4px 6px}
 .master-taglist{display:flex;gap:4px;flex-wrap:wrap}
 .master-tag-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));font-size:8px;font-weight:700}
@@ -6022,7 +6022,15 @@ const RGP_KEY='erpRgpRecordsV1';
 let rgpAnchor=null,rgpFocus=null,rgpUndo=[],rgpClipboard='',rgpUndoing=false,rgpLastSnap='',rgpCopyRange=null;
 
 function rgpLoad(){try{return JSON.parse(localStorage.getItem(RGP_KEY)||'[]')||[]}catch(e){return[]}}
-function rgpStore(a){localStorage.setItem(RGP_KEY,JSON.stringify(a))}
+function rgpStore(a){
+  try{
+    localStorage.setItem(RGP_KEY,JSON.stringify(Array.isArray(a)?a:[]));
+    return true
+  }catch(e){
+    console.error('RGP Store Error',e);
+    return false
+  }
+}
 function rgpFormatNo(v){
   const x=String(v||'').trim();if(!x)return'';
   const digits=x.replace(/\D/g,'');
@@ -6255,48 +6263,138 @@ function rgpClear(){
   rgpBindDedicatedDropdowns();rgpBindExcel();rgpBindDeleteRows();rgpUpdateTotal();rgpUndo=[];rgpLastSnap=JSON.stringify(rgpSnapshot())
 }
 function rgpSave(){
-  const filled=rgpRows().filter(tr=>[...tr.querySelectorAll('input')].some(x=>x.value.trim()));
-  if(!filled.length)return toast('Enter at least one RGP item');
-  const no=rgpFormatNo($('#rgpNo')?.value);if(!no)return toast('Enter RGP No.');
-  const items=filled.map(tr=>{const a=[...tr.querySelectorAll('input')],itemInput=a[0];return{
-    item:itemInput.dataset.itemName||itemInput.value.trim(),
-    size:itemInput.dataset.itemSize||'',
-    itemWithSize:itemInput.value.trim(),
-    itemCode:a[1].value.trim(),
-    unit:a[2].value.trim(),
-    qty:purchaseNum(a[3].value),
-    rate:purchaseNum(a[4].value),
-    pendingValue:purchaseNum(a[3].value)*purchaseNum(a[4].value),
-    remarks:''
-  }});
-  const rec={
-    id:'RGP-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
-    rgpNo:no,date:rgpFormatDate($('#rgpDate')?.value),dueDate:rgpFormatDate($('#rgpDueDate')?.value),
-    department:purchaseFormatText($('#rgpDepartment')?.value||'','department','Department'),
-    workshop:purchaseFormatText($('#rgpWorkshop')?.value||'','workshop','Workshop'),
-    carrier:purchaseFormatText($('#rgpCarrier')?.value||'','carrier','Carrier'),
-    authorizedBy:purchaseFormatText($('#rgpAuthorized')?.value||'','authorization','Authorized By'),
-    billDetail:String($('#rgpBillDetail')?.value||'').toUpperCase(),
-    purpose:purchaseFormatText($('#rgpPurpose')?.value||'','purpose','Purpose'),
-    remarks:purchaseFormatText($('#rgpHeaderRemarks')?.value||'','remarks','Remarks'),
-    vehicleNo:String($('#rgpVehicle')?.value||'').toUpperCase(),
-    contactNo:String($('#rgpContact')?.value||'').trim(),
-    status:'Pending',
-    returns:[],
-    items,createdAt:new Date().toISOString()
-  };
-  let all=rgpLoad(),editId=$('#rgpSaveBtn')?.dataset.editId||'';
-  if(editId){
-    const i=all.findIndex(x=>x.id===editId);
-    if(i>=0){rec.id=editId;rec.createdAt=all[i].createdAt||rec.createdAt;rec.updatedAt=new Date().toISOString();rec.returns=all[i].returns||[];all[i]=rec}
-    try{ERPAudit?.log?.({module:'Gate Pass',page:'RGP Entry',action:'Edit',recordId:rec.id,after:rec})}catch(e){}
-  }else{
-    all.unshift(rec);
-    try{ERPAudit?.log?.({module:'Gate Pass',page:'RGP Entry',action:'Add',recordId:rec.id,after:rec})}catch(e){}
+  try{
+    const no=rgpFormatNo($('#rgpNo')?.value||'');
+    const date=rgpFormatDate($('#rgpDate')?.value||'');
+    const dueDate=rgpFormatDate($('#rgpDueDate')?.value||'');
+
+    if($('#rgpNo'))$('#rgpNo').value=no;
+    if($('#rgpDate'))$('#rgpDate').value=date;
+    if($('#rgpDueDate'))$('#rgpDueDate').value=dueDate;
+
+    if(!no){toast('RGP Number is required');$('#rgpNo')?.focus();return false}
+    if(!date){toast('RGP Date is required');$('#rgpDate')?.focus();return false}
+
+    const rows=[...document.querySelectorAll('#rgpEntryTable tbody tr')];
+    const items=[];
+
+    rows.forEach(tr=>{
+      const a=[...tr.querySelectorAll('input')];
+      if(!a.length)return;
+
+      const itemInput=a[0];
+      const itemWithSize=String(itemInput?.value||'').trim();
+      const itemName=String(itemInput?.dataset.itemName||itemWithSize).trim();
+      const itemSize=String(itemInput?.dataset.itemSize||'').trim();
+      const itemCode=String(a[1]?.value||'').trim();
+      const unit=String(a[2]?.value||'').trim();
+      const qty=purchaseNum(a[3]?.value||0);
+      const rate=purchaseNum(a[4]?.value||0);
+
+      // Skip completely blank rows, but do not reject partially completed rows.
+      if(!itemWithSize && !itemCode && !unit && !qty && !rate)return;
+
+      items.push({
+        item:itemName,
+        size:itemSize,
+        itemWithSize,
+        itemCode,
+        unit,
+        qty,
+        rate,
+        pendingValue:qty*rate,
+        remarks:''
+      })
+    });
+
+    if(!items.length){
+      toast('Please enter at least one RGP item');
+      document.querySelector('#rgpEntryTable tbody tr input')?.focus();
+      return false
+    }
+
+    const rec={
+      id:'RGPREC-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+      rgpNo:no,
+      date,
+      dueDate,
+      department:purchaseFormatText($('#rgpDepartment')?.value||'','department','Department'),
+      workshop:purchaseFormatText($('#rgpWorkshop')?.value||'','workshop','Workshop'),
+      carrier:purchaseFormatText($('#rgpCarrier')?.value||'','carrier','Courier Name'),
+      authorizedBy:purchaseFormatText($('#rgpAuthorized')?.value||'','authorized','Authorized By'),
+      billDetail:String($('#rgpBillDetail')?.value||'').toUpperCase(),
+      purpose:purchaseFormatText($('#rgpPurpose')?.value||'','purpose','Purpose'),
+      remarks:purchaseFormatText($('#rgpHeaderRemarks')?.value||'','remarks','Remarks'),
+      vehicleNo:String($('#rgpVehicle')?.value||'').toUpperCase(),
+      contactNo:String($('#rgpContact')?.value||'').trim(),
+      status:'Pending',
+      returns:[],
+      items,
+      createdAt:new Date().toISOString()
+    };
+
+    let all=rgpLoad();
+    const editId=$('#rgpSaveBtn')?.dataset.editId||'';
+
+    if(editId){
+      const i=all.findIndex(x=>x.id===editId);
+      if(i>=0){
+        const oldRec=all[i];
+        rec.id=editId;
+        rec.createdAt=oldRec.createdAt||rec.createdAt;
+        rec.updatedAt=new Date().toISOString();
+        rec.returns=Array.isArray(oldRec.returns)?oldRec.returns:[];
+        all[i]=rec
+      }else{
+        all.unshift(rec)
+      }
+    }else{
+      const same=all.findIndex(x=>String(x.rgpNo||'').toUpperCase()===no.toUpperCase());
+      if(same>=0){
+        toast('This RGP Number already exists');
+        $('#rgpNo')?.focus();
+        return false
+      }
+      all.unshift(rec)
+    }
+
+    // Persist first. Do not clear form until storage confirms.
+    rgpStore(all);
+
+    const saved=rgpLoad();
+    const verify=saved.some(x=>x.id===rec.id || String(x.rgpNo||'').toUpperCase()===no.toUpperCase());
+    if(!verify){
+      toast('RGP could not be saved');
+      return false
+    }
+
+    try{
+      ERPAudit?.log?.({
+        module:'Gate Pass',
+        page:'RGP Entry',
+        action:editId?'Edit':'Add',
+        recordId:rec.id,
+        after:rec
+      })
+    }catch(e){}
+
+    if($('#rgpSaveBtn')){
+      delete $('#rgpSaveBtn').dataset.editId;
+      $('#rgpSaveBtn').textContent='Save RGP'
+    }
+
+    gateDashboardRender?.();
+    rgpDashboardRender?.();
+    rgpRenderList?.();
+
+    rgpClear();
+    toast(editId?'RGP updated successfully':'RGP saved successfully');
+    return true
+  }catch(err){
+    console.error('RGP Save Error',err);
+    toast('RGP save error: '+(err?.message||'Unknown error'));
+    return false
   }
-  rgpStore(all);
-  if($('#rgpSaveBtn')){delete $('#rgpSaveBtn').dataset.editId;$('#rgpSaveBtn').textContent='Save RGP'}
-  rgpClear();gateDashboardRender();rgpDashboardRender();rgpRenderList();toast(editId?'RGP updated':'RGP saved')
 }
 
 function rgpItemReceived(rec,itemIndex){
