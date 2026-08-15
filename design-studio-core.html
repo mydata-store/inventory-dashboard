@@ -4560,10 +4560,11 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   <div class="card">
     <div class="inv-page-head">
       <div>
-        <h2>Daily Data Entry</h2>
+        <h2>Daily Consumption Report</h2>
         <p>Production • Ash • Electricity Source • Department Consumption</p>
       </div>
       <div style="display:flex;gap:8px">
+        <button class="btn" id="ddeHistoryPageBtn">Consumption History</button>
         <button class="btn" id="ddeBackBtn">← Production & Consumption</button>
         <button class="btn purchase-controller-btn" type="button">⚙ Page Controller</button>
       </div>
@@ -4885,7 +4886,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
     <div class="dde-section">
       <div class="dde-section-title">
         <div>
-          <h3>Daily Data History</h3>
+          <h3>Recent Daily Consumption Records</h3>
           <p>Latest records first.</p>
         </div>
         <input id="ddeSearch" class="dde-control" style="max-width:320px" placeholder="Search date or unit...">
@@ -4901,6 +4902,60 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
           <tbody id="ddeHistoryBody"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="panel purchase-page" id="panel-daily-consumption-history">
+  <div class="card">
+    <div class="inv-page-head">
+      <div>
+        <h2>Daily Consumption History</h2>
+        <p>Search and review saved Daily Consumption Reports.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="dchBackBtn">← Daily Consumption Report</button>
+      </div>
+    </div>
+
+    <div class="dch-summary-grid">
+      <div class="dch-card"><span>Total Records</span><b id="dchTotalRecords">0</b></div>
+      <div class="dch-card"><span>Total Production</span><b id="dchTotalProduction">0.000 Ton</b></div>
+      <div class="dch-card"><span>Total Electricity</span><b id="dchTotalElectricity">0 Units</b></div>
+      <div class="dch-card"><span>Total Steam Produced</span><b id="dchTotalSteam">0.000 Ton</b></div>
+    </div>
+
+    <div class="dch-filters">
+      <input id="dchSearch" class="dde-control" placeholder="Search date, month, year or production unit...">
+      <select id="dchMonth" class="dde-control">
+        <option value="">All Months</option>
+        <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+        <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select>
+      <select id="dchYear" class="dde-control"><option value="">All Years</option></select>
+      <button class="btn" id="dchClear">Clear</button>
+    </div>
+
+    <div class="dde-table-wrap">
+      <table class="dde-table dch-table">
+        <thead><tr>
+          <th>Date</th><th>Production</th><th>Ash Avg</th><th>Total Electricity</th>
+          <th>Electricity Consumed</th><th>Steam Produced</th><th>Steam Consumed</th>
+          <th>Pulp Produced</th><th>Action</th>
+        </tr></thead>
+        <tbody id="dchBody"></tbody>
+      </table>
+    </div>
+
+    <div id="dchDetail" class="dch-detail" style="display:none">
+      <div class="dch-detail-head">
+        <h3 id="dchDetailTitle">Daily Consumption Detail</h3>
+        <button class="btn btn-sm" id="dchCloseDetail">Close</button>
+      </div>
+      <div id="dchDetailContent"></div>
     </div>
   </div>
 </section>
@@ -12939,7 +12994,7 @@ function pcBuild(){
     <div class="pc-nav-cards">
       <button class="pc-nav-card" type="button" data-pc-page="daily">
         <div class="pc-nav-icon">▤</div>
-        <strong>Daily Data Entry</strong>
+        <strong>Daily Consumption Report</strong>
         <span>Enter daily production, electricity, steam, materials and operating data.</span>
       </button>
       <button class="pc-nav-card" type="button" data-pc-page="materials">
@@ -14377,6 +14432,123 @@ function bindEnterNavigation(){
   });
 }
 
+
+function dchDateParts(v){
+  const s=String(v||'').trim();
+  const m=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+  if(m){
+    const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    return {month:months[m[2].toLowerCase()]||'',year:m[3].length===2?'20'+m[3]:m[3]}
+  }
+  const d=new Date(s);
+  return isNaN(d)?{month:'',year:''}:{month:String(d.getMonth()+1).padStart(2,'0'),year:String(d.getFullYear())}
+}
+function dchProduction(r){
+  return Array.isArray(r.productionUnits)?r.productionUnits.reduce((a,x)=>a+num(x.production),0):num(r.totalProduction??r.production)
+}
+function dchElectricityTotal(r){
+  if(r.totalElectricity!=null)return num(r.totalElectricity);
+  const wapda=num(r.wapdaPaper)+num(r.wapdaBoard);
+  const solar=[1,2,3,4,5].reduce((a,i)=>a+num(r['solar'+i]),0);
+  return wapda+solar
+}
+function dchElectricityConsumed(r){
+  if(r.totalConsumption!=null)return num(r.totalConsumption);
+  const units=Array.isArray(r.electricityToProductionUnits)?r.electricityToProductionUnits.reduce((a,x)=>a+num(x.qty),0):0;
+  return num(r.consumptionPulp)+num(r.consumptionBoiler)+units
+}
+function dchSteamProduced(r){return num(r.steamProduction)}
+function dchSteamConsumed(r){
+  if(r.steamConsumed!=null)return num(r.steamConsumed);
+  const units=Array.isArray(r.steamProductionUnits)?r.steamProductionUnits.reduce((a,x)=>a+num(x.qty),0):0;
+  return num(r.steamPulp)+num(r.steamBoiler)+units
+}
+function dchPulpProduced(r){return num(r.pulpProduced)}
+function dchAsh(r){return num(r.ashAverage)}
+
+function renderDailyConsumptionHistory(){
+  const body=$d('#dchBody'); if(!body)return;
+  const q=String($d('#dchSearch')?.value||'').trim().toLowerCase();
+  const month=$d('#dchMonth')?.value||'';
+  const year=$d('#dchYear')?.value||'';
+  const all=rows().slice().sort((a,b)=>(Date.parse(b.date)||0)-(Date.parse(a.date)||0));
+
+  const yearSel=$d('#dchYear');
+  if(yearSel){
+    const selected=yearSel.value;
+    const years=[...new Set(all.map(r=>dchDateParts(r.date).year).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+    yearSel.innerHTML='<option value="">All Years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    if(years.includes(selected))yearSel.value=selected
+  }
+
+  const filtered=all.filter(r=>{
+    const p=dchDateParts(r.date);
+    if(month && p.month!==month)return false;
+    if(year && p.year!==year)return false;
+    if(q){
+      const names=Array.isArray(r.productionUnits)?r.productionUnits.map(x=>x.name||'').join(' '):'';
+      const hay=`${r.date||''} ${p.month} ${p.year} ${names}`.toLowerCase();
+      if(!hay.includes(q))return false
+    }
+    return true
+  });
+
+  body.innerHTML=filtered.length?filtered.map(r=>`
+    <tr>
+      <td><b>${r.date||''}</b></td>
+      <td>${fmt(dchProduction(r))} Ton</td>
+      <td>${dchAsh(r).toFixed(2)}%</td>
+      <td>${electricityNumber(dchElectricityTotal(r))} Units</td>
+      <td>${electricityNumber(dchElectricityConsumed(r))} Units</td>
+      <td>${fmt(dchSteamProduced(r))} Ton</td>
+      <td>${fmt(dchSteamConsumed(r))} Ton</td>
+      <td>${fmt(dchPulpProduced(r))} Ton</td>
+      <td><button class="btn btn-sm" data-dch-id="${String(r.id||r.date||'').replace(/"/g,'')}">Detail</button></td>
+    </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;padding:18px">No saved Daily Consumption Reports found.</td></tr>';
+
+  setText('dchTotalRecords',filtered.length);
+  setText('dchTotalProduction',fmt(filtered.reduce((a,r)=>a+dchProduction(r),0))+' Ton');
+  setText('dchTotalElectricity',electricityNumber(filtered.reduce((a,r)=>a+dchElectricityTotal(r),0))+' Units');
+  setText('dchTotalSteam',fmt(filtered.reduce((a,r)=>a+dchSteamProduced(r),0))+' Ton');
+
+  body.querySelectorAll('[data-dch-id]').forEach(btn=>btn.onclick=()=>{
+    const id=btn.dataset.dchId;
+    const r=all.find(x=>String(x.id||x.date||'')===id);
+    showDailyConsumptionDetail(r)
+  })
+}
+function dchMaterialTable(title,list=[]){
+  if(!Array.isArray(list)||!list.length)return '';
+  return `<div class="dch-block"><h4>${title}</h4><div class="dde-table-wrap"><table class="dde-table">
+    <thead><tr><th>Item</th><th>Opening</th><th>Received</th><th>Used</th><th>Balance</th><th>Used Value</th></tr></thead>
+    <tbody>${list.map(x=>{
+      const used=num(x.used??x.totalConsumed);
+      return `<tr><td>${x.item||''}</td><td>${fmt(x.opening)}</td><td>${fmt(x.received)}</td><td>${fmt(used)}</td><td>${fmt(num(x.opening)+num(x.received)-used)}</td><td>PKR ${money(x.usedValue)}</td></tr>`
+    }).join('')}</tbody></table></div></div>`
+}
+function showDailyConsumptionDetail(r){
+  if(!r)return;
+  const host=$d('#dchDetail'), content=$d('#dchDetailContent');
+  if(!host||!content)return;
+  setText('dchDetailTitle','Daily Consumption Detail - '+(r.date||''));
+  content.innerHTML=`
+    <div class="dch-detail-summary">
+      <div><span>Total Production</span><b>${fmt(dchProduction(r))} Ton</b></div>
+      <div><span>Ash Average</span><b>${dchAsh(r).toFixed(2)}%</b></div>
+      <div><span>Total Electricity</span><b>${electricityNumber(dchElectricityTotal(r))} Units</b></div>
+      <div><span>Electricity Consumed</span><b>${electricityNumber(dchElectricityConsumed(r))} Units</b></div>
+      <div><span>Steam Produced</span><b>${fmt(dchSteamProduced(r))} Ton</b></div>
+      <div><span>Steam Consumed</span><b>${fmt(dchSteamConsumed(r))} Ton</b></div>
+    </div>
+    ${dchMaterialTable('Boiler House Materials',r.boilerMaterials)}
+    ${dchMaterialTable('Pulp Mill Materials',r.pulpMaterials)}
+    ${dchMaterialTable('Sulphite Plant Materials',r.sulphiteMaterials)}
+    ${dchMaterialTable('Production Unit Materials',r.unitMaterials)}
+  `;
+  host.style.display='block';
+  host.scrollIntoView({behavior:'smooth',block:'start'})
+}
+
 function init(){
   let ddeIsCurrent=false;
   try{ddeIsCurrent=localStorage.getItem('erpStudioLastPanel')==='daily-data-entry'}catch(e){}
@@ -14423,6 +14595,25 @@ function init(){
   $d('#ddeClearBtn').onclick=clearForm;
   $d('#ddeSearch').oninput=renderHistory;
   $d('#ddeBackBtn').onclick=()=>window.ERPProductionConsumption?.open();
+  const historyBtn=$d('#ddeHistoryPageBtn');
+  if(historyBtn)historyBtn.onclick=()=>{openPage('panel-daily-consumption-history');renderDailyConsumptionHistory()};
+  const dchBack=$d('#dchBackBtn');
+  if(dchBack)dchBack.onclick=()=>openPage();
+  const dchSearch=$d('#dchSearch');
+  if(dchSearch)dchSearch.addEventListener('input',renderDailyConsumptionHistory);
+  const dchMonth=$d('#dchMonth');
+  if(dchMonth)dchMonth.addEventListener('change',renderDailyConsumptionHistory);
+  const dchYear=$d('#dchYear');
+  if(dchYear)dchYear.addEventListener('change',renderDailyConsumptionHistory);
+  const dchClear=$d('#dchClear');
+  if(dchClear)dchClear.onclick=()=>{
+    if(dchSearch)dchSearch.value='';
+    if(dchMonth)dchMonth.value='';
+    if(dchYear)dchYear.value='';
+    renderDailyConsumptionHistory()
+  };
+  const dchClose=$d('#dchCloseDetail');
+  if(dchClose)dchClose.onclick=()=>{const h=$d('#dchDetail');if(h)h.style.display='none'};
 
   
   
@@ -15609,6 +15800,28 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   min-width:52px;
   font-weight:800;
   color:#003b66;
+}
+</style>
+<style id="dailyConsumptionHistoryV1528Style">
+#panel-daily-consumption-history .dch-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
+#panel-daily-consumption-history .dch-card{border:1px solid #b9e3fb;background:#f7fcff;border-radius:8px;padding:10px 12px}
+#panel-daily-consumption-history .dch-card span{display:block;font-size:10px;font-weight:700;color:#315b75}
+#panel-daily-consumption-history .dch-card b{display:block;margin-top:4px;font-size:15px;color:#003b66}
+#panel-daily-consumption-history .dch-filters{display:grid;grid-template-columns:minmax(260px,1fr) 180px 140px auto;gap:8px;margin:10px 0}
+#panel-daily-consumption-history .dch-table{min-width:1050px}
+#panel-daily-consumption-history .dch-detail{margin-top:14px;border:1px solid #b9e3fb;border-radius:9px;background:#fff;padding:12px}
+#panel-daily-consumption-history .dch-detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+#panel-daily-consumption-history .dch-detail-head h3{margin:0}
+#panel-daily-consumption-history .dch-detail-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-bottom:12px}
+#panel-daily-consumption-history .dch-detail-summary>div{border:1px solid #d3ebfa;border-radius:7px;padding:8px;background:#f9fdff}
+#panel-daily-consumption-history .dch-detail-summary span{display:block;font-size:9px;font-weight:700;color:#315b75}
+#panel-daily-consumption-history .dch-detail-summary b{display:block;margin-top:3px}
+#panel-daily-consumption-history .dch-block{margin-top:12px}
+#panel-daily-consumption-history .dch-block h4{margin:0 0 6px}
+@media(max-width:1100px){
+  #panel-daily-consumption-history .dch-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #panel-daily-consumption-history .dch-detail-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #panel-daily-consumption-history .dch-filters{grid-template-columns:1fr 1fr}
 }
 </style>
 </body></html>
