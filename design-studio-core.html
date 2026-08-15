@@ -4604,12 +4604,24 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
                   <strong id="ddeKeyMaterialConsumed">0.000 Ton</strong>
                 </div>
                 <div class="dde-production-key-card">
+                  <small>Expected Pulp on Standard</small>
+                  <strong id="ddeExpectedPulpStandard">0.000 Ton</strong>
+                </div>
+                <div class="dde-production-key-card">
                   <small>Pulp Produced</small>
                   <strong id="ddeKeyPulpProduced">0.000 Ton</strong>
                 </div>
                 <div class="dde-production-key-card">
+                  <small>Pulp Difference</small>
+                  <strong id="ddePulpStandardDifference">0.000 Ton</strong>
+                </div>
+                <div class="dde-production-key-card">
                   <small>Yield %</small>
                   <strong id="ddeKeyPulpYield">0.00%</strong>
+                </div>
+                <div class="dde-production-key-card">
+                  <small>Standard Status</small>
+                  <strong><span id="ddePulpStandardStatus" class="dde-status ok">On Standard</span></strong>
                 </div>
               </div>
             </div>
@@ -4778,7 +4790,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>6. Pulp Mill Material Consumption</h3>
-          <p>Excel-style daily material movement. Used material will feed the Production & Pulp Summary later.</p>
+          <p>Excel-style daily material movement. Each material uses its own Yield Standard from Material Master to calculate Expected Pulp.</p>
         </div>
         <button class="btn btn-sm" type="button" id="ddeAddPulpRow">+ Add Row</button>
       </div>
@@ -13054,6 +13066,56 @@ function loadMaterialBody(bodyId,section,rows=[],unitsMode=false){
   list.forEach(r=>addMaterialRow(section,bodyId,unitsMode,r))
 }
 
+
+function loadMaterialMaster(){
+  try{
+    const d=JSON.parse(localStorage.getItem('erpDailyMaterialMasterV1')||'{}');
+    return d&&typeof d==='object'?d:{}
+  }catch(e){return {}}
+}
+function materialStandardMap(section='pulp'){
+  const master=loadMaterialMaster();
+  const rows=Array.isArray(master[section])?master[section]:[];
+  const map={};
+  rows.forEach(r=>{
+    const name=String(r.material||'').trim().toLowerCase();
+    if(!name)return;
+    let standard=parseFloat(String(r.standard??'').replace('%','').trim());
+    if(!Number.isFinite(standard))standard=0;
+    map[name]={standard,unit:r.unit||'',rate:num(r.rate)}
+  });
+  return map
+}
+function expectedPulpFromPulpRows(){
+  const map=materialStandardMap('pulp');
+  const body=$d('#ddePulpBody');
+  if(!body)return {expected:0, details:[]};
+
+  let expected=0;
+  const details=[];
+
+  [...body.querySelectorAll('tr')].forEach(tr=>{
+    const item=String(tr.querySelector('.dde-mat-item')?.value||'').trim();
+    const used=num(tr.querySelector('.dde-mat-used')?.value);
+    if(!item || used<=0)return;
+
+    const ref=map[item.toLowerCase()];
+    const standard=ref?num(ref.standard):0;
+    const expectedItem=used*standard/100;
+    expected+=expectedItem;
+
+    details.push({
+      item,
+      used,
+      standard,
+      expected:expectedItem,
+      standardFound:!!ref
+    })
+  });
+
+  return {expected,details}
+}
+
 function recalc(){
   let totalProd=0,totalAshContent=0,active=0;
   for(let i=1;i<=3;i++){
@@ -13071,6 +13133,14 @@ function recalc(){
 
   const rawMaterialConsumed=totalUsed('ddePulpBody');
   const pulpYield=rawMaterialConsumed>0?(pulpProduced/rawMaterialConsumed*100):0;
+
+  // Material-wise standard calculation from Material Master:
+  // Expected Pulp = Σ(Used Material × its own Yield Standard %)
+  const stdResult=expectedPulpFromPulpRows();
+  const expectedPulp=stdResult.expected;
+  const pulpDifference=pulpProduced-expectedPulp;
+  const tolerance=0.0005;
+  const pulpStatus=Math.abs(pulpDifference)<=tolerance?'On Standard':pulpDifference<0?'Under Standard':'Above Standard';
 
   const wapda=value('ddeWapdaPaper')+value('ddeWapdaBoard');
   const solar=[1,2,3,4,5].reduce((a,i)=>a+value('ddeSolar'+i),0);
@@ -13119,8 +13189,16 @@ function recalc(){
   setText('ddeRawMaterialConsumed',rawMaterialConsumed.toFixed(3)+' Ton');
   setText('ddePulpYield',pulpYield.toFixed(2)+'%');
   setText('ddeKeyMaterialConsumed',rawMaterialConsumed.toFixed(3)+' Ton');
+  setText('ddeExpectedPulpStandard',expectedPulp.toFixed(3)+' Ton');
   setText('ddeKeyPulpProduced',pulpProduced.toFixed(3)+' Ton');
+  setText('ddePulpStandardDifference',pulpDifference.toFixed(3)+' Ton');
   setText('ddeKeyPulpYield',pulpYield.toFixed(2)+'%');
+
+  const pulpStatusEl=$d('#ddePulpStandardStatus');
+  if(pulpStatusEl){
+    pulpStatusEl.textContent=pulpStatus;
+    pulpStatusEl.className='dde-status '+(pulpStatus==='On Standard'?'ok':pulpStatus==='Under Standard'?'warn':'ok')
+  }
 
   setText('ddeTotalWapda',wapda.toFixed(3));
   setText('ddeTotalSolar',solar.toFixed(3));
@@ -13193,12 +13271,18 @@ function collect(){
   const totalConsumption=consPulp+consMachine+consBoiler;
   const electricityRate=value('ddeElectricityRate');
   const electricityAmount=totalConsumption*electricityRate;
+  const standardResult=expectedPulpFromPulpRows();
+  const expectedPulpStandard=standardResult.expected;
+  const pulpStandardDifference=pulpProduced-expectedPulpStandard;
+  const pulpStandardStatus=Math.abs(pulpStandardDifference)<=0.0005?'On Standard':pulpStandardDifference<0?'Under Standard':'Above Standard';
 
   return {
     id:$d('#ddeRecordId').value||('DDE-'+Date.now()),
     date:fmtDate($d('#ddeDate').value),
     units,totalProduction,ashAverage,totalAshContent,
     woodPulp,pulpProduced,rawMaterialConsumed,pulpYield,
+    expectedPulpStandard,pulpStandardDifference,pulpStandardStatus,
+    pulpStandardDetails:standardResult.details,
     wapdaPaper,wapdaBoard,totalWapda,
     solar,totalSolar,totalElectricity,
     consPulp,consMachine,consBoiler,totalConsumption,
