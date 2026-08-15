@@ -12226,6 +12226,188 @@ function open(){
   renderAll()
 }
 
+
+function renderMaterialMaster(){
+  const host=f$('[data-fccsection="materials"]');
+  if(!host)return;
+
+  const KEY='erpDailyMaterialMasterV1';
+  const sections=[
+    {id:'pulp',title:'Pulp Mill'},
+    {id:'boiler',title:'Boiler House'},
+    {id:'sulphite',title:'Sulphite Plant'},
+    {id:'stockpulp',title:'Stock Pulp Plant'},
+    {id:'lubricants',title:'Lubricants'},
+    {id:'others',title:'Others'}
+  ];
+
+  function load(){
+    try{
+      const d=JSON.parse(localStorage.getItem(KEY)||'{}');
+      return d&&typeof d==='object'?d:{}
+    }catch(e){return {}}
+  }
+  function save(data){
+    localStorage.setItem(KEY,JSON.stringify(data))
+  }
+  function esc(v){
+    return String(v??'').replace(/[&<>"']/g,ch=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[ch]))
+  }
+  function rowHtml(section,row={},i=0){
+    return `<tr data-mm-section="${section}">
+      <td class="mm-sr">${i+1}</td>
+      <td><input class="mm-material" value="${esc(row.material||'')}" placeholder="Material"></td>
+      <td><input class="mm-unit" value="${esc(row.unit||'')}" placeholder="Unit"></td>
+      <td><input class="mm-rate" type="number" step="any" value="${row.rate??''}" placeholder="0"></td>
+      <td><input class="mm-standard" value="${esc(row.standard||'')}" placeholder="Standard"></td>
+      <td><button class="btn btn-sm mm-delete" type="button">Delete</button></td>
+    </tr>`
+  }
+  function ensureRows(data,id){
+    if(!Array.isArray(data[id]) || !data[id].length)data[id]=[{}];
+  }
+  function collect(){
+    const data={};
+    sections.forEach(sec=>{
+      const body=f$('#mmBody-'+sec.id);
+      if(!body){data[sec.id]=[];return}
+      data[sec.id]=[...body.querySelectorAll('tr')].map(tr=>({
+        material:tr.querySelector('.mm-material')?.value.trim()||'',
+        unit:tr.querySelector('.mm-unit')?.value.trim()||'',
+        rate:parseFloat(tr.querySelector('.mm-rate')?.value)||0,
+        standard:tr.querySelector('.mm-standard')?.value.trim()||''
+      })).filter(r=>r.material||r.unit||r.rate||r.standard)
+    });
+    return data
+  }
+  function renumber(body){
+    [...body.querySelectorAll('tr')].forEach((tr,i)=>{
+      const sr=tr.querySelector('.mm-sr');if(sr)sr.textContent=i+1
+    })
+  }
+  function bindSection(sec){
+    const body=f$('#mmBody-'+sec.id);
+    if(!body)return;
+    body.querySelectorAll('.mm-delete').forEach(btn=>btn.onclick=()=>{
+      const tr=btn.closest('tr');
+      tr?.remove();
+      if(!body.querySelector('tr'))body.insertAdjacentHTML('beforeend',rowHtml(sec.id,{},0));
+      renumber(body);
+      bindSection(sec)
+    });
+    body.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('keydown',e=>{
+        if(e.key!=='Enter')return;
+        e.preventDefault();
+        const tr=inp.closest('tr');
+        if(!tr)return;
+        const rows=[...body.querySelectorAll('tr')];
+        const rIndex=rows.indexOf(tr);
+        const cls=[...inp.classList].find(c=>['mm-material','mm-unit','mm-rate','mm-standard'].includes(c));
+        if(!cls)return;
+        const nextRow=rows[rIndex+1];
+        if(nextRow){
+          const next=nextRow.querySelector('.'+cls);
+          if(next){next.focus();if(next.select)next.select()}
+        }else{
+          body.insertAdjacentHTML('beforeend',rowHtml(sec.id,{},rows.length));
+          bindSection(sec);
+          const next=body.lastElementChild.querySelector('.'+cls);
+          if(next){next.focus();if(next.select)next.select()}
+        }
+      })
+    })
+  }
+
+  const data=load();
+  sections.forEach(sec=>ensureRows(data,sec.id));
+
+  host.innerHTML=`
+    <div class="fcc-card" style="margin-bottom:12px">
+      <div class="fcc-row" style="justify-content:space-between;align-items:center">
+        <div>
+          <h2 style="margin:0 0 4px">Material Master</h2>
+          <p style="margin:0;color:var(--muted)">Department-wise daily-use materials for Daily Data Entry.</p>
+        </div>
+        <button class="btn" id="mmSaveAll" type="button">Save All Materials</button>
+      </div>
+    </div>
+
+    ${sections.map(sec=>`
+      <div class="fcc-card mm-section" style="margin-bottom:12px">
+        <div class="fcc-row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="margin:0">${sec.title}</h3>
+          <button class="btn btn-sm mm-add" type="button" data-section="${sec.id}">+ Add Row</button>
+        </div>
+        <div style="overflow:auto;border:1px solid var(--border);border-radius:8px">
+          <table class="mm-table" style="width:100%;border-collapse:collapse;min-width:760px">
+            <thead>
+              <tr>
+                <th>Sr No</th>
+                <th>Material</th>
+                <th>Unit</th>
+                <th>Rate</th>
+                <th>Standard</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="mmBody-${sec.id}">
+              ${data[sec.id].map((r,i)=>rowHtml(sec.id,r,i)).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `).join('')}
+  `;
+
+  const styleId='materialMasterTableV1490Style';
+  if(!document.getElementById(styleId)){
+    const st=document.createElement('style');
+    st.id=styleId;
+    st.textContent=`
+      #panel-formula-control-center.fcc-material-only .mm-table th{
+        background:color-mix(in srgb,var(--bg) 78%,var(--surface));
+        font-size:8px;text-transform:uppercase;text-align:left;
+        padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap
+      }
+      #panel-formula-control-center.fcc-material-only .mm-table td{
+        padding:5px 7px;border-bottom:1px solid var(--border);font-size:9px
+      }
+      #panel-formula-control-center.fcc-material-only .mm-table tr:last-child td{border-bottom:0}
+      #panel-formula-control-center.fcc-material-only .mm-table input{
+        width:100%;height:30px;box-sizing:border-box;border:1px solid var(--border);
+        border-radius:6px;padding:5px 7px;background:var(--surface);color:var(--text);font:inherit;font-size:9px
+      }
+      #panel-formula-control-center.fcc-material-only .mm-table th:first-child,
+      #panel-formula-control-center.fcc-material-only .mm-table td:first-child{width:55px;text-align:center}
+      #panel-formula-control-center.fcc-material-only .mm-table th:last-child,
+      #panel-formula-control-center.fcc-material-only .mm-table td:last-child{width:80px;text-align:center}
+      #panel-formula-control-center.fcc-material-only .mm-section h3{font-size:12px}
+    `;
+    document.head.appendChild(st)
+  }
+
+  sections.forEach(bindSection);
+
+  host.querySelectorAll('.mm-add').forEach(btn=>btn.onclick=()=>{
+    const sec=sections.find(x=>x.id===btn.dataset.section);
+    const body=f$('#mmBody-'+sec.id);
+    const count=body.querySelectorAll('tr').length;
+    body.insertAdjacentHTML('beforeend',rowHtml(sec.id,{},count));
+    bindSection(sec);
+    body.lastElementChild.querySelector('.mm-material')?.focus()
+  });
+
+  f$('#mmSaveAll').onclick=()=>{
+    const payload=collect();
+    save(payload);
+    if(window.toast)toast('Material Master saved');
+    else alert('Material Master saved')
+  };
+}
+
 function openMaterials(){
   build();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
