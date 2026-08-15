@@ -5068,6 +5068,23 @@ const MASTER_TYPES={
     ['status','Status','select',false,['active','inactive']]
   ],columns:[
     ['code','Code'],['sequence','Sequence'],['name','Production Unit Name'],['shortName','Short Name'],['status','Status']
+  ]},
+  materialGroups:{name:'Material Groups',singular:'Material Group',code:'MGP',fields:[
+    ['name','Group Name','text',true],
+    ['shortName','Short Name','text',false],
+    ['sequence','Sequence','number',true],
+    ['standardType','Standard Type','select',false,['none','yield','steam']],
+    ['status','Status','select',false,['active','inactive']]
+  ],columns:[
+    ['code','Code'],['sequence','Sequence'],['name','Group Name'],['shortName','Short Name'],['standardType','Standard Type'],['status','Status']
+  ]},
+  materialSubGroups:{name:'Material Sub Groups',singular:'Material Sub Group',code:'MSG',fields:[
+    ['parentGroup','Parent Material Group','text',true],
+    ['name','Sub Group Name','text',true],
+    ['sequence','Sequence','number',true],
+    ['status','Status','select',false,['active','inactive']]
+  ],columns:[
+    ['code','Code'],['parentGroup','Parent Group'],['sequence','Sequence'],['name','Sub Group Name'],['status','Status']
   ]}
 };
 let masterCurrent='items',masterEditingId='';
@@ -5218,6 +5235,9 @@ const MASTER_AUTOFILL_MAP={
   },
   locations:{
     department:{source:'departments',value:'name',label:['name','signatureAuthority','code']}
+  },
+  materialSubGroups:{
+    parentGroup:{source:'materialGroups',value:'name',label:['name','shortName','code']}
   }
 };
 
@@ -5634,8 +5654,36 @@ function masterEdit(id){
 }
 function masterDelete(id){
   if(!window.ERPAccessControl?.canPage?.('all-masters','delete'))return toast('You do not have delete permission');
-  const rows=masterBucket(),r=rows.find(x=>x.id===id);if(!r)return;if(!confirm(`Delete ${r.name||r.code}?`))return;
+  const rows=masterBucket(),r=rows.find(x=>x.id===id);if(!r)return;
+  if(['materialGroups','materialSubGroups'].includes(masterCurrent)){
+    if(!confirm(`Deactivate ${r.name||r.code}? Existing history will remain safe.`))return;
+    const i=rows.findIndex(x=>x.id===id);const before={...rows[i]};rows[i]={...rows[i],status:'inactive',updatedAt:new Date().toISOString()};
+    masterWriteBucket(masterCurrent,rows);window.ERPAudit?.log?.({module:'Masters',page:MASTER_TYPES[masterCurrent].name,action:'Deactivate',recordId:r.code,before,after:rows[i]});masterRenderAll();toast('Master record deactivated');return
+  }
+  if(!confirm(`Delete ${r.name||r.code}?`))return;
   masterWriteBucket(masterCurrent,rows.filter(x=>x.id!==id));window.ERPAudit?.log?.({module:'Masters',page:MASTER_TYPES[masterCurrent].name,action:'Delete',recordId:r.code,before:r});masterRenderAll();toast('Master record deleted')
+}
+
+function ensureDefaultMaterialGroups(){
+  let rows=masterBucket('materialGroups');
+  const now=new Date().toISOString(),tenantId=masterTenantId();
+  const defaults=[
+    {id:'MATGRP-pulp',code:'MGP-00001',tenantId,name:'Pulp Mill',shortName:'Pulp',sequence:1,standardType:'yield',storageKey:'pulp',status:'active'},
+    {id:'MATGRP-boiler',code:'MGP-00002',tenantId,name:'Boiler House',shortName:'Boiler',sequence:2,standardType:'steam',storageKey:'boiler',status:'active'},
+    {id:'MATGRP-sulphite',code:'MGP-00003',tenantId,name:'Sulphite Plant',shortName:'Sulphite',sequence:3,standardType:'none',storageKey:'sulphite',status:'active'},
+    {id:'MATGRP-stockpulp',code:'MGP-00004',tenantId,name:'Stock Pulp Plant',shortName:'Stock Pulp',sequence:4,standardType:'none',storageKey:'stockpulp',status:'active'},
+    {id:'MATGRP-lubricants',code:'MGP-00005',tenantId,name:'Lubricants',shortName:'Lubes',sequence:5,standardType:'none',storageKey:'lubricants',status:'active'},
+    {id:'MATGRP-others',code:'MGP-00006',tenantId,name:'Others',shortName:'Other',sequence:6,standardType:'none',storageKey:'others',status:'active'}
+  ].map(x=>({...x,createdAt:now,updatedAt:now}));
+  if(!rows.length){masterWriteBucket('materialGroups',defaults);return}
+  // Add any missing legacy groups without replacing user changes.
+  let changed=false;
+  defaults.forEach(d=>{
+    if(!rows.some(r=>r.storageKey===d.storageKey || String(r.name||'').toLowerCase()===d.name.toLowerCase())){
+      rows.push(d);changed=true
+    }
+  });
+  if(changed)masterWriteBucket('materialGroups',rows)
 }
 
 function ensureDefaultPurchaseSections(){
@@ -5650,6 +5698,7 @@ function ensureDefaultPurchaseSections(){
   masterWriteBucket('purchaseSections',defaults)
 }
 function masterBind(){
+  ensureDefaultMaterialGroups();
   ensureDefaultPurchaseSections();
   window.ERPAccessControl?.registerPage?.({id:'all-masters',name:'All Masters',module:'masters',actions:['view','add','edit','delete','print'],description:'Central ERP master data'});
   $('#masterSearch')?.addEventListener('input',masterRenderTable);$('#masterStatusFilter')?.addEventListener('change',masterRenderTable);$('#masterClearSearch')?.addEventListener('click',()=>{$('#masterSearch').value='';$('#masterStatusFilter').value='';masterRenderTable()});
@@ -13872,14 +13921,34 @@ const KEY='erpDailyMaterialMasterV1';
 const LEGACY_KEY='erp_daily_material_master_v1';
 const MASTER_KEY='erpMasterDataV1';
 const MM_LAST='production-consumption-material-master';
-const GROUPS=[
-  {id:'pulp',title:'Pulp Mill',standard:'yield',standardLabel:'Pulp Yield Standard %'},
-  {id:'boiler',title:'Boiler House',standard:'steam',standardLabel:'Steam Yield Standard'},
-  {id:'sulphite',title:'Sulphite Plant',standard:'none'},
-  {id:'stockpulp',title:'Stock Pulp Plant',standard:'none'},
-  {id:'lubricants',title:'Lubricants',standard:'none'},
-  {id:'others',title:'Others',standard:'none'}
+const FALLBACK_GROUPS=[
+  {id:'pulp',masterId:'MATGRP-pulp',title:'Pulp Mill',standard:'yield',standardLabel:'Pulp Yield Standard %',sequence:1},
+  {id:'boiler',masterId:'MATGRP-boiler',title:'Boiler House',standard:'steam',standardLabel:'Steam Yield Standard',sequence:2},
+  {id:'sulphite',masterId:'MATGRP-sulphite',title:'Sulphite Plant',standard:'none',sequence:3},
+  {id:'stockpulp',masterId:'MATGRP-stockpulp',title:'Stock Pulp Plant',standard:'none',sequence:4},
+  {id:'lubricants',masterId:'MATGRP-lubricants',title:'Lubricants',standard:'none',sequence:5},
+  {id:'others',masterId:'MATGRP-others',title:'Others',standard:'none',sequence:6}
 ];
+let GROUPS=[];
+function groupStorageKey(r){return String(r?.storageKey||r?.id||'').trim()}
+function refreshGroups(){
+  const rows=masterBucket('materialGroups').filter(r=>String(r.status||'active').toLowerCase()!=='inactive');
+  GROUPS=(rows.length?rows.map((r,i)=>({
+    id:groupStorageKey(r),masterId:r.id||'',title:r.name||('Material Group '+(i+1)),
+    shortName:r.shortName||'',standard:String(r.standardType||'none').toLowerCase(),
+    standardLabel:String(r.standardType||'none').toLowerCase()==='yield'?'Pulp Yield Standard %':String(r.standardType||'none').toLowerCase()==='steam'?'Steam Yield Standard':'',
+    sequence:num(r.sequence)||i+1
+  })):FALLBACK_GROUPS.slice()).sort((a,b)=>num(a.sequence)-num(b.sequence)||a.title.localeCompare(b.title));
+  return GROUPS
+}
+function activeSubGroupsFor(group){
+  const gd=typeof group==='string'?groupDef(group):group;
+  const parentNames=new Set([String(gd?.title||'').toLowerCase(),String(gd?.masterId||'').toLowerCase(),String(gd?.id||'').toLowerCase()]);
+  return masterBucket('materialSubGroups')
+    .filter(r=>String(r.status||'active').toLowerCase()!=='inactive')
+    .filter(r=>parentNames.has(String(r.parentGroup||'').trim().toLowerCase()) || String(r.parentGroupId||'')===String(gd?.masterId||''))
+    .sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.name||'').localeCompare(String(b.name||'')))
+}
 const $m=s=>document.querySelector(s);
 let editing={group:'',id:''};
 
@@ -13904,7 +13973,7 @@ function findUnit(name){
   const q=String(name||'').trim().toLowerCase();
   return activeUnits().find(x=>String(x.name||'').trim().toLowerCase()===q||String(x.shortName||'').trim().toLowerCase()===q)
 }
-function groupDef(id){return GROUPS.find(x=>x.id===id)||GROUPS[0]}
+function groupDef(id){if(!GROUPS.length)refreshGroups();return GROUPS.find(x=>x.id===id)||GROUPS[0]||FALLBACK_GROUPS[0]}
 function fmtDate(v){
   const raw=String(v||'').trim();if(!raw)return'';
   if(/^\d{1,2}-[A-Za-z]{3}-\d{2}$/.test(raw))return raw;
@@ -13918,7 +13987,13 @@ function todayText(){
   const d=new Date();return String(d.getDate()).padStart(2,'0')+'-'+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+'-'+String(d.getFullYear()).slice(-2)
 }
 function migrate(raw){
+  refreshGroups();
   const out={};
+  // Keep dynamic master groups plus any historical storage keys already present.
+  const known=new Set(GROUPS.map(g=>g.id));
+  Object.keys(raw||{}).forEach(k=>{
+    if(!known.has(k))GROUPS.push({id:k,masterId:'',title:k,standard:'none',standardLabel:'',sequence:9999})
+  });
   GROUPS.forEach(g=>{
     const src=Array.isArray(raw?.[g.id])?raw[g.id]:[];
     out[g.id]=src.map((r,i)=>{
@@ -13930,6 +14005,8 @@ function migrate(raw){
         itemId:r.itemId||item?.id||'',
         unit:r.unit||item?.unit||'',
         costCentre:r.costCentre||g.title,
+        subGroupId:r.subGroupId||'',
+        subGroup:r.subGroup||'',
         entryMode:r.entryMode||'Manual',
         sequence:num(r.sequence)||i+1,
         standard:g.standard==='yield'?(num(r.yieldStandard)||std):0,
@@ -14013,6 +14090,17 @@ function nextSequence(group){
   return n
 }
 function currentGroup(){return $m('#mgrGroup')?.value||'pulp'}
+function renderSubGroupOptions(selectedId='',selectedName=''){
+  const sel=$m('#mgrSubGroup');if(!sel)return;
+  const rows=activeSubGroupsFor(currentGroup());
+  sel.innerHTML='<option value="">No Sub Group</option>'+rows.map(r=>`<option value="${esc(r.id||r.name)}" data-name="${esc(r.name||'')}">${esc(r.name||'')}</option>`).join('');
+  const match=rows.find(r=>String(r.id||r.name)===String(selectedId) || String(r.name||'').toLowerCase()===String(selectedName||'').toLowerCase());
+  sel.value=match?String(match.id||match.name):''
+}
+function selectedSubGroup(){
+  const sel=$m('#mgrSubGroup');if(!sel||!sel.value)return {id:'',name:''};
+  const opt=sel.options[sel.selectedIndex];return {id:sel.value,name:opt?.dataset?.name||opt?.textContent||''}
+}
 function renderStandardField(){
   const g=groupDef(currentGroup());
   const wrap=$m('#mgrStandardWrap');
@@ -14106,6 +14194,7 @@ function populateDataLists(){
   dl=$m('#mgrUnitList');if(dl)dl.innerHTML=activeUnits().map(x=>`<option value="${esc(x.name||'')}">${esc(x.shortName||'')}</option>`).join('')
 }
 function build(){
+  refreshGroups();
   const host=$m('#mmStandaloneHost');if(!host)return;
   host.innerHTML=`
     <datalist id="mgrItemList"></datalist><datalist id="mgrUnitList"></datalist>
@@ -14116,7 +14205,8 @@ function build(){
         <div class="mgr-note">Select an existing material to Edit. Standard/rate changes create history instead of silently replacing old values.</div>
       </div>
       <div class="mgr-grid">
-        <div class="mgr-field"><label>Group Name *</label><select id="mgrGroup" class="mgr-control">${GROUPS.map(g=>`<option value="${g.id}">${g.title}</option>`).join('')}</select></div>
+        <div class="mgr-field"><label>Group Name *</label><select id="mgrGroup" class="mgr-control">${GROUPS.map(g=>`<option value="${g.id}">${esc(g.title)}</option>`).join('')}</select></div>
+        <div class="mgr-field"><label>Sub Group</label><select id="mgrSubGroup" class="mgr-control"><option value="">No Sub Group</option></select></div>
         <div class="mgr-field span2 mgr-material-search-wrap"><label>Material *</label>
           <input id="mgrMaterial" class="mgr-control" autocomplete="off" placeholder="Type material to search">
           <div id="mgrMaterialPopup" class="mgr-material-popup"></div>
@@ -14173,6 +14263,7 @@ function clearForm(){
   const g=currentGroup();
   $m('#mgrMaterial').value='';
   $m('#mgrUnit').value='';
+  renderSubGroupOptions();
   $m('#mgrCostCentre').value=groupDef(g).title;
   $m('#mgrEntryMode').value='Manual';
   $m('#mgrSequence').value=nextSequence(g);
@@ -14240,12 +14331,15 @@ function formRecord(existing=null){
   const g=currentGroup(),gd=groupDef(g),material=$m('#mgrMaterial').value.trim();
   const source=$m('#mgrRateSource').value;
   const currentRate=calculateRate(material,source,$m('#mgrRate').value);
+  const sg=selectedSubGroup();
   return {
     id:existing?.id||('MGR-'+g+'-'+Date.now()),
     material,
     itemId:$m('#mgrMaterial').dataset.itemId||findItemByName(material)?.id||'',
     unit:$m('#mgrUnit').value.trim(),
     costCentre:$m('#mgrCostCentre').value.trim(),
+    subGroupId:sg.id,
+    subGroup:sg.name,
     entryMode:$m('#mgrEntryMode').value,
     sequence:num($m('#mgrSequence').value),
     standard:gd.standard==='yield'?num($m('#mgrStandard').value):0,
@@ -14301,7 +14395,7 @@ function updateRecord(){
 function editRecord(g,id){
   const r=(load()[g]||[]).find(x=>x.id===id);if(!r)return;
   editing={group:g,id};
-  $m('#mgrGroup').value=g;renderStandardField();
+  $m('#mgrGroup').value=g;renderStandardField();renderSubGroupOptions(r.subGroupId||'',r.subGroup||'');
   $m('#mgrMaterial').value=r.material||'';$m('#mgrMaterial').dataset.itemId=r.itemId||'';
   $m('#mgrUnit').value=r.unit||'';$m('#mgrUnit').readOnly=!!findItemByName(r.material)?.unit;
   $m('#mgrCostCentre').value=r.costCentre||groupDef(g).title;
@@ -14330,22 +14424,23 @@ function showHistory(g,id){
   $m('#mgrHistoryModal').classList.add('open')
 }
 function renderList(){
+  refreshGroups();
   const data=load(),q=String($m('#mgrSearch')?.value||'').trim().toLowerCase(),filter=$m('#mgrFilter')?.value||'';
   let total=0,groups=0,html='';
   GROUPS.forEach(g=>{
     if(filter&&filter!==g.id)return;
     let rows=(data[g.id]||[]).filter(r=>{
-      const hay=[r.material,r.unit,r.costCentre,r.entryMode,r.rateSource,r.status].join(' ').toLowerCase();
+      const hay=[r.material,r.unit,r.costCentre,r.subGroup,r.entryMode,r.rateSource,r.status].join(' ').toLowerCase();
       return !q||hay.includes(q)
     }).sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.material).localeCompare(String(b.material)));
     if(!rows.length)return;
     groups++;total+=rows.length;
     html+=`<div class="mgr-group"><div class="mgr-group-label"><span>${g.title}</span><small>${rows.length} material${rows.length===1?'':'s'}</small></div>
       <div class="mgr-table-wrap"><table class="mgr-table"><thead><tr>
-      <th>#</th><th>Material</th><th>Unit</th><th>Cost Centre</th><th>Entry Mode</th><th>Sequence</th>
+      <th>#</th><th>Material</th><th>Sub Group</th><th>Unit</th><th>Cost Centre</th><th>Entry Mode</th><th>Sequence</th>
       ${g.standard==='yield'?'<th>Target Yield %</th><th>Min Yield %</th><th>Max Yield %</th>':g.standard==='steam'?'<th>Target Steam Yield</th><th>Min Steam</th><th>Max Steam</th>':''}
       <th>Rate Source</th><th>Current Rate</th><th>Effective Date</th><th>Report Ton</th><th>Status</th><th>Action</th></tr></thead><tbody>
-      ${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.unit)}</td><td>${esc(r.costCentre)}</td>
+      ${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.subGroup||'—')}</td><td>${esc(r.unit)}</td><td>${esc(r.costCentre)}</td>
       <td>${esc(r.entryMode)}</td><td>${num(r.sequence)}</td>
       ${g.standard==='yield'?`<td>${num(r.standard).toFixed(2)}%</td><td>${num(r.minStandard).toFixed(2)}%</td><td>${num(r.maxStandard).toFixed(2)}%</td>`:g.standard==='steam'?`<td>${num(r.steamStandard).toFixed(3)}</td><td>${num(r.minStandard).toFixed(3)}</td><td>${num(r.maxStandard).toFixed(3)}</td>`:''}
       <td><span class="mgr-rate-source">${esc(r.rateSource)}</span></td><td>${num(r.currentRate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
@@ -14359,7 +14454,7 @@ function renderList(){
   document.querySelectorAll('.mgr-hist').forEach(b=>b.onclick=()=>showHistory(b.dataset.g,b.dataset.id))
 }
 function bind(){
-  $m('#mgrGroup').onchange=()=>{renderStandardField();$m('#mgrCostCentre').value=groupDef(currentGroup()).title;$m('#mgrSequence').value=nextSequence(currentGroup())};
+  $m('#mgrGroup').onchange=()=>{renderStandardField();renderSubGroupOptions();$m('#mgrCostCentre').value=groupDef(currentGroup()).title;$m('#mgrSequence').value=nextSequence(currentGroup())};
   const matInput=$m('#mgrMaterial');
   matInput.onfocus=()=>{ if(matInput.value.trim())renderMaterialPopup(matInput.value); else closeMaterialPopup() };
   matInput.oninput=()=>{
@@ -14647,4 +14742,33 @@ else seedProductionUnits();
 <style id="v1506MasterControlStyle">
 #panel-daily-data-entry .dde-master-control-note{font-size:7.5px;font-weight:800;color:var(--muted);margin:1px 0 6px}
 </style>
+
+<script id="materialGroupSubGroupSeedV1507">
+(()=>{
+function seedMaterialSubGroups(){
+  try{
+    const key='erpMasterDataV1';const all=JSON.parse(localStorage.getItem(key)||'{}')||{};
+    let tenant='local';try{tenant=window.ERPTenant?.currentId?.()||'local'}catch(e){}
+    all[tenant]=all[tenant]||{};
+    const rows=Array.isArray(all[tenant].materialSubGroups)?all[tenant].materialSubGroups:[];
+    if(rows.length)return;
+    const now=new Date().toISOString();
+    const names=['Base Chemicals','Polishing Chemicals','Fillers','Dyes','Pulp / Fiber','Other Chemicals'];
+    all[tenant].materialSubGroups=names.map((name,i)=>({
+      id:'MSG-STOCK-'+(i+1),code:'MSG-'+String(i+1).padStart(5,'0'),tenantId:tenant,
+      parentGroup:'Stock Pulp Plant',parentGroupId:'MATGRP-stockpulp',name,sequence:i+1,status:'active',createdAt:now,updatedAt:now
+    }));
+    localStorage.setItem(key,JSON.stringify(all))
+  }catch(e){console.error('Material subgroup seed error',e)}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',seedMaterialSubGroups);else seedMaterialSubGroups();
+})();
+</script>
+
+
+<style id="dynamicMaterialGroupsV1507Style">
+#panel-material-master .mgr-table{min-width:1280px}
+#panel-masters .master-tabs{flex-wrap:wrap}
+</style>
+
 </body></html>
