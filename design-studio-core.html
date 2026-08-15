@@ -4632,7 +4632,10 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
               <div class="dde-sm-label">Difference in Pulp Production</div><div class="dde-sm-value" id="ddePulpStandardDifference">0.000 Ton</div>
 
               <div class="dde-sm-label">Pulp Yield</div><div class="dde-sm-value" id="ddePulpYield">0.00%</div>
-              <div class="dde-sm-label">Standard Status</div><div class="dde-sm-value"><span id="ddePulpStandardStatus" class="dde-status ok">On Standard</span></div>
+              <div class="dde-sm-label">Standard Status</div><div class="dde-sm-value"><span id="ddePulpStandardStatus" class="dde-status ok">Within Standard</span></div>
+
+              <div class="dde-sm-label">Allowed Yield Range</div><div class="dde-sm-value" id="ddeAllowedYieldRange">0.00% - 0.00%</div>
+              <div class="dde-sm-label">Target Yield</div><div class="dde-sm-value" id="ddeWeightedTargetYield">0.00%</div>
 
               <div class="dde-sm-hidden" id="ddeRawMaterialConsumed">0.000 Ton</div>
             </div>
@@ -13214,6 +13217,8 @@ function materialStandardMap(section='pulp'){
     const standard=section==='boiler'?num(r.steamStandard??r.standard):num(r.standard);
     map[name]={
       standard,
+      minStandard:num(r.minStandard),
+      maxStandard:num(r.maxStandard),
       unit:r.unit||'',
       rate:num(r.currentRate??r.rate),
       sequence:num(r.sequence),
@@ -13226,9 +13231,9 @@ function materialStandardMap(section='pulp'){
 function expectedPulpFromPulpRows(){
   const map=materialStandardMap('pulp');
   const body=$d('#ddePulpBody');
-  if(!body)return {expected:0, details:[]};
+  if(!body)return {expected:0,minExpected:0,maxExpected:0,totalQty:0,weightedTarget:0,weightedMin:0,weightedMax:0,details:[]};
 
-  let expected=0;
+  let expected=0,minExpected=0,maxExpected=0,totalQty=0;
   const details=[];
 
   [...body.querySelectorAll('tr')].forEach(tr=>{
@@ -13237,23 +13242,34 @@ function expectedPulpFromPulpRows(){
     if(!item || enteredUsed<=0)return;
 
     const ref=map[item.toLowerCase()];
-    const standard=ref?num(ref.standard):0;
-    // Daily consumption rows are reported in Ton. If legacy/native Kg data ever reaches here,
-    // normalize it using the material master unit.
+    const target=ref?num(ref.standard):0;
+    const minStd=ref?num(ref.minStandard):0;
+    const maxStd=ref?num(ref.maxStandard):0;
     const used=qtyForFinalReport('pulp',item,enteredUsed,ref?.unit||'');
-    const expectedItem=used*standard/100;
+
+    const expectedItem=used*target/100;
+    const minExpectedItem=used*(minStd>0?minStd:target)/100;
+    const maxExpectedItem=used*(maxStd>0?maxStd:target)/100;
+
+    totalQty+=used;
     expected+=expectedItem;
+    minExpected+=minExpectedItem;
+    maxExpected+=maxExpectedItem;
 
     details.push({
-      item,
-      used,
-      standard,
-      expected:expectedItem,
+      item,used,target,minStandard:minStd,maxStandard:maxStd,
+      expected:expectedItem,minExpected:minExpectedItem,maxExpected:maxExpectedItem,
       standardFound:!!ref
     })
   });
 
-  return {expected,details}
+  return {
+    expected,minExpected,maxExpected,totalQty,
+    weightedTarget:totalQty>0?expected/totalQty*100:0,
+    weightedMin:totalQty>0?minExpected/totalQty*100:0,
+    weightedMax:totalQty>0?maxExpected/totalQty*100:0,
+    details
+  }
 }
 
 
@@ -13300,8 +13316,15 @@ function recalc(){
   const stdResult=expectedPulpFromPulpRows();
   const expectedPulp=stdResult.expected;
   const pulpDifference=pulpProduced-expectedPulp;
+  const actualYield=rawMaterialConsumed>0?(pulpProduced/rawMaterialConsumed*100):0;
+  const minYield=stdResult.weightedMin;
+  const maxYield=stdResult.weightedMax;
+  const targetYield=stdResult.weightedTarget;
   const tolerance=0.0005;
-  const pulpStatus=Math.abs(pulpDifference)<=tolerance?'On Standard':pulpDifference<0?'Under Standard':'Above Standard';
+  let pulpStatus='Within Standard';
+  if(rawMaterialConsumed<=0)pulpStatus='No Material';
+  else if(minYield>0 && actualYield<minYield-tolerance)pulpStatus='Below Minimum';
+  else if(maxYield>0 && actualYield>maxYield+tolerance)pulpStatus='Above Maximum';
 
   const wapda=value('ddeWapdaPaper')+value('ddeWapdaBoard');
   const solar=[1,2,3,4,5].reduce((a,i)=>a+value('ddeSolar'+i),0);
@@ -13354,11 +13377,13 @@ function recalc(){
   setText('ddeKeyPulpProduced',pulpProduced.toFixed(3)+' Ton');
   setText('ddePulpStandardDifference',pulpDifference.toFixed(3)+' Ton');
   setText('ddeKeyPulpYield',pulpYield.toFixed(2)+'%');
+  setText('ddeAllowedYieldRange',minYield.toFixed(2)+'% - '+maxYield.toFixed(2)+'%');
+  setText('ddeWeightedTargetYield',targetYield.toFixed(2)+'%');
 
   const pulpStatusEl=$d('#ddePulpStandardStatus');
   if(pulpStatusEl){
     pulpStatusEl.textContent=pulpStatus;
-    pulpStatusEl.className='dde-status '+(pulpStatus==='On Standard'?'ok':pulpStatus==='Under Standard'?'warn':'ok')
+    pulpStatusEl.className='dde-status '+(pulpStatus==='Within Standard'?'ok':pulpStatus==='No Material'?'':'warn')
   }
 
   setText('ddeTotalWapda',wapda.toFixed(3));
@@ -13435,7 +13460,14 @@ function collect(){
   const standardResult=expectedPulpFromPulpRows();
   const expectedPulpStandard=standardResult.expected;
   const pulpStandardDifference=pulpProduced-expectedPulpStandard;
-  const pulpStandardStatus=Math.abs(pulpStandardDifference)<=0.0005?'On Standard':pulpStandardDifference<0?'Under Standard':'Above Standard';
+  const actualYieldOnMaterial=rawMaterialConsumed>0?(pulpProduced/rawMaterialConsumed*100):0;
+  const weightedMinYield=standardResult.weightedMin;
+  const weightedMaxYield=standardResult.weightedMax;
+  const weightedTargetYield=standardResult.weightedTarget;
+  let pulpStandardStatus='Within Standard';
+  if(rawMaterialConsumed<=0)pulpStandardStatus='No Material';
+  else if(weightedMinYield>0 && actualYieldOnMaterial<weightedMinYield)pulpStandardStatus='Below Minimum';
+  else if(weightedMaxYield>0 && actualYieldOnMaterial>weightedMaxYield)pulpStandardStatus='Above Maximum';
 
   return {
     id:$d('#ddeRecordId').value||('DDE-'+Date.now()),
@@ -13443,6 +13475,7 @@ function collect(){
     units,totalProduction,ashAverage,totalAshContent,
     woodPulp,pulpProduced,rawMaterialConsumed,pulpYield,
     expectedPulpStandard,pulpStandardDifference,pulpStandardStatus,
+    weightedTargetYield,weightedMinYield,weightedMaxYield,
     pulpStandardDetails:standardResult.details,
     wapdaPaper,wapdaBoard,totalWapda,
     solar,totalSolar,totalElectricity,
@@ -13806,6 +13839,8 @@ function migrate(raw){
         entryMode:r.entryMode||'Manual',
         sequence:num(r.sequence)||i+1,
         standard:g.standard==='yield'?(num(r.yieldStandard)||std):0,
+        minStandard:num(r.minStandard),
+        maxStandard:num(r.maxStandard),
         steamStandard:g.standard==='steam'?(num(r.steamStandard)||std):0,
         rateSource:r.rateSource||'Manual',
         currentRate:num(r.currentRate??r.rate),
@@ -13865,11 +13900,36 @@ function currentGroup(){return $m('#mgrGroup')?.value||'pulp'}
 function renderStandardField(){
   const g=groupDef(currentGroup());
   const wrap=$m('#mgrStandardWrap');
-  if(!wrap)return;
-  if(g.standard==='none'){wrap.classList.add('mgr-hidden');return}
+  const minWrap=$m('#mgrMinStandardWrap');
+  const maxWrap=$m('#mgrMaxStandardWrap');
+  if(!wrap||!minWrap||!maxWrap)return;
+
+  if(g.standard==='none'){
+    wrap.classList.add('mgr-hidden');
+    minWrap.classList.add('mgr-hidden');
+    maxWrap.classList.add('mgr-hidden');
+    return
+  }
+
   wrap.classList.remove('mgr-hidden');
-  $m('#mgrStandardLabel').textContent=g.standardLabel;
-  $m('#mgrStandard').placeholder=g.standard==='yield'?'e.g. 33':'e.g. 2.50 Ton Steam / Ton Fuel'
+  minWrap.classList.remove('mgr-hidden');
+  maxWrap.classList.remove('mgr-hidden');
+
+  if(g.standard==='yield'){
+    $m('#mgrStandardLabel').textContent='Target Yield Standard %';
+    $m('#mgrMinStandardLabel').textContent='Minimum Yield %';
+    $m('#mgrMaxStandardLabel').textContent='Maximum Yield %';
+    $m('#mgrStandard').placeholder='e.g. 33';
+    $m('#mgrMinStandard').placeholder='e.g. 29';
+    $m('#mgrMaxStandard').placeholder='e.g. 35'
+  }else{
+    $m('#mgrStandardLabel').textContent='Target Steam Yield';
+    $m('#mgrMinStandardLabel').textContent='Minimum Steam Yield';
+    $m('#mgrMaxStandardLabel').textContent='Maximum Steam Yield';
+    $m('#mgrStandard').placeholder='e.g. 1.50';
+    $m('#mgrMinStandard').placeholder='e.g. 1.30';
+    $m('#mgrMaxStandard').placeholder='e.g. 1.70'
+  }
 }
 
 let mgrMaterialMatches=[],mgrMaterialActiveIndex=-1;
@@ -13950,7 +14010,9 @@ function build(){
         <div class="mgr-field"><label>Cost Centre *</label><input id="mgrCostCentre" class="mgr-control" placeholder="e.g. Pulp Mill"></div>
         <div class="mgr-field"><label>Data Entry Mode *</label><select id="mgrEntryMode" class="mgr-control"><option>Manual</option><option>Auto from Purchase / Issue</option></select></div>
         <div class="mgr-field"><label>Display Sequence *</label><input id="mgrSequence" class="mgr-control" type="number" min="1" step="1"></div>
-        <div class="mgr-field" id="mgrStandardWrap"><label id="mgrStandardLabel">Pulp Yield Standard %</label><input id="mgrStandard" class="mgr-control" type="number" step="any" placeholder="e.g. 33"></div>
+        <div class="mgr-field" id="mgrStandardWrap"><label id="mgrStandardLabel">Target Standard</label><input id="mgrStandard" class="mgr-control" type="number" step="any" placeholder="e.g. 33"></div>
+        <div class="mgr-field" id="mgrMinStandardWrap"><label id="mgrMinStandardLabel">Minimum Standard</label><input id="mgrMinStandard" class="mgr-control" type="number" step="any" placeholder="e.g. 29"></div>
+        <div class="mgr-field" id="mgrMaxStandardWrap"><label id="mgrMaxStandardLabel">Maximum Standard</label><input id="mgrMaxStandard" class="mgr-control" type="number" step="any" placeholder="e.g. 35"></div>
 
         <div class="mgr-field"><label>Rate Source *</label><select id="mgrRateSource" class="mgr-control"><option>Latest Purchase Rate</option><option>Weighted Average Rate</option><option>Manual</option></select></div>
         <div class="mgr-field"><label>Current Rate</label><input id="mgrRate" class="mgr-control" type="number" step="any" placeholder="0"></div>
@@ -13982,7 +14044,7 @@ function build(){
     <div class="mgr-history" id="mgrHistoryModal">
       <div class="mgr-history-card">
         <div class="mgr-head"><div><h3 id="mgrHistoryTitle">Standard & Rate History</h3><p>Effective-date audit trail.</p></div><button class="btn" id="mgrHistoryClose">Close</button></div>
-        <table class="mgr-history-table"><thead><tr><th>Effective Date</th><th>Standard</th><th>Rate Source</th><th>Rate</th><th>Status</th></tr></thead><tbody id="mgrHistoryBody"></tbody></table>
+        <table class="mgr-history-table"><thead><tr><th>Effective Date</th><th>Target</th><th>Minimum</th><th>Maximum</th><th>Rate Source</th><th>Rate</th><th>Status</th></tr></thead><tbody id="mgrHistoryBody"></tbody></table>
       </div>
     </div>`;
   populateDataLists();
@@ -13999,6 +14061,8 @@ function clearForm(){
   $m('#mgrEntryMode').value='Manual';
   $m('#mgrSequence').value=nextSequence(g);
   $m('#mgrStandard').value='';
+  $m('#mgrMinStandard').value='';
+  $m('#mgrMaxStandard').value='';
   $m('#mgrRateSource').value='Latest Purchase Rate';
   $m('#mgrRate').value='';
   $m('#mgrEffectiveDate').value=todayText();
@@ -14041,7 +14105,15 @@ function validate(){
   if(!$m('#mgrCostCentre').value.trim()){alert('Cost Centre is required.');return false}
   if(num($m('#mgrSequence').value)<=0){alert('Display Sequence must be 1 or more.');return false}
   const gd=groupDef(g);
-  if(gd.standard!=='none' && num($m('#mgrStandard').value)<=0){alert(gd.standardLabel+' is required.');return false}
+  if(gd.standard!=='none'){
+    const target=num($m('#mgrStandard').value);
+    const minv=num($m('#mgrMinStandard').value);
+    const maxv=num($m('#mgrMaxStandard').value);
+    if(target<=0){alert(gd.standardLabel+' is required.');return false}
+    if(minv>0 && target<minv){alert('Target standard cannot be below Minimum Standard.');return false}
+    if(maxv>0 && target>maxv){alert('Target standard cannot be above Maximum Standard.');return false}
+    if(minv>0 && maxv>0 && minv>maxv){alert('Minimum Standard cannot be greater than Maximum Standard.');return false}
+  }
   return true
 }
 function formRecord(existing=null){
@@ -14057,6 +14129,8 @@ function formRecord(existing=null){
     entryMode:$m('#mgrEntryMode').value,
     sequence:num($m('#mgrSequence').value),
     standard:gd.standard==='yield'?num($m('#mgrStandard').value):0,
+    minStandard:gd.standard!=='none'?num($m('#mgrMinStandard').value):0,
+    maxStandard:gd.standard!=='none'?num($m('#mgrMaxStandard').value):0,
     steamStandard:gd.standard==='steam'?num($m('#mgrStandard').value):0,
     rateSource:source,
     currentRate,
@@ -14071,6 +14145,8 @@ function snapshot(r,g){
   return {
     effectiveDate:r.effectiveDate,
     standard:gd.standard==='yield'?r.standard:gd.standard==='steam'?r.steamStandard:0,
+    minStandard:num(r.minStandard),
+    maxStandard:num(r.maxStandard),
     rateSource:r.rateSource,
     rate:r.currentRate,
     status:r.status
@@ -14095,6 +14171,7 @@ function updateRecord(){
   next.id=old.id;
   const changed=old.effectiveDate!==next.effectiveDate || num(old.currentRate)!==num(next.currentRate) ||
     num(old.standard)!==num(next.standard) || num(old.steamStandard)!==num(next.steamStandard) ||
+    num(old.minStandard)!==num(next.minStandard) || num(old.maxStandard)!==num(next.maxStandard) ||
     old.rateSource!==next.rateSource || old.status!==next.status;
   next.history=[...(old.history||[])];
   if(changed)next.history.push(snapshot(next,g));
@@ -14111,6 +14188,8 @@ function editRecord(g,id){
   $m('#mgrEntryMode').value=r.entryMode||'Manual';
   $m('#mgrSequence').value=r.sequence||1;
   $m('#mgrStandard').value=groupDef(g).standard==='yield'?r.standard||'':groupDef(g).standard==='steam'?r.steamStandard||'':'';
+  $m('#mgrMinStandard').value=r.minStandard||'';
+  $m('#mgrMaxStandard').value=r.maxStandard||'';
   $m('#mgrRateSource').value=r.rateSource||'Manual';
   $m('#mgrRate').value=r.currentRate||'';
   $m('#mgrEffectiveDate').value=r.effectiveDate||todayText();
@@ -14125,6 +14204,7 @@ function showHistory(g,id){
   const gd=groupDef(g),hist=(r.history||[]).length?r.history:[snapshot(r,g)];
   $m('#mgrHistoryBody').innerHTML=hist.slice().reverse().map(h=>`<tr>
     <td>${esc(h.effectiveDate||'')}</td><td>${gd.standard==='none'?'—':num(h.standard).toFixed(3)}</td>
+    <td>${gd.standard==='none'?'—':num(h.minStandard).toFixed(3)}</td><td>${gd.standard==='none'?'—':num(h.maxStandard).toFixed(3)}</td>
     <td>${esc(h.rateSource||'')}</td><td>${num(h.rate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
     <td>${esc(h.status||'active')}</td></tr>`).join('');
   $m('#mgrHistoryModal').classList.add('open')
@@ -14143,11 +14223,11 @@ function renderList(){
     html+=`<div class="mgr-group"><div class="mgr-group-label"><span>${g.title}</span><small>${rows.length} material${rows.length===1?'':'s'}</small></div>
       <div class="mgr-table-wrap"><table class="mgr-table"><thead><tr>
       <th>#</th><th>Material</th><th>Unit</th><th>Cost Centre</th><th>Entry Mode</th><th>Sequence</th>
-      ${g.standard==='yield'?'<th>Yield Std %</th>':g.standard==='steam'?'<th>Steam Yield Std</th>':''}
+      ${g.standard==='yield'?'<th>Target Yield %</th><th>Min Yield %</th><th>Max Yield %</th>':g.standard==='steam'?'<th>Target Steam Yield</th><th>Min Steam</th><th>Max Steam</th>':''}
       <th>Rate Source</th><th>Current Rate</th><th>Effective Date</th><th>Report Ton</th><th>Status</th><th>Action</th></tr></thead><tbody>
       ${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.unit)}</td><td>${esc(r.costCentre)}</td>
       <td>${esc(r.entryMode)}</td><td>${num(r.sequence)}</td>
-      ${g.standard==='yield'?`<td>${num(r.standard).toFixed(2)}%</td>`:g.standard==='steam'?`<td>${num(r.steamStandard).toFixed(3)}</td>`:''}
+      ${g.standard==='yield'?`<td>${num(r.standard).toFixed(2)}%</td><td>${num(r.minStandard).toFixed(2)}%</td><td>${num(r.maxStandard).toFixed(2)}%</td>`:g.standard==='steam'?`<td>${num(r.steamStandard).toFixed(3)}</td><td>${num(r.minStandard).toFixed(3)}</td><td>${num(r.maxStandard).toFixed(3)}</td>`:''}
       <td><span class="mgr-rate-source">${esc(r.rateSource)}</span></td><td>${num(r.currentRate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
       <td>${esc(r.effectiveDate)}</td><td>${r.convertToTon==='yes'?'Yes':'No'}</td><td><span class="mgr-status ${r.status==='inactive'?'inactive':'active'}">${r.status==='inactive'?'Inactive':'Active'}</span></td>
       <td><button class="btn btn-sm mgr-edit" data-g="${g.id}" data-id="${r.id}">Edit</button> <button class="btn btn-sm mgr-hist" data-g="${g.id}" data-id="${r.id}">History</button></td></tr>`).join('')}
@@ -14367,6 +14447,13 @@ window.ERPMaterialMaster={open,render:renderList,save:()=>save(load())};
 #panel-daily-data-entry .dde-sm-hidden{display:none!important}
 #panel-daily-data-entry .dde-section:nth-of-type(1){padding-bottom:9px!important}
 @media(max-width:1350px){#panel-daily-data-entry .dde-production-layout{grid-template-columns:1fr!important}}
+</style>
+
+
+<style id="ddeYieldRangeV1502Style">
+#panel-daily-data-entry .dde-summary-matrix{grid-auto-rows:28px!important}
+#panel-daily-data-entry #ddeAllowedYieldRange,
+#panel-daily-data-entry #ddeWeightedTargetYield{font-size:8.2px!important}
 </style>
 
 </body></html>
