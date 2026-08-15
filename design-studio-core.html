@@ -4843,18 +4843,17 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       </div>
     </div>
 
-    <div class="dde-section">
+    <div class="dde-section dde-sulphite-section-v1527">
       <div class="dde-section-title">
         <div>
           <h3>7. Sulphite Plant Material Consumption</h3>
-          <p>Daily entry stays in the original unit. Final-report Ton conversion is controlled from Material Group & Rate Master.</p>
+          <p>Active Sulphite Plant materials are controlled from Material Group & Rate Master. Opening balance carries forward automatically from the previous saved day.</p>
         </div>
-        <button class="btn btn-sm" type="button" id="ddeAddSulphiteRow">+ Add Row</button>
       </div>
       <div class="dde-table-wrap">
         <table class="dde-table dde-material-table" id="ddeSulphiteTable">
           <thead><tr>
-            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Rate / Ton</th><th>Used Value</th><th>Action</th>
+            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening</th><th>Received</th><th>Used</th><th>Balance</th><th>Rate</th><th>Used Value</th>
           </tr></thead>
           <tbody id="ddeSulphiteBody"></tbody>
         </table>
@@ -13310,6 +13309,43 @@ function ddeMaster(){try{return JSON.parse(localStorage.getItem(DDE_MATERIAL_MAS
 function ddeMasterRows(section){const map={boiler:'boiler',pulp:'pulp',sulphite:'sulphite',units:'stockpulp'};return (ddeMaster()[map[section]]||[])}
 function ddeMasterListId(section){return 'ddeMasterList-'+section}
 function ensureDdeMasterLists(){['boiler','pulp','sulphite','units'].forEach(section=>{let dl=$d('#'+ddeMasterListId(section));if(!dl){dl=document.createElement('datalist');dl.id=ddeMasterListId(section);document.body.appendChild(dl)}dl.innerHTML=ddeMasterRows(section).map(x=>`<option value="${String(x.material||'').replace(/"/g,'&quot;')}">${x.unit||''}${x.rate?' | Rate '+x.rate:''}${x.standard?' | Std '+x.standard:''}</option>`).join('')})}
+function latestSulphiteClosingMap(){
+  const all=rows().slice().filter(r=>Array.isArray(r.sulphiteMaterials)&&r.sulphiteMaterials.length);
+  all.sort((a,b)=>{
+    const da=Date.parse(a.date)||Date.parse(a.updatedAt)||0;
+    const db=Date.parse(b.date)||Date.parse(b.updatedAt)||0;
+    return db-da
+  });
+  const latest=all[0];
+  const map={};
+  (latest?.sulphiteMaterials||[]).forEach(r=>{
+    const key=String(r.item||'').trim().toLowerCase();
+    if(!key)return;
+    map[key]=num(r.opening)+num(r.received)-num(r.used)
+  });
+  return map
+}
+
+function latestUnitsClosingMap(){
+  const all=rows().slice().filter(r=>Array.isArray(r.unitMaterials)&&r.unitMaterials.length);
+  all.sort((a,b)=>{
+    const da=Date.parse(a.date)||Date.parse(a.updatedAt)||0;
+    const db=Date.parse(b.date)||Date.parse(b.updatedAt)||0;
+    return db-da
+  });
+  const latest=all[0];
+  const map={};
+  (latest?.unitMaterials||[]).forEach(r=>{
+    const key=String(r.item||'').trim().toLowerCase();
+    if(!key)return;
+    const consumed=Array.isArray(r.consumptionByUnit)
+      ? r.consumptionByUnit.reduce((a,x)=>a+num(x.qty),0)
+      : num(r.totalConsumed);
+    map[key]=num(r.opening)+num(r.received)-consumed
+  });
+  return map
+}
+
 function latestPulpClosingMap(){
   const all=rows().slice().filter(r=>Array.isArray(r.pulpMaterials)&&r.pulpMaterials.length);
   all.sort((a,b)=>{
@@ -13356,6 +13392,15 @@ function ddeDefaultRows(section){
 
   if(section==='pulp'){
     const prev=latestPulpClosingMap();
+    return masterRows.length?masterRows.map(x=>{
+      const key=String(x.material||'').trim().toLowerCase();
+      const hasPrev=Object.prototype.hasOwnProperty.call(prev,key);
+      return {item:x.material,unit:x.unit,rate:x.rate,standard:x.standard,opening:hasPrev?prev[key]:0,openingCarried:hasPrev}
+    }):[]
+  }
+
+  if(section==='sulphite'){
+    const prev=latestSulphiteClosingMap();
     return masterRows.length?masterRows.map(x=>{
       const key=String(x.material||'').trim().toLowerCase();
       const hasPrev=Object.prototype.hasOwnProperty.call(prev,key);
@@ -13451,7 +13496,7 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
       return `<td><input class="dde-control dde-unit-consume" data-unit-id="${u.id}" data-unit-code="${u.code}" data-unit-name="${u.name}" type="number" step="any" value="${q||''}" placeholder="0"></td>`
     }).join('');
     const balance=opening+received-total,usedValue=total*reportRate;
-    return `<tr data-section="${section}" data-master-controlled="true">
+    return `<tr data-section="${section}" data-master-controlled="true" data-opening-carried="${data.openingCarried?'true':'false'}">
       <td class="dde-mat-sr">${index+1}</td>
       <td><div class="dde-master-item">${data.item||''}</div></td>
       <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
@@ -13470,6 +13515,21 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
   if(section==='pulp'){
     const carried=!!data.openingCarried;
     return `<tr data-section="pulp" data-master-controlled="true" data-opening-carried="${carried?'true':'false'}">
+      <td class="dde-mat-sr">${index+1}</td>
+      <td><div class="dde-master-item">${data.item||''}</div></td>
+      <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
+      <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0" ${carried?'readonly':''}><small class="dde-mat-source-note">${carried?'Previous closing':'Initial opening'}</small></td>
+      <td><b class="dde-mat-received-display">${received.toFixed(3)}</b><input class="dde-mat-received" type="hidden" value="${received||0}"></td>
+      <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
+      <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
+      <td><b class="dde-mat-rate">${money(reportRate)}</b></td>
+      <td><b class="dde-mat-value">${money(usedValue)}</b></td>
+    </tr>`
+  }
+
+  if(section==='sulphite'){
+    const carried=!!data.openingCarried;
+    return `<tr data-section="sulphite" data-master-controlled="true" data-opening-carried="${carried?'true':'false'}">
       <td class="dde-mat-sr">${index+1}</td>
       <td><div class="dde-master-item">${data.item||''}</div></td>
       <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
@@ -13597,7 +13657,7 @@ function materialData(bodyId,unitsMode=false){
       return {
         item:tr.querySelector('.dde-master-item')?.textContent||'',
         unit:meta.masterUnit,rate:meta.sourceRate,convertToTon:meta.convertToTon,finalReportUnit:meta.finalReportUnit,finalReportRate:meta.finalReportRate,
-        opening:num(tr.querySelector('.dde-mat-opening')?.value),received:num(tr.querySelector('.dde-mat-received')?.value),
+        opening:num(tr.querySelector('.dde-mat-opening')?.value),openingCarried:tr.dataset.openingCarried==='true',received:num(tr.querySelector('.dde-mat-received')?.value),
         consumptionByUnit,totalConsumed,usedValue:totalConsumed*meta.sourceRate,finalReportQty,finalReportValue:finalReportQty*meta.finalReportRate
       }
     }
@@ -13639,16 +13699,56 @@ function renderProductionUnitsMaterialSection(savedRows=[]){
   const head=$d('#ddeUnitsHead'),body=$d('#ddeUnitsBody');if(!head||!body)return;
   const units=activeProductionUnits();
   head.innerHTML=`<tr><th>Sr No</th><th>Item</th><th>Unit</th><th>Opening</th><th>Received</th>${units.map(u=>`<th>${u.shortName||u.name}</th>`).join('')}<th>Total Consumed</th><th>Balance</th><th>Rate</th><th>Used Value</th></tr>`;
-  const savedMap={};(savedRows||[]).forEach(r=>savedMap[String(r.item||'').trim().toLowerCase()]=r);
+
+  const savedMap={};
+  (savedRows||[]).forEach(r=>savedMap[String(r.item||'').trim().toLowerCase()]=r);
+
+  const prev=latestUnitsClosingMap();
   const rows=activeStockPulpMaterials();
-  body.innerHTML=rows.map((r,i)=>materialRowHtml('units',i,true,{...(savedMap[String(r.material||'').trim().toLowerCase()]||{}),item:r.material,masterUnit:r.unit,reportUnit:r.unit,sourceRate:num(r.currentRate??r.rate)})).join('');
+
+  body.innerHTML=rows.map((r,i)=>{
+    const key=String(r.material||'').trim().toLowerCase();
+    const saved=savedMap[key]||{};
+    const hasSaved=Object.keys(saved).length>0;
+    const hasPrev=Object.prototype.hasOwnProperty.call(prev,key);
+
+    return materialRowHtml('units',i,true,{
+      ...saved,
+      item:r.material,
+      masterUnit:r.unit,
+      reportUnit:r.unit,
+      sourceRate:num(r.currentRate??r.rate),
+      opening:hasSaved?num(saved.opening):(hasPrev?prev[key]:0),
+      openingCarried:hasSaved?!!saved.openingCarried:hasPrev,
+      received:hasSaved?num(saved.received):0
+    })
+  }).join('');
+
+  body.querySelectorAll('tr').forEach(tr=>{
+    const carried=tr.dataset.openingCarried==='true';
+    const opening=tr.querySelector('.dde-mat-opening');
+    if(opening && carried)opening.readOnly=true;
+
+    const received=tr.querySelector('.dde-mat-received');
+    if(received){
+      const v=num(received.value);
+      const td=received.parentElement;
+      td.innerHTML=`<b class="dde-mat-received-display">${v.toFixed(3)}</b><input class="dde-mat-received" type="hidden" value="${v}">`
+    }
+
+    const openingTd=opening?.parentElement;
+    if(openingTd && !openingTd.querySelector('.dde-mat-source-note')){
+      openingTd.insertAdjacentHTML('beforeend',`<small class="dde-mat-source-note">${carried?'Previous closing':'Initial opening'}</small>`)
+    }
+  });
+
   bindMaterialRows('ddeUnitsBody',true)
 }
 function loadMaterialBody(bodyId,section,rows=[],unitsMode=false){
   if(section==='units'){renderProductionUnitsMaterialSection(rows);return}
   const body=$d('#'+bodyId);if(!body)return;
   body.innerHTML='';
-  const list=(rows&&rows.length)?rows:((section==='boiler'||section==='pulp')?[]:[{}]);
+  const list=(rows&&rows.length)?rows:((section==='boiler'||section==='pulp'||section==='sulphite')?[]:[{}]);
   list.forEach(r=>addMaterialRow(section,bodyId,unitsMode,r))
 }
 
@@ -14326,7 +14426,7 @@ function init(){
 
   
   
-  $d('#ddeAddSulphiteRow').onclick=()=>addMaterialRow('sulphite','ddeSulphiteBody',false,{});
+  
 
   ensureDdeMasterLists();
   loadMaterialBody('ddeBoilerBody','boiler',ddeDefaultRows('boiler'),false);
@@ -15481,6 +15581,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   font-weight:700;
 }
 #panel-daily-data-entry #ddePulpTable .dde-mat-received-display{
+  display:inline-block;
+  min-width:52px;
+  font-weight:800;
+  color:#003b66;
+}
+</style>
+<style id="ddeRemainingMaterialStockControlV1527">
+#panel-daily-data-entry #ddeSulphiteTable{
+  table-layout:fixed;
+  min-width:900px;
+}
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(1){width:48px}
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(2){width:180px}
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(3){width:80px}
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(4),
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(5),
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(6),
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(7){width:110px}
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(8){width:95px}
+#panel-daily-data-entry #ddeSulphiteTable th:nth-child(9){width:110px}
+#panel-daily-data-entry #ddeSulphiteTable .dde-control{min-width:0;width:100%}
+#panel-daily-data-entry #ddeSulphiteTable .dde-master-item{font-weight:700}
+#panel-daily-data-entry #ddeSulphiteTable .dde-mat-received-display,
+#panel-daily-data-entry #ddeUnitsTable .dde-mat-received-display{
   display:inline-block;
   min-width:52px;
   font-weight:800;
