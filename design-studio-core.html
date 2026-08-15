@@ -4748,9 +4748,10 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
             <tbody>
               <tr><td>Total Steam Production</td><td><input id="ddeSteamProduction" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
               <tr><td>Steam to Pulp Mill</td><td><input id="ddeSteamPulp" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
-              <tr><td>Steam to Production Unit 1</td><td><input id="ddeSteamUnit1" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
-              <tr><td>Steam to Production Unit 2</td><td><input id="ddeSteamUnit2" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
-              <tr><td>Steam to Production Unit 3</td><td><input id="ddeSteamUnit3" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              
+              
+              
+              <tr id="ddeSteamProductionUnitMarker" style="display:none"></tr>
               <tr><td>Steam to Boiler House</td><td><input id="ddeSteamBoiler" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
               <tr class="dde-prod-footer-row"><td><b>Total Steam Consumed</b></td><td><b id="ddeSteamConsumedTotal">0.000 Ton</b></td></tr>
               <tr><td>Steam Balance</td><td><b id="ddeSteamBalance">0.000 Ton</b></td></tr>
@@ -13077,6 +13078,52 @@ function activeProductionUnits(){
   }))
 }
 
+
+function renderSteamProductionUnitRows(saved=[]){
+  const marker=$d('#ddeSteamProductionUnitMarker');if(!marker)return;
+  const tbody=marker.parentElement;
+  tbody.querySelectorAll('.dde-steam-unit-row').forEach(tr=>tr.remove());
+
+  const savedMap={};
+  (Array.isArray(saved)?saved:[]).forEach(x=>{
+    if(x.id)savedMap['id:'+x.id]=num(x.qty);
+    if(x.code)savedMap['code:'+x.code]=num(x.qty);
+    if(x.name)savedMap['name:'+String(x.name).trim().toLowerCase()]=num(x.qty)
+  });
+
+  activeProductionUnits().forEach(u=>{
+    let q=0;
+    if(savedMap['id:'+u.id]!==undefined)q=savedMap['id:'+u.id];
+    else if(savedMap['code:'+u.code]!==undefined)q=savedMap['code:'+u.code];
+    else if(savedMap['name:'+u.name.toLowerCase()]!==undefined)q=savedMap['name:'+u.name.toLowerCase()];
+
+    const tr=document.createElement('tr');
+    tr.className='dde-steam-unit-row';
+    tr.innerHTML=`<td>Steam to ${u.name}</td>
+      <td><input class="dde-control dde-steam-unit-input"
+        data-unit-id="${u.id}"
+        data-unit-code="${u.code}"
+        data-unit-name="${u.name}"
+        type="number" step="any" value="${q||0}" placeholder="0"></td>`;
+    tbody.insertBefore(tr,marker)
+  });
+
+  tbody.querySelectorAll('.dde-steam-unit-input').forEach(el=>{
+    el.addEventListener('input',recalc);
+    el.addEventListener('change',recalc)
+  })
+}
+function steamProductionUnitData(){
+  return [...document.querySelectorAll('.dde-steam-unit-input')].map(el=>({
+    id:el.dataset.unitId||'',
+    code:el.dataset.unitCode||'',
+    name:el.dataset.unitName||'',
+    qty:num(el.value)
+  }))
+}
+function steamToProductionUnits(){
+  return steamProductionUnitData().reduce((a,x)=>a+x.qty,0)
+}
 function renderElectricityProductionUnitRows(saved=[]){
   const marker=$d('#ddeElectricityProductionUnitMarker');if(!marker)return;
   const tbody=marker.parentElement;
@@ -13555,11 +13602,9 @@ function recalc(){
 
   const steamProduction=value('ddeSteamProduction');
   const steamPulp=value('ddeSteamPulp');
-  const steamUnit1=value('ddeSteamUnit1');
-  const steamUnit2=value('ddeSteamUnit2');
-  const steamUnit3=value('ddeSteamUnit3');
+  const steamUnitsTotal=steamToProductionUnits();
   const steamBoiler=value('ddeSteamBoiler');
-  const steamConsumed=steamPulp+steamUnit1+steamUnit2+steamUnit3+steamBoiler;
+  const steamConsumed=steamPulp+steamUnitsTotal+steamBoiler;
   const steamBalance=steamProduction-steamConsumed;
 
   const paperProduction=totalProd;
@@ -13744,9 +13789,10 @@ function clearForm(){
   }
   if($d('#ddeWoodPulp'))$d('#ddeWoodPulp').textContent='0.000 Ton';
   ['ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsBoiler',
-   'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
+   'ddeSteamProduction','ddeSteamPulp','ddeSteamBoiler']
     .forEach(id=>{const el=$d('#'+id);if(el)el.value=''});
   renderElectricityProductionUnitRows();
+  renderSteamProductionUnitRows();
   applyElectricityRateFromMaster();
   ensureDdeMasterLists();
   loadMaterialBody('ddeBoilerBody','boiler',ddeDefaultRows('boiler'),false);
@@ -13807,9 +13853,6 @@ function editRecord(id){
   $d('#ddeConsBoiler').value=r.consBoiler||'';
   $d('#ddeSteamProduction').value=r.steamProduction||'';
   $d('#ddeSteamPulp').value=r.steamPulp||'';
-  $d('#ddeSteamUnit1').value=r.steamUnit1||'';
-  $d('#ddeSteamUnit2').value=r.steamUnit2||'';
-  $d('#ddeSteamUnit3').value=r.steamUnit3||'';
   $d('#ddeSteamBoiler').value=r.steamBoiler||'';
   loadMaterialBody('ddeBoilerBody','boiler',r.boilerMaterials||[{}],false);
   loadMaterialBody('ddePulpBody','pulp',r.pulpMaterials||[{}],false);
@@ -13899,6 +13942,7 @@ function feedDashboard(){
 function openPage(){
   loadUnitNames();
   renderElectricityProductionUnitRows();
+  renderSteamProductionUnitRows();
   applyElectricityRateFromMaster();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   $d('#panel-daily-data-entry').classList.add('active');
@@ -13924,7 +13968,7 @@ function bindEnterNavigation(){
     ['ddeWapdaPaper','ddeWapdaBoard'],
     ['ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5'],
     ['ddeConsPulp','ddeConsBoiler'],
-    ['ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
+    ['ddeSteamProduction','ddeSteamPulp','ddeSteamBoiler']
   ];
 
   panel.addEventListener('keydown',e=>{
@@ -13964,11 +14008,12 @@ function init(){
   if(ddeIsCurrent)openPage();
   loadUnitNames();
   renderElectricityProductionUnitRows();
+  renderSteamProductionUnitRows();
   applyElectricityRateFromMaster();
   bindDate();
   bindEnterNavigation();
   ['ddeWapdaPaper',
-   'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsBoiler']
+   'ddeSteamProduction','ddeSteamPulp','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
   $d('#ddeSaveBtn').onclick=saveRecord;
   $d('#ddeClearBtn').onclick=clearForm;
@@ -15022,4 +15067,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #panel-daily-data-entry .dde-electricity-entry-wrap-v1515 td{padding-top:4px!important;padding-bottom:4px!important}
 @media(max-width:1150px){#panel-daily-data-entry .dde-electricity-main-layout-v1515{grid-template-columns:1fr}}
 </style>
+
+<style id="steamActiveProductionUnitsV1517Style">
+#panel-daily-data-entry .dde-steam-unit-row td{
+  padding-top:4px!important;
+  padding-bottom:4px!important;
+}
+</style>
+
 </body></html>
