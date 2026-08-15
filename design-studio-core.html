@@ -13064,6 +13064,11 @@ function rows(){
 function saveRows(r){localStorage.setItem(KEY,JSON.stringify(r))}
 function value(id){return num($d('#'+id)?.value)}
 function setText(id,v){const el=$d('#'+id);if(el)el.textContent=v}
+function fmt(v){
+  const n=num(v);
+  if(!Number.isFinite(n))return '0.000';
+  return n.toFixed(3)
+}
 
 function productionUnitMasterRows(){
   try{
@@ -14084,6 +14089,19 @@ function init(){
   const ddePanel=$d('#panel-daily-data-entry');
   if(ddePanel && !ddePanel.dataset.liveCalcBound){
     ddePanel.dataset.liveCalcBound='1';
+
+    ddePanel.addEventListener('keydown',e=>{
+      if(e.target.matches('input[type="number"]') && (e.key==='ArrowUp' || e.key==='ArrowDown')){
+        e.preventDefault()
+      }
+    });
+
+    ddePanel.addEventListener('wheel',e=>{
+      if(e.target.matches('input[type="number"]') && document.activeElement===e.target){
+        e.preventDefault()
+      }
+    },{passive:false});
+
     ddePanel.addEventListener('input',e=>{
       if(e.target.matches('input,select'))recalc()
     });
@@ -14093,7 +14111,12 @@ function init(){
   }
   ['ddeWapdaPaper',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsBoiler']
-    .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
+    .forEach(id=>{
+      const el=$d('#'+id);
+      if(!el)return;
+      el.addEventListener('input',recalc);
+      el.addEventListener('change',recalc)
+    });
   $d('#ddeSaveBtn').onclick=saveRecord;
   $d('#ddeClearBtn').onclick=clearForm;
   $d('#ddeSearch').oninput=renderHistory;
@@ -15167,4 +15190,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #panel-daily-data-entry .dde-steam-summary-col-v1518{min-width:0}
 #panel-daily-data-entry .dde-steam-summary-subhead-v1518{letter-spacing:.02em}
 </style>
+
+<style id="ddeNumberSpinnerRemovalV1521">
+#panel-daily-data-entry input[type="number"]::-webkit-inner-spin-button,
+#panel-daily-data-entry input[type="number"]::-webkit-outer-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+#panel-daily-data-entry input[type="number"]{
+  -moz-appearance:textfield;
+  appearance:textfield;
+}
+</style>
+
 </body></html>
