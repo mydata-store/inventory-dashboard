@@ -4874,12 +4874,11 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   <div class="card">
     <div class="inv-page-head">
       <div>
-        <h2>Material Master</h2>
-        <p>Department-wise Material • Unit • Rate • Standard</p>
+        <h2>Material Group & Rate Master</h2>
+        <p>Central control for materials, units, cost centres, standards, rate source and effective rates.</p>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn" id="mmBackBtn">← Production & Consumption</button>
-        <button class="btn btn-primary" id="mmSaveAllTop">Save All Materials</button>
       </div>
     </div>
 
@@ -12958,7 +12957,7 @@ function saveUnitNames(){
   localStorage.setItem(UNIT_KEY,JSON.stringify(n))
 }
 
-const DDE_MATERIAL_MASTER_KEY='erp_daily_material_master_v1';
+const DDE_MATERIAL_MASTER_KEY='erpDailyMaterialMasterV1';
 function ddeMaster(){try{return JSON.parse(localStorage.getItem(DDE_MATERIAL_MASTER_KEY)||'{}')||{}}catch(e){return {}}}
 function ddeMasterRows(section){const map={boiler:'boiler',pulp:'pulp',sulphite:'sulphite',units:'stockpulp'};return (ddeMaster()[map[section]]||[])}
 function ddeMasterListId(section){return 'ddeMasterList-'+section}
@@ -13075,14 +13074,13 @@ function loadMaterialMaster(){
 }
 function materialStandardMap(section='pulp'){
   const master=loadMaterialMaster();
-  const rows=Array.isArray(master[section])?master[section]:[];
+  const rows=Array.isArray(master[section])?master[section].filter(r=>String(r.status||'active').toLowerCase()!=='inactive'):[];
   const map={};
   rows.forEach(r=>{
     const name=String(r.material||'').trim().toLowerCase();
     if(!name)return;
-    let standard=parseFloat(String(r.standard??'').replace('%','').trim());
-    if(!Number.isFinite(standard))standard=0;
-    map[name]={standard,unit:r.unit||'',rate:num(r.rate)}
+    const standard=section==='boiler'?num(r.steamStandard??r.standard):num(r.standard);
+    map[name]={standard,unit:r.unit||'',rate:num(r.currentRate??r.rate),sequence:num(r.sequence),rateSource:r.rateSource||''}
   });
   return map
 }
@@ -13581,178 +13579,397 @@ window.ERPDailyDataEntry={open:openPage,refresh:feedDashboard};
 <script id="materialMasterStandaloneV1492Script">
 (()=>{
 const KEY='erpDailyMaterialMasterV1';
+const LEGACY_KEY='erp_daily_material_master_v1';
+const MASTER_KEY='erpMasterDataV1';
 const MM_LAST='production-consumption-material-master';
-const sections=[
-  {id:'pulp',title:'Pulp Mill',hasStandard:true,standardLabel:'Yield Standard'},
-  {id:'boiler',title:'Boiler House',hasStandard:true,standardLabel:'Yield / Steam Standard'},
-  {id:'sulphite',title:'Sulphite Plant',hasStandard:false},
-  {id:'stockpulp',title:'Stock Pulp Plant',hasStandard:false},
-  {id:'lubricants',title:'Lubricants',hasStandard:false},
-  {id:'others',title:'Others',hasStandard:false}
+const GROUPS=[
+  {id:'pulp',title:'Pulp Mill',standard:'yield',standardLabel:'Pulp Yield Standard %'},
+  {id:'boiler',title:'Boiler House',standard:'steam',standardLabel:'Steam Yield Standard'},
+  {id:'sulphite',title:'Sulphite Plant',standard:'none'},
+  {id:'stockpulp',title:'Stock Pulp Plant',standard:'none'},
+  {id:'lubricants',title:'Lubricants',standard:'none'},
+  {id:'others',title:'Others',standard:'none'}
 ];
 const $m=s=>document.querySelector(s);
+let editing={group:'',id:''};
 
 function esc(v){
-  return String(v??'').replace(/[&<>"']/g,ch=>({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[ch]))
+  return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))
+}
+function num(v){const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0}
+function tenantId(){try{return window.ERPTenant?.currentId?.()||'local'}catch(e){return'local'}}
+function allMasters(){try{return JSON.parse(localStorage.getItem(MASTER_KEY)||'{}')||{}}catch(e){return {}}}
+function masterBucket(type){
+  const d=allMasters(),t=tenantId();
+  return Array.isArray(d[t]?.[type])?d[t][type]:[]
+}
+function activeItems(){return masterBucket('items').filter(x=>String(x.status||'active').toLowerCase()!=='inactive')}
+function activeUnits(){return masterBucket('units').filter(x=>String(x.status||'active').toLowerCase()!=='inactive')}
+function findItemByName(name){
+  const q=String(name||'').trim().toLowerCase();
+  return activeItems().find(x=>String(x.name||'').trim().toLowerCase()===q)||
+         activeItems().find(x=>[x.name,x.size].filter(Boolean).join(' ').trim().toLowerCase()===q)
+}
+function findUnit(name){
+  const q=String(name||'').trim().toLowerCase();
+  return activeUnits().find(x=>String(x.name||'').trim().toLowerCase()===q||String(x.shortName||'').trim().toLowerCase()===q)
+}
+function groupDef(id){return GROUPS.find(x=>x.id===id)||GROUPS[0]}
+function fmtDate(v){
+  const raw=String(v||'').trim();if(!raw)return'';
+  if(/^\d{1,2}-[A-Za-z]{3}-\d{2}$/.test(raw))return raw;
+  const p=raw.replace(/[/.]/g,'-').split('-').filter(Boolean);if(p.length<2||p.length>3)return raw;
+  const d=+p[0],mo=+p[1];let y=p[2]?+p[2]:new Date().getFullYear();if(y<100)y+=2000;
+  if(!d||!mo||mo<1||mo>12)return raw;
+  const dt=new Date(y,mo-1,d);if(dt.getDate()!=d||dt.getMonth()!=mo-1)return raw;
+  return String(d).padStart(2,'0')+'-'+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mo-1]+'-'+String(y).slice(-2)
+}
+function todayText(){
+  const d=new Date();return String(d.getDate()).padStart(2,'0')+'-'+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+'-'+String(d.getFullYear()).slice(-2)
+}
+function migrate(raw){
+  const out={};
+  GROUPS.forEach(g=>{
+    const src=Array.isArray(raw?.[g.id])?raw[g.id]:[];
+    out[g.id]=src.map((r,i)=>{
+      const item=findItemByName(r.material);
+      const std=num(String(r.standard??'').replace('%',''));
+      return {
+        id:r.id||('MGR-'+g.id+'-'+Date.now()+'-'+i),
+        material:r.material||'',
+        itemId:r.itemId||item?.id||'',
+        unit:r.unit||item?.unit||'',
+        costCentre:r.costCentre||g.title,
+        entryMode:r.entryMode||'Manual',
+        sequence:num(r.sequence)||i+1,
+        standard:g.standard==='yield'?(num(r.yieldStandard)||std):0,
+        steamStandard:g.standard==='steam'?(num(r.steamStandard)||std):0,
+        rateSource:r.rateSource||'Manual',
+        currentRate:num(r.currentRate??r.rate),
+        effectiveDate:fmtDate(r.effectiveDate||todayText()),
+        status:r.status||'active',
+        history:Array.isArray(r.history)?r.history:[]
+      }
+    })
+  });
+  return out
 }
 function load(){
-  try{
-    const d=JSON.parse(localStorage.getItem(KEY)||'{}');
-    return d&&typeof d==='object'?d:{}
-  }catch(e){return {}}
+  let raw={};
+  try{raw=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}
+  return migrate(raw)
+}
+function compatPayload(data){
+  const out={};
+  GROUPS.forEach(g=>{
+    out[g.id]=(data[g.id]||[])
+      .filter(r=>r.status!=='inactive')
+      .sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.material).localeCompare(String(b.material)))
+      .map(r=>({
+        ...r,
+        rate:num(r.currentRate),
+        standard:g.standard==='yield'?num(r.standard):g.standard==='steam'?num(r.steamStandard):0
+      }))
+  });
+  return out
 }
 function save(data){
-  localStorage.setItem(KEY,JSON.stringify(data))
+  const compatible=compatPayload(data);
+  localStorage.setItem(KEY,JSON.stringify(compatible));
+  localStorage.setItem(LEGACY_KEY,JSON.stringify(compatible));
+  window.dispatchEvent(new CustomEvent('erp-material-master-updated'))
 }
-function rowHtml(sec,row={},i=0){
-  const def=sections.find(x=>x.id===sec)||{hasStandard:false};
-  return `<tr data-mm-sec="${sec}">
-    <td class="mm-sr">${i+1}</td>
-    <td><input class="mm-material" value="${esc(row.material||'')}" placeholder="Material"></td>
-    <td><input class="mm-unit" value="${esc(row.unit||'')}" placeholder="Unit"></td>
-    <td><input class="mm-rate" type="number" step="any" value="${row.rate??''}" placeholder="0"></td>
-    ${def.hasStandard?`<td><input class="mm-standard" value="${esc(row.standard||'')}" placeholder="${def.standardLabel||'Standard'}"></td>`:''}
-    <td><button class="btn btn-sm mm-delete" type="button">Delete</button></td>
-  </tr>`
+function latestInventoryRow(material){
+  try{
+    if(typeof invRows!=='function')return null;
+    return invRows().find(x=>String(x.item||'').trim().toLowerCase()===String(material||'').trim().toLowerCase())||null
+  }catch(e){return null}
 }
-function collect(){
-  const data={};
-  sections.forEach(sec=>{
-    const body=$m('#mmStandaloneBody-'+sec.id);
-    data[sec.id]=body?[...body.querySelectorAll('tr')].map(tr=>{
-      const row={
-        material:tr.querySelector('.mm-material')?.value.trim()||'',
-        unit:tr.querySelector('.mm-unit')?.value.trim()||'',
-        rate:parseFloat(tr.querySelector('.mm-rate')?.value)||0
-      };
-      if(sec.hasStandard)row.standard=tr.querySelector('.mm-standard')?.value.trim()||'';
-      return row
-    }).filter(r=>r.material||r.unit||r.rate||(sec.hasStandard&&r.standard)):[]
-  });
-  return data
+function calculateRate(material,source,manual){
+  if(source==='Manual')return num(manual);
+  const x=latestInventoryRow(material);
+  if(!x)return 0;
+  if(source==='Latest Purchase Rate')return num(x.lastRate);
+  if(source==='Weighted Average Rate')return num(x.purchase)>0?num(x.purchaseValue)/num(x.purchase):0;
+  return num(manual)
 }
-function renumber(body){
-  [...body.querySelectorAll('tr')].forEach((tr,i)=>{
-    const sr=tr.querySelector('.mm-sr');if(sr)sr.textContent=i+1
-  })
+function nextSequence(group){
+  const d=load(),rows=d[group]||[];
+  return rows.reduce((m,r)=>Math.max(m,num(r.sequence)),0)+1
 }
-function bindSection(sec){
-  const body=$m('#mmStandaloneBody-'+sec.id);
-  if(!body)return;
-
-  body.querySelectorAll('.mm-delete').forEach(btn=>{
-    btn.onclick=()=>{
-      btn.closest('tr')?.remove();
-      if(!body.querySelector('tr'))body.insertAdjacentHTML('beforeend',rowHtml(sec.id,{},0));
-      renumber(body);
-      bindSection(sec)
-    }
-  });
-
-  body.querySelectorAll('input').forEach(inp=>{
-    inp.onkeydown=e=>{
-      if(e.key!=='Enter')return;
-      e.preventDefault();
-
-      const tr=inp.closest('tr');if(!tr)return;
-      const rows=[...body.querySelectorAll('tr')];
-      const r=rows.indexOf(tr);
-      const cls=[...inp.classList].find(c=>['mm-material','mm-unit','mm-rate','mm-standard'].includes(c));
-      if(!cls)return;
-
-      let next=rows[r+1]?.querySelector('.'+cls);
-      if(!next){
-        body.insertAdjacentHTML('beforeend',rowHtml(sec.id,{},rows.length));
-        bindSection(sec);
-        next=body.lastElementChild.querySelector('.'+cls)
-      }
-      next?.focus();
-      if(next?.select)next.select()
-    }
-  })
+function currentGroup(){return $m('#mgrGroup')?.value||'pulp'}
+function renderStandardField(){
+  const g=groupDef(currentGroup());
+  const wrap=$m('#mgrStandardWrap');
+  if(!wrap)return;
+  if(g.standard==='none'){wrap.classList.add('mgr-hidden');return}
+  wrap.classList.remove('mgr-hidden');
+  $m('#mgrStandardLabel').textContent=g.standardLabel;
+  $m('#mgrStandard').placeholder=g.standard==='yield'?'e.g. 33':'e.g. 2.50 Ton Steam / Ton Fuel'
 }
-function render(){
+function populateDataLists(){
+  let dl=$m('#mgrItemList');if(dl)dl.innerHTML=activeItems().map(x=>`<option value="${esc([x.name,x.size].filter(Boolean).join(' '))}" data-id="${esc(x.id||'')}">${esc([x.code,x.unit,x.category].filter(Boolean).join(' • '))}</option>`).join('');
+  dl=$m('#mgrUnitList');if(dl)dl.innerHTML=activeUnits().map(x=>`<option value="${esc(x.name||'')}">${esc(x.shortName||'')}</option>`).join('')
+}
+function build(){
   const host=$m('#mmStandaloneHost');if(!host)return;
-  const data=load();
+  host.innerHTML=`
+    <datalist id="mgrItemList"></datalist><datalist id="mgrUnitList"></datalist>
 
-  host.innerHTML=sections.map(sec=>{
-    const rows=Array.isArray(data[sec.id])&&data[sec.id].length?data[sec.id]:[{}];
-    return `<div class="mm-standalone-section" data-standard="${sec.hasStandard?'true':'false'}">
-      <div class="mm-standalone-head">
-        <h3>${sec.title}</h3>
-        <button class="btn btn-sm mm-add" data-sec="${sec.id}" type="button">+ Add Row</button>
+    <div class="mgr-entry-card">
+      <div class="mgr-head">
+        <div><h3>Material Entry</h3><p>Controlled material setup for Daily Data Entry and costing.</p></div>
+        <div class="mgr-note">Select an existing material to Edit. Standard/rate changes create history instead of silently replacing old values.</div>
       </div>
-      <div class="mm-table-wrap">
-        <table class="mm-standalone-table">
-          <thead>
-            <tr>
-              <th>Sr No</th>
-              <th>Material</th>
-              <th>Unit</th>
-              <th>Rate</th>
-              ${sec.hasStandard?`<th>${sec.standardLabel||'Standard'}</th>`:''}
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="mmStandaloneBody-${sec.id}">
-            ${rows.map((r,i)=>rowHtml(sec.id,r,i)).join('')}
-          </tbody>
-        </table>
+      <div class="mgr-grid">
+        <div class="mgr-field"><label>Group Name *</label><select id="mgrGroup" class="mgr-control">${GROUPS.map(g=>`<option value="${g.id}">${g.title}</option>`).join('')}</select></div>
+        <div class="mgr-field span2"><label>Material *</label><input id="mgrMaterial" class="mgr-control" list="mgrItemList" autocomplete="off" placeholder="Type or select Item Master material"></div>
+        <div class="mgr-field"><label>Material Unit *</label><input id="mgrUnit" class="mgr-control" list="mgrUnitList" placeholder="Unit Master"></div>
+
+        <div class="mgr-field"><label>Cost Centre *</label><input id="mgrCostCentre" class="mgr-control" placeholder="e.g. Pulp Mill"></div>
+        <div class="mgr-field"><label>Data Entry Mode *</label><select id="mgrEntryMode" class="mgr-control"><option>Manual</option><option>Auto from Purchase / Issue</option></select></div>
+        <div class="mgr-field"><label>Display Sequence *</label><input id="mgrSequence" class="mgr-control" type="number" min="1" step="1"></div>
+        <div class="mgr-field" id="mgrStandardWrap"><label id="mgrStandardLabel">Pulp Yield Standard %</label><input id="mgrStandard" class="mgr-control" type="number" step="any" placeholder="e.g. 33"></div>
+
+        <div class="mgr-field"><label>Rate Source *</label><select id="mgrRateSource" class="mgr-control"><option>Latest Purchase Rate</option><option>Weighted Average Rate</option><option>Manual</option></select></div>
+        <div class="mgr-field"><label>Current Rate</label><input id="mgrRate" class="mgr-control" type="number" step="any" placeholder="0"></div>
+        <div class="mgr-field"><label>Effective Date *</label><input id="mgrEffectiveDate" class="mgr-control" placeholder="25-6"></div>
+        <div class="mgr-field"><label>Status *</label><select id="mgrStatus" class="mgr-control"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
       </div>
-    </div>`
-  }).join('');
+      <div class="mgr-actions">
+        <button class="btn btn-primary" id="mgrAdd">Add</button>
+        <button class="btn" id="mgrUpdate">Update</button>
+        <button class="btn" id="mgrClear">Clear</button>
+      </div>
+      <div class="mgr-note" id="mgrRateNote">Latest Purchase Rate / Weighted Average is calculated from available purchase records. Manual rate remains editable.</div>
+    </div>
 
-  sections.forEach(bindSection);
+    <div class="mgr-list-card">
+      <div class="mgr-head">
+        <div><h3>Group-wise Material List</h3><p>One active material assignment per group. Inactive records remain available for history.</p></div>
+        <div class="mgr-badges"><div class="mgr-badge" id="mgrGroupCount">Groups: 0</div><div class="mgr-badge" id="mgrMaterialCount">Materials: 0</div></div>
+      </div>
+      <div class="mgr-toolbar">
+        <div class="mgr-field"><label>Search Material</label><input id="mgrSearch" class="mgr-control" placeholder="Search material, group, unit or cost centre"></div>
+        <div class="mgr-field"><label>Filter Group</label><select id="mgrFilter" class="mgr-control"><option value="">All Groups</option>${GROUPS.map(g=>`<option value="${g.id}">${g.title}</option>`).join('')}</select></div>
+        <button class="btn" id="mgrClearSearch">Clear Search</button>
+      </div>
+      <div id="mgrGroupList"></div>
+    </div>
 
-  host.querySelectorAll('.mm-add').forEach(btn=>{
-    btn.onclick=()=>{
-      const sec=sections.find(x=>x.id===btn.dataset.sec);
-      const body=$m('#mmStandaloneBody-'+sec.id);
-      const i=body.querySelectorAll('tr').length;
-      body.insertAdjacentHTML('beforeend',rowHtml(sec.id,{},i));
-      bindSection(sec);
-      body.lastElementChild.querySelector('.mm-material')?.focus()
-    }
-  })
+    <div class="mgr-history" id="mgrHistoryModal">
+      <div class="mgr-history-card">
+        <div class="mgr-head"><div><h3 id="mgrHistoryTitle">Standard & Rate History</h3><p>Effective-date audit trail.</p></div><button class="btn" id="mgrHistoryClose">Close</button></div>
+        <table class="mgr-history-table"><thead><tr><th>Effective Date</th><th>Standard</th><th>Rate Source</th><th>Rate</th><th>Status</th></tr></thead><tbody id="mgrHistoryBody"></tbody></table>
+      </div>
+    </div>`;
+  populateDataLists();
+  bind();
+  clearForm();
+  renderList()
 }
-function saveAll(){
-  save(collect());
-  if(window.toast)toast('Material Master saved');
-  else alert('Material Master saved')
+function clearForm(){
+  editing={group:'',id:''};
+  const g=currentGroup();
+  $m('#mgrMaterial').value='';
+  $m('#mgrUnit').value='';
+  $m('#mgrCostCentre').value=groupDef(g).title;
+  $m('#mgrEntryMode').value='Manual';
+  $m('#mgrSequence').value=nextSequence(g);
+  $m('#mgrStandard').value='';
+  $m('#mgrRateSource').value='Latest Purchase Rate';
+  $m('#mgrRate').value='';
+  $m('#mgrEffectiveDate').value=todayText();
+  $m('#mgrStatus').value='active';
+  renderStandardField();
+  updateRateMode()
+}
+function syncSelectedItem(){
+  const material=$m('#mgrMaterial').value;
+  const item=findItemByName(material);
+  if(item){
+    $m('#mgrMaterial').dataset.itemId=item.id||'';
+    $m('#mgrUnit').value=item.unit||'';
+    $m('#mgrUnit').readOnly=!!item.unit;
+    updateAutoRate()
+  }else{
+    $m('#mgrMaterial').dataset.itemId='';
+    $m('#mgrUnit').readOnly=false
+  }
+}
+function updateRateMode(){
+  const src=$m('#mgrRateSource').value;
+  $m('#mgrRate').readOnly=src!=='Manual';
+  updateAutoRate()
+}
+function updateAutoRate(){
+  const src=$m('#mgrRateSource').value;
+  if(src==='Manual')return;
+  $m('#mgrRate').value=calculateRate($m('#mgrMaterial').value,src,$m('#mgrRate').value)||''
+}
+function validate(){
+  const g=currentGroup(),material=$m('#mgrMaterial').value.trim(),unit=$m('#mgrUnit').value.trim();
+  if(!material){alert('Select Material.');return false}
+  const items=activeItems();
+  if(items.length && !findItemByName(material)){alert('Material must be selected from Item Master.');return false}
+  if(!unit){alert('Select Unit.');return false}
+  const units=activeUnits();
+  if(units.length && !findUnit(unit)){alert('Unit must be selected from Unit Master.');return false}
+  if(!$m('#mgrCostCentre').value.trim()){alert('Cost Centre is required.');return false}
+  if(num($m('#mgrSequence').value)<=0){alert('Display Sequence must be 1 or more.');return false}
+  const gd=groupDef(g);
+  if(gd.standard!=='none' && num($m('#mgrStandard').value)<=0){alert(gd.standardLabel+' is required.');return false}
+  return true
+}
+function formRecord(existing=null){
+  const g=currentGroup(),gd=groupDef(g),material=$m('#mgrMaterial').value.trim();
+  const source=$m('#mgrRateSource').value;
+  const currentRate=calculateRate(material,source,$m('#mgrRate').value);
+  return {
+    id:existing?.id||('MGR-'+g+'-'+Date.now()),
+    material,
+    itemId:$m('#mgrMaterial').dataset.itemId||findItemByName(material)?.id||'',
+    unit:$m('#mgrUnit').value.trim(),
+    costCentre:$m('#mgrCostCentre').value.trim(),
+    entryMode:$m('#mgrEntryMode').value,
+    sequence:num($m('#mgrSequence').value),
+    standard:gd.standard==='yield'?num($m('#mgrStandard').value):0,
+    steamStandard:gd.standard==='steam'?num($m('#mgrStandard').value):0,
+    rateSource:source,
+    currentRate,
+    effectiveDate:fmtDate($m('#mgrEffectiveDate').value)||todayText(),
+    status:$m('#mgrStatus').value,
+    history:Array.isArray(existing?.history)?existing.history:[]
+  }
+}
+function snapshot(r,g){
+  const gd=groupDef(g);
+  return {
+    effectiveDate:r.effectiveDate,
+    standard:gd.standard==='yield'?r.standard:gd.standard==='steam'?r.steamStandard:0,
+    rateSource:r.rateSource,
+    rate:r.currentRate,
+    status:r.status
+  }
+}
+function addRecord(){
+  if(!validate())return;
+  const data=load(),g=currentGroup(),material=$m('#mgrMaterial').value.trim().toLowerCase();
+  const dup=(data[g]||[]).find(r=>r.status==='active'&&String(r.material).trim().toLowerCase()===material);
+  if(dup){alert('This material is already active in '+groupDef(g).title+'. Use Edit instead.');return}
+  const r=formRecord();
+  r.history=[snapshot(r,g)];
+  data[g]=data[g]||[];data[g].push(r);save(data);clearForm();renderList();
+  if(window.toast)toast('Material added')
+}
+function updateRecord(){
+  if(!editing.id){alert('Click Edit on a material first.');return}
+  if(!validate())return;
+  const data=load(),g=editing.group,idx=(data[g]||[]).findIndex(r=>r.id===editing.id);
+  if(idx<0)return;
+  const old=data[g][idx],next=formRecord(old);
+  next.id=old.id;
+  const changed=old.effectiveDate!==next.effectiveDate || num(old.currentRate)!==num(next.currentRate) ||
+    num(old.standard)!==num(next.standard) || num(old.steamStandard)!==num(next.steamStandard) ||
+    old.rateSource!==next.rateSource || old.status!==next.status;
+  next.history=[...(old.history||[])];
+  if(changed)next.history.push(snapshot(next,g));
+  data[g][idx]=next;save(data);clearForm();renderList();
+  if(window.toast)toast('Material updated')
+}
+function editRecord(g,id){
+  const r=(load()[g]||[]).find(x=>x.id===id);if(!r)return;
+  editing={group:g,id};
+  $m('#mgrGroup').value=g;renderStandardField();
+  $m('#mgrMaterial').value=r.material||'';$m('#mgrMaterial').dataset.itemId=r.itemId||'';
+  $m('#mgrUnit').value=r.unit||'';$m('#mgrUnit').readOnly=!!findItemByName(r.material)?.unit;
+  $m('#mgrCostCentre').value=r.costCentre||groupDef(g).title;
+  $m('#mgrEntryMode').value=r.entryMode||'Manual';
+  $m('#mgrSequence').value=r.sequence||1;
+  $m('#mgrStandard').value=groupDef(g).standard==='yield'?r.standard||'':groupDef(g).standard==='steam'?r.steamStandard||'':'';
+  $m('#mgrRateSource').value=r.rateSource||'Manual';
+  $m('#mgrRate').value=r.currentRate||'';
+  $m('#mgrEffectiveDate').value=r.effectiveDate||todayText();
+  $m('#mgrStatus').value=r.status||'active';
+  updateRateMode();
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+function showHistory(g,id){
+  const r=(load()[g]||[]).find(x=>x.id===id);if(!r)return;
+  $m('#mgrHistoryTitle').textContent=r.material+' — Standard & Rate History';
+  const gd=groupDef(g),hist=(r.history||[]).length?r.history:[snapshot(r,g)];
+  $m('#mgrHistoryBody').innerHTML=hist.slice().reverse().map(h=>`<tr>
+    <td>${esc(h.effectiveDate||'')}</td><td>${gd.standard==='none'?'—':num(h.standard).toFixed(3)}</td>
+    <td>${esc(h.rateSource||'')}</td><td>${num(h.rate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+    <td>${esc(h.status||'active')}</td></tr>`).join('');
+  $m('#mgrHistoryModal').classList.add('open')
+}
+function renderList(){
+  const data=load(),q=String($m('#mgrSearch')?.value||'').trim().toLowerCase(),filter=$m('#mgrFilter')?.value||'';
+  let total=0,groups=0,html='';
+  GROUPS.forEach(g=>{
+    if(filter&&filter!==g.id)return;
+    let rows=(data[g.id]||[]).filter(r=>{
+      const hay=[r.material,r.unit,r.costCentre,r.entryMode,r.rateSource,r.status].join(' ').toLowerCase();
+      return !q||hay.includes(q)
+    }).sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.material).localeCompare(String(b.material)));
+    if(!rows.length)return;
+    groups++;total+=rows.length;
+    html+=`<div class="mgr-group"><div class="mgr-group-label"><span>${g.title}</span><small>${rows.length} material${rows.length===1?'':'s'}</small></div>
+      <div class="mgr-table-wrap"><table class="mgr-table"><thead><tr>
+      <th>#</th><th>Material</th><th>Unit</th><th>Cost Centre</th><th>Entry Mode</th><th>Sequence</th>
+      ${g.standard==='yield'?'<th>Yield Std %</th>':g.standard==='steam'?'<th>Steam Yield Std</th>':''}
+      <th>Rate Source</th><th>Current Rate</th><th>Effective Date</th><th>Status</th><th>Action</th></tr></thead><tbody>
+      ${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.unit)}</td><td>${esc(r.costCentre)}</td>
+      <td>${esc(r.entryMode)}</td><td>${num(r.sequence)}</td>
+      ${g.standard==='yield'?`<td>${num(r.standard).toFixed(2)}%</td>`:g.standard==='steam'?`<td>${num(r.steamStandard).toFixed(3)}</td>`:''}
+      <td><span class="mgr-rate-source">${esc(r.rateSource)}</span></td><td>${num(r.currentRate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td>${esc(r.effectiveDate)}</td><td><span class="mgr-status ${r.status==='inactive'?'inactive':'active'}">${r.status==='inactive'?'Inactive':'Active'}</span></td>
+      <td><button class="btn btn-sm mgr-edit" data-g="${g.id}" data-id="${r.id}">Edit</button> <button class="btn btn-sm mgr-hist" data-g="${g.id}" data-id="${r.id}">History</button></td></tr>`).join('')}
+      </tbody></table></div></div>`
+  });
+  $m('#mgrGroupList').innerHTML=html||'<div style="padding:24px;text-align:center;color:var(--muted)">No matching materials.</div>';
+  $m('#mgrGroupCount').textContent='Groups: '+groups;$m('#mgrMaterialCount').textContent='Materials: '+total;
+  document.querySelectorAll('.mgr-edit').forEach(b=>b.onclick=()=>editRecord(b.dataset.g,b.dataset.id));
+  document.querySelectorAll('.mgr-hist').forEach(b=>b.onclick=()=>showHistory(b.dataset.g,b.dataset.id))
+}
+function bind(){
+  $m('#mgrGroup').onchange=()=>{renderStandardField();$m('#mgrCostCentre').value=groupDef(currentGroup()).title;$m('#mgrSequence').value=nextSequence(currentGroup())};
+  $m('#mgrMaterial').onchange=syncSelectedItem;
+  $m('#mgrMaterial').onblur=syncSelectedItem;
+  $m('#mgrRateSource').onchange=updateRateMode;
+  $m('#mgrEffectiveDate').onblur=()=>{$m('#mgrEffectiveDate').value=fmtDate($m('#mgrEffectiveDate').value)};
+  $m('#mgrAdd').onclick=addRecord;
+  $m('#mgrUpdate').onclick=updateRecord;
+  $m('#mgrClear').onclick=clearForm;
+  $m('#mgrSearch').oninput=renderList;
+  $m('#mgrFilter').onchange=renderList;
+  $m('#mgrClearSearch').onclick=()=>{$m('#mgrSearch').value='';$m('#mgrFilter').value='';renderList()};
+  $m('#mgrHistoryClose').onclick=()=> $m('#mgrHistoryModal').classList.remove('open');
+  $m('#mgrHistoryModal').onclick=e=>{if(e.target.id==='mgrHistoryModal')e.currentTarget.classList.remove('open')}
 }
 function open(){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   const panel=$m('#panel-material-master');if(!panel)return;
   panel.classList.add('active');
-
   document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
-
-  if($m('#workspaceTitle'))$m('#workspaceTitle').textContent='Material Master';
-  if($m('#workspaceSubtitle'))$m('#workspaceSubtitle').textContent='Pulp Mill • Boiler House • Sulphite Plant • Stock Pulp Plant • Lubricants • Others';
-
+  if($m('#workspaceTitle'))$m('#workspaceTitle').textContent='Material Group & Rate Master';
+  if($m('#workspaceSubtitle'))$m('#workspaceSubtitle').textContent='Materials • Units • Cost Centres • Standards • Effective Rates';
   try{
     localStorage.setItem('erpStudioLastPanel',MM_LAST);
     localStorage.setItem('erpProductionConsumptionPageV1','materials')
   }catch(e){}
-
-  render()
+  build()
 }
 function init(){
   $m('#mmBackBtn').onclick=()=>window.ERPProductionConsumption?.open();
-  $m('#mmSaveAllTop').onclick=saveAll;
-
   try{
-    const last=localStorage.getItem('erpStudioLastPanel')||'';
-    const pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
-    if(last===MM_LAST || pcPage==='materials')setTimeout(open,180)
+    const last=localStorage.getItem('erpStudioLastPanel')||'',pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
+    if(last===MM_LAST||pcPage==='materials')setTimeout(open,180)
   }catch(e){}
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-else init();
-
-window.ERPMaterialMaster={open,render,save:saveAll};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+window.ERPMaterialMaster={open,render:renderList,save:()=>save(load())};
 })();
 </script>
 
@@ -13762,6 +13979,92 @@ window.ERPMaterialMaster={open,render,save:saveAll};
 #panel-material-master .mm-standalone-section[data-standard="false"] .mm-standalone-table td:nth-child(5){
   width:85px;
   text-align:center;
+}
+</style>
+
+
+<style id="materialGroupRateMasterV1495Style">
+#panel-material-master .mgr-entry-card,
+#panel-material-master .mgr-list-card{
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--surface);
+  padding:12px;
+  margin-bottom:12px;
+}
+#panel-material-master .mgr-head{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px
+}
+#panel-material-master .mgr-head h3{margin:0;font-size:15px}
+#panel-material-master .mgr-head p{margin:3px 0 0;color:var(--muted);font-size:9px}
+#panel-material-master .mgr-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+}
+#panel-material-master .mgr-grid .span2{grid-column:span 2}
+#panel-material-master .mgr-field label{
+  display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted);margin:0 0 4px
+}
+#panel-material-master .mgr-control{
+  width:100%;height:34px;box-sizing:border-box;border:1px solid var(--border);border-radius:7px;
+  padding:6px 8px;background:var(--surface);color:var(--text);font:inherit;font-size:10px
+}
+#panel-material-master .mgr-control[readonly]{background:color-mix(in srgb,var(--bg) 75%,var(--surface))}
+#panel-material-master .mgr-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+#panel-material-master .mgr-note{
+  font-size:8px;color:var(--muted);margin-top:4px;line-height:1.4
+}
+#panel-material-master .mgr-toolbar{
+  display:grid;grid-template-columns:minmax(260px,1fr) 220px auto;gap:8px;align-items:end;margin-bottom:10px
+}
+#panel-material-master .mgr-badges{display:flex;gap:6px;flex-wrap:wrap}
+#panel-material-master .mgr-badge{
+  border:1px solid var(--border);border-radius:8px;padding:7px 9px;font-size:9px;background:var(--surface)
+}
+#panel-material-master .mgr-group{
+  display:grid;grid-template-columns:170px 1fr;border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;margin-bottom:10px;background:var(--surface)
+}
+#panel-material-master .mgr-group-label{
+  background:color-mix(in srgb,var(--primary) 12%,var(--surface));
+  padding:12px;font-weight:900;font-size:12px;display:flex;flex-direction:column;justify-content:space-between
+}
+#panel-material-master .mgr-group-label small{font-size:8px;color:var(--muted);margin-top:10px}
+#panel-material-master .mgr-table-wrap{overflow:auto}
+#panel-material-master .mgr-table{width:100%;border-collapse:collapse;min-width:1180px}
+#panel-material-master .mgr-table th{
+  background:color-mix(in srgb,var(--accent) 70%,#fff);color:#111;font-size:7.5px;text-transform:uppercase;
+  padding:7px 6px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left
+}
+#panel-material-master .mgr-table td{
+  padding:7px 6px;border-bottom:1px solid var(--border);font-size:8.5px;vertical-align:middle
+}
+#panel-material-master .mgr-table tr:last-child td{border-bottom:0}
+#panel-material-master .mgr-status{
+  display:inline-block;padding:3px 7px;border-radius:999px;font-size:7px;font-weight:900
+}
+#panel-material-master .mgr-status.active{background:#dcfce7;color:#166534}
+#panel-material-master .mgr-status.inactive{background:#e5e7eb;color:#374151}
+#panel-material-master .mgr-rate-source{
+  display:inline-block;padding:3px 7px;border-radius:999px;background:#fff4cf;color:#7a5200;font-size:7px;font-weight:900
+}
+#panel-material-master .mgr-history{
+  position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:9999;display:none;align-items:center;justify-content:center;padding:30px
+}
+#panel-material-master .mgr-history.open{display:flex}
+#panel-material-master .mgr-history-card{
+  width:min(900px,96vw);max-height:82vh;overflow:auto;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px;box-shadow:0 24px 60px rgba(0,0,0,.28)
+}
+#panel-material-master .mgr-history-table{width:100%;border-collapse:collapse}
+#panel-material-master .mgr-history-table th,#panel-material-master .mgr-history-table td{
+  padding:7px;border-bottom:1px solid var(--border);font-size:9px;text-align:left
+}
+#panel-material-master .mgr-hidden{display:none!important}
+@media(max-width:1250px){
+  #panel-material-master .mgr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #panel-material-master .mgr-group{grid-template-columns:130px 1fr}
 }
 </style>
 
