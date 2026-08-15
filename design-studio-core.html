@@ -4783,18 +4783,25 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       </div>
     </div>
 
-    <div class="dde-section">
+    <div class="dde-section dde-boiler-section-v1522">
       <div class="dde-section-title">
         <div>
           <h3>5. Boiler House Material Consumption</h3>
-          <p>Daily entry stays in the original unit. Final-report Ton conversion is controlled from Material Group & Rate Master.</p>
+          <p>Active Boiler House materials are controlled from Material Group & Rate Master. Opening balance carries forward automatically from the previous saved day.</p>
         </div>
-        <button class="btn btn-sm" type="button" id="ddeAddBoilerRow">+ Add Row</button>
+      </div>
+      <div class="dde-boiler-kpis-v1522">
+        <div><span>Total Steam Produced</span><b id="ddeBoilerSteamProduced">0.000 Ton</b></div>
+        <div><span>Total Material Consumed</span><b id="ddeBoilerMaterialConsumed">0.000 Ton</b></div>
+        <div><span>Steam on Standard</span><b id="ddeBoilerSteamStandard">0.000 Ton</b></div>
+        <div><span>Steam on Min</span><b id="ddeBoilerSteamMin">0.000 Ton</b></div>
+        <div><span>Steam on Max</span><b id="ddeBoilerSteamMax">0.000 Ton</b></div>
+        <div><span>Actual vs Standard</span><b id="ddeBoilerSteamDifference">0.000 Ton</b></div>
       </div>
       <div class="dde-table-wrap">
-        <table class="dde-table dde-material-table" id="ddeBoilerTable">
+        <table class="dde-table dde-material-table dde-boiler-table-v1522" id="ddeBoilerTable">
           <thead><tr>
-            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Rate / Ton</th><th>Used Value</th><th>Action</th>
+            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening</th><th>Received</th><th>Used</th><th>Balance</th><th>Rate</th><th>Used Value</th><th>Steam on Standard</th><th>Steam on Min</th><th>Steam on Max</th>
           </tr></thead>
           <tbody id="ddeBoilerBody"></tbody>
         </table>
@@ -6777,7 +6784,31 @@ function pphRenderPrintStudioHtml(contract,design){
     <div class="totals"><table>${totalRows}</table></div>
     <div class="signatures"><div class="sig">Prepared By</div><div class="sig">Checked By</div><div class="sig">Authorized By</div></div>
     <div class="footer"><span>${escHtml(footer)}</span><span>${d.pageNumbers===false?'':'Page'}</span></div>
-  </div><script>window.onload=()=>setTimeout(()=>window.print(),180)<\/script></body></html>`
+  </div><script>window.onload=()=>setTimeout(()=>window.print(),180)<\/script>
+<style id="ddeBoilerV1522Styles">
+.dde-boiler-kpis-v1522{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:8px 0 10px}
+.dde-boiler-kpis-v1522>div{border:1px solid var(--line,#b9e3fb);background:#f7fcff;border-radius:7px;padding:7px 9px;min-width:0}
+.dde-boiler-kpis-v1522 span{display:block;font-size:10px;font-weight:700;opacity:.78;white-space:nowrap}
+.dde-boiler-kpis-v1522 b{display:block;margin-top:3px;font-size:12px}
+#ddeBoilerTable{table-layout:fixed;min-width:1180px}
+#ddeBoilerTable th:nth-child(1){width:48px}
+#ddeBoilerTable th:nth-child(2){width:175px}
+#ddeBoilerTable th:nth-child(3){width:72px}
+#ddeBoilerTable th:nth-child(4),
+#ddeBoilerTable th:nth-child(5),
+#ddeBoilerTable th:nth-child(6),
+#ddeBoilerTable th:nth-child(7){width:92px}
+#ddeBoilerTable th:nth-child(8){width:82px}
+#ddeBoilerTable th:nth-child(9){width:100px}
+#ddeBoilerTable th:nth-child(10),
+#ddeBoilerTable th:nth-child(11),
+#ddeBoilerTable th:nth-child(12){width:112px}
+#ddeBoilerTable .dde-control{min-width:0;width:100%}
+#ddeBoilerTable .dde-master-item{font-weight:600}
+@media(max-width:1100px){.dde-boiler-kpis-v1522{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+
+</body></html>`
 }
 function pphPrintRows(rows,titleOverride){
   if(!rows.length)return toast('No records to print');
@@ -13232,7 +13263,34 @@ function ddeMaster(){try{return JSON.parse(localStorage.getItem(DDE_MATERIAL_MAS
 function ddeMasterRows(section){const map={boiler:'boiler',pulp:'pulp',sulphite:'sulphite',units:'stockpulp'};return (ddeMaster()[map[section]]||[])}
 function ddeMasterListId(section){return 'ddeMasterList-'+section}
 function ensureDdeMasterLists(){['boiler','pulp','sulphite','units'].forEach(section=>{let dl=$d('#'+ddeMasterListId(section));if(!dl){dl=document.createElement('datalist');dl.id=ddeMasterListId(section);document.body.appendChild(dl)}dl.innerHTML=ddeMasterRows(section).map(x=>`<option value="${String(x.material||'').replace(/"/g,'&quot;')}">${x.unit||''}${x.rate?' | Rate '+x.rate:''}${x.standard?' | Std '+x.standard:''}</option>`).join('')})}
-function ddeDefaultRows(section){const rows=ddeMasterRows(section);return rows.length?rows.map(x=>({item:x.material,unit:x.unit,rate:x.rate,standard:x.standard})): [{}]}
+function latestBoilerClosingMap(){
+  const all=rows().slice().filter(r=>Array.isArray(r.boilerMaterials)&&r.boilerMaterials.length);
+  all.sort((a,b)=>{
+    const da=Date.parse(a.date)||Date.parse(a.updatedAt)||0;
+    const db=Date.parse(b.date)||Date.parse(b.updatedAt)||0;
+    return db-da
+  });
+  const latest=all[0];
+  const map={};
+  (latest?.boilerMaterials||[]).forEach(r=>{
+    const key=String(r.item||'').trim().toLowerCase();
+    if(!key)return;
+    map[key]=num(r.opening)+num(r.received)-num(r.used)
+  });
+  return map
+}
+function ddeDefaultRows(section){
+  const masterRows=ddeMasterRows(section);
+  if(section==='boiler'){
+    const prev=latestBoilerClosingMap();
+    return masterRows.length?masterRows.map(x=>{
+      const key=String(x.material||'').trim().toLowerCase();
+      const hasPrev=Object.prototype.hasOwnProperty.call(prev,key);
+      return {item:x.material,unit:x.unit,rate:x.rate,standard:x.standard,opening:hasPrev?prev[key]:0,openingCarried:hasPrev}
+    }):[]
+  }
+  return masterRows.length?masterRows.map(x=>({item:x.material,unit:x.unit,rate:x.rate,standard:x.standard})): [{}]
+}
 function activeStockPulpMaterials(){
   return ddeMasterRows('units').filter(r=>String(r.status||'active').toLowerCase()!=='inactive')
     .sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.material||'').localeCompare(String(b.material||'')))
@@ -13334,6 +13392,30 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
   }
 
   const opening=num(data.opening),received=num(data.received),used=num(data.used),balance=opening+received-used,usedValue=used*reportRate;
+
+  if(section==='boiler'){
+    const finalUsed=qtyForFinalReport('boiler',data.item||'',used,masterUnit);
+    const target=num(ref?.standard), minStd=num(ref?.minStandard), maxStd=num(ref?.maxStandard);
+    const steamStd=finalUsed*target;
+    const steamMin=finalUsed*(minStd>0?minStd:target);
+    const steamMax=finalUsed*(maxStd>0?maxStd:target);
+    const carried=!!data.openingCarried;
+    return `<tr data-section="boiler" data-master-controlled="true" data-opening-carried="${carried?'true':'false'}">
+      <td class="dde-mat-sr">${index+1}</td>
+      <td><div class="dde-master-item">${data.item||''}</div></td>
+      <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
+      <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0" ${carried?'readonly':''}><small class="dde-mat-source-note">${carried?'Previous closing':'Initial opening'}</small></td>
+      <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
+      <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
+      <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
+      <td><b class="dde-mat-rate">${money(reportRate)}</b></td>
+      <td><b class="dde-mat-value">${money(usedValue)}</b></td>
+      <td><b class="dde-boiler-steam-standard">${fmt(steamStd)}</b></td>
+      <td><b class="dde-boiler-steam-min">${fmt(steamMin)}</b></td>
+      <td><b class="dde-boiler-steam-max">${fmt(steamMax)}</b></td>
+    </tr>`
+  }
+
   return `<tr data-section="${section}">
     <td class="dde-mat-sr">${index+1}</td>
     <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
@@ -13389,7 +13471,18 @@ function recalcMaterialRow(tr,unitsMode=false){
     tr.querySelector('.dde-mat-balance').textContent=(opening+received-consumed).toFixed(3)
   }
   const valEl=tr.querySelector('.dde-mat-value');
-  if(valEl)valEl.textContent=money(consumed*meta.reportRate)
+  if(valEl)valEl.textContent=money(consumed*meta.reportRate);
+
+  if(meta.section==='boiler'){
+    const finalUsed=qtyForFinalReport('boiler',meta.item,consumed,meta.masterUnit);
+    const target=num(meta.ref?.standard), minStd=num(meta.ref?.minStandard), maxStd=num(meta.ref?.maxStandard);
+    const steamStd=finalUsed*target;
+    const steamMin=finalUsed*(minStd>0?minStd:target);
+    const steamMax=finalUsed*(maxStd>0?maxStd:target);
+    const a=tr.querySelector('.dde-boiler-steam-standard'); if(a)a.textContent=fmt(steamStd);
+    const b=tr.querySelector('.dde-boiler-steam-min'); if(b)b.textContent=fmt(steamMin);
+    const c=tr.querySelector('.dde-boiler-steam-max'); if(c)c.textContent=fmt(steamMax)
+  }
 }
 function renumberMaterialRows(body){
   [...body.querySelectorAll('tr')].forEach((tr,i)=>tr.querySelector('.dde-mat-sr').textContent=i+1)
@@ -13420,13 +13513,14 @@ function materialData(bodyId,unitsMode=false){
     const used=num(tr.querySelector('.dde-mat-used')?.value);
     const finalReportQty=qtyForFinalReport(meta.section,meta.item,used,meta.masterUnit);
     return {
-      item:tr.querySelector('.dde-mat-item')?.value||'',
+      item:tr.querySelector('.dde-mat-item')?.value||tr.querySelector('.dde-master-item')?.textContent||'',
       unit:meta.masterUnit,
       rate:meta.sourceRate,
       convertToTon:meta.convertToTon,
       finalReportUnit:meta.finalReportUnit,
       finalReportRate:meta.finalReportRate,
       opening:num(tr.querySelector('.dde-mat-opening')?.value),
+      openingCarried:tr.dataset.openingCarried==='true',
       received:num(tr.querySelector('.dde-mat-received')?.value),
       used,
       usedValue:used*meta.sourceRate,
@@ -13463,7 +13557,7 @@ function loadMaterialBody(bodyId,section,rows=[],unitsMode=false){
   if(section==='units'){renderProductionUnitsMaterialSection(rows);return}
   const body=$d('#'+bodyId);if(!body)return;
   body.innerHTML='';
-  const list=(rows&&rows.length)?rows:[{}];
+  const list=(rows&&rows.length)?rows:(section==='boiler'?[]:[{}]);
   list.forEach(r=>addMaterialRow(section,bodyId,unitsMode,r))
 }
 
@@ -13642,6 +13736,23 @@ function recalc(){
   const ssCost=boilerRows.reduce((sum,r)=>sum+num(r.usedValue),0);
   const ssYield=ssMaterial>0?(steamProduction/ssMaterial)*100:0;
   const ssCostTon=steamProduction>0?ssCost/steamProduction:0;
+
+  let boilerExpectedStd=0,boilerExpectedMin=0,boilerExpectedMax=0;
+  const boilerStdMap=materialStandardMap('boiler');
+  boilerRows.forEach(r=>{
+    const ref=boilerStdMap[String(r.item||'').trim().toLowerCase()]||{};
+    const q=num(r.finalReportQty);
+    const target=num(ref.standard), minStd=num(ref.minStandard), maxStd=num(ref.maxStandard);
+    boilerExpectedStd+=q*target;
+    boilerExpectedMin+=q*(minStd>0?minStd:target);
+    boilerExpectedMax+=q*(maxStd>0?maxStd:target)
+  });
+  setText('ddeBoilerSteamProduced',fmt(steamProduction)+' Ton');
+  setText('ddeBoilerMaterialConsumed',fmt(ssMaterial)+' Ton');
+  setText('ddeBoilerSteamStandard',fmt(boilerExpectedStd)+' Ton');
+  setText('ddeBoilerSteamMin',fmt(boilerExpectedMin)+' Ton');
+  setText('ddeBoilerSteamMax',fmt(boilerExpectedMax)+' Ton');
+  setText('ddeBoilerSteamDifference',fmt(steamProduction-boilerExpectedStd)+' Ton');
 
   const ssPaper=totalProd;
   const ssPaperSteam=steamConsumed;
