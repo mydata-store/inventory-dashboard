@@ -4837,6 +4837,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>8. Production Units Material Consumption</h3>
+          <div class="dde-master-control-note">Rows: Active Stock Pulp Plant materials • Columns: Active Production Units • Controlled from Masters</div>
           <p>Opening + Received − Total Consumed = Balance.</p>
         </div>
         
@@ -13825,7 +13826,14 @@ window.addEventListener('erp-material-master-updated',()=>{
   renderProductionUnitsMaterialSection(current);
   recalc()
 });
-window.ERPDailyDataEntry={open:openPage,refresh:feedDashboard};
+function refreshMasterControlledDailySections(){
+  const current=materialData('ddeUnitsBody',true);
+  loadUnitNames();
+  ensureDdeMasterLists();
+  renderProductionUnitsMaterialSection(current);
+  recalc()
+}
+window.ERPDailyDataEntry={open:()=>{openPage();refreshMasterControlledDailySections()},refresh:()=>{refreshMasterControlledDailySections();feedDashboard()}};
 })();
 </script>
 
@@ -13939,10 +13947,30 @@ function migrate(raw){
   });
   return out
 }
+function normalizeGroupSequences(data){
+  let changed=false;
+  GROUPS.forEach(g=>{
+    const rows=Array.isArray(data[g.id])?data[g.id]:[];
+    const active=rows.filter(r=>String(r.status||'active').toLowerCase()!=='inactive')
+      .sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.material||'').localeCompare(String(b.material||'')));
+    active.forEach((r,idx)=>{
+      const wanted=idx+1;
+      if(num(r.sequence)!==wanted){r.sequence=wanted;changed=true}
+    })
+  });
+  return changed
+}
+
 function load(){
   let raw={};
   try{raw=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}
-  return migrate(raw)
+  const data=migrate(raw);
+  if(normalizeGroupSequences(data)){
+    const compatible=compatPayload(data);
+    localStorage.setItem(KEY,JSON.stringify(compatible));
+    localStorage.setItem(LEGACY_KEY,JSON.stringify(compatible));
+  }
+  return data
 }
 function compatPayload(data){
   const out={};
@@ -14614,5 +14642,9 @@ else seedProductionUnits();
 <style id="stockPulpMasterLinkedV1505Style">
 #panel-daily-data-entry .dde-master-item{min-height:24px;display:flex;align-items:center;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--primary) 4%,var(--surface));font-size:8.5px;font-weight:800}
 #panel-daily-data-entry #ddeUnitsTable th{white-space:nowrap}
+</style>
+
+<style id="v1506MasterControlStyle">
+#panel-daily-data-entry .dde-master-control-note{font-size:7.5px;font-weight:800;color:var(--muted);margin:1px 0 6px}
 </style>
 </body></html>
