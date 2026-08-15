@@ -466,7 +466,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 
 
 
-.save-theme-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.save-theme-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:14px}
 .save-theme-option{border:1px solid var(--border);border-radius:15px;padding:16px;background:var(--surface);cursor:pointer;transition:.18s;text-align:left}
 .save-theme-option:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.10)}
 .save-theme-option .icon{font-size:28px}.save-theme-option h3{margin:10px 0 5px;font-size:16px}.save-theme-option p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
@@ -12214,7 +12214,9 @@ function renderAll(){
   f$('#fccMapFormula').innerHTML='<option value="">Select Formula</option>'+formulas().map(x=>`<option value="${x.id}">${x.no} — ${x.name}</option>`).join('')
 }
 function open(){
-  build();document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));f$('#panel-formula-control-center').classList.add('active');
+  build();
+  f$('#panel-formula-control-center')?.classList.remove('fcc-material-only');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));f$('#panel-formula-control-center').classList.add('active');
   document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));document.querySelectorAll('[data-formula-control-open]').forEach(x=>x.classList.add('active'));
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(f$('#workspaceTitle'))f$('#workspaceTitle').textContent='Formula Control Center';
@@ -12223,6 +12225,26 @@ function open(){
   try{localStorage.setItem('erpStudioLastPanel','formula-control-center');localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'formula-control-center')}catch(e){}
   renderAll()
 }
+
+function openMaterials(){
+  build();
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const panel=f$('#panel-formula-control-center');
+  panel.classList.add('active','fcc-material-only');
+  document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
+  ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
+
+  showTab('materials');
+  renderMaterialMaster();
+
+  if(f$('#workspaceTitle'))f$('#workspaceTitle').textContent='Material Master';
+  if(f$('#workspaceSubtitle'))f$('#workspaceSubtitle').textContent='Department-wise Material • Unit • Rate • Standard';
+  try{
+    localStorage.setItem('erpStudioLastPanel','production-consumption-material-master');
+    localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'production-consumption-material-master')
+  }catch(e){}
+}
+
 function nav(){
   const menu=document.getElementById('sideMenu')||document.querySelector('.side-menu');if(!menu)return;
   let b=menu.querySelector('[data-formula-control-open]');
@@ -12234,10 +12256,15 @@ function nav(){
   b.onclick=e=>{e.preventDefault();e.stopPropagation();open()}
 }
 function startup(){
-  try{ensureSeed();build();nav();let last='';try{last=localStorage.getItem('erpStudioLastPanel')||''}catch(e){}if(last==='formula-control-center')setTimeout(open,120)}catch(e){console.error('Formula Control startup error',e)}
+  try{
+    ensureSeed();build();nav();
+    let last='';try{last=localStorage.getItem('erpStudioLastPanel')||''}catch(e){}
+    if(last==='formula-control-center')setTimeout(open,120);
+    else if(last==='production-consumption-material-master')setTimeout(openMaterials,120)
+  }catch(e){console.error('Formula Control startup error',e)}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startup);else startup();
-window.ERPFormulaControl={open,refresh:renderAll,formulas};
+window.ERPFormulaControl={open,openMaterials,refresh:renderAll,formulas};
 })();
 </script>
 
@@ -12420,13 +12447,18 @@ function pcBuild(){
         <strong>Daily Data Entry</strong>
         <span>Enter daily production, electricity, steam, materials and operating data.</span>
       </button>
-      <button class="pc-nav-card" type="button" data-pc-page="month">
+      <button class="pc-nav-card" type="button" data-pc-page="materials">
         <div class="pc-nav-icon">▦</div>
+        <strong>Material Master</strong>
+        <span>Manage Pulp Mill, Boiler House, Sulphite Plant, Stock Pulp Plant, Lubricants and Other materials.</span>
+      </button>
+      <button class="pc-nav-card" type="button" data-pc-page="month">
+        <div class="pc-nav-icon">▥</div>
         <strong>Month Summary</strong>
         <span>Open monthly production, energy, ash, steam and cost analysis.</span>
       </button>
       <button class="pc-nav-card" type="button" data-pc-page="year">
-        <div class="pc-nav-icon">▥</div>
+        <div class="pc-nav-icon">▧</div>
         <strong>Year Summary</strong>
         <span>Open yearly totals, monthly comparison and annual performance.</span>
       </button>
@@ -12477,7 +12509,7 @@ function pcBuild(){
     </div>
 
     <div class="pc-dashboard-note">
-      This dashboard is the main Production & Consumption home page. Daily Data Entry, Month Summary and Year Summary will open as separate pages when we build them next.
+      This dashboard is the main Production & Consumption home page. Daily Data Entry and Material Master are connected; Month Summary and Year Summary will be built next.
     </div>
   </div>`;
   host.appendChild(sec);
@@ -12486,6 +12518,7 @@ function pcBuild(){
     const page=b.dataset.pcPage;
     try{localStorage.setItem(PC_LAST_PAGE_KEY,page)}catch(e){}
     if(page==='daily')window.ERPDailyDataEntry.open();
+    else if(page==='materials')window.ERPFormulaControl?.openMaterials?.();
     else if(page==='month')toast('Month Summary page will be built after Daily Data Entry is completed');
     else toast('Year Summary page will be built after Month Summary')
   })
@@ -13124,4 +13157,20 @@ window.addEventListener('erp-material-master-updated',()=>{ensureDdeMasterLists(
 window.ERPDailyDataEntry={open:openPage,refresh:feedDashboard};
 })();
 </script>
+
+<style id="materialMasterDashboardV1489Style">
+#panel-formula-control-center.fcc-material-only .fcc-tabs,
+#panel-formula-control-center.fcc-material-only #fccPageController,
+#panel-formula-control-center.fcc-material-only #fccCostGroupMapping,
+#panel-formula-control-center.fcc-material-only [data-fccsection]:not([data-fccsection="materials"]){
+  display:none !important;
+}
+#panel-formula-control-center.fcc-material-only [data-fccsection="materials"]{
+  display:block !important;
+}
+@media(max-width:1250px){
+  .pc-nav-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+
 </body></html>
