@@ -4575,7 +4575,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>1. Production & Ash</h3>
-          <p>Ash Average = Total Ash Content ÷ number of production units having production. Wood Pulp = Long Fiber + Short Fiber automatically; Raw Material = Pulp Mill used materials automatically.</p>
+          <p>Ash Average = Sum of Ash % ÷ number of production units having production. Wood Pulp = Long Fiber + Short Fiber automatically; Raw Material = Pulp Mill used materials automatically.</p>
         </div>
       </div>
 
@@ -13432,7 +13432,7 @@ function autoWoodPulpConsumed(){
 }
 
 function recalc(){
-  let totalProd=0,totalAshContent=0,active=0;
+  let totalProd=0,totalAshContent=0,totalAshPercent=0,active=0;
   const pCount=productionRowCount();
   for(let i=1;i<=pCount;i++){
     const prod=value('ddeProd'+i), ash=value('ddeAsh'+i);
@@ -13440,10 +13440,13 @@ function recalc(){
     setText('ddeAshContent'+i,ashContent.toFixed(3));
     totalProd+=prod;
     totalAshContent+=ashContent;
-    if(prod>0)active++
+    if(prod>0){
+      active++;
+      totalAshPercent+=ash;
+    }
   }
 
-  const ashAverage=active?totalAshContent/active:0;
+  const ashAverage=active?totalAshPercent/active:0;
   const woodPulp=autoWoodPulpConsumed();
   const woodPulpField=$d('#ddeWoodPulp');if(woodPulpField)woodPulpField.textContent=woodPulp.toFixed(3)+' Ton';
   const pulpProduced=Math.max(0,totalProd-totalAshContent-woodPulp);
@@ -13588,7 +13591,8 @@ function collect(){
   const active=units.filter(u=>u.production>0);
   const totalProduction=units.reduce((a,u)=>a+u.production,0);
   const totalAshContent=units.reduce((a,u)=>a+u.ashContent,0);
-  const ashAverage=active.length?totalAshContent/active.length:0;
+  const totalAshPercent=active.reduce((a,u)=>a+u.ash,0);
+  const ashAverage=active.length?totalAshPercent/active.length:0;
   const woodPulp=autoWoodPulpConsumed();
   const pulpProduced=Math.max(0,totalProduction-totalAshContent-woodPulp);
   const rawMaterialConsumed=autoRawMaterialConsumed();
