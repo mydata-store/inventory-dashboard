@@ -1705,7 +1705,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   .dde-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
-/* V14.86 production layout */
+/* V14.87 production layout */
 #panel-daily-data-entry .dde-production-layout{
   display:grid;
   grid-template-columns:minmax(0,1.15fr) minmax(420px,.85fr);
@@ -1802,6 +1802,35 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 }
 @media(max-width:1250px){
   #panel-daily-data-entry .dde-production-layout{grid-template-columns:1fr}
+}
+
+#panel-daily-data-entry .dde-material-table{
+  min-width:980px;
+}
+#panel-daily-data-entry .dde-material-table th,
+#panel-daily-data-entry .dde-material-table td{
+  font-size:8.5px;
+  padding:4px 5px;
+}
+#panel-daily-data-entry .dde-material-table .dde-control{
+  height:28px;
+  font-size:9px;
+}
+#panel-daily-data-entry .dde-material-table th:first-child,
+#panel-daily-data-entry .dde-material-table td:first-child{
+  width:55px;
+  text-align:center;
+}
+#panel-daily-data-entry .dde-material-table th:last-child,
+#panel-daily-data-entry .dde-material-table td:last-child{
+  width:70px;
+  text-align:center;
+}
+#panel-daily-data-entry .dde-material-balance{
+  font-weight:900;
+}
+#panel-daily-data-entry .dde-units-material-table{
+  min-width:1250px;
 }
 </style>
 </head><body>
@@ -4605,7 +4634,123 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       </div>
     </div>
 
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px">
+    
+    <div class="dde-section">
+      <div class="dde-section-title">
+        <div>
+          <h3>4. Steam Distribution</h3>
+          <p>Enter total steam production and department/unit-wise steam consumption.</p>
+        </div>
+      </div>
+
+      <div class="dde-electric-grid">
+        <div class="dde-table-wrap">
+          <table class="dde-table" style="min-width:0">
+            <thead><tr><th colspan="2">Steam Entry</th></tr></thead>
+            <tbody>
+              <tr><td>Total Steam Production</td><td><input id="ddeSteamProduction" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr><td>Steam to Pulp Mill</td><td><input id="ddeSteamPulp" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr><td>Steam to Production Unit 1</td><td><input id="ddeSteamUnit1" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr><td>Steam to Production Unit 2</td><td><input id="ddeSteamUnit2" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr><td>Steam to Production Unit 3</td><td><input id="ddeSteamUnit3" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr><td>Steam to Boiler House</td><td><input id="ddeSteamBoiler" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr class="dde-prod-footer-row"><td><b>Total Steam Consumed</b></td><td><b id="ddeSteamConsumedTotal">0.000 Ton</b></td></tr>
+              <tr><td>Steam Balance</td><td><b id="ddeSteamBalance">0.000 Ton</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="dde-table-wrap">
+          <table class="dde-table" style="min-width:0">
+            <thead><tr><th colspan="2">Steam Summary</th></tr></thead>
+            <tbody>
+              <tr><td>Total Steam Production</td><td><b id="ddeSteamSummaryProduction">0.000 Ton</b></td></tr>
+              <tr><td>Total Steam Consumed</td><td><b id="ddeSteamSummaryConsumed">0.000 Ton</b></td></tr>
+              <tr><td>Steam Balance</td><td><b id="ddeSteamSummaryBalance">0.000 Ton</b></td></tr>
+              <tr><td>Steam / Ton Paper</td><td><b id="ddeSteamPerTonPaper">0.000 Ton/Ton</b></td></tr>
+              <tr><td>Steam / Ton Pulp</td><td><b id="ddeSteamPerTonPulp">0.000 Ton/Ton</b></td></tr>
+              <tr><td>Status</td><td><span id="ddeSteamStatus" class="dde-status ok">Balanced</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="dde-section">
+      <div class="dde-section-title">
+        <div>
+          <h3>5. Boiler House Material Consumption</h3>
+          <p>Excel-style daily material movement.</p>
+        </div>
+        <button class="btn btn-sm" type="button" id="ddeAddBoilerRow">+ Add Row</button>
+      </div>
+      <div class="dde-table-wrap">
+        <table class="dde-table dde-material-table" id="ddeBoilerTable">
+          <thead><tr>
+            <th>Sr No</th><th>Item</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Action</th>
+          </tr></thead>
+          <tbody id="ddeBoilerBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="dde-section">
+      <div class="dde-section-title">
+        <div>
+          <h3>6. Pulp Mill Material Consumption</h3>
+          <p>Excel-style daily material movement. Used material will feed the Production & Pulp Summary later.</p>
+        </div>
+        <button class="btn btn-sm" type="button" id="ddeAddPulpRow">+ Add Row</button>
+      </div>
+      <div class="dde-table-wrap">
+        <table class="dde-table dde-material-table" id="ddePulpTable">
+          <thead><tr>
+            <th>Sr No</th><th>Item</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Action</th>
+          </tr></thead>
+          <tbody id="ddePulpBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="dde-section">
+      <div class="dde-section-title">
+        <div>
+          <h3>7. Sulphite Plant Material Consumption</h3>
+          <p>Excel-style daily material movement.</p>
+        </div>
+        <button class="btn btn-sm" type="button" id="ddeAddSulphiteRow">+ Add Row</button>
+      </div>
+      <div class="dde-table-wrap">
+        <table class="dde-table dde-material-table" id="ddeSulphiteTable">
+          <thead><tr>
+            <th>Sr No</th><th>Item</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Action</th>
+          </tr></thead>
+          <tbody id="ddeSulphiteBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="dde-section">
+      <div class="dde-section-title">
+        <div>
+          <h3>8. Production Units Material Consumption</h3>
+          <p>Opening + Received − Total Consumed = Balance.</p>
+        </div>
+        <button class="btn btn-sm" type="button" id="ddeAddUnitsRow">+ Add Row</button>
+      </div>
+      <div class="dde-table-wrap">
+        <table class="dde-table dde-material-table dde-units-material-table" id="ddeUnitsTable">
+          <thead><tr>
+            <th>Sr No</th><th>Item</th><th>Opening</th><th>Received</th>
+            <th>Consumed Unit 1</th><th>Consumed Unit 2</th><th>Consumed Unit 3</th>
+            <th>Total Consumed</th><th>Balance</th><th>Action</th>
+          </tr></thead>
+          <tbody id="ddeUnitsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px">
       <button class="btn" id="ddeClearBtn">Clear</button>
       <button class="btn btn-primary" id="ddeSaveBtn">Save Daily Record</button>
     </div>
@@ -12436,6 +12581,109 @@ function saveUnitNames(){
   const n=[1,2,3].map(i=>($d('#ddeUnitName'+i).value||'').trim()||('Production Unit '+i));
   localStorage.setItem(UNIT_KEY,JSON.stringify(n))
 }
+
+function materialRowHtml(section,index,unitsMode=false,data={}){
+  if(unitsMode){
+    const opening=num(data.opening),received=num(data.received),u1=num(data.unit1),u2=num(data.unit2),u3=num(data.unit3);
+    const total=u1+u2+u3,balance=opening+received-total;
+    return `<tr data-section="${section}">
+      <td class="dde-mat-sr">${index+1}</td>
+      <td><input class="dde-control dde-mat-item" value="${data.item||''}" placeholder="Type item..."></td>
+      <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
+      <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
+      <td><input class="dde-control dde-mat-u1" type="number" step="any" value="${u1||''}" placeholder="0"></td>
+      <td><input class="dde-control dde-mat-u2" type="number" step="any" value="${u2||''}" placeholder="0"></td>
+      <td><input class="dde-control dde-mat-u3" type="number" step="any" value="${u3||''}" placeholder="0"></td>
+      <td><b class="dde-mat-total">${total.toFixed(3)}</b></td>
+      <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
+      <td><button class="btn btn-sm dde-mat-delete" type="button">Delete</button></td>
+    </tr>`
+  }
+  const opening=num(data.opening),received=num(data.received),used=num(data.used),balance=opening+received-used;
+  return `<tr data-section="${section}">
+    <td class="dde-mat-sr">${index+1}</td>
+    <td><input class="dde-control dde-mat-item" value="${data.item||''}" placeholder="Type item..."></td>
+    <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
+    <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
+    <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
+    <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
+    <td><button class="btn btn-sm dde-mat-delete" type="button">Delete</button></td>
+  </tr>`
+}
+function bindMaterialRows(bodyId,unitsMode=false){
+  const body=$d('#'+bodyId);if(!body)return;
+  body.querySelectorAll('tr').forEach(tr=>{
+    tr.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{
+      recalcMaterialRow(tr,unitsMode);
+      recalc()
+    }));
+    tr.querySelector('.dde-mat-delete')?.addEventListener('click',()=>{
+      tr.remove();
+      renumberMaterialRows(body);
+      recalc()
+    })
+  })
+}
+function recalcMaterialRow(tr,unitsMode=false){
+  const opening=num(tr.querySelector('.dde-mat-opening')?.value);
+  const received=num(tr.querySelector('.dde-mat-received')?.value);
+  if(unitsMode){
+    const total=num(tr.querySelector('.dde-mat-u1')?.value)+num(tr.querySelector('.dde-mat-u2')?.value)+num(tr.querySelector('.dde-mat-u3')?.value);
+    tr.querySelector('.dde-mat-total').textContent=total.toFixed(3);
+    tr.querySelector('.dde-mat-balance').textContent=(opening+received-total).toFixed(3)
+  }else{
+    const used=num(tr.querySelector('.dde-mat-used')?.value);
+    tr.querySelector('.dde-mat-balance').textContent=(opening+received-used).toFixed(3)
+  }
+}
+function renumberMaterialRows(body){
+  [...body.querySelectorAll('tr')].forEach((tr,i)=>tr.querySelector('.dde-mat-sr').textContent=i+1)
+}
+function addMaterialRow(section,bodyId,unitsMode=false,data={}){
+  const body=$d('#'+bodyId);if(!body)return;
+  const i=body.querySelectorAll('tr').length;
+  body.insertAdjacentHTML('beforeend',materialRowHtml(section,i,unitsMode,data));
+  const tr=body.lastElementChild;
+  bindMaterialRows(bodyId,unitsMode);
+  tr.querySelector('.dde-mat-item')?.focus()
+}
+function materialData(bodyId,unitsMode=false){
+  const body=$d('#'+bodyId);if(!body)return [];
+  return [...body.querySelectorAll('tr')].map(tr=>{
+    if(unitsMode){
+      return {
+        item:tr.querySelector('.dde-mat-item')?.value||'',
+        opening:num(tr.querySelector('.dde-mat-opening')?.value),
+        received:num(tr.querySelector('.dde-mat-received')?.value),
+        unit1:num(tr.querySelector('.dde-mat-u1')?.value),
+        unit2:num(tr.querySelector('.dde-mat-u2')?.value),
+        unit3:num(tr.querySelector('.dde-mat-u3')?.value)
+      }
+    }
+    return {
+      item:tr.querySelector('.dde-mat-item')?.value||'',
+      opening:num(tr.querySelector('.dde-mat-opening')?.value),
+      received:num(tr.querySelector('.dde-mat-received')?.value),
+      used:num(tr.querySelector('.dde-mat-used')?.value)
+    }
+  })
+}
+function totalUsed(bodyId){
+  const body=$d('#'+bodyId);if(!body)return 0;
+  return [...body.querySelectorAll('.dde-mat-used')].reduce((a,el)=>a+num(el.value),0)
+}
+function clearMaterialBody(bodyId,unitsMode=false){
+  const body=$d('#'+bodyId);if(!body)return;
+  body.innerHTML='';
+  addMaterialRow(bodyId.replace('dde','').replace('Body',''),bodyId,unitsMode,{})
+}
+function loadMaterialBody(bodyId,section,rows=[],unitsMode=false){
+  const body=$d('#'+bodyId);if(!body)return;
+  body.innerHTML='';
+  const list=(rows&&rows.length)?rows:[{}];
+  list.forEach(r=>addMaterialRow(section,bodyId,unitsMode,r))
+}
+
 function recalc(){
   let totalProd=0,totalAshContent=0,active=0;
   for(let i=1;i<=3;i++){
@@ -12451,8 +12699,7 @@ function recalc(){
   const woodPulp=value('ddeWoodPulp');
   const pulpProduced=Math.max(0,totalProd-totalAshContent-woodPulp);
 
-  // Will be linked to future Pulp Mill material section.
-  const rawMaterialConsumed=0;
+  const rawMaterialConsumed=totalUsed('ddePulpBody');
   const pulpYield=rawMaterialConsumed>0?(pulpProduced/rawMaterialConsumed*100):0;
 
   const wapda=value('ddeWapdaPaper')+value('ddeWapdaBoard');
@@ -12468,9 +12715,17 @@ function recalc(){
   const rate=value('ddeElectricityRate');
   const electricityAmount=totalCons*rate;
 
+  const steamProduction=value('ddeSteamProduction');
+  const steamPulp=value('ddeSteamPulp');
+  const steamUnit1=value('ddeSteamUnit1');
+  const steamUnit2=value('ddeSteamUnit2');
+  const steamUnit3=value('ddeSteamUnit3');
+  const steamBoiler=value('ddeSteamBoiler');
+  const steamConsumed=steamPulp+steamUnit1+steamUnit2+steamUnit3+steamBoiler;
+  const steamBalance=steamProduction-steamConsumed;
+
   const paperProduction=totalProd;
   const pulpProduction=pulpProduced;
-  const steamProduction=0; // Will be linked to Steam section later.
 
   const unitPerTonPaper=paperProduction>0?consMachine/paperProduction:0;
   const unitPerTonPulp=pulpProduction>0?consPulp/pulpProduction:0;
@@ -12479,6 +12734,9 @@ function recalc(){
   const costPerTonPaper=unitPerTonPaper*rate;
   const costPerTonPulp=unitPerTonPulp*rate;
   const costPerTonSteam=unitPerTonSteam*rate;
+
+  const steamPerTonPaper=paperProduction>0?steamConsumed/paperProduction:0;
+  const steamPerTonPulp=pulpProduction>0?steamPulp/pulpProduction:0;
 
   setText('ddeTotalProduction',totalProd.toFixed(3));
   setText('ddeAshAverage',ashAverage.toFixed(2)+'%');
@@ -12515,6 +12773,20 @@ function recalc(){
   setText('ddeCostPerTonPaper','PKR '+costPerTonPaper.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
   setText('ddeCostPerTonSteam','PKR '+costPerTonSteam.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
   setText('ddeCostPerTonPulp','PKR '+costPerTonPulp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+
+  setText('ddeSteamConsumedTotal',steamConsumed.toFixed(3)+' Ton');
+  setText('ddeSteamBalance',steamBalance.toFixed(3)+' Ton');
+  setText('ddeSteamSummaryProduction',steamProduction.toFixed(3)+' Ton');
+  setText('ddeSteamSummaryConsumed',steamConsumed.toFixed(3)+' Ton');
+  setText('ddeSteamSummaryBalance',steamBalance.toFixed(3)+' Ton');
+  setText('ddeSteamPerTonPaper',steamPerTonPaper.toFixed(3)+' Ton/Ton');
+  setText('ddeSteamPerTonPulp',steamPerTonPulp.toFixed(3)+' Ton/Ton');
+
+  const steamStatus=$d('#ddeSteamStatus');
+  if(steamStatus){
+    steamStatus.textContent=steamBalance===0?'Balanced':steamBalance>0?'Balance Available':'Consumption Exceeds Production';
+    steamStatus.className='dde-status '+(steamBalance>=0?'ok':'warn')
+  }
 
   const balEl=$d('#ddeElectricityBalance');
   if(balEl)balEl.className=balance<0?'dde-balance-negative':balance>0?'dde-balance-positive':'';
@@ -12562,6 +12834,16 @@ function collect(){
     consPulp,consMachine,consBoiler,totalConsumption,
     electricityRate,electricityAmount,
     electricityBalance:totalElectricity-totalConsumption,
+    steamProduction:value('ddeSteamProduction'),
+    steamPulp:value('ddeSteamPulp'),
+    steamUnit1:value('ddeSteamUnit1'),
+    steamUnit2:value('ddeSteamUnit2'),
+    steamUnit3:value('ddeSteamUnit3'),
+    steamBoiler:value('ddeSteamBoiler'),
+    boilerMaterials:materialData('ddeBoilerBody',false),
+    pulpMaterials:materialData('ddePulpBody',false),
+    sulphiteMaterials:materialData('ddeSulphiteBody',false),
+    unitMaterials:materialData('ddeUnitsBody',true),
     updatedAt:new Date().toISOString()
   }
 }
@@ -12570,8 +12852,13 @@ function clearForm(){
   $d('#ddeDate').value='';
   for(let i=1;i<=3;i++){$d('#ddeProd'+i).value='';$d('#ddeAsh'+i).value=''}
   $d('#ddeWoodPulp').value='';
-  ['ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeElectricityRate','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
+  ['ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeElectricityRate','ddeConsPulp','ddeConsMachine','ddeConsBoiler',
+   'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
     .forEach(id=>$d('#'+id).value='');
+  loadMaterialBody('ddeBoilerBody','boiler',[{}],false);
+  loadMaterialBody('ddePulpBody','pulp',[{}],false);
+  loadMaterialBody('ddeSulphiteBody','sulphite',[{}],false);
+  loadMaterialBody('ddeUnitsBody','units',[{}],true);
   recalc();
   $d('#ddeSaveBtn').textContent='Save Daily Record'
 }
@@ -12616,6 +12903,16 @@ function editRecord(id){
   $d('#ddeConsPulp').value=r.consPulp||'';
   $d('#ddeConsMachine').value=r.consMachine||'';
   $d('#ddeConsBoiler').value=r.consBoiler||'';
+  $d('#ddeSteamProduction').value=r.steamProduction||'';
+  $d('#ddeSteamPulp').value=r.steamPulp||'';
+  $d('#ddeSteamUnit1').value=r.steamUnit1||'';
+  $d('#ddeSteamUnit2').value=r.steamUnit2||'';
+  $d('#ddeSteamUnit3').value=r.steamUnit3||'';
+  $d('#ddeSteamBoiler').value=r.steamBoiler||'';
+  loadMaterialBody('ddeBoilerBody','boiler',r.boilerMaterials||[{}],false);
+  loadMaterialBody('ddePulpBody','pulp',r.pulpMaterials||[{}],false);
+  loadMaterialBody('ddeSulphiteBody','sulphite',r.sulphiteMaterials||[{}],false);
+  loadMaterialBody('ddeUnitsBody','units',r.unitMaterials||[{}],true);
   $d('#ddeSaveBtn').textContent='Update Daily Record';
   recalc();
   window.scrollTo({top:0,behavior:'smooth'})
@@ -12722,7 +13019,8 @@ function bindEnterNavigation(){
     ['ddeAsh1','ddeAsh2','ddeAsh3'],
     ['ddeWapdaPaper','ddeWapdaBoard'],
     ['ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5'],
-    ['ddeElectricityRate','ddeConsPulp','ddeConsBoiler','ddeConsMachine']
+    ['ddeElectricityRate','ddeConsPulp','ddeConsBoiler','ddeConsMachine'],
+    ['ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
   ];
 
   panel.addEventListener('keydown',e=>{
@@ -12760,13 +13058,25 @@ function init(){
   loadUnitNames();
   bindDate();
   bindEnterNavigation();
-  ['ddeProd1','ddeProd2','ddeProd3','ddeAsh1','ddeAsh2','ddeAsh3','ddeWoodPulp','ddeWapdaPaper','ddeElectricityRate','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
+  ['ddeProd1','ddeProd2','ddeProd3','ddeAsh1','ddeAsh2','ddeAsh3','ddeWoodPulp','ddeWapdaPaper','ddeElectricityRate',
+   'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
   [1,2,3].forEach(i=>$d('#ddeUnitName'+i)?.addEventListener('change',saveUnitNames));
   $d('#ddeSaveBtn').onclick=saveRecord;
   $d('#ddeClearBtn').onclick=clearForm;
   $d('#ddeSearch').oninput=renderHistory;
   $d('#ddeBackBtn').onclick=()=>window.ERPProductionConsumption?.open();
+
+  $d('#ddeAddBoilerRow').onclick=()=>addMaterialRow('boiler','ddeBoilerBody',false,{});
+  $d('#ddeAddPulpRow').onclick=()=>addMaterialRow('pulp','ddePulpBody',false,{});
+  $d('#ddeAddSulphiteRow').onclick=()=>addMaterialRow('sulphite','ddeSulphiteBody',false,{});
+  $d('#ddeAddUnitsRow').onclick=()=>addMaterialRow('units','ddeUnitsBody',true,{});
+
+  loadMaterialBody('ddeBoilerBody','boiler',[{}],false);
+  loadMaterialBody('ddePulpBody','pulp',[{}],false);
+  loadMaterialBody('ddeSulphiteBody','sulphite',[{}],false);
+  loadMaterialBody('ddeUnitsBody','units',[{}],true);
+
   renderHistory();
   recalc();
   feedDashboard();
