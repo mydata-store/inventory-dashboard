@@ -4768,6 +4768,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 <div class="dde-summary-row-v1518"><span>Cost / Ton Steam</span><b id="ddeSteamCostPerTon">PKR 0.00</b></div>
 <div class="dde-steam-summary-subhead-v1518">Paper</div>
 <div class="dde-summary-row-v1518"><span>Total Paper Produced</span><b id="ddeSteamPaperProduced">0.000 Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Steam / Ton Paper</span><b id="ddeSteamPerTonPaperSummary">0.000 Ton/Ton</b></div>
 <div class="dde-summary-row-v1518"><span>Steam Cost to Paper</span><b id="ddeSteamCostToPaper">PKR 0.00</b></div>
 <div class="dde-summary-row-v1518"><span>Steam Cost / Ton Paper</span><b id="ddeSteamCostPerTonPaper">PKR 0.00</b></div>
 <div class="dde-steam-summary-subhead-v1518">Pulp</div>
@@ -13576,6 +13577,18 @@ function recalc(){
   }
 
   const ashAverage=active?totalAshPercent/active:0;
+  const productionUnits=Array.from({length:pCount},(_,idx)=>{
+    const i=idx+1;
+    const tr=$d('#ddeUnitName'+i)?.closest('tr');
+    return {
+      id:tr?.dataset.productionUnitId||'',
+      code:tr?.dataset.productionUnitCode||'',
+      name:unitNameAt(i),
+      production:value('ddeProd'+i),
+      ash:value('ddeAsh'+i)
+    }
+  });
+
   const woodPulp=autoWoodPulpConsumed();
   const woodPulpField=$d('#ddeWoodPulp');if(woodPulpField)woodPulpField.textContent=woodPulp.toFixed(3)+' Ton';
   const pulpProduced=Math.max(0,totalProd-totalAshContent-woodPulp);
@@ -13626,7 +13639,8 @@ function recalc(){
   const ssCostTon=steamProduction>0?ssCost/steamProduction:0;
 
   const ssPaper=totalProd;
-  const ssPaperSteam=steamUnitsTotal;
+  const ssPaperSteam=steamConsumed;
+  const ssSteamPerTonPaper=ssPaper>0?ssPaperSteam/ssPaper:0;
   const ssPaperCost=steamProduction>0?ssCost*(ssPaperSteam/steamProduction):0;
   const ssPaperCostTon=ssPaper>0?ssPaperCost/ssPaper:0;
 
@@ -13641,6 +13655,7 @@ function recalc(){
   setText('ddeSteamTotalCost','PKR '+money(ssCost));
   setText('ddeSteamCostPerTon','PKR '+money(ssCostTon));
   setText('ddeSteamPaperProduced',fmt(ssPaper)+' Ton');
+  setText('ddeSteamPerTonPaperSummary',fmt(ssSteamPerTonPaper)+' Ton/Ton');
   setText('ddeSteamCostToPaper','PKR '+money(ssPaperCost));
   setText('ddeSteamCostPerTonPaper','PKR '+money(ssPaperCostTon));
   setText('ddeSteamToPulpSummary',fmt(steamPulp)+' Ton');
@@ -14065,6 +14080,17 @@ function init(){
   applyElectricityRateFromMaster();
   bindDate();
   bindEnterNavigation();
+
+  const ddePanel=$d('#panel-daily-data-entry');
+  if(ddePanel && !ddePanel.dataset.liveCalcBound){
+    ddePanel.dataset.liveCalcBound='1';
+    ddePanel.addEventListener('input',e=>{
+      if(e.target.matches('input,select'))recalc()
+    });
+    ddePanel.addEventListener('change',e=>{
+      if(e.target.matches('input,select'))recalc()
+    })
+  }
   ['ddeWapdaPaper',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
