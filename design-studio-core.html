@@ -5631,16 +5631,40 @@ function masterDuplicate(rows,data,id=''){
   if(masterCurrent==='items'){const n=String(data.name||'').toLowerCase(),sz=String(data.size||'').toLowerCase();return rows.some(r=>r.id!==id&&String(r.name||'').toLowerCase()===n&&String(r.size||'').toLowerCase()===sz)}
   const n=String(data.name||'').toLowerCase();return !!n&&rows.some(r=>r.id!==id&&String(r.name||'').toLowerCase()===n)
 }
+function masterUsesInsertSequence(type){
+  return ['productionUnits','materialGroups','materialSubGroups'].includes(type)
+}
+function masterReorderSequence(rows,movingId,targetSeq,type){
+  if(!masterUsesInsertSequence(type))return rows;
+  const moving=rows.find(r=>r.id===movingId);if(!moving)return rows;
+  const target=Math.max(1,Math.floor(Number(targetSeq)||1));
+  // Sub-groups reorder only among siblings of the same parent group.
+  const sameScope=r=>type!=='materialSubGroups' || String(r.parentGroupId||r.parentGroup||'')===String(moving.parentGroupId||moving.parentGroup||'');
+  const active=rows.filter(r=>r.id!==movingId && sameScope(r) && String(r.status||'active').toLowerCase()!=='inactive')
+    .sort((a,b)=>(Number(a.sequence)||999999)-(Number(b.sequence)||999999)||String(a.name||'').localeCompare(String(b.name||'')));
+  active.splice(Math.min(target-1,active.length),0,moving);
+  active.forEach((r,i)=>r.sequence=i+1);
+  return rows
+}
 function masterSave(){
   if(!window.ERPAccessControl?.canPage?.('all-masters',masterEditingId?'edit':'add'))return toast('You do not have permission for this action');
   const data=masterReadForm();if(!data)return;const rows=masterBucket();
   if(masterDuplicate(rows,data,masterEditingId))return toast(masterCurrent==='items'?'Item name + size already exists':'This master name already exists');
   const now=new Date().toISOString(),u=window.ERPAccessControl?.currentUser?.();
+  let savedId='';
   if(masterEditingId){
-    const i=rows.findIndex(x=>x.id===masterEditingId);if(i<0)return;const before={...rows[i]};rows[i]={...rows[i],...data,updatedAt:now,updatedBy:u?.id||''};masterWriteBucket(masterCurrent,rows);
+    const i=rows.findIndex(x=>x.id===masterEditingId);if(i<0)return;
+    const before={...rows[i]};
+    rows[i]={...rows[i],...data,updatedAt:now,updatedBy:u?.id||''};
+    savedId=rows[i].id;
+    masterReorderSequence(rows,savedId,rows[i].sequence,masterCurrent);
+    masterWriteBucket(masterCurrent,rows);
     window.ERPAudit?.log?.({module:'Masters',page:MASTER_TYPES[masterCurrent].name,action:'Edit',recordId:rows[i].code,before,after:rows[i]});
   }else{
-    const rec={id:'M-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),code:masterNextCode(masterCurrent),tenantId:masterTenantId(),...data,createdAt:now,updatedAt:now,createdBy:u?.id||''};rows.push(rec);masterWriteBucket(masterCurrent,rows);
+    const rec={id:'M-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),code:masterNextCode(masterCurrent),tenantId:masterTenantId(),...data,createdAt:now,updatedAt:now,createdBy:u?.id||''};
+    rows.push(rec);savedId=rec.id;
+    masterReorderSequence(rows,savedId,rec.sequence,masterCurrent);
+    masterWriteBucket(masterCurrent,rows);
     window.ERPAudit?.log?.({module:'Masters',page:MASTER_TYPES[masterCurrent].name,action:'Add',recordId:rec.code,after:rec});
   }
   masterEditingId='';masterClearForm();masterRenderAll();toast('Master record saved')
@@ -14312,9 +14336,6 @@ function validate(){
   if(!$m('#mgrCostCentre').value.trim()){alert('Cost Centre is required.');return false}
   const seq=num($m('#mgrSequence').value);
   if(seq<=0){alert('Display Sequence must be 1 or more.');return false}
-  const existing=load()[g]||[];
-  const seqConflict=existing.find(r=>r.id!==editing.id && String(r.status||'active').toLowerCase()!=='inactive' && num(r.sequence)===seq);
-  if(seqConflict){alert('Sequence '+seq+' is already used by '+seqConflict.material+' in '+groupDef(g).title+'. Please use another sequence.');return false}
   const gd=groupDef(g);
   if(gd.standard!=='none'){
     const target=num($m('#mgrStandard').value);
@@ -14354,6 +14375,17 @@ function formRecord(existing=null){
     history:Array.isArray(existing?.history)?existing.history:[]
   }
 }
+function reorderMaterialSequence(rows,movingId,targetSeq){
+  const target=Math.max(1,Math.floor(num(targetSeq)||1));
+  const moving=rows.find(r=>r.id===movingId);
+  if(!moving)return rows;
+  const active=rows.filter(r=>r.id!==movingId && String(r.status||'active').toLowerCase()!=='inactive')
+    .sort((a,b)=>(num(a.sequence)||999999)-(num(b.sequence)||999999)||String(a.material||'').localeCompare(String(b.material||'')));
+  const pos=Math.min(target-1,active.length);
+  active.splice(pos,0,moving);
+  active.forEach((r,i)=>r.sequence=i+1);
+  return rows;
+}
 function snapshot(r,g){
   const gd=groupDef(g);
   return {
@@ -14373,7 +14405,7 @@ function addRecord(){
   if(dup){alert('This material is already active in '+groupDef(g).title+'. Use Edit instead.');return}
   const r=formRecord();
   r.history=[snapshot(r,g)];
-  data[g]=data[g]||[];data[g].push(r);save(data);clearForm();renderList();
+  data[g]=data[g]||[];data[g].push(r);reorderMaterialSequence(data[g],r.id,r.sequence);save(data);clearForm();renderList();
   if(window.toast)toast('Material added')
 }
 function updateRecord(){
@@ -14389,7 +14421,7 @@ function updateRecord(){
     old.rateSource!==next.rateSource || old.status!==next.status;
   next.history=[...(old.history||[])];
   if(changed)next.history.push(snapshot(next,g));
-  data[g][idx]=next;save(data);clearForm();renderList();
+  data[g][idx]=next;reorderMaterialSequence(data[g],next.id,next.sequence);save(data);clearForm();renderList();
   if(window.toast)toast('Material updated')
 }
 function editRecord(g,id){
