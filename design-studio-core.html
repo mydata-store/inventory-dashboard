@@ -4597,10 +4597,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
                   <th>Ash Content (Ton)</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr><td>1</td><td><div id="ddeUnitName1" class="dde-unit-name-fixed">Production Unit 1</div></td><td><input id="ddeProd1" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh1" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent1">0.000</b></td></tr>
-                <tr><td>2</td><td><div id="ddeUnitName2" class="dde-unit-name-fixed">Production Unit 2</div></td><td><input id="ddeProd2" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh2" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent2">0.000</b></td></tr>
-                <tr><td>3</td><td><div id="ddeUnitName3" class="dde-unit-name-fixed">Production Unit 3</div></td><td><input id="ddeProd3" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh3" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent3">0.000</b></td></tr>
+              <tbody id="ddeProductionUnitBody">
                 <tr class="dde-prod-footer-row">
                   <td></td><td>TOTAL</td>
                   <td><b id="ddeTotalProduction">0.000</b></td>
@@ -12988,25 +12985,48 @@ function productionUnitMasterRows(){
       .sort((a,b)=>(num(a.sequence)||999)-(num(b.sequence)||999)||String(a.name||'').localeCompare(String(b.name||'')))
   }catch(e){return []}
 }
-function currentProductionUnitNames(){
-  const rows=productionUnitMasterRows().slice(0,3);
-  const legacy=(()=>{
-    try{
-      const r=JSON.parse(localStorage.getItem(UNIT_KEY)||'null');
-      return Array.isArray(r)?r:[]
-    }catch(e){return []}
-  })();
-  return [0,1,2].map(i=>String(rows[i]?.name||legacy[i]||('Production Unit '+(i+1))).trim())
+function activeProductionUnits(){
+  return productionUnitMasterRows().map((r,idx)=>({
+    id:r.id||r.code||('production-unit-'+(idx+1)),
+    code:r.code||'',
+    name:String(r.name||('Production Unit '+(idx+1))).trim(),
+    shortName:String(r.shortName||'').trim(),
+    sequence:num(r.sequence)||idx+1
+  }))
 }
-function loadUnitNames(){
-  const names=currentProductionUnitNames();
-  names.forEach((x,i)=>{
-    const el=$d('#ddeUnitName'+(i+1));
-    if(el)el.textContent=x
+function renderProductionUnitRows(){
+  const body=$d('#ddeProductionUnitBody');if(!body)return;
+  body.querySelectorAll('tr:not(.dde-prod-footer-row)').forEach(tr=>tr.remove());
+  const footer=body.querySelector('.dde-prod-footer-row');
+  const units=activeProductionUnits();
+  body.classList.toggle('no-active-units',units.length===0);
+  units.forEach((unit,idx)=>{
+    const n=idx+1;
+    const tr=document.createElement('tr');
+    tr.dataset.productionUnitId=unit.id;
+    tr.dataset.productionUnitCode=unit.code;
+    tr.dataset.productionUnitName=unit.name;
+    tr.innerHTML=`
+      <td>${n}</td>
+      <td><div id="ddeUnitName${n}" class="dde-unit-name-fixed">${unit.name}</div></td>
+      <td><input id="ddeProd${n}" class="dde-control dde-production-input" type="number" step="any" placeholder="0"></td>
+      <td><input id="ddeAsh${n}" class="dde-control dde-ash-input" type="number" step="any" placeholder="0"></td>
+      <td><b id="ddeAshContent${n}">0.000</b></td>`;
+    body.insertBefore(tr,footer);
+  });
+  body.querySelectorAll('.dde-production-input,.dde-ash-input').forEach(inp=>{
+    inp.addEventListener('input',recalc);
+    inp.addEventListener('change',recalc)
   })
 }
+function loadUnitNames(){
+  renderProductionUnitRows()
+}
 function unitNameAt(i){
-  return String($d('#ddeUnitName'+i)?.textContent||('Production Unit '+i)).trim()
+  return String($d('#ddeUnitName'+i)?.textContent||'').trim()
+}
+function productionRowCount(){
+  return $d('#ddeProductionUnitBody')?.querySelectorAll('tr:not(.dde-prod-footer-row)').length||0
 }
 
 const DDE_MATERIAL_MASTER_KEY='erpDailyMaterialMasterV1';
@@ -13321,7 +13341,8 @@ function autoWoodPulpConsumed(){
 
 function recalc(){
   let totalProd=0,totalAshContent=0,active=0;
-  for(let i=1;i<=3;i++){
+  const pCount=productionRowCount();
+  for(let i=1;i<=pCount;i++){
     const prod=value('ddeProd'+i), ash=value('ddeAsh'+i);
     const ashContent=prod*ash/100;
     setText('ddeAshContent'+i,ashContent.toFixed(3));
@@ -13459,11 +13480,18 @@ function recalc(){
   }
 }
 function collect(){
-  const units=[1,2,3].map(i=>({
-    name:unitNameAt(i),
-    production:value('ddeProd'+i),
-    ash:value('ddeAsh'+i)
-  }));
+  const units=Array.from({length:productionRowCount()},(_,idx)=>{
+    const i=idx+1;
+    const tr=$d('#ddeUnitName'+i)?.closest('tr');
+    return {
+      id:tr?.dataset.productionUnitId||'',
+      code:tr?.dataset.productionUnitCode||'',
+      name:unitNameAt(i),
+      sequence:i,
+      production:value('ddeProd'+i),
+      ash:value('ddeAsh'+i)
+    }
+  });
   units.forEach(u=>u.ashContent=u.production*u.ash/100);
   const active=units.filter(u=>u.production>0);
   const totalProduction=units.reduce((a,u)=>a+u.production,0);
@@ -13525,8 +13553,11 @@ function collect(){
 function clearForm(){
   $d('#ddeRecordId').value='';
   $d('#ddeDate').value='';
-  for(let i=1;i<=3;i++){$d('#ddeProd'+i).value='';$d('#ddeAsh'+i).value=''}
-  $d('#ddeWoodPulp').value='';
+  for(let i=1;i<=productionRowCount();i++){
+    if($d('#ddeProd'+i))$d('#ddeProd'+i).value='';
+    if($d('#ddeAsh'+i))$d('#ddeAsh'+i).value=''
+  }
+  if($d('#ddeWoodPulp'))$d('#ddeWoodPulp').textContent='0.000 Ton';
   ['ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeElectricityRate','ddeConsPulp','ddeConsMachine','ddeConsBoiler',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
     .forEach(id=>$d('#'+id).value='');
@@ -13565,11 +13596,20 @@ function editRecord(id){
   $d('#ddeRecordId').value=r.id;
   $d('#ddeDate').value=r.date||'';
   loadUnitNames();
-  (r.units||[]).forEach((u,idx)=>{
-    const i=idx+1;
-    $d('#ddeProd'+i).value=u.production||'';
-    $d('#ddeAsh'+i).value=u.ash||''
-  });
+  const savedUnits=Array.isArray(r.units)?r.units:[];
+  for(let i=1;i<=productionRowCount();i++){
+    const tr=$d('#ddeUnitName'+i)?.closest('tr');
+    const id=tr?.dataset.productionUnitId||'';
+    const code=tr?.dataset.productionUnitCode||'';
+    const name=String(tr?.dataset.productionUnitName||'').trim().toLowerCase();
+    const u=savedUnits.find(x=>
+      (id && x.id===id) ||
+      (code && x.code===code) ||
+      String(x.name||'').trim().toLowerCase()===name
+    );
+    if($d('#ddeProd'+i))$d('#ddeProd'+i).value=u?.production||'';
+    if($d('#ddeAsh'+i))$d('#ddeAsh'+i).value=u?.ash||''
+  }
   $d('#ddeWoodPulp').value=r.woodPulp||'';
   $d('#ddeElectricityRate').value=r.electricityRate||'';
   $d('#ddeWapdaPaper').value=r.wapdaPaper||'';
@@ -13689,8 +13729,8 @@ function bindEnterNavigation(){
   panel.dataset.enterNavBound='1';
 
   const verticalGroups=[
-    ['ddeProd1','ddeProd2','ddeProd3'],
-    ['ddeAsh1','ddeAsh2','ddeAsh3'],
+    Array.from({length:productionRowCount()},(_,i)=>'ddeProd'+(i+1)),
+    Array.from({length:productionRowCount()},(_,i)=>'ddeAsh'+(i+1)),
     ['ddeWapdaPaper','ddeWapdaBoard'],
     ['ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5'],
     ['ddeElectricityRate','ddeConsPulp','ddeConsBoiler','ddeConsMachine'],
@@ -13735,7 +13775,7 @@ function init(){
   loadUnitNames();
   bindDate();
   bindEnterNavigation();
-  ['ddeProd1','ddeProd2','ddeProd3','ddeAsh1','ddeAsh2','ddeAsh3','ddeWapdaPaper','ddeElectricityRate',
+  ['ddeWapdaPaper','ddeElectricityRate',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
   $d('#ddeSaveBtn').onclick=saveRecord;
@@ -14528,6 +14568,17 @@ else seedProductionUnits();
   font-weight:800;
   color:var(--text);
   box-sizing:border-box;
+}
+</style>
+
+
+<style id="activeProductionUnitsV1504Style">
+#panel-daily-data-entry #ddeProductionUnitBody.no-active-units::before{
+  content:'No active Production Units. Activate a unit in Masters.';
+  display:table-row;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:700;
 }
 </style>
 
