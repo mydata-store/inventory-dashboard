@@ -4698,14 +4698,14 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
               <tr><th colspan="2">Electricity Consumption Summary</th></tr>
             </thead>
             <tbody>
-              <tr><td>Electricity from WAPDA</td><td><b id="ddeElecFromWapda">0.000 kWh</b></td></tr>
-              <tr><td>Electricity from Solar</td><td><b id="ddeElecFromSolar">0.000 kWh</b></td></tr>
+              <tr><td>Electricity from WAPDA</td><td><b id="ddeElecFromWapda">0 kWh</b> <span id="ddeElecFromWapdaPct" class="dde-electricity-pct">0%</span></td></tr>
+              <tr><td>Electricity from Solar</td><td><b id="ddeElecFromSolar">0 kWh</b> <span id="ddeElecFromSolarPct" class="dde-electricity-pct">0%</span></td></tr>
               <tr><td>Rate per Unit</td><td><div class="dde-auto-rate-wrap"><input id="ddeElectricityRate" class="dde-control" type="number" step="any" placeholder="0" readonly><small id="ddeElectricityRateNote">Controlled from Material Group & Rate Master</small></div></td></tr>
               <tr><td>Electricity to Pulp Mill</td><td><input id="ddeConsPulp" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
               <tr><td>Electricity to Boiler House</td><td><input id="ddeConsBoiler" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
               <tr id="ddeElectricityProductionUnitMarker" style="display:none"></tr>
-              <tr class="dde-prod-footer-row"><td><b>Total Electricity Consumed</b></td><td><b id="ddeTotalConsumption">0.000 kWh</b></td></tr>
-              <tr><td>Difference / Balance</td><td><b id="ddeElectricityBalance">0.000 kWh</b></td></tr>
+              <tr class="dde-prod-footer-row"><td><b>Total Electricity Consumed</b></td><td><b id="ddeTotalConsumption">0 kWh</b></td></tr>
+              <tr><td>Difference / Balance</td><td><b id="ddeElectricityBalance">0 kWh</b></td></tr>
               <tr><td>Status</td><td><span id="ddeBalanceStatus" class="dde-status ok">Balanced</span></td></tr>
             </tbody>
           </table>
@@ -4721,9 +4721,9 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
               <tr><td>Paper Production</td><td><b id="ddeElecPaperProduction">0.000 Ton</b></td></tr>
               <tr><td>Pulp Production</td><td><b id="ddeElecPulpProduction">0.000 Ton</b></td></tr>
               <tr><td>Steam Production</td><td><b id="ddeElecSteamProduction">0.000 Ton</b></td></tr>
-              <tr><td>Electricity Unit / Ton Paper</td><td><b id="ddeUnitPerTonPaper">0.000 kWh/Ton</b></td></tr>
-              <tr><td>Electricity Unit / Ton Steam</td><td><b id="ddeUnitPerTonSteam">0.000 kWh/Ton</b></td></tr>
-              <tr><td>Electricity Unit / Ton Pulp</td><td><b id="ddeUnitPerTonPulp">0.000 kWh/Ton</b></td></tr>
+              <tr><td>Electricity Unit / Ton Paper</td><td><b id="ddeUnitPerTonPaper">0 kWh/Ton</b></td></tr>
+              <tr><td>Electricity Unit / Ton Steam</td><td><b id="ddeUnitPerTonSteam">0 kWh/Ton</b></td></tr>
+              <tr><td>Electricity Unit / Ton Pulp</td><td><b id="ddeUnitPerTonPulp">0 kWh/Ton</b></td></tr>
               <tr><td>Electricity Cost / Ton Paper</td><td><b id="ddeCostPerTonPaper">PKR 0.00</b></td></tr>
               <tr><td>Electricity Cost / Ton Steam</td><td><b id="ddeCostPerTonSteam">PKR 0.00</b></td></tr>
               <tr><td>Electricity Cost / Ton Pulp</td><td><b id="ddeCostPerTonPulp">PKR 0.00</b></td></tr>
@@ -13477,6 +13477,13 @@ function autoWoodPulpConsumed(){
   },0)
 }
 
+function electricityNumber(v){
+  const n=num(v);
+  if(!Number.isFinite(n))return '0';
+  return Math.abs(n-Math.round(n))<0.0000001
+    ? String(Math.round(n))
+    : n.toFixed(2).replace(/\.?0+$/,'')
+}
 function recalc(){
   let totalProd=0,totalAshContent=0,totalAshPercent=0,active=0;
   const pCount=productionRowCount();
@@ -13518,6 +13525,8 @@ function recalc(){
   const wapda=value('ddeWapdaPaper')+value('ddeWapdaBoard');
   const solar=[1,2,3,4,5].reduce((a,i)=>a+value('ddeSolar'+i),0);
   const totalElec=wapda+solar;
+  const wapdaPct=totalElec>0?(wapda/totalElec*100):0;
+  const solarPct=totalElec>0?(solar/totalElec*100):0;
 
   const consPulp=value('ddeConsPulp');
   const consBoiler=value('ddeConsBoiler');
@@ -13575,23 +13584,25 @@ function recalc(){
     pulpStatusEl.className='dde-status '+(pulpStatus==='Within Standard'?'ok':pulpStatus==='No Material'?'':'warn')
   }
 
-  setText('ddeTotalWapda',wapda.toFixed(3));
-  setText('ddeTotalSolar',solar.toFixed(3));
-  setText('ddeTotalElectricity',totalElec.toFixed(3));
+  setText('ddeTotalWapda',electricityNumber(wapda));
+  setText('ddeTotalSolar',electricityNumber(solar));
+  setText('ddeTotalElectricity',electricityNumber(totalElec));
 
-  setText('ddeElecFromWapda',wapda.toFixed(3)+' kWh');
-  setText('ddeElecFromSolar',solar.toFixed(3)+' kWh');
-  setText('ddeTotalConsumption',totalCons.toFixed(3)+' kWh');
-  setText('ddeElectricityBalance',balance.toFixed(3)+' kWh');
+  setText('ddeElecFromWapda',electricityNumber(wapda)+' kWh');
+  setText('ddeElecFromSolar',electricityNumber(solar)+' kWh');
+  setText('ddeElecFromWapdaPct',electricityNumber(wapdaPct)+'%');
+  setText('ddeElecFromSolarPct',electricityNumber(solarPct)+'%');
+  setText('ddeTotalConsumption',electricityNumber(totalCons)+' kWh');
+  setText('ddeElectricityBalance',electricityNumber(balance)+' kWh');
 
   setText('ddeElectricityAmount','PKR '+electricityAmount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
   setText('ddeElecPaperProduction',paperProduction.toFixed(3)+' Ton');
   setText('ddeElecPulpProduction',pulpProduction.toFixed(3)+' Ton');
   setText('ddeElecSteamProduction',steamProduction.toFixed(3)+' Ton');
 
-  setText('ddeUnitPerTonPaper',unitPerTonPaper.toFixed(3)+' kWh/Ton');
-  setText('ddeUnitPerTonSteam',unitPerTonSteam.toFixed(3)+' kWh/Ton');
-  setText('ddeUnitPerTonPulp',unitPerTonPulp.toFixed(3)+' kWh/Ton');
+  setText('ddeUnitPerTonPaper',electricityNumber(unitPerTonPaper)+' kWh/Ton');
+  setText('ddeUnitPerTonSteam',electricityNumber(unitPerTonSteam)+' kWh/Ton');
+  setText('ddeUnitPerTonPulp',electricityNumber(unitPerTonPulp)+' kWh/Ton');
 
   setText('ddeCostPerTonPaper','PKR '+costPerTonPaper.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
   setText('ddeCostPerTonSteam','PKR '+costPerTonSteam.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
@@ -13780,7 +13791,7 @@ function editRecord(id){
 function detailRecord(id){
   const r=rows().find(x=>x.id===id);if(!r)return;
   const unitText=(r.units||[]).map(u=>`${u.name}: ${num(u.production).toFixed(3)} Ton | Ash ${num(u.ash).toFixed(2)}%`).join('\n');
-  alert(`Date: ${r.date}\n\n${unitText}\n\nTotal Production: ${num(r.totalProduction).toFixed(3)} Ton\nAsh Average: ${num(r.ashAverage).toFixed(2)}%\nTotal Electricity: ${num(r.totalElectricity).toFixed(3)}\nTotal Consumption: ${num(r.totalConsumption).toFixed(3)}\nBalance: ${num(r.electricityBalance).toFixed(3)}`)
+  alert(`Date: ${r.date}\n\n${unitText}\n\nTotal Production: ${num(r.totalProduction).toFixed(3)} Ton\nAsh Average: ${num(r.ashAverage).toFixed(2)}%\nTotal Electricity: ${electricityNumber(r.totalElectricity)}\nTotal Consumption: ${electricityNumber(r.totalConsumption)}\nBalance: ${electricityNumber(r.electricityBalance)}`)
 }
 function deleteRecord(id){
   if(!confirm('Delete this daily record?'))return;
@@ -13798,14 +13809,14 @@ function renderHistory(){
     <td><b>${r.date||''}</b></td>
     <td>${num(r.totalProduction).toFixed(3)}</td>
     <td>${num(r.ashAverage).toFixed(2)}%</td>
-    <td>${num(r.totalWapda).toFixed(3)}</td>
-    <td>${num(r.totalSolar).toFixed(3)}</td>
-    <td>${num(r.totalElectricity).toFixed(3)}</td>
-    <td>${num(r.consPulp).toFixed(3)}</td>
-    <td>${num(r.consMachine).toFixed(3)}</td>
-    <td>${num(r.consBoiler).toFixed(3)}</td>
-    <td>${num(r.totalConsumption).toFixed(3)}</td>
-    <td>${num(r.electricityBalance).toFixed(3)}</td>
+    <td>${electricityNumber(r.totalWapda)}</td>
+    <td>${electricityNumber(r.totalSolar)}</td>
+    <td>${electricityNumber(r.totalElectricity)}</td>
+    <td>${electricityNumber(r.consPulp)}</td>
+    <td>${electricityNumber(r.consMachine)}</td>
+    <td>${electricityNumber(r.consBoiler)}</td>
+    <td>${electricityNumber(r.totalConsumption)}</td>
+    <td>${electricityNumber(r.electricityBalance)}</td>
     <td><div class="dde-actions">
       <button class="btn btn-sm dde-detail" data-id="${r.id}">Detail</button>
       <button class="btn btn-sm dde-edit" data-id="${r.id}">Edit</button>
@@ -14930,6 +14941,24 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #panel-daily-data-entry .dde-auto-rate-wrap{display:flex;align-items:center;gap:7px;justify-content:flex-end}
 #panel-daily-data-entry .dde-auto-rate-wrap input{max-width:260px;background:color-mix(in srgb,var(--primary) 4%,var(--surface))}
 #panel-daily-data-entry .dde-auto-rate-wrap small{font-size:7px;color:var(--muted);white-space:nowrap}
+</style>
+
+
+<style id="electricityPercentV1511Style">
+#panel-daily-data-entry .dde-electricity-pct{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:42px;
+  margin-left:8px;
+  padding:2px 7px;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--primary) 10%,var(--surface));
+  border:1px solid var(--border);
+  font-size:8px;
+  font-weight:900;
+  white-space:nowrap;
+}
 </style>
 
 </body></html>
