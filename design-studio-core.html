@@ -4598,9 +4598,9 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
                 </tr>
               </thead>
               <tbody>
-                <tr><td>1</td><td><input id="ddeUnitName1" class="dde-control" value="Production Unit 1"></td><td><input id="ddeProd1" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh1" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent1">0.000</b></td></tr>
-                <tr><td>2</td><td><input id="ddeUnitName2" class="dde-control" value="Production Unit 2"></td><td><input id="ddeProd2" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh2" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent2">0.000</b></td></tr>
-                <tr><td>3</td><td><input id="ddeUnitName3" class="dde-control" value="Production Unit 3"></td><td><input id="ddeProd3" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh3" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent3">0.000</b></td></tr>
+                <tr><td>1</td><td><div id="ddeUnitName1" class="dde-unit-name-fixed">Production Unit 1</div></td><td><input id="ddeProd1" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh1" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent1">0.000</b></td></tr>
+                <tr><td>2</td><td><div id="ddeUnitName2" class="dde-unit-name-fixed">Production Unit 2</div></td><td><input id="ddeProd2" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh2" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent2">0.000</b></td></tr>
+                <tr><td>3</td><td><div id="ddeUnitName3" class="dde-unit-name-fixed">Production Unit 3</div></td><td><input id="ddeProd3" class="dde-control" type="number" step="any" placeholder="0"></td><td><input id="ddeAsh3" class="dde-control" type="number" step="any" placeholder="0"></td><td><b id="ddeAshContent3">0.000</b></td></tr>
                 <tr class="dde-prod-footer-row">
                   <td></td><td>TOTAL</td>
                   <td><b id="ddeTotalProduction">0.000</b></td>
@@ -5066,7 +5066,15 @@ const MASTER_TYPES={
     ['name','Purchase Section Name','text',true],
     ['stockTreatment','Stock Treatment','select',false,['inventory','non-inventory']],
     ['status','Status','select',false,['active','inactive']]
-  ],columns:[['code','Code'],['name','Purchase Section'],['stockTreatment','Stock Treatment'],['status','Status']]}
+  ],columns:[['code','Code'],['name','Purchase Section'],['stockTreatment','Stock Treatment'],['status','Status']]},
+  productionUnits:{name:'Production Units',singular:'Production Unit',code:'PUN',fields:[
+    ['name','Production Unit Name','text',true],
+    ['shortName','Short Name','text',false],
+    ['sequence','Sequence','number',true],
+    ['status','Status','select',false,['active','inactive']]
+  ],columns:[
+    ['code','Code'],['sequence','Sequence'],['name','Production Unit Name'],['shortName','Short Name'],['status','Status']
+  ]}
 };
 let masterCurrent='items',masterEditingId='';
 
@@ -12969,17 +12977,36 @@ function saveRows(r){localStorage.setItem(KEY,JSON.stringify(r))}
 function value(id){return num($d('#'+id)?.value)}
 function setText(id,v){const el=$d('#'+id);if(el)el.textContent=v}
 
-function loadUnitNames(){
-  let names=['Production Unit 1','Production Unit 2','Production Unit 3'];
+function productionUnitMasterRows(){
   try{
-    const r=JSON.parse(localStorage.getItem(UNIT_KEY)||'null');
-    if(Array.isArray(r)&&r.length===3)names=r
-  }catch(e){}
-  names.forEach((x,i)=>{const el=$d('#ddeUnitName'+(i+1));if(el)el.value=x})
+    const all=JSON.parse(localStorage.getItem('erpMasterDataV1')||'{}')||{};
+    let tenant='local';
+    try{tenant=window.ERPTenant?.currentId?.()||'local'}catch(e){}
+    const rows=Array.isArray(all?.[tenant]?.productionUnits)?all[tenant].productionUnits:[];
+    return rows
+      .filter(r=>String(r.status||'active').toLowerCase()!=='inactive')
+      .sort((a,b)=>(num(a.sequence)||999)-(num(b.sequence)||999)||String(a.name||'').localeCompare(String(b.name||'')))
+  }catch(e){return []}
 }
-function saveUnitNames(){
-  const n=[1,2,3].map(i=>($d('#ddeUnitName'+i).value||'').trim()||('Production Unit '+i));
-  localStorage.setItem(UNIT_KEY,JSON.stringify(n))
+function currentProductionUnitNames(){
+  const rows=productionUnitMasterRows().slice(0,3);
+  const legacy=(()=>{
+    try{
+      const r=JSON.parse(localStorage.getItem(UNIT_KEY)||'null');
+      return Array.isArray(r)?r:[]
+    }catch(e){return []}
+  })();
+  return [0,1,2].map(i=>String(rows[i]?.name||legacy[i]||('Production Unit '+(i+1))).trim())
+}
+function loadUnitNames(){
+  const names=currentProductionUnitNames();
+  names.forEach((x,i)=>{
+    const el=$d('#ddeUnitName'+(i+1));
+    if(el)el.textContent=x
+  })
+}
+function unitNameAt(i){
+  return String($d('#ddeUnitName'+i)?.textContent||('Production Unit '+i)).trim()
 }
 
 const DDE_MATERIAL_MASTER_KEY='erpDailyMaterialMasterV1';
@@ -13433,7 +13460,7 @@ function recalc(){
 }
 function collect(){
   const units=[1,2,3].map(i=>({
-    name:($d('#ddeUnitName'+i).value||'').trim()||('Production Unit '+i),
+    name:unitNameAt(i),
     production:value('ddeProd'+i),
     ash:value('ddeAsh'+i)
   }));
@@ -13516,7 +13543,6 @@ function saveRecord(){
   if(!r.date)return window.toast?toast('Date is required'):alert('Date is required');
   if(!r.totalProduction&&!r.totalElectricity&&!r.totalConsumption)return window.toast?toast('Enter daily data first'):alert('Enter daily data first');
 
-  saveUnitNames();
   let all=rows();
   const existingId=all.findIndex(x=>x.id===r.id);
   if(existingId>=0)all[existingId]=r;
@@ -13538,9 +13564,9 @@ function editRecord(id){
   const r=rows().find(x=>x.id===id);if(!r)return;
   $d('#ddeRecordId').value=r.id;
   $d('#ddeDate').value=r.date||'';
+  loadUnitNames();
   (r.units||[]).forEach((u,idx)=>{
     const i=idx+1;
-    $d('#ddeUnitName'+i).value=u.name||('Production Unit '+i);
     $d('#ddeProd'+i).value=u.production||'';
     $d('#ddeAsh'+i).value=u.ash||''
   });
@@ -13663,7 +13689,6 @@ function bindEnterNavigation(){
   panel.dataset.enterNavBound='1';
 
   const verticalGroups=[
-    ['ddeUnitName1','ddeUnitName2','ddeUnitName3'],
     ['ddeProd1','ddeProd2','ddeProd3'],
     ['ddeAsh1','ddeAsh2','ddeAsh3'],
     ['ddeWapdaPaper','ddeWapdaBoard'],
@@ -13713,7 +13738,6 @@ function init(){
   ['ddeProd1','ddeProd2','ddeProd3','ddeAsh1','ddeAsh2','ddeAsh3','ddeWapdaPaper','ddeElectricityRate',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
-  [1,2,3].forEach(i=>$d('#ddeUnitName'+i)?.addEventListener('change',saveUnitNames));
   $d('#ddeSaveBtn').onclick=saveRecord;
   $d('#ddeClearBtn').onclick=clearForm;
   $d('#ddeSearch').oninput=renderHistory;
@@ -14454,6 +14478,57 @@ window.ERPMaterialMaster={open,render:renderList,save:()=>save(load())};
 #panel-daily-data-entry .dde-summary-matrix{grid-auto-rows:28px!important}
 #panel-daily-data-entry #ddeAllowedYieldRange,
 #panel-daily-data-entry #ddeWeightedTargetYield{font-size:8.2px!important}
+</style>
+
+
+<script id="productionUnitMasterV1503Seed">
+(()=>{
+function seedProductionUnits(){
+  try{
+    const key='erpMasterDataV1';
+    const all=JSON.parse(localStorage.getItem(key)||'{}')||{};
+    let tenant='local';
+    try{tenant=window.ERPTenant?.currentId?.()||'local'}catch(e){}
+    all[tenant]=all[tenant]||{};
+    if(Array.isArray(all[tenant].productionUnits)&&all[tenant].productionUnits.length)return;
+
+    let legacy=[];
+    try{
+      const r=JSON.parse(localStorage.getItem('erpProductionUnitNamesV1')||'null');
+      if(Array.isArray(r))legacy=r
+    }catch(e){}
+
+    all[tenant].productionUnits=[0,1,2].map(i=>({
+      id:'pun-seed-'+(i+1),
+      code:'PUN-'+String(i+1).padStart(5,'0'),
+      name:String(legacy[i]||('Production Unit '+(i+1))),
+      shortName:'PU-'+(i+1),
+      sequence:i+1,
+      status:'active'
+    }));
+    localStorage.setItem(key,JSON.stringify(all))
+  }catch(e){console.error('Production Unit seed error',e)}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',seedProductionUnits);
+else seedProductionUnits();
+})();
+</script>
+
+
+<style id="productionUnitMasterV1503Style">
+#panel-daily-data-entry .dde-unit-name-fixed{
+  min-height:25px;
+  display:flex;
+  align-items:center;
+  padding:2px 7px;
+  border:1px solid color-mix(in srgb,var(--border) 80%,transparent);
+  border-radius:5px;
+  background:color-mix(in srgb,var(--primary) 4%,var(--surface));
+  font-size:9px;
+  font-weight:800;
+  color:var(--text);
+  box-sizing:border-box;
+}
 </style>
 
 </body></html>
