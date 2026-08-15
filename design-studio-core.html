@@ -4772,7 +4772,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>5. Boiler House Material Consumption</h3>
-          <p>Daily consumption is reported in Ton. Kg-based Material Master rates are converted automatically to Rate/Ton.</p>
+          <p>Daily entry stays in the original unit. Final-report Ton conversion is controlled from Material Group & Rate Master.</p>
         </div>
         <button class="btn btn-sm" type="button" id="ddeAddBoilerRow">+ Add Row</button>
       </div>
@@ -4790,7 +4790,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>6. Pulp Mill Material Consumption</h3>
-          <p>Daily consumption is reported in Ton. Kg-based Material Master quantities/rates are converted automatically; each Pulp material also uses its own Yield Standard.</p>
+          <p>Daily entry stays in the material's original unit. Only items marked 'Convert to Ton in Final Reports' are converted for final production/yield reports.</p>
         </div>
         <button class="btn btn-sm" type="button" id="ddeAddPulpRow">+ Add Row</button>
       </div>
@@ -4808,7 +4808,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>7. Sulphite Plant Material Consumption</h3>
-          <p>Daily consumption is reported in Ton. Kg-based Material Master rates are converted automatically to Rate/Ton.</p>
+          <p>Daily entry stays in the original unit. Final-report Ton conversion is controlled from Material Group & Rate Master.</p>
         </div>
         <button class="btn btn-sm" type="button" id="ddeAddSulphiteRow">+ Add Row</button>
       </div>
@@ -12965,16 +12965,30 @@ function ensureDdeMasterLists(){['boiler','pulp','sulphite','units'].forEach(sec
 function ddeDefaultRows(section){const rows=ddeMasterRows(section);return rows.length?rows.map(x=>({item:x.material,unit:x.unit,rate:x.rate,standard:x.standard})): [{}]}
 
 function analysisUnitFor(masterUnit){
-  const u=String(masterUnit||'').trim().toLowerCase();
-  if(['kg','kgs','kilogram','kilograms'].includes(u))return 'Ton';
+  // Daily entry always stays in the material's original/native unit.
   return masterUnit||''
 }
 function qtyToAnalysis(qty,masterUnit){
+  return num(qty)
+}
+function rateToAnalysis(rate,masterUnit){
+  return num(rate)
+}
+function shouldConvertToTon(section,item){
+  const master=loadMaterialMaster();
+  const rows=Array.isArray(master[section])?master[section]:[];
+  const q=String(item||'').trim().toLowerCase();
+  const r=rows.find(x=>String(x.material||'').trim().toLowerCase()===q);
+  return !!r && String(r.convertToTon||'no').toLowerCase()==='yes'
+}
+function qtyForFinalReport(section,item,qty,masterUnit){
+  if(!shouldConvertToTon(section,item))return num(qty);
   const u=String(masterUnit||'').trim().toLowerCase();
   if(['kg','kgs','kilogram','kilograms'].includes(u))return num(qty)/1000;
   return num(qty)
 }
-function rateToAnalysis(rate,masterUnit){
+function rateForFinalReport(section,item,rate,masterUnit){
+  if(!shouldConvertToTon(section,item))return num(rate);
   const u=String(masterUnit||'').trim().toLowerCase();
   if(['kg','kgs','kilogram','kilograms'].includes(u))return num(rate)*1000;
   return num(rate)
@@ -12988,10 +13002,13 @@ function rowMaterialMeta(tr){
   const item=tr?.querySelector('.dde-mat-item')?.value||'';
   const ref=sectionMasterRecord(section,item);
   const masterUnit=ref?.unit||'';
-  const reportUnit=analysisUnitFor(masterUnit);
+  const reportUnit=masterUnit; // Daily entry remains native.
   const sourceRate=num(ref?.rate);
-  const reportRate=rateToAnalysis(sourceRate,masterUnit);
-  return {section,item,ref,masterUnit,reportUnit,sourceRate,reportRate}
+  const reportRate=sourceRate; // Daily entry remains native.
+  const convertToTon=!!ref?.convertToTon;
+  const finalReportUnit=(convertToTon && ['kg','kgs','kilogram','kilograms'].includes(String(masterUnit).trim().toLowerCase()))?'Ton':masterUnit;
+  const finalReportRate=rateForFinalReport(section,item,sourceRate,masterUnit);
+  return {section,item,ref,masterUnit,reportUnit,sourceRate,reportRate,convertToTon,finalReportUnit,finalReportRate}
 }
 function money(v){
   return num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})
@@ -13009,7 +13026,7 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
     return `<tr data-section="${section}">
       <td class="dde-mat-sr">${index+1}</td>
       <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
-      <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${masterUnit&&masterUnit!==reportUnit?'Master: '+masterUnit:''}</small></td>
+      <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
       <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-u1" type="number" step="any" value="${u1||''}" placeholder="0"></td>
@@ -13017,7 +13034,7 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
       <td><input class="dde-control dde-mat-u3" type="number" step="any" value="${u3||''}" placeholder="0"></td>
       <td><b class="dde-mat-total">${total.toFixed(3)}</b></td>
       <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
-      <td><b class="dde-mat-rate">${money(reportRate)}</b><small class="dde-mat-source-note">${masterUnit?'from '+masterUnit+' rate':''}</small></td>
+      <td><b class="dde-mat-rate">${money(reportRate)}</b><small class="dde-mat-source-note">${ref?.convertToTon?'Final report converts rate to Ton':''}</small></td>
       <td><b class="dde-mat-value">${money(usedValue)}</b></td>
       <td><button class="btn btn-sm dde-mat-delete" type="button">Delete</button></td>
     </tr>`
@@ -13027,12 +13044,12 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
   return `<tr data-section="${section}">
     <td class="dde-mat-sr">${index+1}</td>
     <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
-    <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${masterUnit&&masterUnit!==reportUnit?'Master: '+masterUnit:''}</small></td>
+    <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
     <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
     <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
     <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
     <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
-    <td><b class="dde-mat-rate">${money(reportRate)}</b><small class="dde-mat-source-note">${masterUnit?'from '+masterUnit+' rate':''}</small></td>
+    <td><b class="dde-mat-rate">${money(reportRate)}</b><small class="dde-mat-source-note">${ref?.convertToTon?'Final report converts rate to Ton':''}</small></td>
     <td><b class="dde-mat-value">${money(usedValue)}</b></td>
     <td><button class="btn btn-sm dde-mat-delete" type="button">Delete</button></td>
   </tr>`
@@ -13098,28 +13115,49 @@ function materialData(bodyId,unitsMode=false){
     if(unitsMode){
       const unit1=num(tr.querySelector('.dde-mat-u1')?.value),unit2=num(tr.querySelector('.dde-mat-u2')?.value),unit3=num(tr.querySelector('.dde-mat-u3')?.value);
       const totalConsumed=unit1+unit2+unit3;
+      const finalReportQty=qtyForFinalReport(meta.section,meta.item,totalConsumed,meta.masterUnit);
       return {
         item:tr.querySelector('.dde-mat-item')?.value||'',
-        masterUnit:meta.masterUnit,reportUnit:meta.reportUnit,sourceRate:meta.sourceRate,reportRate:meta.reportRate,
+        unit:meta.masterUnit,
+        rate:meta.sourceRate,
+        convertToTon:meta.convertToTon,
+        finalReportUnit:meta.finalReportUnit,
+        finalReportRate:meta.finalReportRate,
         opening:num(tr.querySelector('.dde-mat-opening')?.value),
         received:num(tr.querySelector('.dde-mat-received')?.value),
-        unit1,unit2,unit3,totalConsumed,usedValue:totalConsumed*meta.reportRate
+        unit1,unit2,unit3,totalConsumed,
+        usedValue:totalConsumed*meta.sourceRate,
+        finalReportQty,
+        finalReportValue:finalReportQty*meta.finalReportRate
       }
     }
     const used=num(tr.querySelector('.dde-mat-used')?.value);
+    const finalReportQty=qtyForFinalReport(meta.section,meta.item,used,meta.masterUnit);
     return {
       item:tr.querySelector('.dde-mat-item')?.value||'',
-      masterUnit:meta.masterUnit,reportUnit:meta.reportUnit,sourceRate:meta.sourceRate,reportRate:meta.reportRate,
+      unit:meta.masterUnit,
+      rate:meta.sourceRate,
+      convertToTon:meta.convertToTon,
+      finalReportUnit:meta.finalReportUnit,
+      finalReportRate:meta.finalReportRate,
       opening:num(tr.querySelector('.dde-mat-opening')?.value),
       received:num(tr.querySelector('.dde-mat-received')?.value),
-      used,usedValue:used*meta.reportRate
+      used,
+      usedValue:used*meta.sourceRate,
+      finalReportQty,
+      finalReportValue:finalReportQty*meta.finalReportRate
     }
   })
 }
 function totalUsed(bodyId){
   const body=$d('#'+bodyId);if(!body)return 0;
-  // Daily material report quantities are stored/displayed in analysis unit (Ton for Kg master materials).
-  return [...body.querySelectorAll('.dde-mat-used')].reduce((a,el)=>a+num(el.value),0)
+  return [...body.querySelectorAll('tr')].reduce((sum,tr)=>{
+    const section=tr.dataset.section||'';
+    const item=tr.querySelector('.dde-mat-item')?.value||'';
+    const used=num(tr.querySelector('.dde-mat-used')?.value);
+    const ref=sectionMasterRecord(section,item);
+    return sum+qtyForFinalReport(section,item,used,ref?.unit||'')
+  },0)
 }
 function clearMaterialBody(bodyId,unitsMode=false){
   const body=$d('#'+bodyId);if(!body)return;
@@ -13148,7 +13186,14 @@ function materialStandardMap(section='pulp'){
     const name=String(r.material||'').trim().toLowerCase();
     if(!name)return;
     const standard=section==='boiler'?num(r.steamStandard??r.standard):num(r.standard);
-    map[name]={standard,unit:r.unit||'',rate:num(r.currentRate??r.rate),sequence:num(r.sequence),rateSource:r.rateSource||''}
+    map[name]={
+      standard,
+      unit:r.unit||'',
+      rate:num(r.currentRate??r.rate),
+      sequence:num(r.sequence),
+      rateSource:r.rateSource||'',
+      convertToTon:String(r.convertToTon||'no').toLowerCase()==='yes'
+    }
   });
   return map
 }
@@ -13169,7 +13214,7 @@ function expectedPulpFromPulpRows(){
     const standard=ref?num(ref.standard):0;
     // Daily consumption rows are reported in Ton. If legacy/native Kg data ever reaches here,
     // normalize it using the material master unit.
-    const used=enteredUsed;
+    const used=qtyForFinalReport('pulp',item,enteredUsed,ref?.unit||'');
     const expectedItem=used*standard/100;
     expected+=expectedItem;
 
@@ -13718,6 +13763,7 @@ function migrate(raw){
         rateSource:r.rateSource||'Manual',
         currentRate:num(r.currentRate??r.rate),
         effectiveDate:fmtDate(r.effectiveDate||todayText()),
+        convertToTon:String(r.convertToTon||'no').toLowerCase()==='yes'?'yes':'no',
         status:r.status||'active',
         history:Array.isArray(r.history)?r.history:[]
       }
@@ -13862,6 +13908,7 @@ function build(){
         <div class="mgr-field"><label>Rate Source *</label><select id="mgrRateSource" class="mgr-control"><option>Latest Purchase Rate</option><option>Weighted Average Rate</option><option>Manual</option></select></div>
         <div class="mgr-field"><label>Current Rate</label><input id="mgrRate" class="mgr-control" type="number" step="any" placeholder="0"></div>
         <div class="mgr-field"><label>Effective Date *</label><input id="mgrEffectiveDate" class="mgr-control" placeholder="25-6"></div>
+        <div class="mgr-field"><label>Convert to Ton in Final Reports</label><select id="mgrConvertToTon" class="mgr-control"><option value="no">No</option><option value="yes">Yes</option></select></div>
         <div class="mgr-field"><label>Status *</label><select id="mgrStatus" class="mgr-control"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
       </div>
       <div class="mgr-actions">
@@ -13908,6 +13955,7 @@ function clearForm(){
   $m('#mgrRateSource').value='Latest Purchase Rate';
   $m('#mgrRate').value='';
   $m('#mgrEffectiveDate').value=todayText();
+  $m('#mgrConvertToTon').value='no';
   $m('#mgrStatus').value='active';
   renderStandardField();
   updateRateMode()
@@ -13966,6 +14014,7 @@ function formRecord(existing=null){
     rateSource:source,
     currentRate,
     effectiveDate:fmtDate($m('#mgrEffectiveDate').value)||todayText(),
+    convertToTon:$m('#mgrConvertToTon').value==='yes'?'yes':'no',
     status:$m('#mgrStatus').value,
     history:Array.isArray(existing?.history)?existing.history:[]
   }
@@ -14018,6 +14067,7 @@ function editRecord(g,id){
   $m('#mgrRateSource').value=r.rateSource||'Manual';
   $m('#mgrRate').value=r.currentRate||'';
   $m('#mgrEffectiveDate').value=r.effectiveDate||todayText();
+  $m('#mgrConvertToTon').value=r.convertToTon==='yes'?'yes':'no';
   $m('#mgrStatus').value=r.status||'active';
   updateRateMode();
   window.scrollTo({top:0,behavior:'smooth'})
@@ -14047,12 +14097,12 @@ function renderList(){
       <div class="mgr-table-wrap"><table class="mgr-table"><thead><tr>
       <th>#</th><th>Material</th><th>Unit</th><th>Cost Centre</th><th>Entry Mode</th><th>Sequence</th>
       ${g.standard==='yield'?'<th>Yield Std %</th>':g.standard==='steam'?'<th>Steam Yield Std</th>':''}
-      <th>Rate Source</th><th>Current Rate</th><th>Effective Date</th><th>Status</th><th>Action</th></tr></thead><tbody>
+      <th>Rate Source</th><th>Current Rate</th><th>Effective Date</th><th>Report Ton</th><th>Status</th><th>Action</th></tr></thead><tbody>
       ${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.unit)}</td><td>${esc(r.costCentre)}</td>
       <td>${esc(r.entryMode)}</td><td>${num(r.sequence)}</td>
       ${g.standard==='yield'?`<td>${num(r.standard).toFixed(2)}%</td>`:g.standard==='steam'?`<td>${num(r.steamStandard).toFixed(3)}</td>`:''}
       <td><span class="mgr-rate-source">${esc(r.rateSource)}</span></td><td>${num(r.currentRate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-      <td>${esc(r.effectiveDate)}</td><td><span class="mgr-status ${r.status==='inactive'?'inactive':'active'}">${r.status==='inactive'?'Inactive':'Active'}</span></td>
+      <td>${esc(r.effectiveDate)}</td><td>${r.convertToTon==='yes'?'Yes':'No'}</td><td><span class="mgr-status ${r.status==='inactive'?'inactive':'active'}">${r.status==='inactive'?'Inactive':'Active'}</span></td>
       <td><button class="btn btn-sm mgr-edit" data-g="${g.id}" data-id="${r.id}">Edit</button> <button class="btn btn-sm mgr-hist" data-g="${g.id}" data-id="${r.id}">History</button></td></tr>`).join('')}
       </tbody></table></div></div>`
   });
