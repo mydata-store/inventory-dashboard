@@ -4700,10 +4700,10 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
             <tbody>
               <tr><td>Electricity from WAPDA</td><td><b id="ddeElecFromWapda">0.000 kWh</b></td></tr>
               <tr><td>Electricity from Solar</td><td><b id="ddeElecFromSolar">0.000 kWh</b></td></tr>
-              <tr><td>Rate per Unit</td><td><input id="ddeElectricityRate" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr><td>Rate per Unit</td><td><div class="dde-auto-rate-wrap"><input id="ddeElectricityRate" class="dde-control" type="number" step="any" placeholder="0" readonly><small id="ddeElectricityRateNote">Controlled from Material Group & Rate Master</small></div></td></tr>
               <tr><td>Electricity to Pulp Mill</td><td><input id="ddeConsPulp" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
               <tr><td>Electricity to Boiler House</td><td><input id="ddeConsBoiler" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
-              <tr><td>Electricity to Machine Hall</td><td><input id="ddeConsMachine" class="dde-control" type="number" step="any" placeholder="0"></td></tr>
+              <tr id="ddeElectricityProductionUnitMarker" style="display:none"></tr>
               <tr class="dde-prod-footer-row"><td><b>Total Electricity Consumed</b></td><td><b id="ddeTotalConsumption">0.000 kWh</b></td></tr>
               <tr><td>Difference / Balance</td><td><b id="ddeElectricityBalance">0.000 kWh</b></td></tr>
               <tr><td>Status</td><td><span id="ddeBalanceStatus" class="dde-status ok">Balanced</span></td></tr>
@@ -13036,6 +13036,21 @@ function bindDate(){
   el.addEventListener('blur',f);
   el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Tab')f()})
 }
+
+const ELECTRICITY_RATE_KEY='erpElectricityRateControlV1';
+function electricityRateControl(){
+  try{
+    const x=JSON.parse(localStorage.getItem(ELECTRICITY_RATE_KEY)||'null');
+    return x&&typeof x==='object'?{rate:num(x.rate),mode:x.mode||'keep',effectiveDate:x.effectiveDate||''}:{rate:0,mode:'keep',effectiveDate:''}
+  }catch(e){return {rate:0,mode:'keep',effectiveDate:''}}
+}
+function applyElectricityRateFromMaster(){
+  const x=electricityRateControl();
+  const el=$d('#ddeElectricityRate');
+  if(el){el.value=x.rate||0;el.readOnly=true}
+  const note=$d('#ddeElectricityRateNote');
+  if(note)note.textContent=x.effectiveDate?('Effective '+x.effectiveDate):'Controlled from Material Group & Rate Master'
+}
 function rows(){
   try{const r=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(r)?r:[]}
   catch(e){return []}
@@ -13063,6 +13078,37 @@ function activeProductionUnits(){
     shortName:String(r.shortName||'').trim(),
     sequence:num(r.sequence)||idx+1
   }))
+}
+
+function renderElectricityProductionUnitRows(saved=[]){
+  const marker=$d('#ddeElectricityProductionUnitMarker');if(!marker)return;
+  const tbody=marker.parentElement;
+  tbody.querySelectorAll('.dde-electricity-unit-row').forEach(tr=>tr.remove());
+  const savedMap={};
+  (Array.isArray(saved)?saved:[]).forEach(x=>{
+    if(x.id)savedMap['id:'+x.id]=num(x.qty);
+    if(x.code)savedMap['code:'+x.code]=num(x.qty);
+    if(x.name)savedMap['name:'+String(x.name).trim().toLowerCase()]=num(x.qty)
+  });
+  activeProductionUnits().forEach(u=>{
+    let q=0;
+    if(savedMap['id:'+u.id]!==undefined)q=savedMap['id:'+u.id];
+    else if(savedMap['code:'+u.code]!==undefined)q=savedMap['code:'+u.code];
+    else if(savedMap['name:'+u.name.toLowerCase()]!==undefined)q=savedMap['name:'+u.name.toLowerCase()];
+    const tr=document.createElement('tr');
+    tr.className='dde-electricity-unit-row';
+    tr.innerHTML=`<td>Electricity to ${u.name}</td><td><input class="dde-control dde-electricity-unit-input" data-unit-id="${u.id}" data-unit-code="${u.code}" data-unit-name="${u.name}" type="number" step="any" value="${q||0}" placeholder="0"></td>`;
+    tbody.insertBefore(tr,marker);
+  });
+  tbody.querySelectorAll('.dde-electricity-unit-input').forEach(el=>el.addEventListener('input',recalc))
+}
+function electricityProductionUnitData(){
+  return [...document.querySelectorAll('.dde-electricity-unit-input')].map(el=>({
+    id:el.dataset.unitId||'',code:el.dataset.unitCode||'',name:el.dataset.unitName||'',qty:num(el.value)
+  }))
+}
+function electricityToProductionUnits(){
+  return electricityProductionUnitData().reduce((a,x)=>a+x.qty,0)
 }
 function renderProductionUnitRows(){
   const body=$d('#ddeProductionUnitBody');if(!body)return;
@@ -13475,7 +13521,7 @@ function recalc(){
 
   const consPulp=value('ddeConsPulp');
   const consBoiler=value('ddeConsBoiler');
-  const consMachine=value('ddeConsMachine');
+  const consMachine=electricityToProductionUnits();
   const totalCons=consPulp+consBoiler+consMachine;
   const balance=totalElec-totalCons;
 
@@ -13604,7 +13650,8 @@ function collect(){
   const totalSolar=solar.reduce((a,x)=>a+x,0);
   const totalElectricity=totalWapda+totalSolar;
 
-  const consPulp=value('ddeConsPulp'),consMachine=value('ddeConsMachine'),consBoiler=value('ddeConsBoiler');
+  const consPulp=value('ddeConsPulp'),consMachine=electricityToProductionUnits(),consBoiler=value('ddeConsBoiler');
+  const electricityProductionUnits=electricityProductionUnitData();
   const totalConsumption=consPulp+consMachine+consBoiler;
   const electricityRate=value('ddeElectricityRate');
   const electricityAmount=totalConsumption*electricityRate;
@@ -13630,7 +13677,7 @@ function collect(){
     pulpStandardDetails:standardResult.details,
     wapdaPaper,wapdaBoard,totalWapda,
     solar,totalSolar,totalElectricity,
-    consPulp,consMachine,consBoiler,totalConsumption,
+    consPulp,consMachine,consBoiler,electricityProductionUnits,totalConsumption,
     electricityRate,electricityAmount,
     electricityBalance:totalElectricity-totalConsumption,
     steamProduction:value('ddeSteamProduction'),
@@ -13654,9 +13701,11 @@ function clearForm(){
     if($d('#ddeAsh'+i))$d('#ddeAsh'+i).value=''
   }
   if($d('#ddeWoodPulp'))$d('#ddeWoodPulp').textContent='0.000 Ton';
-  ['ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeElectricityRate','ddeConsPulp','ddeConsMachine','ddeConsBoiler',
+  ['ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsBoiler',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
-    .forEach(id=>$d('#'+id).value='');
+    .forEach(id=>{const el=$d('#'+id);if(el)el.value=''});
+  renderElectricityProductionUnitRows();
+  applyElectricityRateFromMaster();
   ensureDdeMasterLists();
   loadMaterialBody('ddeBoilerBody','boiler',ddeDefaultRows('boiler'),false);
   loadMaterialBody('ddePulpBody','pulp',ddeDefaultRows('pulp'),false);
@@ -13706,13 +13755,13 @@ function editRecord(id){
     if($d('#ddeProd'+i))$d('#ddeProd'+i).value=u?.production||'';
     if($d('#ddeAsh'+i))$d('#ddeAsh'+i).value=u?.ash||''
   }
-  $d('#ddeWoodPulp').value=r.woodPulp||'';
-  $d('#ddeElectricityRate').value=r.electricityRate||'';
+  if($d('#ddeWoodPulp'))$d('#ddeWoodPulp').textContent=num(r.woodPulp).toFixed(3)+' Ton';
+  applyElectricityRateFromMaster();
+  renderElectricityProductionUnitRows(r.electricityProductionUnits||[]);
   $d('#ddeWapdaPaper').value=r.wapdaPaper||'';
   $d('#ddeWapdaBoard').value=r.wapdaBoard||'';
   [1,2,3,4,5].forEach((i,idx)=>$d('#ddeSolar'+i).value=(r.solar||[])[idx]||'');
   $d('#ddeConsPulp').value=r.consPulp||'';
-  $d('#ddeConsMachine').value=r.consMachine||'';
   $d('#ddeConsBoiler').value=r.consBoiler||'';
   $d('#ddeSteamProduction').value=r.steamProduction||'';
   $d('#ddeSteamPulp').value=r.steamPulp||'';
@@ -13806,6 +13855,9 @@ function feedDashboard(){
   set('pcPrevAsh',prev.ash.toFixed(2)+'%')
 }
 function openPage(){
+  loadUnitNames();
+  renderElectricityProductionUnitRows();
+  applyElectricityRateFromMaster();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   $d('#panel-daily-data-entry').classList.add('active');
   document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
@@ -13829,7 +13881,7 @@ function bindEnterNavigation(){
     Array.from({length:productionRowCount()},(_,i)=>'ddeAsh'+(i+1)),
     ['ddeWapdaPaper','ddeWapdaBoard'],
     ['ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5'],
-    ['ddeElectricityRate','ddeConsPulp','ddeConsBoiler','ddeConsMachine'],
+    ['ddeConsPulp','ddeConsBoiler'],
     ['ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
   ];
 
@@ -13869,10 +13921,12 @@ function init(){
   try{ddeIsCurrent=localStorage.getItem('erpStudioLastPanel')==='daily-data-entry'}catch(e){}
   if(ddeIsCurrent)openPage();
   loadUnitNames();
+  renderElectricityProductionUnitRows();
+  applyElectricityRateFromMaster();
   bindDate();
   bindEnterNavigation();
-  ['ddeWapdaPaper','ddeElectricityRate',
-   'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
+  ['ddeWapdaPaper',
+   'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
   $d('#ddeSaveBtn').onclick=saveRecord;
   $d('#ddeClearBtn').onclick=clearForm;
@@ -13978,6 +14032,32 @@ function activeSubGroupsFor(group){
     .sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.name||'').localeCompare(String(b.name||'')))
 }
 const $m=s=>document.querySelector(s);
+const ELECTRICITY_RATE_KEY='erpElectricityRateControlV1';
+function loadElectricityRateControl(){
+  try{
+    const x=JSON.parse(localStorage.getItem(ELECTRICITY_RATE_KEY)||'null');
+    return x&&typeof x==='object'?{
+      mode:x.mode==='change'?'change':'keep',
+      rate:num(x.rate),
+      effectiveDate:x.effectiveDate||todayText()
+    }:{mode:'keep',rate:0,effectiveDate:todayText()}
+  }catch(e){return {mode:'keep',rate:0,effectiveDate:todayText()}}
+}
+function saveElectricityRateControl(){
+  const mode=$m('#mgrElectricityRateMode')?.value==='change'?'change':'keep';
+  const rate=num($m('#mgrElectricityRate')?.value);
+  const effectiveDate=fmtDate($m('#mgrElectricityRateDate')?.value)||todayText();
+  localStorage.setItem(ELECTRICITY_RATE_KEY,JSON.stringify({mode,rate,effectiveDate,updatedAt:new Date().toISOString()}));
+  window.dispatchEvent(new CustomEvent('erp-electricity-rate-updated',{detail:{mode,rate,effectiveDate}}));
+  if(window.toast)toast('Electricity rate saved')
+}
+function renderElectricityRateControl(){
+  const x=loadElectricityRateControl();
+  if($m('#mgrElectricityRateMode'))$m('#mgrElectricityRateMode').value=x.mode;
+  if($m('#mgrElectricityRate'))$m('#mgrElectricityRate').value=x.rate||'';
+  if($m('#mgrElectricityRateDate'))$m('#mgrElectricityRateDate').value=x.effectiveDate||todayText()
+}
+
 let editing={group:'',id:''};
 
 function esc(v){
@@ -14226,6 +14306,36 @@ function build(){
   const host=$m('#mmStandaloneHost');if(!host)return;
   host.innerHTML=`
     <datalist id="mgrItemList"></datalist><datalist id="mgrUnitList"></datalist>
+
+    <div class="mgr-utility-rate-card">
+      <div class="mgr-head">
+        <div>
+          <h3>Electricity Rate Control</h3>
+          <p>Set the electricity rate here once. Daily Data Entry will pick it automatically.</p>
+        </div>
+        <button class="btn btn-primary" id="mgrSaveElectricityRate" type="button">Save Electricity Rate</button>
+      </div>
+      <div class="mgr-grid mgr-utility-rate-grid">
+        <div class="mgr-field">
+          <label>Rate Behaviour</label>
+          <select id="mgrElectricityRateMode" class="mgr-control">
+            <option value="keep">Keep Current Rate</option>
+            <option value="change">Change Rate</option>
+          </select>
+        </div>
+        <div class="mgr-field">
+          <label>Electricity Rate / Unit</label>
+          <input id="mgrElectricityRate" class="mgr-control" type="number" step="any" placeholder="0">
+        </div>
+        <div class="mgr-field">
+          <label>Effective Date</label>
+          <input id="mgrElectricityRateDate" class="mgr-control" placeholder="25-6">
+        </div>
+      </div>
+      <div class="mgr-note">
+        <b>Keep Current Rate</b> keeps this rate for future daily entries. Select <b>Change Rate</b> when the tariff changes, enter the new rate and effective date, then save.
+      </div>
+    </div>
 
     <div class="mgr-entry-card">
       <div class="mgr-head">
@@ -14490,6 +14600,9 @@ function renderList(){
   document.querySelectorAll('.mgr-hist').forEach(b=>b.onclick=()=>showHistory(b.dataset.g,b.dataset.id))
 }
 function bind(){
+  $m('#mgrSaveElectricityRate')?.addEventListener('click',saveElectricityRateControl);
+  $m('#mgrElectricityRateDate')?.addEventListener('blur',e=>{e.target.value=fmtDate(e.target.value)||e.target.value});
+  renderElectricityRateControl();
   $m('#mgrGroup').onchange=()=>{renderStandardField();renderSubGroupOptions();$m('#mgrCostCentre').value=groupDef(currentGroup()).title;$m('#mgrSequence').value=nextSequence(currentGroup())};
   const matInput=$m('#mgrMaterial');
   matInput.onfocus=()=>{ if(matInput.value.trim())renderMaterialPopup(matInput.value); else closeMaterialPopup() };
@@ -14805,6 +14918,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <style id="dynamicMaterialGroupsV1507Style">
 #panel-material-master .mgr-table{min-width:1280px}
 #panel-masters .master-tabs{flex-wrap:wrap}
+</style>
+
+
+<style id="electricityRateActiveUnitsV1510Style">
+#panel-material-master .mgr-utility-rate-card{
+  border:1px solid var(--border);border-radius:10px;background:var(--surface);
+  padding:10px 12px;margin-bottom:10px
+}
+#panel-material-master .mgr-utility-rate-grid{grid-template-columns:1fr 1fr 1fr}
+#panel-daily-data-entry .dde-auto-rate-wrap{display:flex;align-items:center;gap:7px;justify-content:flex-end}
+#panel-daily-data-entry .dde-auto-rate-wrap input{max-width:260px;background:color-mix(in srgb,var(--primary) 4%,var(--surface))}
+#panel-daily-data-entry .dde-auto-rate-wrap small{font-size:7px;color:var(--muted);white-space:nowrap}
 </style>
 
 </body></html>
