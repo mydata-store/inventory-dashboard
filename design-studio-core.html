@@ -1833,6 +1833,10 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
   min-width:1250px;
 }
 </style>
+
+<style>
+.mm-section{margin-top:12px;border:1px solid var(--line,#cbdaf0);border-radius:12px;overflow:hidden;background:#fff}.mm-head{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:#f6f9ff;border-bottom:1px solid var(--line,#cbdaf0)}.mm-head h3{margin:0;font-size:13px}.mm-table th,.mm-table td{padding:5px 7px}.mm-table th:first-child,.mm-table td:first-child{width:60px;text-align:center}.mm-table th:last-child,.mm-table td:last-child{width:90px;text-align:center}.mm-table .fcc-master-control{min-height:30px;height:30px;padding:4px 7px}.mm-table .mm-material{min-width:260px}.mm-table .mm-unit{min-width:100px}.mm-table .mm-rate,.mm-table .mm-standard{min-width:120px}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -11947,6 +11951,20 @@ function saveDpcEntry(){const setup=dpcSelectedSetup();if(!setup)return toast('S
 function clearDpcEntry(){f$('#fccDpcDate').value='';f$('#fccDpcSetup').value='';loadDpcSetup()}
 function renderDpcHistory(){const body=f$('#fccDpcHistoryBody');if(!body)return;let q=ft(f$('#fccDpcSearch')?.value).toLowerCase(),rows=dpcRecords().slice();if(q)rows=rows.filter(r=>[r.date,r.department,r.process,r.output,...(r.rows||[]).flatMap(x=>[x.material,x.status])].join(' ').toLowerCase().includes(q));const flat=[];rows.forEach(r=>(r.rows||[]).forEach(x=>flat.push({...x,date:r.date,department:r.department,process:r.process,output:r.output,outputUnit:r.outputUnit})));body.innerHTML=flat.length?flat.map(x=>`<tr><td>${x.date}</td><td>${x.department}</td><td>${x.process}</td><td>${x.material}</td><td>${Number(x.consumed||0).toFixed(3)}</td><td>${Number(x.actualOutput||0).toFixed(3)}</td><td>${Number(x.actualYield||0).toFixed(2)}${x.standardType==='Yield %'?'%':''}</td><td>${Number(x.standardValue||0).toFixed(2)}${x.standardType==='Yield %'?'%':''}</td><td>${Number(x.expectedOutput||0).toFixed(3)}</td><td>${Number(x.outputDifference||0).toFixed(3)}</td><td>${Number(x.standardMaterialRequired||0).toFixed(3)}</td><td>${Number(x.materialVariance||0).toFixed(3)}</td><td>${dpcStatusBadge(x.status||'On Standard')}</td></tr>`).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px">No daily production & consumption records saved yet.</td></tr>'}
 function renderAsh(){renderDpcSetupOptions();renderDpcHistory()}
+const FCC_MATERIAL_MASTER_KEY='erp_daily_material_master_v1';
+const FCC_MATERIAL_GROUPS=[
+  ['pulp','Pulp Mill'],['boiler','Boiler House'],['sulphite','Sulphite Plant'],
+  ['stockpulp','Stock Pulp Plant'],['lubricants','Lubricants'],['others','Others']
+];
+function materialMaster(){try{const x=JSON.parse(localStorage.getItem(FCC_MATERIAL_MASTER_KEY)||'{}');return x&&typeof x==='object'?x:{}}catch(e){return {}}}
+function saveMaterialMaster(x){localStorage.setItem(FCC_MATERIAL_MASTER_KEY,JSON.stringify(x));window.dispatchEvent(new CustomEvent('erp-material-master-updated'))}
+function mmEsc(v){return String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function mmRowHtml(group,row={},i=0){return `<tr data-mm-group="${group}"><td class="mm-sr">${i+1}</td><td><input class="fcc-master-control mm-material" value="${mmEsc(row.material)}" placeholder="Material"></td><td><input class="fcc-master-control mm-unit" value="${mmEsc(row.unit)}" placeholder="Unit"></td><td><input class="fcc-master-control mm-rate" type="number" step="any" value="${row.rate??''}" placeholder="0"></td><td><input class="fcc-master-control mm-standard" value="${mmEsc(row.standard)}" placeholder="Standard"></td><td><button class="fcc-btn mm-delete" type="button">Delete</button></td></tr>`}
+function mmBindBody(body){body.querySelectorAll('.mm-delete').forEach(b=>b.onclick=()=>{b.closest('tr').remove();[...body.querySelectorAll('tr')].forEach((tr,i)=>tr.querySelector('.mm-sr').textContent=i+1)})}
+function mmAddRow(group,data={}){const body=f$('#mmBody-'+group);if(!body)return;body.insertAdjacentHTML('beforeend',mmRowHtml(group,data,body.children.length));mmBindBody(body);body.lastElementChild.querySelector('.mm-material')?.focus()}
+function renderMaterialMaster(){const host=f$('#fccMaterialMasterSections');if(!host)return;const db=materialMaster();host.innerHTML=FCC_MATERIAL_GROUPS.map(([key,title])=>`<div class="mm-section"><div class="mm-head"><h3>${title}</h3><button class="fcc-btn mm-add" data-group="${key}" type="button">+ Add Row</button></div><div class="fcc-table-wrap"><table class="fcc-table mm-table"><thead><tr><th>Sr No.</th><th>Material</th><th>Unit</th><th>Rate</th><th>Standard</th><th>Action</th></tr></thead><tbody id="mmBody-${key}">${(db[key]&&db[key].length?db[key]:[{}]).map((r,i)=>mmRowHtml(key,r,i)).join('')}</tbody></table></div></div>`).join('');host.querySelectorAll('.mm-add').forEach(b=>b.onclick=()=>mmAddRow(b.dataset.group));FCC_MATERIAL_GROUPS.forEach(([key])=>mmBindBody(f$('#mmBody-'+key)))}
+function collectMaterialMaster(){const out={};FCC_MATERIAL_GROUPS.forEach(([key])=>{const body=f$('#mmBody-'+key);out[key]=body?[...body.querySelectorAll('tr')].map(tr=>({material:ft(tr.querySelector('.mm-material')?.value),unit:ft(tr.querySelector('.mm-unit')?.value),rate:fn(tr.querySelector('.mm-rate')?.value),standard:ft(tr.querySelector('.mm-standard')?.value)})).filter(x=>x.material):[]});return out}
+function saveAllMaterials(){saveMaterialMaster(collectMaterialMaster());toast('Material Master saved and connected to Daily Data Entry')}
 function renderVersions(){
   const rows=versions().slice().reverse();
   f$('#fccVersionsBody').innerHTML=rows.length?rows.map(x=>`<tr><td>${x.no}</td><td>${x.name}</td><td>v${x.version}</td><td><div class="fcc-formula-box">${x.formula}</div></td><td>${x.unit}</td><td>${new Date(x.savedAt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:25px">No previous versions yet.</td></tr>'
@@ -11970,7 +11988,7 @@ function build(){
   const host=document.querySelector('main.content');if(!host)return;
   const sec=document.createElement('section');sec.className='panel purchase-page';sec.id='panel-formula-control-center';
   sec.innerHTML=`<div class="fcc-topbar">
-    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Daily Production & Consumption</button><button class="fcc-tab" data-fcctab="versions">Version History</button></div><div style="display:flex;gap:8px">
+    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Daily Production & Consumption</button><button class="fcc-tab" data-fcctab="materials">Material Master</button></div><div style="display:flex;gap:8px">
       <button class="fcc-btn" id="fccPageController">⚙ Page Controller</button>
       <button class="fcc-btn dark" data-fcctab="mapping">Cost Group Mapping</button>
     </div></div>
@@ -12125,7 +12143,12 @@ function build(){
 <div class="fcc-std-rule-note" style="margin-top:12px"><b>Working rule:</b> Actual Yield = Actual Output ÷ Material Consumed. Expected Output = Material Consumed × Standard Yield %. Standard Material Required = Actual Output ÷ Standard Yield %. Status compares Actual Yield with Standard Yield.</div>
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="fcc-btn" id="fccDpcClear">Clear</button><button class="fcc-btn dark" id="fccDpcSave">Save Daily Record</button></div></div>
 <div class="fcc-card"><div class="fcc-toolbar"><div><h3 style="margin:0">Daily Production & Consumption History</h3><div style="font-size:10px;color:var(--muted);margin-top:4px">Search by date, department, process, material or status.</div></div><input id="fccDpcSearch" class="fcc-master-control" style="max-width:330px" placeholder="Search history..."></div><div class="fcc-table-wrap"><table class="fcc-table dpc-history-table"><thead><tr><th>Date</th><th>Department</th><th>Process</th><th>Material</th><th>Consumed</th><th>Actual Output</th><th>Actual Yield</th><th>Standard</th><th>Expected Output</th><th>Output Difference</th><th>Standard Material Required</th><th>Extra / Saved Material</th><th>Status</th></tr></thead><tbody id="fccDpcHistoryBody"></tbody></table></div></div>
-</div><div class="fcc-section" data-fccsection="versions"><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>No.</th><th>Formula</th><th>Version</th><th>Previous Formula</th><th>Unit</th><th>Saved At</th></tr></thead><tbody id="fccVersionsBody"></tbody></table></div></div>
+</div><div class="fcc-section" data-fccsection="materials">
+  <div class="fcc-card">
+    <div class="fcc-toolbar"><div><h3 style="margin:0">Material Master</h3><div style="font-size:10px;color:var(--muted);margin-top:4px">Maintain daily-use materials department-wise. Saved materials feed the Daily Data Entry material fields.</div></div><button class="fcc-btn dark" id="fccSaveAllMaterials">Save All Materials</button></div>
+    <div id="fccMaterialMasterSections"></div>
+  </div>
+</div>
    <div class="fcc-section" data-fccsection="mapping"><div class="fcc-grid"><div class="fcc-span-2"><label>Formula</label><select id="fccMapFormula"></select></div><div><label>Cost Group</label><input id="fccMapGroup" placeholder="e.g. Raw Material / Production"></div><div><label>Department</label><input id="fccMapDepartment"></div><div class="fcc-span-2"><label>Report / Use</label><input id="fccMapReport" placeholder="e.g. Daily Costing / Ash Report"></div></div><button class="fcc-btn dark" id="fccSaveMapping" style="margin:10px 0">Save Mapping</button><div class="fcc-table-wrap"><table class="fcc-table"><thead><tr><th>Formula</th><th>Cost Group</th><th>Department</th><th>Report / Use</th><th>Action</th></tr></thead><tbody id="fccMappingBody"></tbody></table></div></div>
   </div>
   
@@ -12154,6 +12177,7 @@ function build(){
 <div id="fccViewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;padding:8vh 12vw"><div class="fcc-card" style="max-width:850px;margin:auto"><div class="fcc-toolbar"><h3>Formula Detail</h3><button class="fcc-btn" id="fccCloseView">Close</button></div><div class="fcc-grid"><div><label>No.</label><div id="fccViewNo"></div></div><div class="fcc-span-2"><label>Name</label><div id="fccViewName"></div></div><div><label>Unit</label><div id="fccViewUnit"></div></div><div class="fcc-span-4"><label>Formula</label><div class="fcc-formula-box" id="fccViewFormula"></div></div><div><label>Status</label><div id="fccViewStatus"></div></div><div><label>Version</label><div id="fccViewVersion"></div></div></div></div></div>`;
   host.appendChild(sec);
   sec.querySelectorAll('[data-fcctab]').forEach(b=>b.onclick=()=>showTab(b.dataset.fcctab));
+  f$('#fccSaveAllMaterials')&&(f$('#fccSaveAllMaterials').onclick=saveAllMaterials);
   f$('#fccSearch').oninput=renderLibrary;
   f$('#fccNewFormula').onclick=()=>{clearEditor();showTab('tester')};
   f$('#fccNewFormulaFromTester').onclick=clearEditor;
@@ -12186,7 +12210,7 @@ function build(){
 }
 function renderAll(){
   if(!f$('#panel-formula-control-center'))return;
-  renderLibrary();renderTester();renderStandards();renderAsh();renderVersions();renderMappings();
+  renderLibrary();renderTester();renderStandards();renderAsh();renderVersions();renderMaterialMaster();renderMappings();
   f$('#fccMapFormula').innerHTML='<option value="">Select Formula</option>'+formulas().map(x=>`<option value="${x.id}">${x.no} — ${x.name}</option>`).join('')
 }
 function open(){
@@ -12582,13 +12606,19 @@ function saveUnitNames(){
   localStorage.setItem(UNIT_KEY,JSON.stringify(n))
 }
 
+const DDE_MATERIAL_MASTER_KEY='erp_daily_material_master_v1';
+function ddeMaster(){try{return JSON.parse(localStorage.getItem(DDE_MATERIAL_MASTER_KEY)||'{}')||{}}catch(e){return {}}}
+function ddeMasterRows(section){const map={boiler:'boiler',pulp:'pulp',sulphite:'sulphite',units:'stockpulp'};return (ddeMaster()[map[section]]||[])}
+function ddeMasterListId(section){return 'ddeMasterList-'+section}
+function ensureDdeMasterLists(){['boiler','pulp','sulphite','units'].forEach(section=>{let dl=$d('#'+ddeMasterListId(section));if(!dl){dl=document.createElement('datalist');dl.id=ddeMasterListId(section);document.body.appendChild(dl)}dl.innerHTML=ddeMasterRows(section).map(x=>`<option value="${String(x.material||'').replace(/"/g,'&quot;')}">${x.unit||''}${x.rate?' | Rate '+x.rate:''}${x.standard?' | Std '+x.standard:''}</option>`).join('')})}
+function ddeDefaultRows(section){const rows=ddeMasterRows(section);return rows.length?rows.map(x=>({item:x.material,unit:x.unit,rate:x.rate,standard:x.standard})): [{}]}
 function materialRowHtml(section,index,unitsMode=false,data={}){
   if(unitsMode){
     const opening=num(data.opening),received=num(data.received),u1=num(data.unit1),u2=num(data.unit2),u3=num(data.unit3);
     const total=u1+u2+u3,balance=opening+received-total;
     return `<tr data-section="${section}">
       <td class="dde-mat-sr">${index+1}</td>
-      <td><input class="dde-control dde-mat-item" value="${data.item||''}" placeholder="Type item..."></td>
+      <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
       <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-u1" type="number" step="any" value="${u1||''}" placeholder="0"></td>
@@ -12602,7 +12632,7 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
   const opening=num(data.opening),received=num(data.received),used=num(data.used),balance=opening+received-used;
   return `<tr data-section="${section}">
     <td class="dde-mat-sr">${index+1}</td>
-    <td><input class="dde-control dde-mat-item" value="${data.item||''}" placeholder="Type item..."></td>
+    <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
     <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
     <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
     <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
@@ -12855,10 +12885,11 @@ function clearForm(){
   ['ddeWapdaPaper','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeElectricityRate','ddeConsPulp','ddeConsMachine','ddeConsBoiler',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler']
     .forEach(id=>$d('#'+id).value='');
-  loadMaterialBody('ddeBoilerBody','boiler',[{}],false);
-  loadMaterialBody('ddePulpBody','pulp',[{}],false);
-  loadMaterialBody('ddeSulphiteBody','sulphite',[{}],false);
-  loadMaterialBody('ddeUnitsBody','units',[{}],true);
+  ensureDdeMasterLists();
+  loadMaterialBody('ddeBoilerBody','boiler',ddeDefaultRows('boiler'),false);
+  loadMaterialBody('ddePulpBody','pulp',ddeDefaultRows('pulp'),false);
+  loadMaterialBody('ddeSulphiteBody','sulphite',ddeDefaultRows('sulphite'),false);
+  loadMaterialBody('ddeUnitsBody','units',ddeDefaultRows('units'),true);
   recalc();
   $d('#ddeSaveBtn').textContent='Save Daily Record'
 }
@@ -13072,10 +13103,11 @@ function init(){
   $d('#ddeAddSulphiteRow').onclick=()=>addMaterialRow('sulphite','ddeSulphiteBody',false,{});
   $d('#ddeAddUnitsRow').onclick=()=>addMaterialRow('units','ddeUnitsBody',true,{});
 
-  loadMaterialBody('ddeBoilerBody','boiler',[{}],false);
-  loadMaterialBody('ddePulpBody','pulp',[{}],false);
-  loadMaterialBody('ddeSulphiteBody','sulphite',[{}],false);
-  loadMaterialBody('ddeUnitsBody','units',[{}],true);
+  ensureDdeMasterLists();
+  loadMaterialBody('ddeBoilerBody','boiler',ddeDefaultRows('boiler'),false);
+  loadMaterialBody('ddePulpBody','pulp',ddeDefaultRows('pulp'),false);
+  loadMaterialBody('ddeSulphiteBody','sulphite',ddeDefaultRows('sulphite'),false);
+  loadMaterialBody('ddeUnitsBody','units',ddeDefaultRows('units'),true);
 
   renderHistory();
   recalc();
@@ -13088,6 +13120,7 @@ function init(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
 else init();
 
+window.addEventListener('erp-material-master-updated',()=>{ensureDdeMasterLists()});
 window.ERPDailyDataEntry={open:openPage,refresh:feedDashboard};
 })();
 </script>
