@@ -4759,19 +4759,25 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
           </table>
         </div>
 
-        <div class="dde-table-wrap">
-          <table class="dde-table" style="min-width:0">
-            <thead><tr><th colspan="2">Steam Summary</th></tr></thead>
-            <tbody>
-              <tr><td>Total Steam Production</td><td><b id="ddeSteamSummaryProduction">0.000 Ton</b></td></tr>
-              <tr><td>Total Steam Consumed</td><td><b id="ddeSteamSummaryConsumed">0.000 Ton</b></td></tr>
-              <tr><td>Steam Balance</td><td><b id="ddeSteamSummaryBalance">0.000 Ton</b></td></tr>
-              <tr><td>Steam / Ton Paper</td><td><b id="ddeSteamPerTonPaper">0.000 Ton/Ton</b></td></tr>
-              <tr><td>Steam / Ton Pulp</td><td><b id="ddeSteamPerTonPulp">0.000 Ton/Ton</b></td></tr>
-              <tr><td>Status</td><td><span id="ddeSteamStatus" class="dde-status ok">Balanced</span></td></tr>
-            </tbody>
-          </table>
-        </div>
+        <div class="dde-steam-summary-shell-v1518"><div class="dde-steam-summary-title-v1518">Steam Summary</div><div class="dde-steam-summary-columns-v1518">
+<div class="dde-steam-summary-col-v1518">
+<div class="dde-summary-row-v1518"><span>Total Steam Produced</span><b id="ddeSteamSummaryProduced">0.000 Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Total Material Consumed</span><b id="ddeSteamMaterialConsumed">0.000 Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Steam Yield %</span><b id="ddeSteamYieldPct">0.00%</b></div>
+<div class="dde-summary-row-v1518"><span>Total Cost</span><b id="ddeSteamTotalCost">PKR 0.00</b></div>
+<div class="dde-summary-row-v1518"><span>Cost / Ton Steam</span><b id="ddeSteamCostPerTon">PKR 0.00</b></div>
+<div class="dde-steam-summary-subhead-v1518">Paper</div>
+<div class="dde-summary-row-v1518"><span>Total Paper Produced</span><b id="ddeSteamPaperProduced">0.000 Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Steam Cost to Paper</span><b id="ddeSteamCostToPaper">PKR 0.00</b></div>
+<div class="dde-summary-row-v1518"><span>Steam Cost / Ton Paper</span><b id="ddeSteamCostPerTonPaper">PKR 0.00</b></div>
+</div>
+<div class="dde-steam-summary-col-v1518">
+<div class="dde-summary-row-v1518"><span>Total Steam Produced</span><b id="ddeSteamSummaryProducedRight">0.000 Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Steam to Pulp Mill</span><b id="ddeSteamToPulpSummary">0.000 Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Total Pulp Produced</span><b id="ddeSteamPulpProduced">0.000 Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Steam / Ton Pulp</span><b id="ddeSteamPerTonPulpNew">0.000 Ton/Ton</b></div>
+<div class="dde-summary-row-v1518"><span>Steam Cost / Ton Pulp</span><b id="ddeSteamCostPerTonPulp">PKR 0.00</b></div>
+<div id="ddeSteamSummaryUnitRows"></div></div></div></div>
       </div>
     </div>
 
@@ -13111,7 +13117,13 @@ function renderSteamProductionUnitRows(saved=[]){
   tbody.querySelectorAll('.dde-steam-unit-input').forEach(el=>{
     el.addEventListener('input',recalc);
     el.addEventListener('change',recalc)
-  })
+  });
+  renderSteamSummaryUnitRows()
+}
+function renderSteamSummaryUnitRows(){
+ const host=$d('#ddeSteamSummaryUnitRows');if(!host)return;host.innerHTML='';
+ activeProductionUnits().forEach(u=>{const safe=String(u.id||u.code||u.name).replace(/[^a-zA-Z0-9_-]/g,'_');
+ [[`Steam to ${u.name}`,`ddeSteamSummaryToUnit_${safe}`,'0.000 Ton'],[`Total Production ${u.name}`,`ddeSteamSummaryProdUnit_${safe}`,'0.000 Ton'],[`Total Cost ${u.name}`,`ddeSteamSummaryCostUnit_${safe}`,'PKR 0.00'],[`Steam Cost / Ton ${u.name}`,`ddeSteamSummaryCostPerTonUnit_${safe}`,'PKR 0.00']].forEach(([label,id,val])=>{const row=document.createElement('div');row.className='dde-summary-row-v1518';row.innerHTML=`<span>${label}</span><b id="${id}">${val}</b>`;host.appendChild(row)})})
 }
 function steamProductionUnitData(){
   return [...document.querySelectorAll('.dde-steam-unit-input')].map(el=>({
@@ -13606,6 +13618,24 @@ function recalc(){
   const steamBoiler=value('ddeSteamBoiler');
   const steamConsumed=steamPulp+steamUnitsTotal+steamBoiler;
   const steamBalance=steamProduction-steamConsumed;
+  const ssMaterial=(typeof totalBoilerMaterialTon!=='undefined'?totalBoilerMaterialTon:0);
+  const ssYield=ssMaterial>0?(steamProduction/ssMaterial)*100:0;
+  const ssCost=(typeof boilerMaterialUsedValue!=='undefined'?boilerMaterialUsedValue:0);
+  const ssCostTon=steamProduction>0?ssCost/steamProduction:0;
+  const ssPaper=totalProduction, ssPaperCost=steamProduction>0?ssCost*(steamConsumed>0?Math.min(1,steamConsumed/steamProduction):0):0;
+  const ssPaperCostTon=ssPaper>0?ssPaperCost/ssPaper:0, ssPulp=pulpProduced;
+  const ssPulpRatio=ssPulp>0?steamPulp/ssPulp:0, ssPulpCost=steamProduction>0?ssCost*(steamPulp/steamProduction):0, ssPulpCostTon=ssPulp>0?ssPulpCost/ssPulp:0;
+  setText('ddeSteamSummaryProduced',fmt(steamProduction)+' Ton');setText('ddeSteamSummaryProducedRight',fmt(steamProduction)+' Ton');
+  setText('ddeSteamMaterialConsumed',fmt(ssMaterial)+' Ton');setText('ddeSteamYieldPct',ssYield.toFixed(2)+'%');
+  setText('ddeSteamTotalCost','PKR '+money(ssCost));setText('ddeSteamCostPerTon','PKR '+money(ssCostTon));
+  setText('ddeSteamPaperProduced',fmt(ssPaper)+' Ton');setText('ddeSteamCostToPaper','PKR '+money(ssPaperCost));setText('ddeSteamCostPerTonPaper','PKR '+money(ssPaperCostTon));
+  setText('ddeSteamToPulpSummary',fmt(steamPulp)+' Ton');setText('ddeSteamPulpProduced',fmt(ssPulp)+' Ton');setText('ddeSteamPerTonPulpNew',fmt(ssPulpRatio)+' Ton/Ton');setText('ddeSteamCostPerTonPulp','PKR '+money(ssPulpCostTon));
+  steamProductionUnitData().forEach(x=>{const u=activeProductionUnits().find(a=>String(a.id)===String(x.id)||String(a.code)===String(x.code)||String(a.name)===String(x.name));if(!u)return;
+   const safe=String(u.id||u.code||u.name).replace(/[^a-zA-Z0-9_-]/g,'_');
+   const pi=[...document.querySelectorAll('.dde-production-unit-input')].find(el=>String(el.dataset.unitId||'')===String(u.id||'')||String(el.dataset.unitCode||'')===String(u.code||'')||String(el.dataset.unitName||'')===String(u.name||''));
+   const up=num(pi?.value), uc=steamProduction>0?ssCost*(x.qty/steamProduction):0, uct=up>0?uc/up:0;
+   setText('ddeSteamSummaryToUnit_'+safe,fmt(x.qty)+' Ton');setText('ddeSteamSummaryProdUnit_'+safe,fmt(up)+' Ton');setText('ddeSteamSummaryCostUnit_'+safe,'PKR '+money(uc));setText('ddeSteamSummaryCostPerTonUnit_'+safe,'PKR '+money(uct))});
+
 
   const paperProduction=totalProd;
   const pulpProduction=pulpProduced;
@@ -15075,4 +15105,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 </style>
 
+<style id="steamSummaryCardsV1518Style">
+#panel-daily-data-entry .dde-steam-summary-shell-v1518{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);min-width:0}
+#panel-daily-data-entry .dde-steam-summary-title-v1518{padding:7px 9px;background:color-mix(in srgb,var(--primary) 7%,var(--surface));border-bottom:1px solid var(--border);font-size:9px;font-weight:900}
+#panel-daily-data-entry .dde-steam-summary-columns-v1518{display:grid;grid-template-columns:1fr 1fr}
+#panel-daily-data-entry .dde-steam-summary-col-v1518:first-child{border-right:1px solid var(--border)}
+#panel-daily-data-entry .dde-summary-row-v1518{min-height:27px;padding:3px 7px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-bottom:1px solid var(--border);font-size:8px}
+#panel-daily-data-entry .dde-summary-row-v1518 span{font-weight:700} #panel-daily-data-entry .dde-summary-row-v1518 b{white-space:nowrap;font-size:8.2px}
+#panel-daily-data-entry .dde-steam-summary-subhead-v1518{padding:5px 7px;background:color-mix(in srgb,var(--primary) 4%,var(--surface));border-bottom:1px solid var(--border);font-size:8px;font-weight:900}
+</style>
 </body></html>
