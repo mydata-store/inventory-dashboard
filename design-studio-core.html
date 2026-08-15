@@ -4839,15 +4839,11 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
           <h3>8. Production Units Material Consumption</h3>
           <p>Opening + Received − Total Consumed = Balance.</p>
         </div>
-        <button class="btn btn-sm" type="button" id="ddeAddUnitsRow">+ Add Row</button>
+        
       </div>
       <div class="dde-table-wrap">
         <table class="dde-table dde-material-table dde-units-material-table" id="ddeUnitsTable">
-          <thead><tr>
-            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening</th><th>Received</th>
-            <th>Consumed Unit 1</th><th>Consumed Unit 2</th><th>Consumed Unit 3</th>
-            <th>Total Consumed</th><th>Balance</th><th>Rate / Ton</th><th>Used Value</th><th>Action</th>
-          </tr></thead>
+          <thead id="ddeUnitsHead"></thead>
           <tbody id="ddeUnitsBody"></tbody>
         </table>
       </div>
@@ -13035,6 +13031,10 @@ function ddeMasterRows(section){const map={boiler:'boiler',pulp:'pulp',sulphite:
 function ddeMasterListId(section){return 'ddeMasterList-'+section}
 function ensureDdeMasterLists(){['boiler','pulp','sulphite','units'].forEach(section=>{let dl=$d('#'+ddeMasterListId(section));if(!dl){dl=document.createElement('datalist');dl.id=ddeMasterListId(section);document.body.appendChild(dl)}dl.innerHTML=ddeMasterRows(section).map(x=>`<option value="${String(x.material||'').replace(/"/g,'&quot;')}">${x.unit||''}${x.rate?' | Rate '+x.rate:''}${x.standard?' | Std '+x.standard:''}</option>`).join('')})}
 function ddeDefaultRows(section){const rows=ddeMasterRows(section);return rows.length?rows.map(x=>({item:x.material,unit:x.unit,rate:x.rate,standard:x.standard})): [{}]}
+function activeStockPulpMaterials(){
+  return ddeMasterRows('units').filter(r=>String(r.status||'active').toLowerCase()!=='inactive')
+    .sort((a,b)=>num(a.sequence)-num(b.sequence)||String(a.material||'').localeCompare(String(b.material||'')))
+}
 
 function analysisUnitFor(masterUnit){
   // Daily entry always stays in the material's original/native unit.
@@ -13075,7 +13075,7 @@ function sectionMasterRecord(section,item){
 }
 function rowMaterialMeta(tr){
   const section=tr?.dataset?.section||'';
-  const item=tr?.querySelector('.dde-mat-item')?.value||'';
+  const item=tr?.querySelector('.dde-master-item')?.textContent||tr?.querySelector('.dde-mat-item')?.value||'';
   const ref=sectionMasterRecord(section,item);
   const masterUnit=ref?.unit||'';
   const reportUnit=masterUnit; // Daily entry remains native.
@@ -13097,22 +13097,37 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
   const reportRate=num(data.reportRate||rateToAnalysis(ref?.rate||data.sourceRate||0,masterUnit));
 
   if(unitsMode){
-    const opening=num(data.opening),received=num(data.received),u1=num(data.unit1),u2=num(data.unit2),u3=num(data.unit3);
-    const total=u1+u2+u3,balance=opening+received-total,usedValue=total*reportRate;
-    return `<tr data-section="${section}">
+    const units=activeProductionUnits();
+    const opening=num(data.opening),received=num(data.received);
+    const savedMap={};
+    (data.consumptionByUnit||[]).forEach(x=>{
+      if(x.id)savedMap['id:'+x.id]=num(x.qty);
+      if(x.code)savedMap['code:'+x.code]=num(x.qty);
+      if(x.name)savedMap['name:'+String(x.name).trim().toLowerCase()]=num(x.qty)
+    });
+    const legacy=[num(data.unit1),num(data.unit2),num(data.unit3)];
+    let total=0;
+    const unitCells=units.map((u,i)=>{
+      let q=0;
+      if(savedMap['id:'+u.id]!==undefined)q=savedMap['id:'+u.id];
+      else if(savedMap['code:'+u.code]!==undefined)q=savedMap['code:'+u.code];
+      else if(savedMap['name:'+u.name.toLowerCase()]!==undefined)q=savedMap['name:'+u.name.toLowerCase()];
+      else q=legacy[i]||0;
+      total+=q;
+      return `<td><input class="dde-control dde-unit-consume" data-unit-id="${u.id}" data-unit-code="${u.code}" data-unit-name="${u.name}" type="number" step="any" value="${q||''}" placeholder="0"></td>`
+    }).join('');
+    const balance=opening+received-total,usedValue=total*reportRate;
+    return `<tr data-section="${section}" data-master-controlled="true">
       <td class="dde-mat-sr">${index+1}</td>
-      <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
+      <td><div class="dde-master-item">${data.item||''}</div></td>
       <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
       <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
-      <td><input class="dde-control dde-mat-u1" type="number" step="any" value="${u1||''}" placeholder="0"></td>
-      <td><input class="dde-control dde-mat-u2" type="number" step="any" value="${u2||''}" placeholder="0"></td>
-      <td><input class="dde-control dde-mat-u3" type="number" step="any" value="${u3||''}" placeholder="0"></td>
+      ${unitCells}
       <td><b class="dde-mat-total">${total.toFixed(3)}</b></td>
       <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
-      <td><b class="dde-mat-rate">${money(reportRate)}</b><small class="dde-mat-source-note">${ref?.convertToTon?'Final report converts rate to Ton':''}</small></td>
+      <td><b class="dde-mat-rate">${money(reportRate)}</b></td>
       <td><b class="dde-mat-value">${money(usedValue)}</b></td>
-      <td><button class="btn btn-sm dde-mat-delete" type="button">Delete</button></td>
     </tr>`
   }
 
@@ -13144,6 +13159,7 @@ function bindMaterialRows(bodyId,unitsMode=false){
       })
     });
     tr.querySelector('.dde-mat-delete')?.addEventListener('click',()=>{
+      if(tr.dataset.masterControlled==='true')return;
       tr.remove();
       renumberMaterialRows(body);
       recalc()
@@ -13163,7 +13179,7 @@ function recalcMaterialRow(tr,unitsMode=false){
 
   let consumed=0;
   if(unitsMode){
-    consumed=num(tr.querySelector('.dde-mat-u1')?.value)+num(tr.querySelector('.dde-mat-u2')?.value)+num(tr.querySelector('.dde-mat-u3')?.value);
+    consumed=[...tr.querySelectorAll('.dde-unit-consume')].reduce((a,el)=>a+num(el.value),0);
     tr.querySelector('.dde-mat-total').textContent=consumed.toFixed(3);
     tr.querySelector('.dde-mat-balance').textContent=(opening+received-consumed).toFixed(3)
   }else{
@@ -13189,22 +13205,14 @@ function materialData(bodyId,unitsMode=false){
   return [...body.querySelectorAll('tr')].map(tr=>{
     const meta=rowMaterialMeta(tr);
     if(unitsMode){
-      const unit1=num(tr.querySelector('.dde-mat-u1')?.value),unit2=num(tr.querySelector('.dde-mat-u2')?.value),unit3=num(tr.querySelector('.dde-mat-u3')?.value);
-      const totalConsumed=unit1+unit2+unit3;
+      const consumptionByUnit=[...tr.querySelectorAll('.dde-unit-consume')].map(el=>({id:el.dataset.unitId||'',code:el.dataset.unitCode||'',name:el.dataset.unitName||'',qty:num(el.value)}));
+      const totalConsumed=consumptionByUnit.reduce((a,x)=>a+x.qty,0);
       const finalReportQty=qtyForFinalReport(meta.section,meta.item,totalConsumed,meta.masterUnit);
       return {
-        item:tr.querySelector('.dde-mat-item')?.value||'',
-        unit:meta.masterUnit,
-        rate:meta.sourceRate,
-        convertToTon:meta.convertToTon,
-        finalReportUnit:meta.finalReportUnit,
-        finalReportRate:meta.finalReportRate,
-        opening:num(tr.querySelector('.dde-mat-opening')?.value),
-        received:num(tr.querySelector('.dde-mat-received')?.value),
-        unit1,unit2,unit3,totalConsumed,
-        usedValue:totalConsumed*meta.sourceRate,
-        finalReportQty,
-        finalReportValue:finalReportQty*meta.finalReportRate
+        item:tr.querySelector('.dde-master-item')?.textContent||'',
+        unit:meta.masterUnit,rate:meta.sourceRate,convertToTon:meta.convertToTon,finalReportUnit:meta.finalReportUnit,finalReportRate:meta.finalReportRate,
+        opening:num(tr.querySelector('.dde-mat-opening')?.value),received:num(tr.querySelector('.dde-mat-received')?.value),
+        consumptionByUnit,totalConsumed,usedValue:totalConsumed*meta.sourceRate,finalReportQty,finalReportValue:finalReportQty*meta.finalReportRate
       }
     }
     const used=num(tr.querySelector('.dde-mat-used')?.value);
@@ -13240,7 +13248,17 @@ function clearMaterialBody(bodyId,unitsMode=false){
   body.innerHTML='';
   addMaterialRow(bodyId.replace('dde','').replace('Body',''),bodyId,unitsMode,{})
 }
+function renderProductionUnitsMaterialSection(savedRows=[]){
+  const head=$d('#ddeUnitsHead'),body=$d('#ddeUnitsBody');if(!head||!body)return;
+  const units=activeProductionUnits();
+  head.innerHTML=`<tr><th>Sr No</th><th>Item</th><th>Unit</th><th>Opening</th><th>Received</th>${units.map(u=>`<th>${u.shortName||u.name}</th>`).join('')}<th>Total Consumed</th><th>Balance</th><th>Rate</th><th>Used Value</th></tr>`;
+  const savedMap={};(savedRows||[]).forEach(r=>savedMap[String(r.item||'').trim().toLowerCase()]=r);
+  const rows=activeStockPulpMaterials();
+  body.innerHTML=rows.map((r,i)=>materialRowHtml('units',i,true,{...(savedMap[String(r.material||'').trim().toLowerCase()]||{}),item:r.material,masterUnit:r.unit,reportUnit:r.unit,sourceRate:num(r.currentRate??r.rate)})).join('');
+  bindMaterialRows('ddeUnitsBody',true)
+}
 function loadMaterialBody(bodyId,section,rows=[],unitsMode=false){
+  if(section==='units'){renderProductionUnitsMaterialSection(rows);return}
   const body=$d('#'+bodyId);if(!body)return;
   body.innerHTML='';
   const list=(rows&&rows.length)?rows:[{}];
@@ -13331,9 +13349,9 @@ function autoWoodPulpConsumed(){
   if(!body)return 0;
   const allowed=new Set(['long fiber','short fiber']);
   return [...body.querySelectorAll('tr')].reduce((sum,tr)=>{
-    const item=String(tr.querySelector('.dde-mat-item')?.value||'').trim();
+    const item=String(tr.querySelector('.dde-master-item')?.textContent||'').trim();
     if(!allowed.has(item.toLowerCase()))return sum;
-    const consumed=num(tr.querySelector('.dde-mat-u1')?.value)+num(tr.querySelector('.dde-mat-u2')?.value)+num(tr.querySelector('.dde-mat-u3')?.value);
+    const consumed=[...tr.querySelectorAll('.dde-unit-consume')].reduce((a,el)=>a+num(el.value),0);
     const ref=sectionMasterRecord('units',item);
     return sum+qtyForFinalReport('units',item,consumed,ref?.unit||'')
   },0)
@@ -13786,7 +13804,6 @@ function init(){
   $d('#ddeAddBoilerRow').onclick=()=>addMaterialRow('boiler','ddeBoilerBody',false,{});
   $d('#ddeAddPulpRow').onclick=()=>addMaterialRow('pulp','ddePulpBody',false,{});
   $d('#ddeAddSulphiteRow').onclick=()=>addMaterialRow('sulphite','ddeSulphiteBody',false,{});
-  $d('#ddeAddUnitsRow').onclick=()=>addMaterialRow('units','ddeUnitsBody',true,{});
 
   ensureDdeMasterLists();
   loadMaterialBody('ddeBoilerBody','boiler',ddeDefaultRows('boiler'),false);
@@ -13802,7 +13819,12 @@ function init(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
 else init();
 
-window.addEventListener('erp-material-master-updated',()=>{ensureDdeMasterLists()});
+window.addEventListener('erp-material-master-updated',()=>{
+  const current=materialData('ddeUnitsBody',true);
+  ensureDdeMasterLists();
+  renderProductionUnitsMaterialSection(current);
+  recalc()
+});
 window.ERPDailyDataEntry={open:openPage,refresh:feedDashboard};
 })();
 </script>
@@ -13957,8 +13979,10 @@ function calculateRate(material,source,manual){
   return num(manual)
 }
 function nextSequence(group){
-  const d=load(),rows=d[group]||[];
-  return rows.reduce((m,r)=>Math.max(m,num(r.sequence)),0)+1
+  const d=load(),rows=(d[group]||[]).filter(r=>String(r.status||'active').toLowerCase()!=='inactive');
+  const used=new Set(rows.map(r=>num(r.sequence)).filter(Boolean));
+  let n=1;while(used.has(n))n++;
+  return n
 }
 function currentGroup(){return $m('#mgrGroup')?.value||'pulp'}
 function renderStandardField(){
@@ -14167,7 +14191,11 @@ function validate(){
   const units=activeUnits();
   if(units.length && !findUnit(unit)){alert('Unit must be selected from Unit Master.');return false}
   if(!$m('#mgrCostCentre').value.trim()){alert('Cost Centre is required.');return false}
-  if(num($m('#mgrSequence').value)<=0){alert('Display Sequence must be 1 or more.');return false}
+  const seq=num($m('#mgrSequence').value);
+  if(seq<=0){alert('Display Sequence must be 1 or more.');return false}
+  const existing=load()[g]||[];
+  const seqConflict=existing.find(r=>r.id!==editing.id && String(r.status||'active').toLowerCase()!=='inactive' && num(r.sequence)===seq);
+  if(seqConflict){alert('Sequence '+seq+' is already used by '+seqConflict.material+' in '+groupDef(g).title+'. Please use another sequence.');return false}
   const gd=groupDef(g);
   if(gd.standard!=='none'){
     const target=num($m('#mgrStandard').value);
@@ -14582,4 +14610,9 @@ else seedProductionUnits();
 }
 </style>
 
+
+<style id="stockPulpMasterLinkedV1505Style">
+#panel-daily-data-entry .dde-master-item{min-height:24px;display:flex;align-items:center;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--primary) 4%,var(--surface));font-size:8.5px;font-weight:800}
+#panel-daily-data-entry #ddeUnitsTable th{white-space:nowrap}
+</style>
 </body></html>
