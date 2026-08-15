@@ -4575,7 +4575,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>1. Production & Ash</h3>
-          <p>Ash Average = Total Ash Content ÷ number of production units having production.</p>
+          <p>Ash Average = Total Ash Content ÷ number of production units having production. Wood Pulp = Long Fiber + Short Fiber automatically; Raw Material = Pulp Mill used materials automatically.</p>
         </div>
       </div>
 
@@ -4620,7 +4620,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
                 <div class="dde-production-summary-line"><span>Total Production</span><strong id="ddeSummaryTotalProduction">0.000 Ton</strong></div>
                 <div class="dde-production-summary-line"><span>Ash Average</span><strong id="ddeSummaryAshAverage">0.00%</strong></div>
                 <div class="dde-production-summary-line"><span>Ash Content</span><strong id="ddeSummaryAshContent">0.000 Ton</strong></div>
-                <div class="dde-production-summary-line"><span>Wood Pulp Consumed</span><input id="ddeWoodPulp" class="dde-control" type="number" step="any" placeholder="0"></div>
+                <div class="dde-production-summary-line"><span>Wood Pulp Consumed</span><input id="ddeWoodPulp" class="dde-control" type="number" step="any" value="0" readonly title="Automatic: Long Fiber + Short Fiber from Stock Pulp Plant"></div>
                 <div class="dde-production-summary-line"><span>Pulp Produced</span><strong id="ddePulpProduced">0.000 Ton</strong></div>
                 <div class="dde-production-summary-line"><span>Raw Material Consumed</span><strong id="ddeRawMaterialConsumed">0.000 Ton</strong></div>
                 <div class="dde-production-summary-line"><span>Pulp Yield</span><strong id="ddePulpYield">0.00%</strong></div>
@@ -10743,7 +10743,7 @@ function issueSave(){let recs=issueLoad(),added=0;issueInputs().forEach(a=>{if(!
 function issueRenderHistory(){let box=$('#issueHistoryRows');if(!box)return;let q=($('#issueHistSearch')?.value||'').toLowerCase();let a=issueLoad().filter(r=>!q||Object.values(r).join(' ').toLowerCase().includes(q));box.innerHTML=a.length?a.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.ir)}</td><td>${escHtml(r.item)}</td><td>${escHtml(r.size)}</td><td>${escHtml(r.qty)}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.department)}</td><td>${escHtml(r.issuedTo)}</td><td>${escHtml(r.usedFor)}</td><td>${escHtml(r.remarks)}</td><td><button class="issue-mini" data-ie="${r.id}">Edit</button> <button class="issue-mini danger" data-idel="${r.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--muted)">No issue records found.</td></tr>';box.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{if(confirm('Delete this issue record?')){issueStore(issueLoad().filter(x=>x.id!==b.dataset.idel));issueRenderHistory();toast('Issue record deleted')}});box.querySelectorAll('[data-ie]').forEach(b=>b.onclick=()=>{let a=issueLoad(),r=a.find(x=>x.id===b.dataset.ie);if(!r)return;let vals=[r.date,r.ir,r.item,r.size,r.qty,r.remainingBalance??(purchaseNum(r.stock)-purchaseNum(r.qty)),r.unit,r.stock,r.department,r.issuedTo,r.usedFor,r.remarks],inp=issueInputs()[0];vals.forEach((v,i)=>inp[i].value=v??'');issueStore(a.filter(x=>x.id!==r.id));document.querySelector('[data-panel="issue-entry"]')?.click();issueUpdateTotal();toast('Record loaded for correction')})}
 function issuePrint(){let rows=[...document.querySelectorAll('#issueHistoryRows tr')].map(tr=>'<tr>'+[...tr.children].slice(0,10).map(td=>'<td>'+td.textContent+'</td>').join('')+'</tr>').join('');let w=open('','_blank');w.document.write('<html><head><title>Issue History</title><style>body{font-family:Arial;padding:25px}h2{margin:0 0 15px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px}th{background:#ffcc00}</style>
 <style id="ddeProductionCompactV1499">
-/* ===== V14.99 Production section balanced compact layout ===== */
+/* ===== V15.00 Production section balanced compact layout ===== */
 #panel-daily-data-entry .dde-production-layout{
   grid-template-columns:minmax(0,1.35fr) minmax(520px,1fr);
   gap:10px;align-items:start;
@@ -13042,9 +13042,13 @@ function qtyToAnalysis(qty,masterUnit){
 function rateToAnalysis(rate,masterUnit){
   return num(rate)
 }
+function masterSectionKey(section){
+  return section==='units'?'stockpulp':section
+}
 function shouldConvertToTon(section,item){
   const master=loadMaterialMaster();
-  const rows=Array.isArray(master[section])?master[section]:[];
+  const key=masterSectionKey(section);
+  const rows=Array.isArray(master[key])?master[key]:[];
   const q=String(item||'').trim().toLowerCase();
   const r=rows.find(x=>String(x.material||'').trim().toLowerCase()===q);
   return !!r && String(r.convertToTon||'no').toLowerCase()==='yes'
@@ -13062,7 +13066,7 @@ function rateForFinalReport(section,item,rate,masterUnit){
   return num(rate)
 }
 function sectionMasterRecord(section,item){
-  const map=materialStandardMap(section);
+  const map=materialStandardMap(masterSectionKey(section));
   return map[String(item||'').trim().toLowerCase()]||null
 }
 function rowMaterialMeta(tr){
@@ -13298,6 +13302,26 @@ function expectedPulpFromPulpRows(){
   return {expected,details}
 }
 
+
+function autoRawMaterialConsumed(){
+  // Pulp Mill materials are entered in their native unit; only materials marked
+  // Convert to Ton in Final Reports are normalized before production/yield calculations.
+  return totalUsed('ddePulpBody')
+}
+function autoWoodPulpConsumed(){
+  // Only Long Fiber and Short Fiber from Stock Pulp Plant count as Wood Pulp.
+  const body=$d('#ddeUnitsBody');
+  if(!body)return 0;
+  const allowed=new Set(['long fiber','short fiber']);
+  return [...body.querySelectorAll('tr')].reduce((sum,tr)=>{
+    const item=String(tr.querySelector('.dde-mat-item')?.value||'').trim();
+    if(!allowed.has(item.toLowerCase()))return sum;
+    const consumed=num(tr.querySelector('.dde-mat-u1')?.value)+num(tr.querySelector('.dde-mat-u2')?.value)+num(tr.querySelector('.dde-mat-u3')?.value);
+    const ref=sectionMasterRecord('units',item);
+    return sum+qtyForFinalReport('units',item,consumed,ref?.unit||'')
+  },0)
+}
+
 function recalc(){
   let totalProd=0,totalAshContent=0,active=0;
   for(let i=1;i<=3;i++){
@@ -13310,10 +13334,11 @@ function recalc(){
   }
 
   const ashAverage=active?totalAshContent/active:0;
-  const woodPulp=value('ddeWoodPulp');
+  const woodPulp=autoWoodPulpConsumed();
+  const woodPulpField=$d('#ddeWoodPulp');if(woodPulpField)woodPulpField.value=woodPulp.toFixed(3);
   const pulpProduced=Math.max(0,totalProd-totalAshContent-woodPulp);
 
-  const rawMaterialConsumed=totalUsed('ddePulpBody');
+  const rawMaterialConsumed=autoRawMaterialConsumed();
   const pulpYield=rawMaterialConsumed>0?(pulpProduced/rawMaterialConsumed*100):0;
 
   // Material-wise standard calculation from Material Master:
@@ -13438,9 +13463,9 @@ function collect(){
   const totalProduction=units.reduce((a,u)=>a+u.production,0);
   const totalAshContent=units.reduce((a,u)=>a+u.ashContent,0);
   const ashAverage=active.length?totalAshContent/active.length:0;
-  const woodPulp=value('ddeWoodPulp');
+  const woodPulp=autoWoodPulpConsumed();
   const pulpProduced=Math.max(0,totalProduction-totalAshContent-woodPulp);
-  const rawMaterialConsumed=0;
+  const rawMaterialConsumed=autoRawMaterialConsumed();
   const pulpYield=rawMaterialConsumed>0?(pulpProduced/rawMaterialConsumed*100):0;
 
   const wapdaPaper=value('ddeWapdaPaper'),wapdaBoard=value('ddeWapdaBoard');
@@ -13695,7 +13720,7 @@ function init(){
   loadUnitNames();
   bindDate();
   bindEnterNavigation();
-  ['ddeProd1','ddeProd2','ddeProd3','ddeAsh1','ddeAsh2','ddeAsh3','ddeWoodPulp','ddeWapdaPaper','ddeElectricityRate',
+  ['ddeProd1','ddeProd2','ddeProd3','ddeAsh1','ddeAsh2','ddeAsh3','ddeWapdaPaper','ddeElectricityRate',
    'ddeSteamProduction','ddeSteamPulp','ddeSteamUnit1','ddeSteamUnit2','ddeSteamUnit3','ddeSteamBoiler','ddeWapdaBoard','ddeSolar1','ddeSolar2','ddeSolar3','ddeSolar4','ddeSolar5','ddeConsPulp','ddeConsMachine','ddeConsBoiler']
     .forEach(id=>$d('#'+id)?.addEventListener('input',recalc));
   [1,2,3].forEach(i=>$d('#ddeUnitName'+i)?.addEventListener('change',saveUnitNames));
