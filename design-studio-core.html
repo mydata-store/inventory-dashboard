@@ -12228,8 +12228,14 @@ function open(){
 
 
 function renderMaterialMaster(){
-  const host=f$('[data-fccsection="materials"]');
-  if(!host)return;
+  let host=f$('[data-fccsection="materials"]');
+  if(!host){
+    const panel=f$('#panel-formula-control-center');
+    if(!panel)return;
+    host=document.createElement('div');
+    host.setAttribute('data-fccsection','materials');
+    panel.appendChild(host)
+  }
 
   const KEY='erpDailyMaterialMasterV1';
   const sections=[
@@ -12412,19 +12418,28 @@ function openMaterials(){
   build();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   const panel=f$('#panel-formula-control-center');
+  if(!panel)return;
   panel.classList.add('active','fcc-material-only');
+
   document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
 
   showTab('materials');
-  renderMaterialMaster();
 
   if(f$('#workspaceTitle'))f$('#workspaceTitle').textContent='Material Master';
   if(f$('#workspaceSubtitle'))f$('#workspaceSubtitle').textContent='Department-wise Material • Unit • Rate • Standard';
+
   try{
     localStorage.setItem('erpStudioLastPanel','production-consumption-material-master');
-    localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'production-consumption-material-master')
+    localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'production-consumption-material-master');
+    localStorage.setItem('erpProductionConsumptionPageV1','materials');
   }catch(e){}
+
+  // showTab() may rebuild/replace the section, so render after it completes.
+  requestAnimationFrame(()=>{
+    renderMaterialMaster();
+    requestAnimationFrame(()=>renderMaterialMaster())
+  });
 }
 
 function nav(){
@@ -12439,11 +12454,29 @@ function nav(){
 }
 function startup(){
   try{
-    ensureSeed();build();nav();
-    let last='';try{last=localStorage.getItem('erpStudioLastPanel')||''}catch(e){}
-    if(last==='formula-control-center')setTimeout(open,120);
-    else if(last==='production-consumption-material-master')setTimeout(openMaterials,120)
-  }catch(e){console.error('Formula Control startup error',e)}
+    ensureSeed();
+    build();
+    nav();
+
+    let last='',active='',pcPage='';
+    try{
+      last=localStorage.getItem('erpStudioLastPanel')||'';
+      active=localStorage.getItem(ACTIVE_STUDIO_PANEL_KEY)||'';
+      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||''
+    }catch(e){}
+
+    if(
+      last==='production-consumption-material-master' ||
+      active==='production-consumption-material-master' ||
+      pcPage==='materials'
+    ){
+      setTimeout(openMaterials,160);
+    }else if(last==='formula-control-center'){
+      setTimeout(open,120)
+    }
+  }catch(e){
+    console.error('Formula Control startup error',e)
+  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startup);else startup();
 window.ERPFormulaControl={open,openMaterials,refresh:renderAll,formulas};
@@ -12761,8 +12794,12 @@ function pcNav(){
 function pcStartup(){
   try{
     pcBuild();pcNav();
-    let last='';try{last=localStorage.getItem('erpStudioLastPanel')||''}catch(e){}
-    if(last==='production-consumption')setTimeout(pcOpen,120)
+    let last='',pcPage='';
+    try{
+      last=localStorage.getItem('erpStudioLastPanel')||'';
+      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||''
+    }catch(e){}
+    if(last==='production-consumption' && pcPage!=='materials')setTimeout(pcOpen,120)
   }catch(e){console.error('Production & Consumption dashboard startup error',e)}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',pcStartup);
@@ -13352,6 +13389,19 @@ window.ERPDailyDataEntry={open:openPage,refresh:feedDashboard};
 }
 @media(max-width:1250px){
   .pc-nav-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+
+
+<style id="materialMasterV1491VisibilityFix">
+#panel-formula-control-center.fcc-material-only [data-fccsection="materials"]{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  min-height:200px;
+}
+#panel-formula-control-center.fcc-material-only .mm-section{
+  display:block !important;
 }
 </style>
 
