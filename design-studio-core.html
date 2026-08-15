@@ -4772,14 +4772,14 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>5. Boiler House Material Consumption</h3>
-          <p>Excel-style daily material movement.</p>
+          <p>Daily consumption is reported in Ton. Kg-based Material Master rates are converted automatically to Rate/Ton.</p>
         </div>
         <button class="btn btn-sm" type="button" id="ddeAddBoilerRow">+ Add Row</button>
       </div>
       <div class="dde-table-wrap">
         <table class="dde-table dde-material-table" id="ddeBoilerTable">
           <thead><tr>
-            <th>Sr No</th><th>Item</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Action</th>
+            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Rate / Ton</th><th>Used Value</th><th>Action</th>
           </tr></thead>
           <tbody id="ddeBoilerBody"></tbody>
         </table>
@@ -4790,14 +4790,14 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>6. Pulp Mill Material Consumption</h3>
-          <p>Excel-style daily material movement. Each material uses its own Yield Standard from Material Master to calculate Expected Pulp.</p>
+          <p>Daily consumption is reported in Ton. Kg-based Material Master quantities/rates are converted automatically; each Pulp material also uses its own Yield Standard.</p>
         </div>
         <button class="btn btn-sm" type="button" id="ddeAddPulpRow">+ Add Row</button>
       </div>
       <div class="dde-table-wrap">
         <table class="dde-table dde-material-table" id="ddePulpTable">
           <thead><tr>
-            <th>Sr No</th><th>Item</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Action</th>
+            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Rate / Ton</th><th>Used Value</th><th>Action</th>
           </tr></thead>
           <tbody id="ddePulpBody"></tbody>
         </table>
@@ -4808,14 +4808,14 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-section-title">
         <div>
           <h3>7. Sulphite Plant Material Consumption</h3>
-          <p>Excel-style daily material movement.</p>
+          <p>Daily consumption is reported in Ton. Kg-based Material Master rates are converted automatically to Rate/Ton.</p>
         </div>
         <button class="btn btn-sm" type="button" id="ddeAddSulphiteRow">+ Add Row</button>
       </div>
       <div class="dde-table-wrap">
         <table class="dde-table dde-material-table" id="ddeSulphiteTable">
           <thead><tr>
-            <th>Sr No</th><th>Item</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Action</th>
+            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening Stock</th><th>Received Material</th><th>Used</th><th>Balance</th><th>Rate / Ton</th><th>Used Value</th><th>Action</th>
           </tr></thead>
           <tbody id="ddeSulphiteBody"></tbody>
         </table>
@@ -4833,9 +4833,9 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       <div class="dde-table-wrap">
         <table class="dde-table dde-material-table dde-units-material-table" id="ddeUnitsTable">
           <thead><tr>
-            <th>Sr No</th><th>Item</th><th>Opening</th><th>Received</th>
+            <th>Sr No</th><th>Item</th><th>Unit</th><th>Opening</th><th>Received</th>
             <th>Consumed Unit 1</th><th>Consumed Unit 2</th><th>Consumed Unit 3</th>
-            <th>Total Consumed</th><th>Balance</th><th>Action</th>
+            <th>Total Consumed</th><th>Balance</th><th>Rate / Ton</th><th>Used Value</th><th>Action</th>
           </tr></thead>
           <tbody id="ddeUnitsBody"></tbody>
         </table>
@@ -12963,13 +12963,53 @@ function ddeMasterRows(section){const map={boiler:'boiler',pulp:'pulp',sulphite:
 function ddeMasterListId(section){return 'ddeMasterList-'+section}
 function ensureDdeMasterLists(){['boiler','pulp','sulphite','units'].forEach(section=>{let dl=$d('#'+ddeMasterListId(section));if(!dl){dl=document.createElement('datalist');dl.id=ddeMasterListId(section);document.body.appendChild(dl)}dl.innerHTML=ddeMasterRows(section).map(x=>`<option value="${String(x.material||'').replace(/"/g,'&quot;')}">${x.unit||''}${x.rate?' | Rate '+x.rate:''}${x.standard?' | Std '+x.standard:''}</option>`).join('')})}
 function ddeDefaultRows(section){const rows=ddeMasterRows(section);return rows.length?rows.map(x=>({item:x.material,unit:x.unit,rate:x.rate,standard:x.standard})): [{}]}
+
+function analysisUnitFor(masterUnit){
+  const u=String(masterUnit||'').trim().toLowerCase();
+  if(['kg','kgs','kilogram','kilograms'].includes(u))return 'Ton';
+  return masterUnit||''
+}
+function qtyToAnalysis(qty,masterUnit){
+  const u=String(masterUnit||'').trim().toLowerCase();
+  if(['kg','kgs','kilogram','kilograms'].includes(u))return num(qty)/1000;
+  return num(qty)
+}
+function rateToAnalysis(rate,masterUnit){
+  const u=String(masterUnit||'').trim().toLowerCase();
+  if(['kg','kgs','kilogram','kilograms'].includes(u))return num(rate)*1000;
+  return num(rate)
+}
+function sectionMasterRecord(section,item){
+  const map=materialStandardMap(section);
+  return map[String(item||'').trim().toLowerCase()]||null
+}
+function rowMaterialMeta(tr){
+  const section=tr?.dataset?.section||'';
+  const item=tr?.querySelector('.dde-mat-item')?.value||'';
+  const ref=sectionMasterRecord(section,item);
+  const masterUnit=ref?.unit||'';
+  const reportUnit=analysisUnitFor(masterUnit);
+  const sourceRate=num(ref?.rate);
+  const reportRate=rateToAnalysis(sourceRate,masterUnit);
+  return {section,item,ref,masterUnit,reportUnit,sourceRate,reportRate}
+}
+function money(v){
+  return num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})
+}
+
 function materialRowHtml(section,index,unitsMode=false,data={}){
+  const ref=sectionMasterRecord(section,data.item||'');
+  const masterUnit=data.masterUnit||ref?.unit||'';
+  const reportUnit=data.reportUnit||analysisUnitFor(masterUnit)||'Ton';
+  const reportRate=num(data.reportRate||rateToAnalysis(ref?.rate||data.sourceRate||0,masterUnit));
+
   if(unitsMode){
     const opening=num(data.opening),received=num(data.received),u1=num(data.unit1),u2=num(data.unit2),u3=num(data.unit3);
-    const total=u1+u2+u3,balance=opening+received-total;
+    const total=u1+u2+u3,balance=opening+received-total,usedValue=total*reportRate;
     return `<tr data-section="${section}">
       <td class="dde-mat-sr">${index+1}</td>
       <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
+      <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${masterUnit&&masterUnit!==reportUnit?'Master: '+masterUnit:''}</small></td>
       <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-u1" type="number" step="any" value="${u1||''}" placeholder="0"></td>
@@ -12977,27 +13017,39 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
       <td><input class="dde-control dde-mat-u3" type="number" step="any" value="${u3||''}" placeholder="0"></td>
       <td><b class="dde-mat-total">${total.toFixed(3)}</b></td>
       <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
+      <td><b class="dde-mat-rate">${money(reportRate)}</b><small class="dde-mat-source-note">${masterUnit?'from '+masterUnit+' rate':''}</small></td>
+      <td><b class="dde-mat-value">${money(usedValue)}</b></td>
       <td><button class="btn btn-sm dde-mat-delete" type="button">Delete</button></td>
     </tr>`
   }
-  const opening=num(data.opening),received=num(data.received),used=num(data.used),balance=opening+received-used;
+
+  const opening=num(data.opening),received=num(data.received),used=num(data.used),balance=opening+received-used,usedValue=used*reportRate;
   return `<tr data-section="${section}">
     <td class="dde-mat-sr">${index+1}</td>
     <td><input class="dde-control dde-mat-item" list="${ddeMasterListId(section)}" value="${data.item||''}" placeholder="Type item..."></td>
+    <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${masterUnit&&masterUnit!==reportUnit?'Master: '+masterUnit:''}</small></td>
     <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0"></td>
     <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
     <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
     <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
+    <td><b class="dde-mat-rate">${money(reportRate)}</b><small class="dde-mat-source-note">${masterUnit?'from '+masterUnit+' rate':''}</small></td>
+    <td><b class="dde-mat-value">${money(usedValue)}</b></td>
     <td><button class="btn btn-sm dde-mat-delete" type="button">Delete</button></td>
   </tr>`
 }
 function bindMaterialRows(bodyId,unitsMode=false){
   const body=$d('#'+bodyId);if(!body)return;
   body.querySelectorAll('tr').forEach(tr=>{
-    tr.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{
-      recalcMaterialRow(tr,unitsMode);
-      recalc()
-    }));
+    tr.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input',()=>{
+        recalcMaterialRow(tr,unitsMode);
+        recalc()
+      });
+      inp.addEventListener('change',()=>{
+        recalcMaterialRow(tr,unitsMode);
+        recalc()
+      })
+    });
     tr.querySelector('.dde-mat-delete')?.addEventListener('click',()=>{
       tr.remove();
       renumberMaterialRows(body);
@@ -13008,14 +13060,25 @@ function bindMaterialRows(bodyId,unitsMode=false){
 function recalcMaterialRow(tr,unitsMode=false){
   const opening=num(tr.querySelector('.dde-mat-opening')?.value);
   const received=num(tr.querySelector('.dde-mat-received')?.value);
+  const meta=rowMaterialMeta(tr);
+  const unitEl=tr.querySelector('.dde-mat-unit');
+  if(unitEl)unitEl.textContent=meta.reportUnit||'';
+  const note=tr.querySelector('.dde-mat-unit')?.parentElement?.querySelector('.dde-mat-source-note');
+  if(note)note.textContent=meta.masterUnit&&meta.masterUnit!==meta.reportUnit?'Master: '+meta.masterUnit:'';
+  const rateEl=tr.querySelector('.dde-mat-rate');
+  if(rateEl)rateEl.textContent=money(meta.reportRate);
+
+  let consumed=0;
   if(unitsMode){
-    const total=num(tr.querySelector('.dde-mat-u1')?.value)+num(tr.querySelector('.dde-mat-u2')?.value)+num(tr.querySelector('.dde-mat-u3')?.value);
-    tr.querySelector('.dde-mat-total').textContent=total.toFixed(3);
-    tr.querySelector('.dde-mat-balance').textContent=(opening+received-total).toFixed(3)
+    consumed=num(tr.querySelector('.dde-mat-u1')?.value)+num(tr.querySelector('.dde-mat-u2')?.value)+num(tr.querySelector('.dde-mat-u3')?.value);
+    tr.querySelector('.dde-mat-total').textContent=consumed.toFixed(3);
+    tr.querySelector('.dde-mat-balance').textContent=(opening+received-consumed).toFixed(3)
   }else{
-    const used=num(tr.querySelector('.dde-mat-used')?.value);
-    tr.querySelector('.dde-mat-balance').textContent=(opening+received-used).toFixed(3)
+    consumed=num(tr.querySelector('.dde-mat-used')?.value);
+    tr.querySelector('.dde-mat-balance').textContent=(opening+received-consumed).toFixed(3)
   }
+  const valEl=tr.querySelector('.dde-mat-value');
+  if(valEl)valEl.textContent=money(consumed*meta.reportRate)
 }
 function renumberMaterialRows(body){
   [...body.querySelectorAll('tr')].forEach((tr,i)=>tr.querySelector('.dde-mat-sr').textContent=i+1)
@@ -13031,26 +13094,31 @@ function addMaterialRow(section,bodyId,unitsMode=false,data={}){
 function materialData(bodyId,unitsMode=false){
   const body=$d('#'+bodyId);if(!body)return [];
   return [...body.querySelectorAll('tr')].map(tr=>{
+    const meta=rowMaterialMeta(tr);
     if(unitsMode){
+      const unit1=num(tr.querySelector('.dde-mat-u1')?.value),unit2=num(tr.querySelector('.dde-mat-u2')?.value),unit3=num(tr.querySelector('.dde-mat-u3')?.value);
+      const totalConsumed=unit1+unit2+unit3;
       return {
         item:tr.querySelector('.dde-mat-item')?.value||'',
+        masterUnit:meta.masterUnit,reportUnit:meta.reportUnit,sourceRate:meta.sourceRate,reportRate:meta.reportRate,
         opening:num(tr.querySelector('.dde-mat-opening')?.value),
         received:num(tr.querySelector('.dde-mat-received')?.value),
-        unit1:num(tr.querySelector('.dde-mat-u1')?.value),
-        unit2:num(tr.querySelector('.dde-mat-u2')?.value),
-        unit3:num(tr.querySelector('.dde-mat-u3')?.value)
+        unit1,unit2,unit3,totalConsumed,usedValue:totalConsumed*meta.reportRate
       }
     }
+    const used=num(tr.querySelector('.dde-mat-used')?.value);
     return {
       item:tr.querySelector('.dde-mat-item')?.value||'',
+      masterUnit:meta.masterUnit,reportUnit:meta.reportUnit,sourceRate:meta.sourceRate,reportRate:meta.reportRate,
       opening:num(tr.querySelector('.dde-mat-opening')?.value),
       received:num(tr.querySelector('.dde-mat-received')?.value),
-      used:num(tr.querySelector('.dde-mat-used')?.value)
+      used,usedValue:used*meta.reportRate
     }
   })
 }
 function totalUsed(bodyId){
   const body=$d('#'+bodyId);if(!body)return 0;
+  // Daily material report quantities are stored/displayed in analysis unit (Ton for Kg master materials).
   return [...body.querySelectorAll('.dde-mat-used')].reduce((a,el)=>a+num(el.value),0)
 }
 function clearMaterialBody(bodyId,unitsMode=false){
@@ -13094,11 +13162,14 @@ function expectedPulpFromPulpRows(){
 
   [...body.querySelectorAll('tr')].forEach(tr=>{
     const item=String(tr.querySelector('.dde-mat-item')?.value||'').trim();
-    const used=num(tr.querySelector('.dde-mat-used')?.value);
-    if(!item || used<=0)return;
+    const enteredUsed=num(tr.querySelector('.dde-mat-used')?.value);
+    if(!item || enteredUsed<=0)return;
 
     const ref=map[item.toLowerCase()];
     const standard=ref?num(ref.standard):0;
+    // Daily consumption rows are reported in Ton. If legacy/native Kg data ever reaches here,
+    // normalize it using the material master unit.
+    const used=enteredUsed;
     const expectedItem=used*standard/100;
     expected+=expectedItem;
 
@@ -13707,6 +13778,60 @@ function renderStandardField(){
   $m('#mgrStandardLabel').textContent=g.standardLabel;
   $m('#mgrStandard').placeholder=g.standard==='yield'?'e.g. 33':'e.g. 2.50 Ton Steam / Ton Fuel'
 }
+
+let mgrMaterialMatches=[],mgrMaterialActiveIndex=-1;
+function closeMaterialPopup(){
+  const p=$m('#mgrMaterialPopup');if(!p)return;
+  p.classList.remove('open');p.innerHTML='';
+  mgrMaterialMatches=[];mgrMaterialActiveIndex=-1
+}
+function selectMaterialOption(item){
+  if(!item)return;
+  const display=[item.name,item.size].filter(Boolean).join(' ');
+  $m('#mgrMaterial').value=display;
+  $m('#mgrMaterial').dataset.itemId=item.id||'';
+  $m('#mgrUnit').value=item.unit||'';
+  $m('#mgrUnit').readOnly=!!item.unit;
+  closeMaterialPopup();
+  updateAutoRate()
+}
+function renderMaterialPopup(query){
+  const p=$m('#mgrMaterialPopup');if(!p)return;
+  const q=String(query||'').trim().toLowerCase();
+  if(!q){closeMaterialPopup();return}
+
+  mgrMaterialMatches=activeItems().filter(x=>{
+    const hay=[x.name,x.size,x.code,x.category,x.unit].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q)
+  }).slice(0,12);
+  mgrMaterialActiveIndex=-1;
+
+  if(!mgrMaterialMatches.length){
+    p.innerHTML='<div class="mgr-material-option"><small>No matching Item Master material</small></div>';
+    p.classList.add('open');return
+  }
+
+  p.innerHTML=mgrMaterialMatches.map((x,i)=>`
+    <div class="mgr-material-option" data-index="${i}">
+      <b>${esc([x.name,x.size].filter(Boolean).join(' '))}</b>
+      <small>${esc([x.code,x.unit,x.category].filter(Boolean).join(' • '))}</small>
+    </div>`).join('');
+  p.classList.add('open');
+
+  p.querySelectorAll('.mgr-material-option[data-index]').forEach(el=>{
+    el.onmousedown=e=>{
+      e.preventDefault();
+      selectMaterialOption(mgrMaterialMatches[+el.dataset.index])
+    }
+  })
+}
+function highlightMaterialOption(){
+  const p=$m('#mgrMaterialPopup');if(!p)return;
+  const opts=[...p.querySelectorAll('.mgr-material-option[data-index]')];
+  opts.forEach((el,i)=>el.classList.toggle('active',i===mgrMaterialActiveIndex));
+  opts[mgrMaterialActiveIndex]?.scrollIntoView({block:'nearest'})
+}
+
 function populateDataLists(){
   let dl=$m('#mgrItemList');if(dl)dl.innerHTML=activeItems().map(x=>`<option value="${esc([x.name,x.size].filter(Boolean).join(' '))}" data-id="${esc(x.id||'')}">${esc([x.code,x.unit,x.category].filter(Boolean).join(' • '))}</option>`).join('');
   dl=$m('#mgrUnitList');if(dl)dl.innerHTML=activeUnits().map(x=>`<option value="${esc(x.name||'')}">${esc(x.shortName||'')}</option>`).join('')
@@ -13723,7 +13848,10 @@ function build(){
       </div>
       <div class="mgr-grid">
         <div class="mgr-field"><label>Group Name *</label><select id="mgrGroup" class="mgr-control">${GROUPS.map(g=>`<option value="${g.id}">${g.title}</option>`).join('')}</select></div>
-        <div class="mgr-field span2"><label>Material *</label><input id="mgrMaterial" class="mgr-control" list="mgrItemList" autocomplete="off" placeholder="Type or select Item Master material"></div>
+        <div class="mgr-field span2 mgr-material-search-wrap"><label>Material *</label>
+          <input id="mgrMaterial" class="mgr-control" autocomplete="off" placeholder="Type material to search">
+          <div id="mgrMaterialPopup" class="mgr-material-popup"></div>
+        </div>
         <div class="mgr-field"><label>Material Unit *</label><input id="mgrUnit" class="mgr-control" list="mgrUnitList" placeholder="Unit Master"></div>
 
         <div class="mgr-field"><label>Cost Centre *</label><input id="mgrCostCentre" class="mgr-control" placeholder="e.g. Pulp Mill"></div>
@@ -13935,8 +14063,32 @@ function renderList(){
 }
 function bind(){
   $m('#mgrGroup').onchange=()=>{renderStandardField();$m('#mgrCostCentre').value=groupDef(currentGroup()).title;$m('#mgrSequence').value=nextSequence(currentGroup())};
-  $m('#mgrMaterial').onchange=syncSelectedItem;
-  $m('#mgrMaterial').onblur=syncSelectedItem;
+  const matInput=$m('#mgrMaterial');
+  matInput.onfocus=()=>{ if(matInput.value.trim())renderMaterialPopup(matInput.value); else closeMaterialPopup() };
+  matInput.oninput=()=>{
+    matInput.dataset.itemId='';
+    $m('#mgrUnit').value='';
+    $m('#mgrUnit').readOnly=false;
+    renderMaterialPopup(matInput.value)
+  };
+  matInput.onkeydown=e=>{
+    if(e.key==='ArrowDown' && mgrMaterialMatches.length){
+      e.preventDefault();mgrMaterialActiveIndex=Math.min(mgrMaterialActiveIndex+1,mgrMaterialMatches.length-1);highlightMaterialOption()
+    }else if(e.key==='ArrowUp' && mgrMaterialMatches.length){
+      e.preventDefault();mgrMaterialActiveIndex=Math.max(mgrMaterialActiveIndex-1,0);highlightMaterialOption()
+    }else if(e.key==='Enter' && mgrMaterialActiveIndex>=0 && mgrMaterialMatches[mgrMaterialActiveIndex]){
+      e.preventDefault();selectMaterialOption(mgrMaterialMatches[mgrMaterialActiveIndex])
+    }else if(e.key==='Escape'){
+      closeMaterialPopup()
+    }
+  };
+  matInput.onblur=()=>setTimeout(()=>{
+    closeMaterialPopup();
+    if(matInput.value.trim())syncSelectedItem()
+  },120);
+  document.addEventListener('mousedown',e=>{
+    if(!e.target.closest('.mgr-material-search-wrap'))closeMaterialPopup()
+  });
   $m('#mgrRateSource').onchange=updateRateMode;
   $m('#mgrEffectiveDate').onblur=()=>{$m('#mgrEffectiveDate').value=fmtDate($m('#mgrEffectiveDate').value)};
   $m('#mgrAdd').onclick=addRecord;
@@ -14065,6 +14217,38 @@ window.ERPMaterialMaster={open,render:renderList,save:()=>save(load())};
 @media(max-width:1250px){
   #panel-material-master .mgr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   #panel-material-master .mgr-group{grid-template-columns:130px 1fr}
+}
+</style>
+
+
+<style id="materialSearchAndDailyReportV1496Style">
+#panel-material-master .mgr-material-search-wrap{position:relative}
+#panel-material-master .mgr-material-popup{
+  position:absolute;left:0;right:0;top:100%;z-index:1200;
+  display:none;max-height:230px;overflow:auto;background:var(--surface);
+  border:1px solid var(--border);border-radius:7px;box-shadow:0 10px 28px rgba(0,0,0,.16);
+  margin-top:3px
+}
+#panel-material-master .mgr-material-popup.open{display:block}
+#panel-material-master .mgr-material-option{
+  padding:7px 9px;border-bottom:1px solid var(--border);cursor:pointer;font-size:9px
+}
+#panel-material-master .mgr-material-option:last-child{border-bottom:0}
+#panel-material-master .mgr-material-option:hover,
+#panel-material-master .mgr-material-option.active{
+  background:color-mix(in srgb,var(--primary) 10%,var(--surface))
+}
+#panel-material-master .mgr-material-option b{font-size:10px}
+#panel-material-master .mgr-material-option small{display:block;color:var(--muted);margin-top:2px}
+
+/* Daily material report columns */
+#panel-daily-data-entry .dde-material-table{min-width:1220px}
+#panel-daily-data-entry .dde-units-material-table{min-width:1460px}
+#panel-daily-data-entry .dde-mat-unit{font-weight:800;white-space:nowrap}
+#panel-daily-data-entry .dde-mat-rate,
+#panel-daily-data-entry .dde-mat-value{font-weight:800;white-space:nowrap}
+#panel-daily-data-entry .dde-mat-source-note{
+  display:block;color:var(--muted);font-size:7px;margin-top:2px;white-space:nowrap
 }
 </style>
 
