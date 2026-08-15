@@ -10741,7 +10741,47 @@ function issueUpdateTotal(){
 function issueClear(){issueInputs().forEach(a=>a.forEach(x=>x.value=''));issueUpdateTotal()}
 function issueSave(){let recs=issueLoad(),added=0;issueInputs().forEach(a=>{if(!a.some(x=>x.value.trim()))return;if(a[9]?.value)issueAutoSaveEmployeeName(a[9].value);recs.unshift({id:'ISS-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),date:issueDate(a[0].value),ir:issueIr(a[1].value),item:a[2].value.trim(),size:a[3].value.trim(),qty:Number(a[4].value||0),remainingBalance:a[5].value.trim(),unit:a[6].value.trim(),stock:a[7].value.trim(),department:a[8].value.trim(),issuedTo:a[9].value.trim(),usedFor:a[10].value.trim(),remarks:a[11].value.trim(),savedAt:new Date().toISOString()});added++});if(!added)return toast('Enter at least one issue row');issueStore(recs);issueClear();issueRenderHistory();toast(added+' issue record'+(added>1?'s':'')+' saved')}
 function issueRenderHistory(){let box=$('#issueHistoryRows');if(!box)return;let q=($('#issueHistSearch')?.value||'').toLowerCase();let a=issueLoad().filter(r=>!q||Object.values(r).join(' ').toLowerCase().includes(q));box.innerHTML=a.length?a.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.ir)}</td><td>${escHtml(r.item)}</td><td>${escHtml(r.size)}</td><td>${escHtml(r.qty)}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.department)}</td><td>${escHtml(r.issuedTo)}</td><td>${escHtml(r.usedFor)}</td><td>${escHtml(r.remarks)}</td><td><button class="issue-mini" data-ie="${r.id}">Edit</button> <button class="issue-mini danger" data-idel="${r.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--muted)">No issue records found.</td></tr>';box.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{if(confirm('Delete this issue record?')){issueStore(issueLoad().filter(x=>x.id!==b.dataset.idel));issueRenderHistory();toast('Issue record deleted')}});box.querySelectorAll('[data-ie]').forEach(b=>b.onclick=()=>{let a=issueLoad(),r=a.find(x=>x.id===b.dataset.ie);if(!r)return;let vals=[r.date,r.ir,r.item,r.size,r.qty,r.remainingBalance??(purchaseNum(r.stock)-purchaseNum(r.qty)),r.unit,r.stock,r.department,r.issuedTo,r.usedFor,r.remarks],inp=issueInputs()[0];vals.forEach((v,i)=>inp[i].value=v??'');issueStore(a.filter(x=>x.id!==r.id));document.querySelector('[data-panel="issue-entry"]')?.click();issueUpdateTotal();toast('Record loaded for correction')})}
-function issuePrint(){let rows=[...document.querySelectorAll('#issueHistoryRows tr')].map(tr=>'<tr>'+[...tr.children].slice(0,10).map(td=>'<td>'+td.textContent+'</td>').join('')+'</tr>').join('');let w=open('','_blank');w.document.write('<html><head><title>Issue History</title><style>body{font-family:Arial;padding:25px}h2{margin:0 0 15px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px}th{background:#ffcc00}</style></head><body><h2>Issue History</h2><table><thead><tr><th>Date</th><th>IR No.</th><th>Item</th><th>Size</th><th>Qty</th><th>Unit</th><th>Department</th><th>Issued To</th><th>Used For</th><th>Remarks</th></tr></thead><tbody>'+rows+'</tbody></table><script>onload=()=>print()<\/script></body></html>');w.document.close()}
+function issuePrint(){let rows=[...document.querySelectorAll('#issueHistoryRows tr')].map(tr=>'<tr>'+[...tr.children].slice(0,10).map(td=>'<td>'+td.textContent+'</td>').join('')+'</tr>').join('');let w=open('','_blank');w.document.write('<html><head><title>Issue History</title><style>body{font-family:Arial;padding:25px}h2{margin:0 0 15px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px}th{background:#ffcc00}</style>
+<style id="ddeProductionCompactV1499">
+/* ===== V14.99 Production section balanced compact layout ===== */
+#panel-daily-data-entry .dde-production-layout{
+  grid-template-columns:minmax(0,1.35fr) minmax(520px,1fr);
+  gap:10px;align-items:start;
+}
+#panel-daily-data-entry .dde-production-summary-title{
+  min-height:27px;padding:4px 8px;font-size:10px;
+}
+#panel-daily-data-entry .dde-production-summary-body{
+  grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);
+  align-items:stretch;
+}
+#panel-daily-data-entry .dde-production-summary-list{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-auto-rows:29px;padding:4px 7px;gap:0 12px;align-content:start;
+}
+#panel-daily-data-entry .dde-production-summary-line{
+  grid-template-columns:minmax(0,1fr) auto;min-height:29px;height:29px;gap:5px;
+}
+#panel-daily-data-entry .dde-production-summary-line span{font-size:8px;white-space:nowrap}
+#panel-daily-data-entry .dde-production-summary-line strong{font-size:9px;white-space:nowrap}
+#panel-daily-data-entry .dde-production-summary-line .dde-control{
+  width:82px;height:22px;min-height:22px;padding:2px 5px;font-size:8.5px;
+}
+#panel-daily-data-entry .dde-production-key{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-auto-rows:minmax(47px,auto);gap:5px;padding:5px;align-content:start;
+}
+#panel-daily-data-entry .dde-production-key-card{
+  min-height:47px;height:auto;padding:5px 7px;margin:0;border-radius:6px;
+}
+#panel-daily-data-entry .dde-production-key-card small{font-size:6.7px;line-height:1.15;margin-bottom:3px}
+#panel-daily-data-entry .dde-production-key-card strong{font-size:10.5px;line-height:1.1}
+#panel-daily-data-entry .dde-production-key-card .dde-status{font-size:7px;padding:2px 5px}
+@media(max-width:1350px){
+ #panel-daily-data-entry .dde-production-layout{grid-template-columns:1fr}
+}
+</style>
+</head><body><h2>Issue History</h2><table><thead><tr><th>Date</th><th>IR No.</th><th>Item</th><th>Size</th><th>Qty</th><th>Unit</th><th>Department</th><th>Issued To</th><th>Used For</th><th>Remarks</th></tr></thead><tbody>'+rows+'</tbody></table><script>onload=()=>print()<\/script></body></html>');w.document.close()}
 document.addEventListener('DOMContentLoaded',()=>{issueEnhanceItemDropdowns();issueInputs().forEach(row=>row.forEach((x,i)=>{x.addEventListener('blur',()=>{if(i===0)x.value=issueDate(x.value);if(i===1)x.value=issueIr(x.value);if(i===9){x.value=purchaseFormatText(x.value,'employee','Employee');issueAutoSaveEmployeeName(x.value)}});x.addEventListener('input',issueUpdateTotal)}));issueExcelBind();$('#issueSaveBtn')?.addEventListener('click',issueSave);$('#issueClearBtn')?.addEventListener('click',issueClear);$('#issueHistSearch')?.addEventListener('input',issueRenderHistory);$('#issueHistClear')?.addEventListener('click',()=>{$('#issueHistSearch').value='';$('#issueHistFrom').value='';$('#issueHistTo').value='';issueRenderHistory()});$('#issuePrintBtn')?.addEventListener('click',issuePrint);issueRenderHistory()});
 </script>
 <style id="inventoryV1461Style">
