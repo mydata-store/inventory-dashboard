@@ -12333,12 +12333,12 @@ function renderMaterialMaster(){
 
   const KEY='erpDailyMaterialMasterV1';
   const sections=[
-    {id:'pulp',title:'Pulp Mill'},
-    {id:'boiler',title:'Boiler House'},
-    {id:'sulphite',title:'Sulphite Plant'},
-    {id:'stockpulp',title:'Stock Pulp Plant'},
-    {id:'lubricants',title:'Lubricants'},
-    {id:'others',title:'Others'}
+    {id:'pulp',title:'Pulp Mill',hasStandard:true},
+    {id:'boiler',title:'Boiler House',hasStandard:true},
+    {id:'sulphite',title:'Sulphite Plant',hasStandard:false},
+    {id:'stockpulp',title:'Stock Pulp Plant',hasStandard:false},
+    {id:'lubricants',title:'Lubricants',hasStandard:false},
+    {id:'others',title:'Others',hasStandard:false}
   ];
 
   function load(){
@@ -13499,12 +13499,12 @@ window.ERPDailyDataEntry={open:openPage,refresh:feedDashboard};
 const KEY='erpDailyMaterialMasterV1';
 const MM_LAST='production-consumption-material-master';
 const sections=[
-  {id:'pulp',title:'Pulp Mill'},
-  {id:'boiler',title:'Boiler House'},
-  {id:'sulphite',title:'Sulphite Plant'},
-  {id:'stockpulp',title:'Stock Pulp Plant'},
-  {id:'lubricants',title:'Lubricants'},
-  {id:'others',title:'Others'}
+  {id:'pulp',title:'Pulp Mill',hasStandard:true,standardLabel:'Yield Standard'},
+  {id:'boiler',title:'Boiler House',hasStandard:true,standardLabel:'Yield / Steam Standard'},
+  {id:'sulphite',title:'Sulphite Plant',hasStandard:false},
+  {id:'stockpulp',title:'Stock Pulp Plant',hasStandard:false},
+  {id:'lubricants',title:'Lubricants',hasStandard:false},
+  {id:'others',title:'Others',hasStandard:false}
 ];
 const $m=s=>document.querySelector(s);
 
@@ -13523,12 +13523,13 @@ function save(data){
   localStorage.setItem(KEY,JSON.stringify(data))
 }
 function rowHtml(sec,row={},i=0){
+  const def=sections.find(x=>x.id===sec)||{hasStandard:false};
   return `<tr data-mm-sec="${sec}">
     <td class="mm-sr">${i+1}</td>
     <td><input class="mm-material" value="${esc(row.material||'')}" placeholder="Material"></td>
     <td><input class="mm-unit" value="${esc(row.unit||'')}" placeholder="Unit"></td>
     <td><input class="mm-rate" type="number" step="any" value="${row.rate??''}" placeholder="0"></td>
-    <td><input class="mm-standard" value="${esc(row.standard||'')}" placeholder="Standard"></td>
+    ${def.hasStandard?`<td><input class="mm-standard" value="${esc(row.standard||'')}" placeholder="${def.standardLabel||'Standard'}"></td>`:''}
     <td><button class="btn btn-sm mm-delete" type="button">Delete</button></td>
   </tr>`
 }
@@ -13536,12 +13537,15 @@ function collect(){
   const data={};
   sections.forEach(sec=>{
     const body=$m('#mmStandaloneBody-'+sec.id);
-    data[sec.id]=body?[...body.querySelectorAll('tr')].map(tr=>({
-      material:tr.querySelector('.mm-material')?.value.trim()||'',
-      unit:tr.querySelector('.mm-unit')?.value.trim()||'',
-      rate:parseFloat(tr.querySelector('.mm-rate')?.value)||0,
-      standard:tr.querySelector('.mm-standard')?.value.trim()||''
-    })).filter(r=>r.material||r.unit||r.rate||r.standard):[]
+    data[sec.id]=body?[...body.querySelectorAll('tr')].map(tr=>{
+      const row={
+        material:tr.querySelector('.mm-material')?.value.trim()||'',
+        unit:tr.querySelector('.mm-unit')?.value.trim()||'',
+        rate:parseFloat(tr.querySelector('.mm-rate')?.value)||0
+      };
+      if(sec.hasStandard)row.standard=tr.querySelector('.mm-standard')?.value.trim()||'';
+      return row
+    }).filter(r=>r.material||r.unit||r.rate||(sec.hasStandard&&r.standard)):[]
   });
   return data
 }
@@ -13591,7 +13595,7 @@ function render(){
 
   host.innerHTML=sections.map(sec=>{
     const rows=Array.isArray(data[sec.id])&&data[sec.id].length?data[sec.id]:[{}];
-    return `<div class="mm-standalone-section">
+    return `<div class="mm-standalone-section" data-standard="${sec.hasStandard?'true':'false'}">
       <div class="mm-standalone-head">
         <h3>${sec.title}</h3>
         <button class="btn btn-sm mm-add" data-sec="${sec.id}" type="button">+ Add Row</button>
@@ -13604,7 +13608,7 @@ function render(){
               <th>Material</th>
               <th>Unit</th>
               <th>Rate</th>
-              <th>Standard</th>
+              ${sec.hasStandard?`<th>${sec.standardLabel||'Standard'}</th>`:''}
               <th>Action</th>
             </tr>
           </thead>
@@ -13667,5 +13671,14 @@ else init();
 window.ERPMaterialMaster={open,render,save:saveAll};
 })();
 </script>
+
+
+<style id="materialMasterStandardRulesV1493Style">
+#panel-material-master .mm-standalone-section[data-standard="false"] .mm-standalone-table th:nth-child(5),
+#panel-material-master .mm-standalone-section[data-standard="false"] .mm-standalone-table td:nth-child(5){
+  width:85px;
+  text-align:center;
+}
+</style>
 
 </body></html>
