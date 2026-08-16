@@ -17487,21 +17487,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function getHashPanel(){
     const h=String(location.hash||'').replace(/^#/,'').trim();
     if(!h)return '';
-    if(h.indexOf('panel-')===0)return h.slice(6);
-    return h;
+    return h.indexOf('panel-')===0?h.slice(6):h;
   }
 
-  function restoreProductionPage(){
+  function restoreExactPage(){
     const hash=getHashPanel();
-    let saved='';
-    try{saved=localStorage.getItem(PC_LAST_PAGE_KEY)||''}catch(e){}
-
-    // URL hash always has priority on refresh.
-    const key=hash||saved;
+    let saved='', studioLast='', pcPage='';
+    try{
+      saved=localStorage.getItem(PC_LAST_PAGE_KEY)||'';
+      studioLast=localStorage.getItem('erpStudioLastPanel')||'';
+      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
+    }catch(e){}
 
     const routes={
       'production-consumption':()=>window.ERPProductionConsumption?.open?.(),
-      'daily-data-entry':()=>window.ERPDailyConsumption?.open?.(),
+      'daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
       'daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
       'material-master':()=>window.ERPMaterialMaster?.open?.(),
       'management-summary':()=>window.ERPManagementSummary?.open?.(),
@@ -17510,15 +17510,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       'operating-expenses':()=>window.ERPOperatingExpenses?.open?.()
     };
 
-    if(routes[key]){
-      routes[key]();
+    // 1. Exact URL hash has first priority.
+    if(hash && routes[hash]){
+      routes[hash]();
       return true;
     }
 
-    // Saved logical page names used by Production & Consumption.
-    const savedRoutes={
+    // 2. Exact saved studio page.
+    if(studioLast && routes[studioLast]){
+      routes[studioLast]();
+      return true;
+    }
+
+    const logical={
       'home':()=>window.ERPProductionConsumption?.open?.(),
-      'daily':()=>window.ERPDailyConsumption?.open?.(),
+      'daily':()=>window.ERPDailyDataEntry?.open?.(),
       'history':()=>window.ERPConsumptionHistory?.open?.(),
       'material':()=>window.ERPMaterialMaster?.open?.(),
       'summary':()=>window.ERPManagementSummary?.open?.(),
@@ -17526,27 +17532,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       'year':()=>window.ERPYearSummary?.open?.(),
       'expenses':()=>window.ERPOperatingExpenses?.open?.()
     };
-    if(savedRoutes[saved]){
-      savedRoutes[saved]();
+
+    // 3. Production & Consumption saved page.
+    const key=pcPage||saved;
+    if(key && logical[key]){
+      logical[key]();
       return true;
     }
     return false;
   }
 
-  function restore(){
-    // Run after the original Design Studio startup has finished.
-    setTimeout(restoreProductionPage,60);
-    setTimeout(restoreProductionPage,220);
+  function boot(){
+    setTimeout(restoreExactPage,70);
+    setTimeout(restoreExactPage,240);
+    setTimeout(restoreExactPage,650);
   }
 
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',restore,{once:true});
+    document.addEventListener('DOMContentLoaded',boot,{once:true});
   }else{
-    restore();
+    boot();
   }
 
   window.addEventListener('hashchange',function(){
-    setTimeout(restoreProductionPage,0);
+    setTimeout(restoreExactPage,0);
   });
 })();
 </script>
@@ -18143,7 +18152,7 @@ function open(){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   $o('#panel-operating-expenses')?.classList.add('active');
   if($o('#workspaceTitle'))$o('#workspaceTitle').textContent='Operating Expenses';
-  if($o('#workspaceSubtitle'))$o('#workspaceSubtitle').textContent='Expense Entry • History • Expense Head Master';
+  if($o('#workspaceSubtitle'))$o('#workspaceSubtitle').textContent='Expense Entry • History • Automatic Cost Rules • Expense Head Master';
   renderAll();
   try{localStorage.setItem('erpStudioLastPanel','operating-expenses');localStorage.setItem('erpProductionConsumptionPageV1','expenses')}catch(e){}
 }
@@ -18189,5 +18198,128 @@ window.ERPOperatingExpenses={
  #panel-operating-expenses .oe-provisional-summary-v1543{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>
+
+
+<script id="operatingExpensesRuntimeFixV1544">
+(function(){
+  function q(s){return document.querySelector(s)}
+
+  function ensureAutomaticRulesOption(){
+    const sel=q('#oeView');
+    if(!sel)return false;
+    if(![...sel.options].some(o=>o.value==='rules')){
+      const opt=document.createElement('option');
+      opt.value='rules';
+      opt.textContent='Automatic Cost Rules';
+      const master=[...sel.options].find(o=>o.value==='master');
+      if(master)sel.insertBefore(opt,master);else sel.appendChild(opt);
+    }
+    return true;
+  }
+
+  function ensureRulesPanelVisible(){
+    ensureAutomaticRulesOption();
+    const sel=q('#oeView');
+    const panel=q('#oeRulesPanel');
+    if(sel && panel && sel.value==='rules'){
+      q('#oeEntryPanel') && (q('#oeEntryPanel').style.display='none');
+      q('#oeHistoryPanel') && (q('#oeHistoryPanel').style.display='none');
+      q('#oeMasterPanel') && (q('#oeMasterPanel').style.display='none');
+      panel.style.display='block';
+    }
+  }
+
+  function rememberOperatingExpenses(){
+    try{
+      localStorage.setItem('erpStudioLastPanel','operating-expenses');
+      localStorage.setItem('erpProductionConsumptionLastPage','expenses');
+      localStorage.setItem('erpProductionConsumptionPageV1','expenses');
+    }catch(e){}
+    if(location.hash!=='#panel-operating-expenses'){
+      history.replaceState(null,'','#panel-operating-expenses');
+    }
+  }
+
+  function restoreOperatingExpenses(){
+    const hash=String(location.hash||'');
+    let last='',pcLast='',pcPage='';
+    try{
+      last=localStorage.getItem('erpStudioLastPanel')||'';
+      pcLast=localStorage.getItem('erpProductionConsumptionLastPage')||'';
+      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
+    }catch(e){}
+
+    const shouldRestore =
+      hash==='#panel-operating-expenses' ||
+      last==='operating-expenses' ||
+      pcLast==='expenses' ||
+      pcPage==='expenses';
+
+    if(!shouldRestore)return false;
+
+    if(window.ERPOperatingExpenses?.open){
+      window.ERPOperatingExpenses.open();
+      ensureAutomaticRulesOption();
+      return true;
+    }
+    return false;
+  }
+
+  function bind(){
+    ensureAutomaticRulesOption();
+
+    const sel=q('#oeView');
+    if(sel && !sel.dataset.v1544Bound){
+      sel.dataset.v1544Bound='1';
+      sel.addEventListener('change',function(){
+        ensureAutomaticRulesOption();
+        ensureRulesPanelVisible();
+        rememberOperatingExpenses();
+      });
+    }
+
+    const page=q('#panel-operating-expenses');
+    if(page?.classList.contains('active'))rememberOperatingExpenses();
+  }
+
+  function boot(){
+    // Run after all original startup scripts to override Theme Studio fallback.
+    setTimeout(()=>{restoreOperatingExpenses();bind()},80);
+    setTimeout(()=>{restoreOperatingExpenses();bind()},250);
+    setTimeout(()=>{restoreOperatingExpenses();bind()},700);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',boot,{once:true});
+  }else{
+    boot();
+  }
+
+  window.addEventListener('hashchange',function(){
+    if(location.hash==='#panel-operating-expenses'){
+      setTimeout(()=>{restoreOperatingExpenses();bind()},0);
+    }
+  });
+
+  // Keep URL/state correct whenever Operating Expenses is opened.
+  const hook=setInterval(function(){
+    if(window.ERPOperatingExpenses?.open && !window.ERPOperatingExpenses.__v1544Hooked){
+      const original=window.ERPOperatingExpenses.open;
+      window.ERPOperatingExpenses.open=function(){
+        const r=original.apply(this,arguments);
+        setTimeout(function(){
+          ensureAutomaticRulesOption();
+          rememberOperatingExpenses();
+          bind();
+        },0);
+        return r;
+      };
+      window.ERPOperatingExpenses.__v1544Hooked=true;
+      clearInterval(hook);
+    }
+  },50);
+  setTimeout(()=>clearInterval(hook),5000);
+})();
+</script>
 
 </body></html>
