@@ -13136,6 +13136,11 @@ function pcBuild(){
         <strong>Management Summary</strong>
         <span>Automatic production, energy, steam, pulp and cost KPIs for any selected period.</span>
       </button>
+      <button class="pc-nav-card" type="button" data-pc-page="expenses">
+        <div class="pc-nav-icon">₨</div>
+        <strong>Operating Expenses</strong>
+        <span>Control Salary, Sales Tax, Contractor, Machine Clothing and other non-purchase costs.</span>
+      </button>
       <button class="pc-nav-card" type="button" data-pc-page="month">
         <div class="pc-nav-icon">▥</div>
         <strong>Month Summary</strong>
@@ -13204,6 +13209,7 @@ function pcBuild(){
     if(page==='daily')window.ERPDailyDataEntry.open();
     else if(page==='materials')window.ERPMaterialMaster?.open?.();
     else if(page==='summary')pcSummaryOpen();
+    else if(page==='expenses')window.ERPOperatingExpenses?.open?.();
     else if(page==='month')pcMonthOpen();
     else if(page==='year')pcYearOpen()
   })
@@ -17500,7 +17506,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       'material-master':()=>window.ERPMaterialMaster?.open?.(),
       'management-summary':()=>window.ERPManagementSummary?.open?.(),
       'month-summary':()=>window.ERPMonthSummary?.open?.(),
-      'year-summary':()=>window.ERPYearSummary?.open?.()
+      'year-summary':()=>window.ERPYearSummary?.open?.(),
+      'operating-expenses':()=>window.ERPOperatingExpenses?.open?.()
     };
 
     if(routes[key]){
@@ -17516,7 +17523,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       'material':()=>window.ERPMaterialMaster?.open?.(),
       'summary':()=>window.ERPManagementSummary?.open?.(),
       'month':()=>window.ERPMonthSummary?.open?.(),
-      'year':()=>window.ERPYearSummary?.open?.()
+      'year':()=>window.ERPYearSummary?.open?.(),
+      'expenses':()=>window.ERPOperatingExpenses?.open?.()
     };
     if(savedRoutes[saved]){
       savedRoutes[saved]();
@@ -17540,6 +17548,299 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.addEventListener('hashchange',function(){
     setTimeout(restoreProductionPage,0);
   });
+})();
+</script>
+
+
+<style id="operatingExpensesV1542Style">
+#panel-operating-expenses{display:none}
+#panel-operating-expenses.active{display:block}
+#panel-operating-expenses .oe-page{padding:14px}
+#panel-operating-expenses .oe-top-actions{display:flex;gap:8px;align-items:center}
+#panel-operating-expenses .oe-view-wrap{width:220px}
+#panel-operating-expenses label{display:block;font-size:8px;font-weight:900;color:var(--muted);margin-bottom:3px;text-transform:uppercase}
+#panel-operating-expenses .dde-control{height:31px;min-height:31px;padding:4px 8px;font-size:10px;box-sizing:border-box}
+#panel-operating-expenses .oe-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:10px 0}
+#panel-operating-expenses .oe-summary-card{border:1px solid var(--border);border-radius:9px;background:var(--surface);padding:9px 10px}
+#panel-operating-expenses .oe-summary-card small{display:block;font-size:8px;font-weight:900;color:var(--muted);text-transform:uppercase}
+#panel-operating-expenses .oe-summary-card strong{display:block;font-size:14px;margin-top:5px}
+#panel-operating-expenses .oe-entry-form{display:grid;grid-template-columns:130px 200px 150px 210px minmax(250px,1fr) 120px auto;gap:7px;align-items:end;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--bg) 55%,var(--surface));padding:9px}
+#panel-operating-expenses .oe-entry-form .btn{height:31px;white-space:nowrap}
+#panel-operating-expenses .oe-history-filter{display:grid;grid-template-columns:110px 110px 170px 130px minmax(180px,1fr) auto;gap:7px;align-items:end;margin-bottom:9px}
+#panel-operating-expenses .oe-history-buttons{display:flex;gap:6px}
+#panel-operating-expenses .oe-master-form{display:grid;grid-template-columns:160px 240px 150px 150px minmax(220px,1fr) auto;gap:7px;align-items:end;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--bg) 55%,var(--surface));padding:9px;margin-bottom:9px}
+#panel-operating-expenses .oe-master-form .btn{height:31px}
+#panel-operating-expenses .oe-table{min-width:1100px}
+#panel-operating-expenses .oe-note{margin-top:9px;padding:8px 10px;border-left:3px solid #e2a000;background:#fff8e5;border-radius:6px;font-size:9px}
+#panel-operating-expenses .oe-status-active{font-weight:800;color:#14783b}
+#panel-operating-expenses .oe-status-inactive{font-weight:800;color:#a04b4b}
+@media(max-width:1300px){
+ #panel-operating-expenses .oe-entry-form,#panel-operating-expenses .oe-master-form{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #panel-operating-expenses .oe-history-filter{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #panel-operating-expenses .oe-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+</style>
+
+<script id="operatingExpensesV1542Script">
+(function(){
+const OE_HEAD_KEY='erpOperatingExpenseHeadsV1';
+const OE_ROWS_KEY='erpOperatingExpensesV1';
+const $o=s=>document.querySelector(s);
+const onum=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0};
+const omoney=v=>'PKR '+onum(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const oesc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function oFmtDate(v){
+  const s=String(v||'').trim();
+  if(!s)return '';
+  const m=s.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);
+  if(!m)return s;
+  let y=m[3]?Number(m[3]):new Date().getFullYear();if(y<100)y+=2000;
+  const d=new Date(y,Number(m[2])-1,Number(m[1]));
+  if(isNaN(d))return s;
+  const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${String(d.getDate()).padStart(2,'0')}-${mons[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`
+}
+function oParseDate(v){
+  const s=String(v||'').trim();
+  const m=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+  if(m){
+    const mm={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}[m[2].toLowerCase()];
+    let y=Number(m[3]);if(y<100)y+=2000;
+    return new Date(y,mm,Number(m[1]))
+  }
+  const d=new Date(s);return isNaN(d)?null:d
+}
+function defaultHeads(){
+  return [
+    {id:'OEH-SALARY',code:'EXP-001',name:'Salary',category:'Employee Cost',include:true,status:'active',remarks:''},
+    {id:'OEH-SALESTAX',code:'EXP-002',name:'Sales Tax',category:'Tax & Duties',include:true,status:'active',remarks:''},
+    {id:'OEH-CONTRACTOR',code:'EXP-003',name:'Contractor',category:'Contract Services',include:true,status:'active',remarks:''},
+    {id:'OEH-MC',code:'EXP-004',name:'Machine Clothing',category:'Production Overhead',include:true,status:'active',remarks:''},
+    {id:'OEH-OTHER',code:'EXP-005',name:'Other Expenses',category:'Other Operating Cost',include:true,status:'active',remarks:''}
+  ]
+}
+function loadHeads(){
+  try{
+    let x=JSON.parse(localStorage.getItem(OE_HEAD_KEY)||'[]');
+    if(!Array.isArray(x)||!x.length){x=defaultHeads();saveHeads(x)}
+    return x
+  }catch(e){const x=defaultHeads();saveHeads(x);return x}
+}
+function saveHeads(x){localStorage.setItem(OE_HEAD_KEY,JSON.stringify(x||[]))}
+function loadRows(){try{const x=JSON.parse(localStorage.getItem(OE_ROWS_KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
+function saveRows(x){localStorage.setItem(OE_ROWS_KEY,JSON.stringify(x||[]))}
+function nextHeadCode(){
+  const nums=loadHeads().map(x=>Number(String(x.code||'').match(/(\d+)/)?.[1]||0));
+  return 'EXP-'+String(Math.max(0,...nums)+1).padStart(3,'0')
+}
+function activeHeads(){return loadHeads().filter(x=>x.status!=='inactive')}
+function renderHeadOptions(){
+  const sel=$o('#oeHead');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Select Expense Head</option>'+activeHeads().map(x=>`<option value="${oesc(x.id)}">${oesc(x.name)} • ${oesc(x.category)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur))sel.value=cur
+}
+function headById(id){return loadHeads().find(x=>x.id===id)||{}}
+
+function build(){
+  if($o('#panel-operating-expenses'))return;
+  const host=document.querySelector('main.content');if(!host)return;
+  const sec=document.createElement('section');
+  sec.className='panel purchase-page';
+  sec.id='panel-operating-expenses';
+  sec.innerHTML=`<div class="card oe-page">
+    <div class="inv-page-head">
+      <div>
+        <h2>Operating Expenses</h2>
+        <p>Control non-purchase costs that will feed the final Production Cost Report.</p>
+      </div>
+      <div class="oe-top-actions">
+        <div class="oe-view-wrap"><label>View</label>
+          <select id="oeView" class="dde-control">
+            <option value="entry">Expense Entry</option>
+            <option value="history">Expense History</option>
+            <option value="master">Expense Head Master</option>
+          </select>
+        </div>
+        <button class="btn" id="oeBack">← Production & Consumption</button>
+      </div>
+    </div>
+
+    <div class="oe-summary-grid">
+      <div class="oe-summary-card"><small>This Month</small><strong id="oeThisMonth">PKR 0.00</strong></div>
+      <div class="oe-summary-card"><small>This Year</small><strong id="oeThisYear">PKR 0.00</strong></div>
+      <div class="oe-summary-card"><small>Active Expense Heads</small><strong id="oeActiveHeads">0</strong></div>
+      <div class="oe-summary-card"><small>Total Entries</small><strong id="oeTotalEntries">0</strong></div>
+      <div class="oe-summary-card"><small>Cost Report Included</small><strong id="oeIncludedTotal">PKR 0.00</strong></div>
+    </div>
+
+    <div id="oeEntryPanel">
+      <div class="oe-entry-form">
+        <input type="hidden" id="oeEditId">
+        <div><label>Date</label><input id="oeDate" class="dde-control" placeholder="16-8-26"></div>
+        <div><label>Expense Head</label><select id="oeHead" class="dde-control"></select></div>
+        <div><label>Amount</label><input id="oeAmount" class="dde-control" type="number" step="any" placeholder="0"></div>
+        <div><label>Reference</label><input id="oeReference" class="dde-control" placeholder="Voucher / Bill / Ref."></div>
+        <div><label>Remarks</label><input id="oeRemarks" class="dde-control" placeholder="Remarks"></div>
+        <div><label>Status</label><select id="oeStatus" class="dde-control"><option value="posted">Posted</option><option value="hold">Hold</option></select></div>
+        <div><button class="btn primary" id="oeSave">Save Expense</button></div>
+      </div>
+      <div class="oe-note">Only <b>Posted</b> expenses whose Expense Head is marked <b>Include in Cost Report</b> will be added to the final cost report.</div>
+    </div>
+
+    <div id="oeHistoryPanel" style="display:none">
+      <div class="oe-history-filter">
+        <div><label>From Date</label><input id="oeFrom" class="dde-control" placeholder="1-8-26"></div>
+        <div><label>To Date</label><input id="oeTo" class="dde-control" placeholder="31-8-26"></div>
+        <div><label>Expense Head</label><select id="oeFilterHead" class="dde-control"><option value="">All Heads</option></select></div>
+        <div><label>Status</label><select id="oeFilterStatus" class="dde-control"><option value="">All Status</option><option value="posted">Posted</option><option value="hold">Hold</option></select></div>
+        <div><label>Search</label><input id="oeSearch" class="dde-control" placeholder="Reference, remarks..."></div>
+        <div class="oe-history-buttons"><button class="btn btn-sm" id="oeClearFilters">Clear</button></div>
+      </div>
+      <div class="dde-table-wrap">
+        <table class="dde-table oe-table"><thead><tr><th>Date</th><th>Expense Head</th><th>Category</th><th>Amount</th><th>Reference</th><th>Remarks</th><th>Status</th><th>Action</th></tr></thead><tbody id="oeHistoryBody"></tbody></table>
+      </div>
+    </div>
+
+    <div id="oeMasterPanel" style="display:none">
+      <div class="oe-master-form">
+        <input type="hidden" id="oeHeadEditId">
+        <div><label>Code</label><input id="oeHeadCode" class="dde-control" readonly></div>
+        <div><label>Expense Head</label><input id="oeHeadName" class="dde-control" placeholder="Expense head name"></div>
+        <div><label>Category</label><input id="oeHeadCategory" class="dde-control" placeholder="Operating Cost"></div>
+        <div><label>Cost Report</label><select id="oeHeadInclude" class="dde-control"><option value="yes">Include</option><option value="no">Exclude</option></select></div>
+        <div><label>Remarks</label><input id="oeHeadRemarks" class="dde-control" placeholder="Purpose / remarks"></div>
+        <div><label>Status</label><select id="oeHeadStatus" class="dde-control"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+        <div><button class="btn primary" id="oeHeadSave">Save Head</button></div>
+      </div>
+      <div class="dde-table-wrap">
+        <table class="dde-table oe-table"><thead><tr><th>Code</th><th>Expense Head</th><th>Category</th><th>Cost Report</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead><tbody id="oeHeadBody"></tbody></table>
+      </div>
+    </div>
+  </div>`;
+  host.appendChild(sec);
+
+  $o('#oeBack').onclick=()=>window.ERPProductionConsumption?.open?.();
+  $o('#oeView').onchange=()=>switchView($o('#oeView').value);
+  $o('#oeSave').onclick=saveExpense;
+  $o('#oeHeadSave').onclick=saveHead;
+  ['oeFrom','oeTo','oeFilterHead','oeFilterStatus','oeSearch'].forEach(id=>$o('#'+id)?.addEventListener('input',renderHistory));
+  $o('#oeClearFilters').onclick=()=>{['oeFrom','oeTo','oeSearch'].forEach(id=>$o('#'+id).value='');$o('#oeFilterHead').value='';$o('#oeFilterStatus').value='';renderHistory()};
+  renderAll()
+}
+function switchView(view){
+  $o('#oeEntryPanel').style.display=view==='entry'?'block':'none';
+  $o('#oeHistoryPanel').style.display=view==='history'?'block':'none';
+  $o('#oeMasterPanel').style.display=view==='master'?'block':'none';
+  if(view==='history')renderHistory();
+  if(view==='master')renderHeads()
+}
+function clearExpense(){
+  $o('#oeEditId').value='';
+  ['oeDate','oeAmount','oeReference','oeRemarks'].forEach(id=>$o('#'+id).value='');
+  $o('#oeHead').value='';
+  $o('#oeStatus').value='posted';
+  $o('#oeSave').textContent='Save Expense'
+}
+function saveExpense(){
+  const date=oFmtDate($o('#oeDate').value);
+  const headId=$o('#oeHead').value;
+  const amount=onum($o('#oeAmount').value);
+  if(!date||!headId||amount===0)return alert('Date, Expense Head and Amount are required.');
+  const all=loadRows();
+  const id=$o('#oeEditId').value||('OEX-'+Date.now());
+  const row={id,date,headId,amount,reference:$o('#oeReference').value.trim(),remarks:$o('#oeRemarks').value.trim(),status:$o('#oeStatus').value,updatedAt:new Date().toISOString()};
+  const i=all.findIndex(x=>x.id===id);
+  if(i>=0)all[i]=row;else all.unshift(row);
+  saveRows(all);clearExpense();renderAll();
+  if(window.toast)toast(i>=0?'Expense updated':'Expense saved')
+}
+function editExpense(id){
+  const r=loadRows().find(x=>x.id===id);if(!r)return;
+  switchView('entry');$o('#oeView').value='entry';
+  $o('#oeEditId').value=r.id;$o('#oeDate').value=r.date;$o('#oeHead').value=r.headId;$o('#oeAmount').value=r.amount||'';
+  $o('#oeReference').value=r.reference||'';$o('#oeRemarks').value=r.remarks||'';$o('#oeStatus').value=r.status||'posted';
+  $o('#oeSave').textContent='Update Expense'
+}
+function deleteExpense(id){
+  if(!confirm('Delete this expense entry?'))return;
+  saveRows(loadRows().filter(x=>x.id!==id));renderAll()
+}
+function renderHistory(){
+  const from=oParseDate(oFmtDate($o('#oeFrom')?.value||'')),to=oParseDate(oFmtDate($o('#oeTo')?.value||''));
+  const head=$o('#oeFilterHead')?.value||'',status=$o('#oeFilterStatus')?.value||'',q=String($o('#oeSearch')?.value||'').toLowerCase();
+  let list=loadRows().filter(r=>{
+    const d=oParseDate(r.date);
+    if(from&&d&&d<from)return false;if(to&&d&&d>to)return false;
+    if(head&&r.headId!==head)return false;if(status&&r.status!==status)return false;
+    const h=headById(r.headId);const hay=[r.date,h.name,h.category,r.reference,r.remarks].join(' ').toLowerCase();
+    return !q||hay.includes(q)
+  }).sort((a,b)=>(oParseDate(b.date)||0)-(oParseDate(a.date)||0));
+  const body=$o('#oeHistoryBody');if(!body)return;
+  body.innerHTML=list.length?list.map(r=>{const h=headById(r.headId);return `<tr><td>${oesc(r.date)}</td><td><b>${oesc(h.name||'Unknown')}</b></td><td>${oesc(h.category||'')}</td><td>${omoney(r.amount)}</td><td>${oesc(r.reference||'')}</td><td>${oesc(r.remarks||'')}</td><td>${oesc(r.status)}</td><td><button class="btn btn-sm" data-oe-edit="${r.id}">Edit</button> <button class="btn btn-sm" data-oe-delete="${r.id}">Delete</button></td></tr>`}).join(''):'<tr><td colspan="8" style="text-align:center;padding:16px">No operating expense records found.</td></tr>';
+  body.querySelectorAll('[data-oe-edit]').forEach(b=>b.onclick=()=>editExpense(b.dataset.oeEdit));
+  body.querySelectorAll('[data-oe-delete]').forEach(b=>b.onclick=()=>deleteExpense(b.dataset.oeDelete))
+}
+function clearHead(){
+  $o('#oeHeadEditId').value='';$o('#oeHeadCode').value=nextHeadCode();['oeHeadName','oeHeadCategory','oeHeadRemarks'].forEach(id=>$o('#'+id).value='');
+  $o('#oeHeadInclude').value='yes';$o('#oeHeadStatus').value='active';$o('#oeHeadSave').textContent='Save Head'
+}
+function saveHead(){
+  const name=$o('#oeHeadName').value.trim();if(!name)return alert('Expense Head is required.');
+  const all=loadHeads();const id=$o('#oeHeadEditId').value||('OEH-'+Date.now());
+  if(all.some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase()))return alert('This Expense Head already exists.');
+  const r={id,code:$o('#oeHeadCode').value||nextHeadCode(),name,category:$o('#oeHeadCategory').value.trim()||'Other Operating Cost',include:$o('#oeHeadInclude').value==='yes',status:$o('#oeHeadStatus').value,remarks:$o('#oeHeadRemarks').value.trim()};
+  const i=all.findIndex(x=>x.id===id);if(i>=0)all[i]=r;else all.push(r);saveHeads(all);clearHead();renderAll()
+}
+function editHead(id){
+  const h=loadHeads().find(x=>x.id===id);if(!h)return;
+  $o('#oeHeadEditId').value=h.id;$o('#oeHeadCode').value=h.code;$o('#oeHeadName').value=h.name;$o('#oeHeadCategory').value=h.category||'';
+  $o('#oeHeadInclude').value=h.include===false?'no':'yes';$o('#oeHeadStatus').value=h.status||'active';$o('#oeHeadRemarks').value=h.remarks||'';$o('#oeHeadSave').textContent='Update Head'
+}
+function renderHeads(){
+  const body=$o('#oeHeadBody');if(!body)return;
+  const list=loadHeads();
+  body.innerHTML=list.map(h=>`<tr><td>${oesc(h.code)}</td><td><b>${oesc(h.name)}</b></td><td>${oesc(h.category||'')}</td><td>${h.include===false?'Exclude':'Include'}</td><td><span class="${h.status==='inactive'?'oe-status-inactive':'oe-status-active'}">${oesc(h.status)}</span></td><td>${oesc(h.remarks||'')}</td><td><button class="btn btn-sm" data-oe-head-edit="${h.id}">Edit</button></td></tr>`).join('');
+  body.querySelectorAll('[data-oe-head-edit]').forEach(b=>b.onclick=()=>editHead(b.dataset.oeHeadEdit))
+}
+function renderSummary(){
+  const rows=loadRows().filter(r=>r.status==='posted');
+  const now=new Date();
+  const monthRows=rows.filter(r=>{const d=oParseDate(r.date);return d&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()});
+  const yearRows=rows.filter(r=>{const d=oParseDate(r.date);return d&&d.getFullYear()===now.getFullYear()});
+  const included=rows.filter(r=>headById(r.headId).include!==false);
+  $o('#oeThisMonth').textContent=omoney(monthRows.reduce((a,r)=>a+onum(r.amount),0));
+  $o('#oeThisYear').textContent=omoney(yearRows.reduce((a,r)=>a+onum(r.amount),0));
+  $o('#oeActiveHeads').textContent=String(activeHeads().length);
+  $o('#oeTotalEntries').textContent=String(loadRows().length);
+  $o('#oeIncludedTotal').textContent=omoney(included.reduce((a,r)=>a+onum(r.amount),0))
+}
+function renderAll(){
+  renderHeadOptions();
+  const f=$o('#oeFilterHead');if(f){const cur=f.value;f.innerHTML='<option value="">All Heads</option>'+loadHeads().map(h=>`<option value="${oesc(h.id)}">${oesc(h.name)}</option>`).join('');if([...f.options].some(o=>o.value===cur))f.value=cur}
+  if(!$o('#oeHeadCode').value)$o('#oeHeadCode').value=nextHeadCode();
+  renderSummary();renderHistory();renderHeads()
+}
+function open(){
+  build();
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  $o('#panel-operating-expenses')?.classList.add('active');
+  if($o('#workspaceTitle'))$o('#workspaceTitle').textContent='Operating Expenses';
+  if($o('#workspaceSubtitle'))$o('#workspaceSubtitle').textContent='Expense Entry • History • Expense Head Master';
+  renderAll();
+  try{localStorage.setItem('erpStudioLastPanel','operating-expenses');localStorage.setItem('erpProductionConsumptionPageV1','expenses')}catch(e){}
+}
+window.ERPOperatingExpenses={
+  open,
+  rows:loadRows,
+  heads:loadHeads,
+  costRows:function(){return loadRows().filter(r=>r.status==='posted'&&headById(r.headId).include!==false)},
+  totalForRange:function(from,to){
+    const f=oParseDate(from),t=oParseDate(to);
+    return this.costRows().filter(r=>{const d=oParseDate(r.date);return (!f||d>=f)&&(!t||d<=t)}).reduce((a,r)=>a+onum(r.amount),0)
+  }
+};
 })();
 </script>
 
