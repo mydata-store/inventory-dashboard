@@ -1941,6 +1941,35 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 @media(max-width:1250px){#panel-daily-data-entry .dde-analysis-summary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:980px){#panel-daily-data-entry .dde-analysis-summary-grid{grid-template-columns:1fr}}
 </style>
+
+<script id="erpEarlyRouteGuardV1545">
+(function(){
+  try{
+    const hash=String(location.hash||'').replace(/^#/,'');
+    const last=localStorage.getItem('erpStudioLastPanel')||'';
+    const pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
+    const needsRestore =
+      hash==='panel-operating-expenses' ||
+      last==='operating-expenses' ||
+      pcPage==='expenses' ||
+      hash==='panel-production-consumption' ||
+      hash==='panel-daily-data-entry' ||
+      hash==='panel-daily-consumption-history' ||
+      hash==='panel-material-master' ||
+      hash==='panel-management-summary' ||
+      hash==='panel-month-summary' ||
+      hash==='panel-year-summary';
+
+    if(needsRestore){
+      document.documentElement.classList.add('erp-route-restoring-v1545');
+    }
+  }catch(e){}
+})();
+</script>
+<style id="erpEarlyRouteGuardV1545Style">
+html.erp-route-restoring-v1545 body{visibility:hidden!important}
+</style>
+
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -17483,6 +17512,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="erpRefreshPageStateV1541">
 (function(){
   const PC_LAST_PAGE_KEY='erpProductionConsumptionLastPage';
+  const reveal=()=>document.documentElement.classList.remove('erp-route-restoring-v1545');
 
   function getHashPanel(){
     const h=String(location.hash||'').replace(/^#/,'').trim();
@@ -17513,12 +17543,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     // 1. Exact URL hash has first priority.
     if(hash && routes[hash]){
       routes[hash]();
+      reveal();
       return true;
     }
 
     // 2. Exact saved studio page.
     if(studioLast && routes[studioLast]){
       routes[studioLast]();
+      reveal();
       return true;
     }
 
@@ -17537,8 +17569,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const key=pcPage||saved;
     if(key && logical[key]){
       logical[key]();
+      reveal();
       return true;
     }
+    reveal();
     return false;
   }
 
@@ -17833,16 +17867,34 @@ function build(){
     .forEach(id=>$o('#'+id)?.addEventListener('input',renderRulePreview));
   ['oeFrom','oeTo','oeFilterHead','oeFilterStatus','oeSearch'].forEach(id=>$o('#'+id)?.addEventListener('input',renderHistory));
   $o('#oeClearFilters').onclick=()=>{['oeFrom','oeTo','oeSearch'].forEach(id=>$o('#'+id).value='');$o('#oeFilterHead').value='';$o('#oeFilterStatus').value='';renderHistory()};
-  renderAll()
+  renderAll();
+  let savedView='entry';
+  try{savedView=localStorage.getItem('erpOperatingExpenseViewV1')||'entry'}catch(e){}
+  const validViews=['entry','history','rules','master'];
+  if(!validViews.includes(savedView))savedView='entry';
+  if($o('#oeView'))$o('#oeView').value=savedView;
+  switchView(savedView)
 }
 function switchView(view){
-  $o('#oeEntryPanel').style.display=view==='entry'?'block':'none';
-  $o('#oeHistoryPanel').style.display=view==='history'?'block':'none';
-  $o('#oeRulesPanel').style.display=view==='rules'?'block':'none';
-  $o('#oeMasterPanel').style.display=view==='master'?'block':'none';
+  const entry=$o('#oeEntryPanel');
+  const history=$o('#oeHistoryPanel');
+  const rules=$o('#oeRulesPanel');
+  const master=$o('#oeMasterPanel');
+
+  if(entry)entry.style.display=view==='entry'?'block':'none';
+  if(history)history.style.display=view==='history'?'block':'none';
+  if(rules)rules.style.display=view==='rules'?'block':'none';
+  if(master)master.style.display=view==='master'?'block':'none';
+
+  // Save Expense is strictly an Expense Entry control.
+  const saveBtn=$o('#oeSave');
+  if(saveBtn)saveBtn.style.display=view==='entry'?'inline-flex':'none';
+
   if(view==='history')renderHistory();
   if(view==='rules')renderRules();
-  if(view==='master')renderHeads()
+  if(view==='master')renderHeads();
+
+  try{localStorage.setItem('erpOperatingExpenseViewV1',view)}catch(e){}
 }
 function clearExpense(){
   $o('#oeEditId').value='';
@@ -18203,10 +18255,11 @@ window.ERPOperatingExpenses={
 <script id="operatingExpensesRuntimeFixV1544">
 (function(){
   function q(s){return document.querySelector(s)}
+  function reveal(){document.documentElement.classList.remove('erp-route-restoring-v1545')}
 
-  function ensureAutomaticRulesOption(){
+  function ensureRulesOption(){
     const sel=q('#oeView');
-    if(!sel)return false;
+    if(!sel)return;
     if(![...sel.options].some(o=>o.value==='rules')){
       const opt=document.createElement('option');
       opt.value='rules';
@@ -18214,79 +18267,41 @@ window.ERPOperatingExpenses={
       const master=[...sel.options].find(o=>o.value==='master');
       if(master)sel.insertBefore(opt,master);else sel.appendChild(opt);
     }
-    return true;
   }
 
-  function ensureRulesPanelVisible(){
-    ensureAutomaticRulesOption();
-    const sel=q('#oeView');
-    const panel=q('#oeRulesPanel');
-    if(sel && panel && sel.value==='rules'){
-      q('#oeEntryPanel') && (q('#oeEntryPanel').style.display='none');
-      q('#oeHistoryPanel') && (q('#oeHistoryPanel').style.display='none');
-      q('#oeMasterPanel') && (q('#oeMasterPanel').style.display='none');
-      panel.style.display='block';
-    }
-  }
-
-  function rememberOperatingExpenses(){
-    try{
-      localStorage.setItem('erpStudioLastPanel','operating-expenses');
-      localStorage.setItem('erpProductionConsumptionLastPage','expenses');
-      localStorage.setItem('erpProductionConsumptionPageV1','expenses');
-    }catch(e){}
-    if(location.hash!=='#panel-operating-expenses'){
-      history.replaceState(null,'','#panel-operating-expenses');
-    }
-  }
-
-  function restoreOperatingExpenses(){
+  function shouldRestoreOperatingExpenses(){
     const hash=String(location.hash||'');
-    let last='',pcLast='',pcPage='';
+    let last='',pcPage='';
     try{
       last=localStorage.getItem('erpStudioLastPanel')||'';
-      pcLast=localStorage.getItem('erpProductionConsumptionLastPage')||'';
       pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
     }catch(e){}
+    return hash==='#panel-operating-expenses' || last==='operating-expenses' || pcPage==='expenses';
+  }
 
-    const shouldRestore =
-      hash==='#panel-operating-expenses' ||
-      last==='operating-expenses' ||
-      pcLast==='expenses' ||
-      pcPage==='expenses';
-
-    if(!shouldRestore)return false;
-
+  function restore(){
+    if(!shouldRestoreOperatingExpenses())return false;
     if(window.ERPOperatingExpenses?.open){
       window.ERPOperatingExpenses.open();
-      ensureAutomaticRulesOption();
+      ensureRulesOption();
+      reveal();
       return true;
     }
     return false;
   }
 
-  function bind(){
-    ensureAutomaticRulesOption();
-
-    const sel=q('#oeView');
-    if(sel && !sel.dataset.v1544Bound){
-      sel.dataset.v1544Bound='1';
-      sel.addEventListener('change',function(){
-        ensureAutomaticRulesOption();
-        ensureRulesPanelVisible();
-        rememberOperatingExpenses();
-      });
-    }
-
-    const page=q('#panel-operating-expenses');
-    if(page?.classList.contains('active'))rememberOperatingExpenses();
-  }
-
   function boot(){
-    // Run after all original startup scripts to override Theme Studio fallback.
-    setTimeout(()=>{restoreOperatingExpenses();bind()},80);
-    setTimeout(()=>{restoreOperatingExpenses();bind()},250);
-    setTimeout(()=>{restoreOperatingExpenses();bind()},700);
+    // Try immediately after DOM is ready; no visible Theme page should appear.
+    if(!restore()){
+      let tries=0;
+      const timer=setInterval(function(){
+        tries++;
+        if(restore()||tries>40){
+          clearInterval(timer);
+          reveal();
+        }
+      },10);
+    }
   }
 
   if(document.readyState==='loading'){
@@ -18297,29 +18312,17 @@ window.ERPOperatingExpenses={
 
   window.addEventListener('hashchange',function(){
     if(location.hash==='#panel-operating-expenses'){
-      setTimeout(()=>{restoreOperatingExpenses();bind()},0);
+      restore();
     }
   });
-
-  // Keep URL/state correct whenever Operating Expenses is opened.
-  const hook=setInterval(function(){
-    if(window.ERPOperatingExpenses?.open && !window.ERPOperatingExpenses.__v1544Hooked){
-      const original=window.ERPOperatingExpenses.open;
-      window.ERPOperatingExpenses.open=function(){
-        const r=original.apply(this,arguments);
-        setTimeout(function(){
-          ensureAutomaticRulesOption();
-          rememberOperatingExpenses();
-          bind();
-        },0);
-        return r;
-      };
-      window.ERPOperatingExpenses.__v1544Hooked=true;
-      clearInterval(hook);
-    }
-  },50);
-  setTimeout(()=>clearInterval(hook),5000);
 })();
 </script>
+
+
+<style id="operatingExpenseViewIsolationV1545">
+#panel-operating-expenses #oeHistoryPanel #oeSave,
+#panel-operating-expenses #oeRulesPanel #oeSave,
+#panel-operating-expenses #oeMasterPanel #oeSave{display:none!important}
+</style>
 
 </body></html>
