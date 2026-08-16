@@ -18518,7 +18518,34 @@ function applyCompanyProfileToReport(){
 }
 
 function parseDate(v){try{return typeof oParseDate==='function'?oParseDate(v):pcParseDailyDate(v)}catch(e){return pcParseDailyDate(v)}}
-function fmtDate(v){try{return typeof oFmtDate==='function'?oFmtDate(v):v}catch(e){return v}}
+function fmtDate(v){
+  const s=String(v||'').trim();
+  if(!s)return '';
+  const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let m=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/);
+  if(m){
+    const mi=mons.findIndex(x=>x.toLowerCase()===m[2].toLowerCase());
+    if(mi>=0){
+      let y=String(m[3]);if(y.length===4)y=y.slice(-2);
+      return `${String(Number(m[1])).padStart(2,'0')}-${mons[mi]}-${y}`
+    }
+  }
+  m=s.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2}|\d{4}))?$/);
+  if(m){
+    const d=Number(m[1]),mo=Number(m[2]);
+    if(d>=1&&d<=31&&mo>=1&&mo<=12){
+      let y=m[3]?Number(m[3]):new Date().getFullYear();
+      if(y<100)y+=2000;
+      const dt=new Date(y,mo-1,d);
+      if(dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d){
+        return `${String(d).padStart(2,'0')}-${mons[mo-1]}-${String(y).slice(-2)}`
+      }
+    }
+  }
+  const d=new Date(s);
+  if(!isNaN(d))return `${String(d.getDate()).padStart(2,'0')}-${mons[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+  return s
+}
 function dailyRows(){try{const a=JSON.parse(localStorage.getItem('erpProductionConsumptionDailyV1')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
 function period(){
   const mode=$f('#fcrMode')?.value||'month',now=new Date();
@@ -18632,10 +18659,16 @@ function build(){
     el.addEventListener('blur',()=>{normalizeFcrDateInput(el);render()});
     el.addEventListener('change',()=>{normalizeFcrDateInput(el);render()});
     el.addEventListener('keydown',e=>{
-      if(e.key==='Enter'){normalizeFcrDateInput(el);render()}
+      if(e.key==='Enter'||e.key==='Tab'){
+        normalizeFcrDateInput(el);
+        if(e.key==='Enter'){e.preventDefault();render()}
+      }
     })
   });
-  $f('#fcrRefresh').onclick=render;$f('#fcrMonth').onchange=render;$f('#fcrYear').onchange=render;
+  $f('#fcrRefresh').onclick=()=>{
+    ['fcrDate','fcrFrom','fcrTo'].forEach(id=>normalizeFcrDateInput($f('#'+id)));
+    render()
+  };$f('#fcrMonth').onchange=render;$f('#fcrYear').onchange=render;
   $f('#fcrPrint').onclick=()=>window.print();$f('#fcrBack').onclick=()=>window.ERPDailyDataEntry?.open?.();
   applyCompanyProfileToReport()
 }
@@ -18821,7 +18854,21 @@ function render(){
     <div class="fcr-table-wrap"><table class="fcr-compact"><thead><tr><th>Date</th><th>Paper Ton</th><th>Pulp Ton</th><th>Electricity</th><th>Steam</th><th>Material Cost</th><th>Electricity Cost</th><th>Operating Cost</th><th>Total Cost</th><th>Cost/Ton</th></tr></thead><tbody>${dailyRowsHtml||'<tr><td colspan="10" class="fcr-empty">No saved reports found.</td></tr>'}</tbody></table></div>
   </details>`;
 }
-function open(){build();document.querySelectorAll('main.content > section.panel').forEach(x=>x.classList.remove('active'));$f('#panel-final-cost-report')?.classList.add('active');if($f('#workspaceTitle'))$f('#workspaceTitle').textContent='Final Production & Cost Report';if($f('#workspaceSubtitle'))$f('#workspaceSubtitle').textContent='Daily • Monthly • Materials • Rates • Production Cost';try{history.replaceState(null,'','#panel-final-cost-report');localStorage.setItem('erpProductionConsumptionLastPageV1','final-report')}catch(e){}render()}
+function open(){
+  build();
+  document.querySelectorAll('main.content > section.panel').forEach(x=>x.classList.remove('active'));
+  $f('#panel-final-cost-report')?.classList.add('active');
+  if($f('#workspaceTitle'))$f('#workspaceTitle').textContent='Final Production & Cost Report';
+  if($f('#workspaceSubtitle'))$f('#workspaceSubtitle').textContent='Daily • Monthly • Materials • Rates • Production Cost';
+  try{
+    localStorage.setItem('erpStudioLastPanel','final-cost-report');
+    localStorage.setItem('erpProductionConsumptionLastPage','final-cost-report');
+    localStorage.setItem('erpProductionConsumptionPageV1','final-cost-report');
+    localStorage.setItem('erpProductionConsumptionLastPageV1','final-report');
+    history.replaceState({erpPanel:'panel-final-cost-report'},'','#panel-final-cost-report')
+  }catch(e){}
+  render()
+}
 function addCard(){/* Intentionally disabled: report opens from Daily Consumption Report. */}
 window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash==='#panel-final-cost-report')open()};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,350));else setTimeout(boot,350);
 })();
@@ -18887,5 +18934,41 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
   text-align:center!important;
 }
 </style>
+
+
+<script id="fcrExactRefreshRestoreV1552">
+(function(){
+  function wantsFinalReport(){
+    try{
+      return location.hash==='#panel-final-cost-report' ||
+        localStorage.getItem('erpStudioLastPanel')==='final-cost-report' ||
+        localStorage.getItem('erpProductionConsumptionLastPage')==='final-cost-report' ||
+        localStorage.getItem('erpProductionConsumptionPageV1')==='final-cost-report';
+    }catch(e){return location.hash==='#panel-final-cost-report'}
+  }
+  function restore(){
+    if(!wantsFinalReport())return true;
+    if(window.ERPFinalCostReport?.open){
+      window.ERPFinalCostReport.open();
+      document.documentElement.classList.remove('erp-route-restoring-v1545');
+      return true
+    }
+    return false
+  }
+  function boot(){
+    if(restore())return;
+    let tries=0;
+    const t=setInterval(()=>{
+      tries++;
+      if(restore()||tries>=80){
+        clearInterval(t);
+        document.documentElement.classList.remove('erp-route-restoring-v1545')
+      }
+    },10)
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();
+</script>
 
 </body></html>
