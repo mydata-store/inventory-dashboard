@@ -18427,18 +18427,327 @@ const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 function parseDate(v){try{return typeof oParseDate==='function'?oParseDate(v):pcParseDailyDate(v)}catch(e){return pcParseDailyDate(v)}}
 function fmtDate(v){try{return typeof oFmtDate==='function'?oFmtDate(v):v}catch(e){return v}}
 function dailyRows(){try{const a=JSON.parse(localStorage.getItem('erpProductionConsumptionDailyV1')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
-function period(){const mode=$f('#fcrMode')?.value||'month',now=new Date();if(mode==='daily'){const d=parseDate(fmtDate($f('#fcrDate')?.value||''))||now;return{mode,from:new Date(d.getFullYear(),d.getMonth(),d.getDate()),to:new Date(d.getFullYear(),d.getMonth(),d.getDate()),label:fmtDate(`${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`),year:d.getFullYear(),month:d.getMonth()+1}}const year=+$f('#fcrYear').value||now.getFullYear(),month=+$f('#fcrMonth').value||now.getMonth()+1;return{mode,from:new Date(year,month-1,1),to:new Date(year,month,0),label:new Date(year,month-1,1).toLocaleString('en',{month:'long',year:'numeric'}),year,month}}
+function period(){
+  const mode=$f('#fcrMode')?.value||'month',now=new Date();
+  if(mode==='daily'){
+    const d=parseDate(fmtDate($f('#fcrDate')?.value||''))||now;
+    return{mode,from:new Date(d.getFullYear(),d.getMonth(),d.getDate()),to:new Date(d.getFullYear(),d.getMonth(),d.getDate()),label:fmtDate(`${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`),year:d.getFullYear(),month:d.getMonth()+1}
+  }
+  if(mode==='custom'){
+    const f=parseDate(fmtDate($f('#fcrFrom')?.value||''))||new Date(now.getFullYear(),now.getMonth(),1);
+    const t=parseDate(fmtDate($f('#fcrTo')?.value||''))||now;
+    return{mode,from:f,to:t,label:`${fmtDate(`${f.getDate()}-${f.getMonth()+1}-${f.getFullYear()}`)} to ${fmtDate(`${t.getDate()}-${t.getMonth()+1}-${t.getFullYear()}`)}`,year:f.getFullYear(),month:f.getMonth()+1}
+  }
+  const year=+$f('#fcrYear').value||now.getFullYear();
+  if(mode==='year'){
+    return{mode,from:new Date(year,0,1),to:new Date(year,11,31),label:String(year),year,month:1}
+  }
+  const month=+$f('#fcrMonth').value||now.getMonth()+1;
+  return{mode,from:new Date(year,month-1,1),to:new Date(year,month,0),label:new Date(year,month-1,1).toLocaleString('en',{month:'long',year:'numeric'}),year,month}
+}
 function inPeriod(v,p){const d=parseDate(v);return d&&d>=p.from&&d<=new Date(p.to.getFullYear(),p.to.getMonth(),p.to.getDate(),23,59,59)}
-function mats(r){const out=[];[['Boiler House',r.boilerMaterials],['Pulp Mill',r.pulpMaterials],['Sulphite Plant',r.sulphiteMaterials],['Production Units',r.unitMaterials]].forEach(([group,a])=>(Array.isArray(a)?a:[]).forEach(x=>{const used=n(x.used??x.totalConsumed),rate=n(x.finalReportRate||x.rate||(used?n(x.usedValue)/used:0)),amount=n(x.finalReportValue||x.usedValue||(used*rate));if(used||amount)out.push({group,item:x.item||'',unit:x.finalReportUnit||x.unit||'',used,rate,amount})}));return out}
-function aggregateMaterials(list){const m=new Map();list.forEach(r=>mats(r).forEach(x=>{const k=[x.group,x.item,x.unit].join('|'),z=m.get(k)||{...x,used:0,amount:0};z.used+=x.used;z.amount+=x.amount;z.rate=z.used?z.amount/z.used:x.rate;m.set(k,z)}));return [...m.values()].sort((a,b)=>a.group.localeCompare(b.group)||a.item.localeCompare(b.item))}
+function mats(r){
+  const out=[];
+  [['Boiler House',r.boilerMaterials],['Pulp Mill',r.pulpMaterials],['Sulphite Plant',r.sulphiteMaterials],['Production Units',r.unitMaterials]].forEach(([group,a])=>
+    (Array.isArray(a)?a:[]).forEach(x=>{
+      const used=n(x.finalReportQty??x.used??x.totalConsumed);
+      const rate=n(x.finalReportRate||x.rate||(used?n(x.finalReportValue||x.usedValue)/used:0));
+      const amount=n(x.finalReportValue||x.usedValue||(used*rate));
+      const opening=n(x.opening);
+      const received=n(x.received);
+      const balance=Math.max(0,opening+received-n(x.used??x.totalConsumed));
+      if(used||amount)out.push({group,item:x.item||'',unit:x.finalReportUnit||x.unit||'',opening,received,used,rate,amount,balance})
+    })
+  );
+  return out
+}
+function aggregateMaterials(list){
+  const m=new Map();
+  list.forEach(r=>mats(r).forEach(x=>{
+    const k=[x.group,x.item,x.unit].join('|');
+    const z=m.get(k)||{...x,opening:0,received:0,used:0,amount:0,balance:0,first:true};
+    if(z.first){z.opening=x.opening;z.first=false}
+    z.received+=x.received;z.used+=x.used;z.amount+=x.amount;z.balance=x.balance;
+    z.rate=z.used?z.amount/z.used:x.rate;
+    m.set(k,z)
+  }));
+  return [...m.values()].map(x=>{delete x.first;return x}).sort((a,b)=>a.group.localeCompare(b.group)||a.item.localeCompare(b.item))
+}
 function postedExpenses(p){try{const rows=JSON.parse(localStorage.getItem('erpOperatingExpensesV1')||'[]'),heads=JSON.parse(localStorage.getItem('erpOperatingExpenseHeadsV1')||'[]');const hm=new Map((Array.isArray(heads)?heads:[]).map(h=>[h.id,h]));return (Array.isArray(rows)?rows:[]).filter(r=>r.status==='posted'&&inPeriod(r.date,p)&&hm.get(r.headId)?.include!==false).map(r=>({name:hm.get(r.headId)?.name||'Operating Expense',amount:n(r.amount)}))}catch(e){return []}}
 function operatingCost(p){if(p.mode==='month'&&typeof ruleEstimate==='function'){const x=ruleEstimate(p.year,p.month);return{total:n(x.provisionalTotal),status:x.allActual?'Actual':'Provisional',detail:[['Salary',x.salary.used,x.salary.actualExists?'Actual':'Estimated'],['Sales Tax',x.salesTax.used,x.salesTax.actualExists?'Actual':'Estimated'],['Contractor',x.contractor.used,x.contractor.actualExists?'Actual':'Estimated'],['Other Posted Expenses',x.other,'Actual']]}}let auto={salary:0,salesTax:0,contractor:0,total:0,status:'Provisional'};if(typeof automaticDailyCost==='function')auto=automaticDailyCost(p.label);const other=postedExpenses(p).filter(x=>!['salary','sales tax','contractor'].includes(x.name.toLowerCase())).reduce((a,x)=>a+x.amount,0);return{total:n(auto.total)+other,status:auto.status||'Provisional',detail:[['Salary',auto.salary,auto.status],['Sales Tax',auto.salesTax,auto.status],['Contractor',auto.contractor,auto.status],['Other Posted Expenses',other,'Actual']]}}
 function purchases(p){let all=[];try{if(typeof purchaseAllTenantRows==='function')all=purchaseAllTenantRows()}catch(e){};const buckets={'Head Office / Zafar Purchase':0,'Local Purchase':0,'Bearing & Belts Purchase':0,'Board / Paper Purchase':0};all.filter(x=>inPeriod(x.r?.date,p)).forEach(x=>{const r=x.r||{},val=typeof purchaseBaseValue==='function'?purchaseBaseValue(x):n(r.amount||r.grossTotal);if(x.register==='zafar')buckets['Head Office / Zafar Purchase']+=val;else if(x.register==='board')buckets['Board / Paper Purchase']+=val;else{const text=[r.section,r.item,r.remarks].join(' ').toLowerCase();if(/bearing|belt|v[ -]?belt/.test(text))buckets['Bearing & Belts Purchase']+=val;else buckets['Local Purchase']+=val}});return buckets}
-function build(){if($f('#panel-final-cost-report'))return;const host=$f('main.content');if(!host)return;const sec=document.createElement('section');sec.id='panel-final-cost-report';sec.className='panel purchase-page';sec.innerHTML=`<div class="card fcr-page"><div class="fcr-print-title"><h2>Final Production & Cost Report</h2><div id="fcrPrintPeriod"></div></div><div class="fcr-head"><div><h2>Final Production & Cost Report</h2><p>Daily or monthly material consumption, production, energy, rates, amounts and complete production cost in one report.</p></div><div class="fcr-actions"><button class="btn" id="fcrPrint">Print Report</button><button class="btn" id="fcrBack">← Daily Consumption Report</button></div></div><div class="fcr-filter"><div><label>Report Type</label><select id="fcrMode"><option value="month">Monthly Report</option><option value="daily">Daily Report</option></select></div><div id="fcrDateWrap" style="display:none"><label>Date</label><input id="fcrDate" placeholder="Date"></div><div id="fcrMonthWrap"><label>Month</label><select id="fcrMonth"></select></div><div id="fcrYearWrap"><label>Year</label><select id="fcrYear"></select></div><div><button class="btn primary" id="fcrRefresh">Generate Report</button></div></div><div id="fcrBody"></div></div>`;host.appendChild(sec);const now=new Date(),mn=['January','February','March','April','May','June','July','August','September','October','November','December'];$f('#fcrMonth').innerHTML=mn.map((x,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${x}</option>`).join('');const ys=new Set([now.getFullYear()]);dailyRows().forEach(r=>{const d=parseDate(r.date);if(d)ys.add(d.getFullYear())});$f('#fcrYear').innerHTML=[...ys].sort((a,b)=>b-a).map(y=>`<option>${y}</option>`).join('');$f('#fcrDate').value=fmtDate(`${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`);$f('#fcrMode').onchange=()=>{const d=$f('#fcrMode').value==='daily';$f('#fcrDateWrap').style.display=d?'block':'none';$f('#fcrMonthWrap').style.display=d?'none':'block';$f('#fcrYearWrap').style.display=d?'none':'block';render()};$f('#fcrDate').onblur=e=>{e.target.value=fmtDate(e.target.value);render()};$f('#fcrRefresh').onclick=render;$f('#fcrMonth').onchange=render;$f('#fcrYear').onchange=render;$f('#fcrPrint').onclick=()=>window.print();$f('#fcrBack').onclick=()=>window.ERPDailyDataEntry?.open?.()}
-function render(){const p=period(),list=dailyRows().filter(r=>inPeriod(r.date,p)),materials=aggregateMaterials(list),prod=list.reduce((a,r)=>a+n(r.totalProduction),0),pulp=list.reduce((a,r)=>a+n(r.pulpProduced),0),elec=list.reduce((a,r)=>a+n(r.totalConsumption),0),elecAmt=list.reduce((a,r)=>a+n(r.electricityAmount),0),steam=list.reduce((a,r)=>a+n(r.steamProduction),0),matCost=materials.reduce((a,x)=>a+x.amount,0),op=operatingCost(p),total=matCost+elecAmt+op.total,cpt=prod?total/prod:0,purch=purchases(p);$f('#fcrPrintPeriod').textContent=p.label;const groups={};materials.forEach(x=>(groups[x.group]||(groups[x.group]=[])).push(x));const materialRows=materials.length?materials.map(x=>`<tr><td>${esc(x.group)}</td><td><b>${esc(x.item)}</b></td><td class="num">${qty(x.used)}</td><td>${esc(x.unit)}</td><td class="num">${money(x.rate)}</td><td class="num">${money(x.amount)}</td><td class="num">${money(prod?x.amount/prod:0)}</td></tr>`).join(''):'<tr><td colspan="7" class="fcr-empty">No material consumption recorded for this period.</td></tr>';const processRows=['Boiler House','Pulp Mill','Sulphite Plant','Production Units'].map(g=>{const a=(groups[g]||[]).reduce((s,x)=>s+x.amount,0);return a?`<tr><td>${g}</td><td>${g==='Boiler House'?'Steam / Boiler material cost':'Material consumption cost'}</td><td class="num">${money(a)}</td><td class="num">${money(prod?a/prod:0)}</td></tr>`:''}).join('');const daily=list.slice().sort((a,b)=>parseDate(a.date)-parseDate(b.date)).map(r=>{const mc=mats(r).reduce((a,x)=>a+x.amount,0),ec=n(r.electricityAmount),dc=typeof automaticDailyCost==='function'?automaticDailyCost(r.date):{total:0,status:'Provisional'},other=postedExpenses({mode:'daily',from:parseDate(r.date),to:parseDate(r.date),label:r.date,year:parseDate(r.date)?.getFullYear(),month:(parseDate(r.date)?.getMonth()||0)+1}).filter(x=>!['salary','sales tax','contractor'].includes(x.name.toLowerCase())).reduce((a,x)=>a+x.amount,0),tc=mc+ec+n(dc.total)+other,pr=n(r.totalProduction);return`<tr><td><b>${esc(r.date)}</b></td><td class="num">${qty(pr)}</td><td class="num">${qty(n(r.pulpProduced))}</td><td class="num">${qty(n(r.totalConsumption))}</td><td class="num">${qty(n(r.steamProduction))}</td><td class="num">${money(mc)}</td><td class="num">${money(ec)}</td><td class="num">${money(n(dc.total)+other)}</td><td class="num"><b>${money(tc)}</b></td><td class="num">${money(pr?tc/pr:0)}</td></tr>`}).join('');$f('#fcrBody').innerHTML=`<div class="fcr-kpis"><div class="fcr-kpi"><small>Paper Production</small><strong>${qty(prod)} Ton</strong></div><div class="fcr-kpi"><small>Pulp Production</small><strong>${qty(pulp)} Ton</strong></div><div class="fcr-kpi"><small>Electricity Consumed</small><strong>${qty(elec)} Units</strong></div><div class="fcr-kpi"><small>Steam Produced</small><strong>${qty(steam)} Ton</strong></div><div class="fcr-kpi"><small>Material Cost</small><strong>${money(matCost)}</strong></div><div class="fcr-kpi"><small>Electricity Cost</small><strong>${money(elecAmt)}</strong></div><div class="fcr-kpi"><small>Operating Cost <span class="fcr-status">${esc(op.status)}</span></small><strong>${money(op.total)}</strong></div><div class="fcr-kpi fcr-cost-highlight"><small>Total Cost / Cost Per Ton</small><strong>${money(total)} / ${money(cpt)}</strong></div></div><div class="fcr-section"><div class="fcr-section-title"><span>Material Consumption Detail</span><span>${p.label}</span></div><div class="fcr-table-wrap"><table class="fcr-table"><thead><tr><th>Cost Center</th><th>Material</th><th class="num">Consumed</th><th>Unit</th><th class="num">Average Rate</th><th class="num">Amount</th><th class="num">Cost / Ton Paper</th></tr></thead><tbody>${materialRows}<tr class="fcr-total-row"><td colspan="5">Total Material Cost</td><td class="num">${money(matCost)}</td><td class="num">${money(prod?matCost/prod:0)}</td></tr></tbody></table></div></div><div class="fcr-two"><div class="fcr-section"><div class="fcr-section-title">Production Cost Breakdown</div><div class="fcr-table-wrap"><table class="fcr-table"><thead><tr><th>Cost Head</th><th>Basis</th><th class="num">Amount</th><th class="num">Cost / Ton</th></tr></thead><tbody>${processRows}<tr><td>Electricity</td><td>${qty(elec)} Units</td><td class="num">${money(elecAmt)}</td><td class="num">${money(prod?elecAmt/prod:0)}</td></tr>${op.detail.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[2]||'')}</td><td class="num">${money(x[1])}</td><td class="num">${money(prod?n(x[1])/prod:0)}</td></tr>`).join('')}<tr class="fcr-total-row"><td colspan="2">Grand Production Cost</td><td class="num">${money(total)}</td><td class="num">${money(cpt)}</td></tr></tbody></table></div></div><div class="fcr-section"><div class="fcr-section-title">Purchase Source Activity <span style="font-weight:600">Reference only — not added again to production cost</span></div><div class="fcr-table-wrap"><table class="fcr-table"><thead><tr><th>Purchase Source</th><th class="num">Period Purchase Value</th></tr></thead><tbody>${Object.entries(purch).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${money(v)}</td></tr>`).join('')}</tbody></table></div></div></div><div class="fcr-section"><div class="fcr-section-title">${p.mode==='month'?'Daily Production & Cost Analysis':'Selected Day Cost Analysis'}</div><div class="fcr-table-wrap"><table class="fcr-table"><thead><tr><th>Date</th><th class="num">Paper Ton</th><th class="num">Pulp Ton</th><th class="num">Electricity Units</th><th class="num">Steam Ton</th><th class="num">Material Cost</th><th class="num">Electricity Cost</th><th class="num">Operating Cost</th><th class="num">Total Cost</th><th class="num">Cost / Ton</th></tr></thead><tbody>${daily||'<tr><td colspan="10" class="fcr-empty">No saved Daily Consumption Reports for this period.</td></tr>'}</tbody></table></div></div><div class="fcr-note"><b>Costing rule:</b> Boiler House is costed from materials consumed because no steam-consumption data is supplied. Zero-consumption materials are hidden. Salary, Sales Tax and Contractor use the automatic-cost rules until actual posted expenses are available. Purchase-source values are shown separately for management reference and are not double-counted in production cost.</div>`}
+function build(){
+  if($f('#panel-final-cost-report'))return;
+  const host=$f('main.content');if(!host)return;
+  const sec=document.createElement('section');
+  sec.id='panel-final-cost-report';sec.className='panel purchase-page';
+  sec.innerHTML=`<div class="card fcr-page fcr-approved">
+    <div class="fcr-report-banner">
+      <div class="fcr-company"><div class="fcr-factory">▥</div><div><b>FPM PAPER MILLS</b><span>Production & Costing Department</span></div></div>
+      <div class="fcr-main-title"><h2>FINAL PRODUCTION & COST REPORT</h2><span>Detailed Consumption, Rate, Amount & Cost Statement</span></div>
+      <div class="fcr-report-meta"><span>Report Date</span><b id="fcrMetaDate"></b><span>Currency</span><b>PKR</b></div>
+    </div>
+    <div class="fcr-toolbar-approved">
+      <div class="fcr-mode-tabs">
+        <button type="button" data-fcr-mode="daily">Daily</button>
+        <button type="button" data-fcr-mode="month" class="active">Monthly</button>
+        <button type="button" data-fcr-mode="year">Yearly</button>
+        <button type="button" data-fcr-mode="custom">Custom</button>
+      </div>
+      <select id="fcrMode" style="display:none"><option value="daily">daily</option><option value="month" selected>month</option><option value="year">year</option><option value="custom">custom</option></select>
+      <div class="fcr-period-controls">
+        <div id="fcrDateWrap" style="display:none"><label>Date</label><input id="fcrDate" placeholder="Date"></div>
+        <div id="fcrMonthWrap"><label>Month</label><select id="fcrMonth"></select></div>
+        <div id="fcrYearWrap"><label>Year</label><select id="fcrYear"></select></div>
+        <div id="fcrCustomWrap" style="display:none"><label>Period</label><input id="fcrFrom" placeholder="From Date"><span>to</span><input id="fcrTo" placeholder="To Date"></div>
+        <button class="btn primary" id="fcrRefresh">Generate Report</button>
+      </div>
+      <div class="fcr-actions"><button class="btn" id="fcrPrint">Print Report</button><button class="btn" id="fcrBack">← Daily Consumption Report</button></div>
+    </div>
+    <div class="fcr-print-title"><h2>Final Production & Cost Report</h2><div id="fcrPrintPeriod"></div></div>
+    <div id="fcrBody"></div>
+  </div>`;
+  host.appendChild(sec);
+  const now=new Date(),mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  $f('#fcrMonth').innerHTML=mn.map((x,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${x}</option>`).join('');
+  const ys=new Set([now.getFullYear()]);
+  dailyRows().forEach(r=>{const d=parseDate(r.date);if(d)ys.add(d.getFullYear())});
+  $f('#fcrYear').innerHTML=[...ys].sort((a,b)=>b-a).map(y=>`<option>${y}</option>`).join('');
+  $f('#fcrDate').value=fmtDate(`${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`);
+  $f('#fcrFrom').value=fmtDate(`1-${now.getMonth()+1}-${now.getFullYear()}`);
+  $f('#fcrTo').value=fmtDate(`${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`);
+  $f('#fcrMetaDate').textContent=fmtDate(`${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}`);
+  function syncMode(mode){
+    $f('#fcrMode').value=mode;
+    document.querySelectorAll('[data-fcr-mode]').forEach(b=>b.classList.toggle('active',b.dataset.fcrMode===mode));
+    $f('#fcrDateWrap').style.display=mode==='daily'?'flex':'none';
+    $f('#fcrMonthWrap').style.display=mode==='month'?'flex':'none';
+    $f('#fcrYearWrap').style.display=(mode==='month'||mode==='year')?'flex':'none';
+    $f('#fcrCustomWrap').style.display=mode==='custom'?'flex':'none';
+    render()
+  }
+  document.querySelectorAll('[data-fcr-mode]').forEach(b=>b.onclick=()=>syncMode(b.dataset.fcrMode));
+  ['fcrDate','fcrFrom','fcrTo'].forEach(id=>$f('#'+id).onblur=e=>{e.target.value=fmtDate(e.target.value);render()});
+  $f('#fcrRefresh').onclick=render;$f('#fcrMonth').onchange=render;$f('#fcrYear').onchange=render;
+  $f('#fcrPrint').onclick=()=>window.print();$f('#fcrBack').onclick=()=>window.ERPDailyDataEntry?.open?.()
+}
+function render(){
+  const p=period(),list=dailyRows().filter(r=>inPeriod(r.date,p)),materials=aggregateMaterials(list);
+  const prod=list.reduce((a,r)=>a+n(r.totalProduction),0);
+  const pulp=list.reduce((a,r)=>a+n(r.pulpProduced),0);
+  const pulpConsumed=list.reduce((a,r)=>a+n(r.woodPulp),0);
+  const elec=list.reduce((a,r)=>a+n(r.totalConsumption),0);
+  const elecAmt=list.reduce((a,r)=>a+n(r.electricityAmount),0);
+  const steam=list.reduce((a,r)=>a+n(r.steamProduction),0);
+  const ashRows=list.filter(r=>n(r.totalProduction)>0);
+  const ashAvg=ashRows.length?ashRows.reduce((a,r)=>a+n(r.ashAverage),0)/ashRows.length:0;
+  const pulpYieldRows=list.filter(r=>n(r.rawMaterialConsumed)>0);
+  const pulpYield=pulpYieldRows.length?pulpYieldRows.reduce((a,r)=>a+n(r.pulpYield),0)/pulpYieldRows.length:0;
+  const matCost=materials.reduce((a,x)=>a+x.amount,0),op=operatingCost(p),purch=purchases(p);
+  const purchaseTotal=Object.values(purch).reduce((a,v)=>a+n(v),0);
+  const total=matCost+elecAmt+op.total,cpt=prod?total/prod:0,cptPulp=pulp?total/pulp:0;
+  const unitsPerTon=prod?elec/prod:0,steamTonPaper=prod?steam/prod:0;
+  $f('#fcrPrintPeriod').textContent=p.label;
+
+  const groups={};materials.forEach(x=>(groups[x.group]||(groups[x.group]=[])).push(x));
+  const groupCost=g=>(groups[g]||[]).reduce((a,x)=>a+x.amount,0);
+  const pulpMats=groups['Pulp Mill']||[],boilerMats=groups['Boiler House']||[];
+  const otherMats=[...(groups['Sulphite Plant']||[]),...(groups['Production Units']||[])];
+
+  const materialTable=(arr,type)=>arr.length?arr.map((x,i)=>`<tr>
+    <td>${i+1}</td><td><b>${esc(x.item)}</b></td>
+    ${type==='pulp'?`<td class="num">${qty(x.opening)}</td><td class="num">${qty(x.received)}</td>`:''}
+    <td class="num">${qty(x.used)}</td><td>${esc(x.unit)}</td><td class="num">${money(x.rate)}</td>
+    <td class="num">${money(x.amount)}</td>
+    ${type==='pulp'?`<td class="num">${money(pulp?x.amount/pulp:0)}</td>`:''}
+    <td class="num">${money(prod?x.amount/prod:0)}</td></tr>`).join(''):
+    `<tr><td colspan="${type==='pulp'?10:7}" class="fcr-empty">No material consumption recorded.</td></tr>`;
+
+  const opMap={};op.detail.forEach(x=>opMap[x[0]]=n(x[1]));
+  const otherRows=[
+    ['Head Office / Zafar Purchase',n(purch['Head Office / Zafar Purchase'])],
+    ['Local Purchase',n(purch['Local Purchase'])],
+    ['Board / Paper Purchase',n(purch['Board / Paper Purchase'])],
+    ['Bearings, Belts & Misc',n(purch['Bearing & Belts Purchase'])],
+    ['Salary',n(opMap['Salary'])],
+    ['Contractor',n(opMap['Contractor'])],
+    ['Sales Tax',n(opMap['Sales Tax'])],
+    ['Other Posted Expenses',n(opMap['Other Posted Expenses'])]
+  ];
+
+  const unitMap={};
+  list.forEach(r=>{
+    (Array.isArray(r.units)?r.units:[]).forEach(u=>{
+      const k=u.name||u.code||u.id||'Production Unit';
+      unitMap[k]=unitMap[k]||{name:k,production:0,electricity:0,cost:0};
+      unitMap[k].production+=n(u.production)
+    });
+    (Array.isArray(r.electricityProductionUnits)?r.electricityProductionUnits:[]).forEach(u=>{
+      const k=u.name||u.code||u.id||'Production Unit';
+      unitMap[k]=unitMap[k]||{name:k,production:0,electricity:0,cost:0};
+      unitMap[k].electricity+=n(u.qty)
+    })
+  });
+  Object.values(unitMap).forEach(u=>{u.cost=u.electricity*n(list[0]?.electricityRate||0)});
+
+  const breakdown=[
+    ['Pulp Mill Materials',groupCost('Pulp Mill')],
+    ['Boiler House / Steam',groupCost('Boiler House')],
+    ['Other Materials',groupCost('Sulphite Plant')+groupCost('Production Units')],
+    ['Electricity',elecAmt],
+    ['Operating Costs',op.total]
+  ];
+  const bTotal=breakdown.reduce((a,x)=>a+x[1],0)||1;
+  let deg=0;const colors=['#173d73','#d67a12','#6b46a1','#288240','#cc3d37'];
+  const stops=breakdown.map((x,i)=>{const start=deg;deg+=x[1]/bTotal*360;return `${colors[i]} ${start}deg ${deg}deg`}).join(',');
+
+  const dailyRowsHtml=list.slice().sort((a,b)=>parseDate(a.date)-parseDate(b.date)).map(r=>{
+    const mc=mats(r).reduce((a,x)=>a+x.amount,0),ec=n(r.electricityAmount);
+    const dc=typeof automaticDailyCost==='function'?automaticDailyCost(r.date):{total:0,status:'Provisional'};
+    const tc=mc+ec+n(dc.total),pr=n(r.totalProduction);
+    return `<tr><td><b>${esc(r.date)}</b></td><td class="num">${qty(pr)}</td><td class="num">${qty(n(r.pulpProduced))}</td><td class="num">${qty(n(r.totalConsumption))}</td><td class="num">${qty(n(r.steamProduction))}</td><td class="num">${money(mc)}</td><td class="num">${money(ec)}</td><td class="num">${money(n(dc.total))}</td><td class="num"><b>${money(tc)}</b></td><td class="num">${money(pr?tc/pr:0)}</td></tr>`
+  }).join('');
+
+  const alerts=[];
+  if(prod&&unitsPerTon>0)alerts.push(`Electricity / Ton Paper: ${qty(unitsPerTon)} Units`);
+  if(pulpYield>0)alerts.push(`Pulp Yield: ${pulpYield.toFixed(2)}%`);
+  if(ashAvg>0)alerts.push(`Ash Average: ${ashAvg.toFixed(2)}%`);
+  if(steamTonPaper>0)alerts.push(`Steam / Ton Paper: ${steamTonPaper.toFixed(3)} Ton/Ton`);
+  if(!materials.length)alerts.push('No material consumption recorded for selected period');
+
+  $f('#fcrBody').innerHTML=`
+  <div class="fcr-top-grid">
+    <div class="fcr-block">
+      <div class="fcr-blue-head">PRODUCTION SUMMARY</div>
+      <table class="fcr-compact"><thead><tr><th>Particular</th><th>Daily Avg.</th><th>Total (Period)</th><th>Standard</th><th>Variance</th></tr></thead><tbody>
+        <tr><td>Paper Production (Ton)</td><td class="num">${qty(list.length?prod/list.length:0)}</td><td class="num"><b>${qty(prod)}</b></td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>Pulp Produced (Ton)</td><td class="num">${qty(list.length?pulp/list.length:0)}</td><td class="num"><b>${qty(pulp)}</b></td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>Pulp Consumed (Ton)</td><td class="num">${qty(list.length?pulpConsumed/list.length:0)}</td><td class="num"><b>${qty(pulpConsumed)}</b></td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>Pulp Yield (%)</td><td></td><td class="num"><b>${pulpYield.toFixed(2)}%</b></td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>Paper Ash (%)</td><td></td><td class="num"><b>${ashAvg.toFixed(2)}%</b></td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>Electricity Units</td><td class="num">${qty(list.length?elec/list.length:0)}</td><td class="num"><b>${qty(elec)}</b></td><td></td><td></td></tr>
+        <tr><td>Units / Ton Paper</td><td></td><td class="num"><b>${qty(unitsPerTon)}</b></td><td></td><td></td></tr>
+      </tbody></table>
+    </div>
+    <div class="fcr-block fcr-indicators">
+      <div class="fcr-blue-head">KEY COST INDICATORS</div>
+      <div class="fcr-ind-row"><span>Total Production Cost</span><b>${money(total)}</b></div>
+      <div class="fcr-ind-row"><span>Cost Per Ton Paper</span><b>${money(cpt)}</b></div>
+      <div class="fcr-ind-row"><span>Electricity / Ton Paper</span><b>${qty(unitsPerTon)} Units</b></div>
+      <div class="fcr-ind-row"><span>Pulp Yield</span><b>${pulpYield.toFixed(2)}%</b></div>
+    </div>
+    <div class="fcr-block">
+      <div class="fcr-blue-head">COST BREAKDOWN (% OF TOTAL)</div>
+      <div class="fcr-donut-wrap"><div class="fcr-donut" style="background:conic-gradient(${stops})"><div></div></div>
+        <div class="fcr-legend">${breakdown.map((x,i)=>`<span><i style="background:${colors[i]}"></i>${esc(x[0])}<b>${(x[1]/bTotal*100).toFixed(1)}%</b></span>`).join('')}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fcr-mid-grid">
+    <div class="fcr-block">
+      <div class="fcr-blue-head">A. PULP MILL MATERIAL CONSUMPTION</div>
+      <div class="fcr-table-wrap"><table class="fcr-compact"><thead><tr><th>SR #</th><th>Material</th><th>Opening</th><th>Received</th><th>Consumed</th><th>Unit</th><th>Avg Rate</th><th>Amount</th><th>Cost/Ton Pulp</th><th>Cost/Ton Paper</th></tr></thead>
+      <tbody>${materialTable(pulpMats,'pulp')}<tr class="fcr-total-row"><td colspan="7">TOTAL (A)</td><td class="num">${money(groupCost('Pulp Mill'))}</td><td class="num">${money(pulp?groupCost('Pulp Mill')/pulp:0)}</td><td class="num">${money(prod?groupCost('Pulp Mill')/prod:0)}</td></tr></tbody></table></div>
+    </div>
+    <div class="fcr-block">
+      <div class="fcr-blue-head">B. BOILER HOUSE / STEAM COST</div>
+      <div class="fcr-table-wrap"><table class="fcr-compact"><thead><tr><th>SR #</th><th>Material</th><th>Consumed</th><th>Unit</th><th>Rate</th><th>Amount</th><th>Cost/Ton Paper</th></tr></thead>
+      <tbody>${materialTable(boilerMats,'boiler')}<tr class="fcr-total-row"><td colspan="5">TOTAL (B)</td><td class="num">${money(groupCost('Boiler House'))}</td><td class="num">${money(prod?groupCost('Boiler House')/prod:0)}</td></tr></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="fcr-mid-grid lower">
+    <div class="fcr-block">
+      <div class="fcr-blue-head">C. ELECTRICITY</div>
+      <table class="fcr-compact"><thead><tr><th>Source</th><th>Units Consumed</th><th>Rate / Unit</th><th>Amount</th><th>Units / Ton Paper</th><th>Cost / Ton Paper</th></tr></thead><tbody>
+        <tr><td>WAPDA / Solar Combined</td><td class="num">${qty(elec)}</td><td class="num">${money(list.length?n(list[0]?.electricityRate):0)}</td><td class="num">${money(elecAmt)}</td><td class="num">${qty(unitsPerTon)}</td><td class="num">${money(prod?elecAmt/prod:0)}</td></tr>
+        <tr class="fcr-total-row"><td>TOTAL (C)</td><td class="num">${qty(elec)}</td><td></td><td class="num">${money(elecAmt)}</td><td class="num">${qty(unitsPerTon)}</td><td class="num">${money(prod?elecAmt/prod:0)}</td></tr>
+      </tbody></table>
+    </div>
+    <div class="fcr-block">
+      <div class="fcr-blue-head">D. OTHER PRODUCTION COSTS</div>
+      <table class="fcr-compact"><thead><tr><th>SR #</th><th>Cost Head</th><th>Amount</th><th>Cost/Ton Paper</th><th>Basis</th></tr></thead><tbody>
+        ${otherRows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x[0])}</td><td class="num">${money(x[1])}</td><td class="num">${money(prod?x[1]/prod:0)}</td><td>${i<4?'Purchase':'${op.status}'}</td></tr>`).join('')}
+        <tr class="fcr-total-row"><td colspan="2">TOTAL (D)</td><td class="num">${money(purchaseTotal+op.total)}</td><td class="num">${money(prod?(purchaseTotal+op.total)/prod:0)}</td><td></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  ${otherMats.length?`<div class="fcr-block fcr-othermat"><div class="fcr-blue-head">OTHER MATERIAL / PRODUCTION UNIT CONSUMPTION</div><div class="fcr-table-wrap"><table class="fcr-compact"><thead><tr><th>SR #</th><th>Material</th><th>Cost Center</th><th>Consumed</th><th>Unit</th><th>Rate</th><th>Amount</th><th>Cost/Ton Paper</th></tr></thead><tbody>${otherMats.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.item)}</td><td>${esc(x.group)}</td><td class="num">${qty(x.used)}</td><td>${esc(x.unit)}</td><td class="num">${money(x.rate)}</td><td class="num">${money(x.amount)}</td><td class="num">${money(prod?x.amount/prod:0)}</td></tr>`).join('')}</tbody></table></div></div>`:''}
+
+  <div class="fcr-bottom-grid">
+    <div class="fcr-block">
+      <div class="fcr-blue-head">GRAND COST SUMMARY</div>
+      <table class="fcr-compact"><thead><tr><th>Particular</th><th>Amount</th><th>% of Total</th><th>Cost/Ton Pulp</th><th>Cost/Ton Paper</th></tr></thead><tbody>
+        ${[
+          ['A. Pulp Mill Materials',groupCost('Pulp Mill')],
+          ['B. Boiler House / Steam',groupCost('Boiler House')],
+          ['C. Electricity',elecAmt],
+          ['D. Other Materials',groupCost('Sulphite Plant')+groupCost('Production Units')],
+          ['E. Operating Costs',op.total]
+        ].map(x=>`<tr><td>${x[0]}</td><td class="num">${money(x[1])}</td><td class="num">${total?(x[1]/total*100).toFixed(2):'0.00'}%</td><td class="num">${money(pulp?x[1]/pulp:0)}</td><td class="num">${money(prod?x[1]/prod:0)}</td></tr>`).join('')}
+      </tbody></table>
+    </div>
+    <div class="fcr-block fcr-grand-indicators">
+      <div class="fcr-grand"><span>TOTAL PRODUCTION COST</span><b>${money(total)}</b></div>
+      <div class="fcr-grand"><span>COST PER TON PULP</span><b>${money(cptPulp)}</b></div>
+      <div class="fcr-grand"><span>COST PER TON PAPER</span><b>${money(cpt)}</b></div>
+    </div>
+    <div class="fcr-block">
+      <div class="fcr-blue-head">PRODUCTION UNIT SUMMARY</div>
+      <table class="fcr-compact"><thead><tr><th>Unit</th><th>Paper Production</th><th>Electricity Units</th><th>Electricity Cost</th><th>Cost/Ton Paper</th></tr></thead><tbody>
+        ${Object.values(unitMap).length?Object.values(unitMap).map(u=>`<tr><td>${esc(u.name)}</td><td class="num">${qty(u.production)}</td><td class="num">${qty(u.electricity)}</td><td class="num">${money(u.cost)}</td><td class="num">${money(u.production?u.cost/u.production:0)}</td></tr>`).join(''):'<tr><td colspan="5" class="fcr-empty">No production-unit data.</td></tr>'}
+      </tbody></table>
+    </div>
+    <div class="fcr-block">
+      <div class="fcr-blue-head">EXCEPTIONS / VARIANCE ALERTS</div>
+      <div class="fcr-alerts">${alerts.map((a,i)=>`<div><span>${i<3?'▲':'●'}</span>${esc(a)}</div>`).join('')}</div>
+    </div>
+  </div>
+
+  <div class="fcr-final-strip"><b>${qty(prod)} TON PAPER PRODUCED</b><span>|</span><b>TOTAL COST ${money(total)}</b><span>|</span><b>FINAL COST PER TON PAPER ${money(cpt)}</b></div>
+
+  <details class="fcr-daily-details"><summary>${p.mode==='month'||p.mode==='year'?'Daily Production & Cost Detail':'Selected Day Cost Detail'}</summary>
+    <div class="fcr-table-wrap"><table class="fcr-compact"><thead><tr><th>Date</th><th>Paper Ton</th><th>Pulp Ton</th><th>Electricity</th><th>Steam</th><th>Material Cost</th><th>Electricity Cost</th><th>Operating Cost</th><th>Total Cost</th><th>Cost/Ton</th></tr></thead><tbody>${dailyRowsHtml||'<tr><td colspan="10" class="fcr-empty">No saved reports found.</td></tr>'}</tbody></table></div>
+  </details>`;
+}
 function open(){build();document.querySelectorAll('main.content > section.panel').forEach(x=>x.classList.remove('active'));$f('#panel-final-cost-report')?.classList.add('active');if($f('#workspaceTitle'))$f('#workspaceTitle').textContent='Final Production & Cost Report';if($f('#workspaceSubtitle'))$f('#workspaceSubtitle').textContent='Daily • Monthly • Materials • Rates • Production Cost';try{history.replaceState(null,'','#panel-final-cost-report');localStorage.setItem('erpProductionConsumptionLastPageV1','final-report')}catch(e){}render()}
 function addCard(){/* Intentionally disabled: report opens from Daily Consumption Report. */}
 window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash==='#panel-final-cost-report')open()};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,350));else setTimeout(boot,350);
 })();
 </script>
+
+<style id="fcrApprovedLayoutV1550">
+#panel-final-cost-report .fcr-page{padding:0!important;border-radius:0!important;overflow:hidden;background:#fff}
+.fcr-approved{font-family:Arial,Helvetica,sans-serif;color:#102849}
+.fcr-report-banner{display:grid;grid-template-columns:1fr 2.2fr .8fr;align-items:center;border:1px solid #8ba4c5;background:#fff}
+.fcr-company{display:flex;align-items:center;gap:10px;padding:10px 14px}.fcr-factory{font-size:34px;color:#173d73}.fcr-company b{display:block;font-size:17px}.fcr-company span{display:block;font-size:10px;color:#51647f;margin-top:2px}
+.fcr-main-title{text-align:center;border-left:1px solid #c4d1e2;border-right:1px solid #c4d1e2;padding:7px}.fcr-main-title h2{font-size:24px!important;margin:0!important;color:#16396d}.fcr-main-title span{color:#d64532;font-weight:800;font-size:10px}
+.fcr-report-meta{display:grid;grid-template-columns:auto auto;gap:3px 8px;padding:8px 12px;font-size:9px}
+.fcr-toolbar-approved{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:10px;border:1px solid #8ba4c5;border-top:0;padding:7px 10px;background:#f7fbff}
+.fcr-mode-tabs{display:flex}.fcr-mode-tabs button{border:1px solid #9db3ce;background:#fff;color:#173d73;padding:6px 16px;font-size:10px;cursor:pointer}.fcr-mode-tabs button.active{background:#173d73;color:#fff}
+.fcr-period-controls{display:flex;gap:7px;align-items:end;justify-content:center}.fcr-period-controls>div{display:flex;align-items:center;gap:5px}.fcr-period-controls label{font-size:8px;font-weight:900;text-transform:uppercase}.fcr-period-controls input,.fcr-period-controls select{height:29px;border:1px solid #9db3ce;border-radius:3px;padding:0 7px;min-width:130px}.fcr-period-controls .btn{height:29px;padding:0 12px;border-radius:4px}
+.fcr-toolbar-approved .fcr-actions{display:flex;gap:6px}.fcr-toolbar-approved .btn{height:30px;padding:0 10px;border-radius:4px;font-size:10px}
+.fcr-top-grid{display:grid;grid-template-columns:1.35fr .65fr 1fr;gap:7px;margin-top:7px}.fcr-mid-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:7px;margin-top:7px}.fcr-mid-grid.lower{grid-template-columns:.8fr 1.2fr}.fcr-bottom-grid{display:grid;grid-template-columns:1.1fr .48fr 1.05fr 1fr;gap:7px;margin-top:7px}
+.fcr-block{border:1px solid #9db3ce;background:#fff;min-width:0}.fcr-blue-head{background:#153d73;color:#fff;font-size:10px;font-weight:900;padding:5px 7px;letter-spacing:.02em}.fcr-compact{width:100%;border-collapse:collapse}.fcr-compact th,.fcr-compact td{border:1px solid #c7d4e5;padding:4px 5px;font-size:8px}.fcr-compact th{background:#f1f5fa;color:#102849;font-weight:900;text-transform:none}.fcr-compact .num,.fcr-approved .num{text-align:right}.fcr-total-row td{font-weight:900;background:#eef3fa!important}
+.fcr-indicators{display:flex;flex-direction:column}.fcr-ind-row{padding:8px 13px;border-bottom:1px solid #d5dfeb}.fcr-ind-row span{display:block;font-size:8px;text-transform:uppercase;color:#51647f}.fcr-ind-row b{display:block;font-size:16px;color:#153d73;margin-top:2px}
+.fcr-donut-wrap{display:flex;align-items:center;justify-content:center;gap:18px;padding:10px}.fcr-donut{width:125px;height:125px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}.fcr-donut>div{width:62px;height:62px;background:#fff;border-radius:50%}.fcr-legend{display:grid;gap:5px;min-width:150px}.fcr-legend span{display:grid;grid-template-columns:9px 1fr auto;gap:6px;align-items:center;font-size:8px}.fcr-legend i{width:8px;height:8px}.fcr-legend b{font-size:8px}
+.fcr-grand-indicators{display:grid;align-content:center;text-align:center}.fcr-grand{padding:9px;border-bottom:1px solid #c7d4e5}.fcr-grand:last-child{border-bottom:0}.fcr-grand span{display:block;font-size:8px;font-weight:900}.fcr-grand b{display:block;font-size:17px;color:#163d73;margin-top:4px}
+.fcr-alerts{padding:7px}.fcr-alerts div{font-size:8px;padding:4px 2px;border-bottom:1px solid #e1e7ef}.fcr-alerts span{color:#d43c32;margin-right:6px}.fcr-final-strip{margin-top:7px;background:#153d73;color:#fff;padding:7px 12px;display:flex;justify-content:center;gap:18px;font-size:11px}.fcr-final-strip b:nth-of-type(2){color:#ffd246}
+.fcr-othermat{margin-top:7px}.fcr-daily-details{margin-top:7px;border:1px solid #9db3ce}.fcr-daily-details summary{cursor:pointer;background:#eef3fa;padding:7px 10px;font-weight:900;font-size:9px}
+.fcr-approved .fcr-empty{text-align:center!important;padding:12px!important;color:#728197}
+@media(max-width:1200px){.fcr-top-grid,.fcr-mid-grid,.fcr-mid-grid.lower,.fcr-bottom-grid{grid-template-columns:1fr}.fcr-toolbar-approved{grid-template-columns:1fr}.fcr-period-controls{justify-content:flex-start;flex-wrap:wrap}}
+@media print{
+ #panel-final-cost-report .fcr-toolbar-approved{display:none!important}
+ #panel-final-cost-report .fcr-report-banner{display:grid!important}
+ #panel-final-cost-report .fcr-top-grid{grid-template-columns:1.35fr .65fr 1fr!important}
+ #panel-final-cost-report .fcr-mid-grid{grid-template-columns:1.2fr .8fr!important}
+ #panel-final-cost-report .fcr-mid-grid.lower{grid-template-columns:.8fr 1.2fr!important}
+ #panel-final-cost-report .fcr-bottom-grid{grid-template-columns:1.1fr .48fr 1.05fr 1fr!important}
+ #panel-final-cost-report .fcr-daily-details{display:none!important}
+ @page{size:A3 landscape;margin:7mm}
+}
+</style>
+
 </body></html>
