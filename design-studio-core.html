@@ -13560,7 +13560,7 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
       <td><div class="dde-master-item">${data.item||''}</div></td>
       <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
       <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0" ${carried?'readonly':''}><small class="dde-mat-source-note">${carried?'Previous closing':'Initial opening'}</small></td>
-      <td><b class="dde-mat-received-display">${received.toFixed(3)}</b><input class="dde-mat-received" type="hidden" value="${received||0}"></td>
+      <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
       <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
       <td><b class="dde-mat-rate">${money(reportRate)}</b></td>
@@ -13575,7 +13575,7 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
       <td><div class="dde-master-item">${data.item||''}</div></td>
       <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
       <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0" ${carried?'readonly':''}><small class="dde-mat-source-note">${carried?'Previous closing':'Initial opening'}</small></td>
-      <td><b class="dde-mat-received-display">${received.toFixed(3)}</b><input class="dde-mat-received" type="hidden" value="${received||0}"></td>
+      <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
       <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
       <td><b class="dde-mat-rate">${money(reportRate)}</b></td>
@@ -13595,7 +13595,7 @@ function materialRowHtml(section,index,unitsMode=false,data={}){
       <td><div class="dde-master-item">${data.item||''}</div></td>
       <td><span class="dde-mat-unit">${reportUnit||''}</span><small class="dde-mat-source-note">${ref?.convertToTon?'Final report: convert to Ton':''}</small></td>
       <td><input class="dde-control dde-mat-opening" type="number" step="any" value="${opening||''}" placeholder="0" ${carried?'readonly':''}><small class="dde-mat-source-note">${carried?'Previous closing':'Initial opening'}</small></td>
-      <td><b class="dde-mat-received-display">${received.toFixed(3)}</b><input class="dde-mat-received" type="hidden" value="${received||0}"></td>
+      <td><input class="dde-control dde-mat-received" type="number" step="any" value="${received||''}" placeholder="0"></td>
       <td><input class="dde-control dde-mat-used" type="number" step="any" value="${used||''}" placeholder="0"></td>
       <td><b class="dde-material-balance dde-mat-balance">${balance.toFixed(3)}</b></td>
       <td><b class="dde-mat-rate">${money(reportRate)}</b></td>
@@ -13643,8 +13643,6 @@ function bindMaterialRows(bodyId,unitsMode=false){
 function recalcMaterialRow(tr,unitsMode=false){
   const opening=num(tr.querySelector('.dde-mat-opening')?.value);
   const received=num(tr.querySelector('.dde-mat-received')?.value);
-  const receivedDisplay=tr.querySelector('.dde-mat-received-display');
-  if(receivedDisplay)receivedDisplay.textContent=received.toFixed(3);
   const meta=rowMaterialMeta(tr);
   const unitEl=tr.querySelector('.dde-mat-unit');
   if(unitEl)unitEl.textContent=meta.reportUnit||'';
@@ -13769,13 +13767,6 @@ function renderProductionUnitsMaterialSection(savedRows=[]){
     const carried=tr.dataset.openingCarried==='true';
     const opening=tr.querySelector('.dde-mat-opening');
     if(opening && carried)opening.readOnly=true;
-
-    const received=tr.querySelector('.dde-mat-received');
-    if(received){
-      const v=num(received.value);
-      const td=received.parentElement;
-      td.innerHTML=`<b class="dde-mat-received-display">${v.toFixed(3)}</b><input class="dde-mat-received" type="hidden" value="${v}">`
-    }
 
     const openingTd=opening?.parentElement;
     if(openingTd && !openingTd.querySelector('.dde-mat-source-note')){
@@ -15624,14 +15615,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
 }
 </style>
-<style id="ddeBoilerReceivedReadonlyV1525">
-#panel-daily-data-entry #ddeBoilerTable .dde-mat-received-display{
-  display:inline-block;
-  min-width:52px;
-  font-weight:800;
-  color:#003b66;
-}
-</style>
 <style id="ddePulpMasterControlV1526">
 #panel-daily-data-entry #ddePulpTable{
   table-layout:fixed;
@@ -15653,12 +15636,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #panel-daily-data-entry #ddePulpTable .dde-master-item{
   font-weight:700;
 }
-#panel-daily-data-entry #ddePulpTable .dde-mat-received-display{
-  display:inline-block;
-  min-width:52px;
-  font-weight:800;
-  color:#003b66;
-}
 </style>
 <style id="ddeRemainingMaterialStockControlV1527">
 #panel-daily-data-entry #ddeSulphiteTable{
@@ -15676,13 +15653,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #panel-daily-data-entry #ddeSulphiteTable th:nth-child(9){width:110px}
 #panel-daily-data-entry #ddeSulphiteTable .dde-control{min-width:0;width:100%}
 #panel-daily-data-entry #ddeSulphiteTable .dde-master-item{font-weight:700}
-#panel-daily-data-entry #ddeSulphiteTable .dde-mat-received-display,
-#panel-daily-data-entry #ddeUnitsTable .dde-mat-received-display{
-  display:inline-block;
-  min-width:52px;
-  font-weight:800;
-  color:#003b66;
-}
 </style>
 <style id="dailyConsumptionHistoryV1528Style">
 #panel-daily-consumption-history .dch-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
