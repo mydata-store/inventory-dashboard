@@ -15739,203 +15739,104 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 </style>
 
-<script id="historyBackButtonFixV1532">
+<script id="erpBrowserHistoryNavigationV1535">
 (function(){
-  function openDailyConsumptionReport(){
-    var target =
-      document.getElementById('panel-daily-consumption') ||
-      document.getElementById('panel-daily-consumption-report') ||
-      document.querySelector('[data-panel="daily-consumption"]') ||
-      document.querySelector('[data-page="daily-consumption"]');
+  let restoring=false;
+  let lastPanel='';
 
-    // Prefer the ERP's own navigation controls if one exists.
-    var nav =
-      document.querySelector('[data-open="daily-consumption"]') ||
-      document.querySelector('[data-target="panel-daily-consumption"]') ||
-      document.querySelector('[data-panel-target="daily-consumption"]');
+  function activePanelId(){
+    const p=document.querySelector('.panel.active[id]');
+    return p ? p.id : '';
+  }
 
-    if(nav && nav !== document.getElementById('dchBackBtn')) {
-      nav.click();
+  function stateFor(id){ return {erpPanel:id}; }
+
+  function seed(){
+    const current=activePanelId();
+    const hash=(location.hash||'').replace(/^#/,'');
+    if(hash && document.getElementById(hash) && hash!==current){
+      restore(hash);
       return;
     }
-
-    // Same-page fallback: hide the history panel and show Daily Consumption Report.
-    var history = document.getElementById('panel-daily-consumption-history');
-    if(history) {
-      history.hidden = true;
-      history.style.display = 'none';
-      history.classList.remove('active','show');
-    }
-    if(target) {
-      target.hidden = false;
-      target.style.display = '';
-      target.classList.add('active','show');
-      target.scrollIntoView({block:'start'});
-      return;
-    }
-
-    // Last fallback for versions using the page switcher function.
-    if(typeof window.showPanel === 'function') {
-      window.showPanel('daily-consumption');
-    } else if(typeof window.openPanel === 'function') {
-      window.openPanel('daily-consumption');
-    } else if(typeof window.showPage === 'function') {
-      window.showPage('daily-consumption');
+    if(current){
+      lastPanel=current;
+      history.replaceState(stateFor(current),'','#'+current);
     }
   }
 
-  document.addEventListener('click', function(e){
-    var b = e.target.closest('#dchBackBtn');
-    if(!b) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    openDailyConsumptionReport();
-  }, true);
-})();
-</script>
-
-
-<script id="erpBrowserHistoryNavigationV1534">
-(function(){
-  const HISTORY_KEY='erpPanelHistoryV1534';
-
-  function allPanels(){
-    return Array.from(document.querySelectorAll('.panel[id], section.panel[id]'));
+  function pushIfChanged(){
+    if(restoring)return;
+    const id=activePanelId();
+    if(!id || id===lastPanel)return;
+    lastPanel=id;
+    history.pushState(stateFor(id),'','#'+id);
   }
 
-  function currentPanelId(){
-    const panels=allPanels();
-    const visible=panels.find(p=>{
-      const cs=getComputedStyle(p);
-      return !p.hidden && cs.display!=='none' && cs.visibility!=='hidden' &&
-             (p.classList.contains('active') || p.classList.contains('show') || p.offsetParent!==null);
-    });
-    return visible ? visible.id : '';
-  }
-
-  function findPanel(id){
-    if(!id)return null;
-    return document.getElementById(id) ||
-           document.querySelector('[data-page-id="'+CSS.escape(id)+'"]') ||
-           document.querySelector('[data-panel-id="'+CSS.escape(id)+'"]');
-  }
-
-  function showPanelById(id, fromPopState){
-    const target=findPanel(id);
+  function fallbackOpen(id){
+    const target=document.getElementById(id);
     if(!target)return false;
-
-    const panels=allPanels();
-    panels.forEach(p=>{
-      if(p===target)return;
-      p.hidden=true;
-      p.style.display='none';
-      p.classList.remove('active','show');
-    });
-
-    target.hidden=false;
-    target.style.display='';
-    target.classList.add('active','show');
-
-    // Restore the page near the top.
-    requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'auto'}));
-
-    if(!fromPopState){
-      const state={erpPanel:id};
-      const hash='#'+id;
-      if(history.state && history.state.erpPanel===id){
-        history.replaceState(state,'',hash);
-      }else{
-        history.pushState(state,'',hash);
-      }
-    }
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    target.classList.add('active');
     return true;
   }
 
-  function panelIdFromElement(el){
-    if(!el)return '';
-    const direct =
-      el.getAttribute('data-target') ||
-      el.getAttribute('data-open') ||
-      el.getAttribute('data-panel-target') ||
-      el.getAttribute('data-page') ||
-      el.getAttribute('data-panel');
-    if(direct){
-      const cleaned=String(direct).replace(/^#/,'');
-      if(findPanel(cleaned))return cleaned;
-      if(findPanel('panel-'+cleaned))return 'panel-'+cleaned;
-    }
+  function restore(id){
+    if(!id)return;
+    restoring=true;
 
-    const href=el.getAttribute('href');
-    if(href && href.startsWith('#')){
-      const id=href.slice(1);
-      if(findPanel(id))return id;
-    }
-
-    // Known same-file navigation buttons may already have onclick logic.
-    // We detect their destination after the click by observing which panel becomes visible.
-    return '';
-  }
-
-  // Record the initially visible ERP page so Back has a real starting point.
-  function seedInitialState(){
-    let id='';
-    if(location.hash && findPanel(location.hash.slice(1))){
-      id=location.hash.slice(1);
-      showPanelById(id,true);
-    }else{
-      id=currentPanelId();
-    }
-    if(id){
-      history.replaceState({erpPanel:id},'', '#'+id);
-    }
-  }
-
-  // Capture clicks on navigation-like controls and record the page that becomes visible.
-  document.addEventListener('click',function(e){
-    const el=e.target.closest('a,button,[data-target],[data-open],[data-panel-target],[data-page],[data-panel]');
-    if(!el)return;
-
-    const explicit=panelIdFromElement(el);
-    if(explicit){
-      // Let existing click handlers run first; then normalize state.
-      setTimeout(()=>{
-        const now=currentPanelId();
-        const id=now||explicit;
-        if(id && (!history.state || history.state.erpPanel!==id)){
-          history.pushState({erpPanel:id},'', '#'+id);
-        }
-      },0);
-      return;
-    }
-
-    // For buttons using JavaScript routing without data attributes,
-    // compare visible panel before/after the existing click handlers.
-    const before=currentPanelId();
-    setTimeout(()=>{
-      const after=currentPanelId();
-      if(after && after!==before && (!history.state || history.state.erpPanel!==after)){
-        history.pushState({erpPanel:after},'', '#'+after);
+    try{
+      if(id==='panel-daily-data-entry' && typeof window.ERPDailyDataEntry?.open==='function'){
+        window.ERPDailyDataEntry.open();
+      }else if(id==='panel-production-consumption' && typeof window.ERPProductionConsumption?.open==='function'){
+        window.ERPProductionConsumption.open();
+      }else if(id==='panel-material-master' && typeof window.ERPMaterialMaster?.open==='function'){
+        window.ERPMaterialMaster.open();
+      }else if(id==='panel-daily-consumption-history'){
+        // Use the ERP's existing Daily page first so all dynamic controls remain initialized,
+        // then activate History and render it with the existing functions.
+        fallbackOpen(id);
+        if(typeof renderDailyConsumptionHistory==='function')renderDailyConsumptionHistory();
+        const wt=document.getElementById('workspaceTitle');
+        const ws=document.getElementById('workspaceSubtitle');
+        if(wt)wt.textContent='Consumption History & Analysis';
+        if(ws)ws.textContent='Daily • Material • Cost • Yield Analysis';
+      }else{
+        fallbackOpen(id);
       }
-    },0);
-  },true);
+      lastPanel=id;
+    }finally{
+      setTimeout(()=>{restoring=false},0);
+    }
+  }
 
   window.addEventListener('popstate',function(e){
-    const id=e.state && e.state.erpPanel ? e.state.erpPanel :
-             (location.hash ? location.hash.slice(1) : '');
-    if(id)showPanelById(id,true);
+    const id=(e.state&&e.state.erpPanel) || (location.hash||'').replace(/^#/,'');
+    restore(id);
   });
 
-  // Expose a helper for future page buttons.
-  window.ERPBrowserHistory={
-    open:function(id){return showPanelById(id,false)},
-    current:currentPanelId
-  };
+  // Observe the ERP's own navigation rather than replacing it.
+  const observer=new MutationObserver(function(mutations){
+    if(restoring)return;
+    for(const m of mutations){
+      if(m.type==='attributes' && m.attributeName==='class' && m.target.classList.contains('panel')){
+        pushIfChanged();
+        break;
+      }
+    }
+  });
 
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',seedInitialState,{once:true});
-  }else{
-    seedInitialState();
+  function start(){
+    document.querySelectorAll('.panel').forEach(p=>observer.observe(p,{attributes:true,attributeFilter:['class']}));
+    seed();
   }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+
+  window.ERPBrowserHistory={
+    current:activePanelId,
+    restore
+  };
 })();
 </script>
 
