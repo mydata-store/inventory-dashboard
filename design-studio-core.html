@@ -17473,4 +17473,74 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 </style>
 
+
+<script id="erpRefreshPageStateV1541">
+(function(){
+  const PC_LAST_PAGE_KEY='erpProductionConsumptionLastPage';
+
+  function getHashPanel(){
+    const h=String(location.hash||'').replace(/^#/,'').trim();
+    if(!h)return '';
+    if(h.indexOf('panel-')===0)return h.slice(6);
+    return h;
+  }
+
+  function restoreProductionPage(){
+    const hash=getHashPanel();
+    let saved='';
+    try{saved=localStorage.getItem(PC_LAST_PAGE_KEY)||''}catch(e){}
+
+    // URL hash always has priority on refresh.
+    const key=hash||saved;
+
+    const routes={
+      'production-consumption':()=>window.ERPProductionConsumption?.open?.(),
+      'daily-data-entry':()=>window.ERPDailyConsumption?.open?.(),
+      'daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
+      'material-master':()=>window.ERPMaterialMaster?.open?.(),
+      'management-summary':()=>window.ERPManagementSummary?.open?.(),
+      'month-summary':()=>window.ERPMonthSummary?.open?.(),
+      'year-summary':()=>window.ERPYearSummary?.open?.()
+    };
+
+    if(routes[key]){
+      routes[key]();
+      return true;
+    }
+
+    // Saved logical page names used by Production & Consumption.
+    const savedRoutes={
+      'home':()=>window.ERPProductionConsumption?.open?.(),
+      'daily':()=>window.ERPDailyConsumption?.open?.(),
+      'history':()=>window.ERPConsumptionHistory?.open?.(),
+      'material':()=>window.ERPMaterialMaster?.open?.(),
+      'summary':()=>window.ERPManagementSummary?.open?.(),
+      'month':()=>window.ERPMonthSummary?.open?.(),
+      'year':()=>window.ERPYearSummary?.open?.()
+    };
+    if(savedRoutes[saved]){
+      savedRoutes[saved]();
+      return true;
+    }
+    return false;
+  }
+
+  function restore(){
+    // Run after the original Design Studio startup has finished.
+    setTimeout(restoreProductionPage,60);
+    setTimeout(restoreProductionPage,220);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',restore,{once:true});
+  }else{
+    restore();
+  }
+
+  window.addEventListener('hashchange',function(){
+    setTimeout(restoreProductionPage,0);
+  });
+})();
+</script>
+
 </body></html>
