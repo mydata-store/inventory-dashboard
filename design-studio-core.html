@@ -13205,7 +13205,7 @@ function pcBuild(){
     else if(page==='materials')window.ERPMaterialMaster?.open?.();
     else if(page==='summary')pcSummaryOpen();
     else if(page==='month')pcMonthOpen();
-    else toast('Year Summary page will be built after Month Summary')
+    else if(page==='year')pcYearOpen()
   })
 }
 
@@ -13760,6 +13760,305 @@ function pcMonthOpen(){
   }catch(e){}
 }
 
+
+function pcYearBuild(){
+  if(pc$('#panel-year-summary'))return;
+  const host=document.querySelector('main.content');if(!host)return;
+
+  const now=new Date();
+  const years=[...new Set(pcSummaryRows().map(r=>pcParseDailyDate(r.date)?.getFullYear()).filter(Boolean).concat([now.getFullYear()]))].sort((a,b)=>b-a);
+
+  const sec=document.createElement('section');
+  sec.className='panel purchase-page';
+  sec.id='panel-year-summary';
+  sec.innerHTML=`<div class="card pc-year-page">
+    <div class="inv-page-head">
+      <div>
+        <h2>Year Summary</h2>
+        <p>Annual production, electricity, steam, pulp, material cost and month-by-month performance analysis.</p>
+      </div>
+      <button class="btn" id="pcYearBack">← Production & Consumption</button>
+    </div>
+
+    <div class="pc-year-filter">
+      <div><label>Year</label>
+        <select id="pcYearYear" class="dde-control">
+          ${years.map(y=>`<option value="${y}">${y}</option>`).join('')}
+        </select>
+      </div>
+      <div class="pc-year-filter-actions">
+        <button class="btn btn-sm" id="pcYearRefresh">Refresh</button>
+      </div>
+      <div class="pc-year-period-label" id="pcYearPeriodLabel">${now.getFullYear()}</div>
+    </div>
+
+    <div class="pc-year-kpi-grid">
+      ${pcSummaryMetric('Working Days','pcYearDays')}
+      ${pcSummaryMetric('Paper Production','pcYearPaper')}
+      ${pcSummaryMetric('Average / Month','pcYearPaperAvgMonth')}
+      ${pcSummaryMetric('Average Ash','pcYearAshAvg')}
+      ${pcSummaryMetric('Pulp Produced','pcYearPulp')}
+      ${pcSummaryMetric('Pulp Yield','pcYearPulpYield')}
+      ${pcSummaryMetric('Total Material Cost','pcYearMaterialCost')}
+      ${pcSummaryMetric('Cost / Ton Paper','pcYearMaterialCostTon')}
+    </div>
+
+    <div class="pc-year-two-col">
+      <div class="pc-year-block">
+        <div class="pc-year-block-head">Electricity Summary</div>
+        <div class="pc-year-metric-table">
+          <div><span>WAPDA</span><b id="pcYearWapda">0 Units</b></div>
+          <div><span>Solar</span><b id="pcYearSolar">0 Units</b></div>
+          <div><span>Total Electricity Available</span><b id="pcYearElectricityAvailable">0 Units</b></div>
+          <div><span>Total Electricity Consumed</span><b id="pcYearElectricityConsumed">0 Units</b></div>
+          <div><span>Electricity Cost</span><b id="pcYearElectricityCost">PKR 0.00</b></div>
+          <div><span>Units / Ton Paper</span><b id="pcYearUnitsTonPaper">0 Units/Ton</b></div>
+          <div><span>Electricity Cost / Ton Paper</span><b id="pcYearElecCostTonPaper">PKR 0.00</b></div>
+          <div><span>Balance</span><b id="pcYearElectricityBalance">0 Units</b></div>
+        </div>
+      </div>
+
+      <div class="pc-year-block">
+        <div class="pc-year-block-head">Steam Summary</div>
+        <div class="pc-year-metric-table">
+          <div><span>Steam Produced</span><b id="pcYearSteamProduced">0.000 Ton</b></div>
+          <div><span>Steam Consumed</span><b id="pcYearSteamConsumed">0.000 Ton</b></div>
+          <div><span>Steam / Ton Paper</span><b id="pcYearSteamTonPaper">0.000 Ton/Ton</b></div>
+          <div><span>Boiler Material Cost</span><b id="pcYearBoilerCost">PKR 0.00</b></div>
+          <div><span>Cost / Ton Steam</span><b id="pcYearCostTonSteam">PKR 0.00</b></div>
+          <div><span>Steam Cost / Ton Paper</span><b id="pcYearSteamCostTonPaper">PKR 0.00</b></div>
+          <div><span>Steam Balance</span><b id="pcYearSteamBalance">0.000 Ton</b></div>
+          <div><span>Steam Yield</span><b id="pcYearSteamYield">0.00%</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc-year-two-col">
+      <div class="pc-year-block">
+        <div class="pc-year-block-head">Pulp Summary</div>
+        <div class="pc-year-metric-table">
+          <div><span>Raw Material Consumed</span><b id="pcYearRawMaterial">0.000 Ton</b></div>
+          <div><span>Pulp Produced</span><b id="pcYearPulpProduced">0.000 Ton</b></div>
+          <div><span>Pulp Yield</span><b id="pcYearPulpYield2">0.00%</b></div>
+          <div><span>Steam to Pulp Mill</span><b id="pcYearSteamPulp">0.000 Ton</b></div>
+          <div><span>Steam / Ton Pulp</span><b id="pcYearSteamTonPulp">0.000 Ton/Ton</b></div>
+          <div><span>Electricity to Pulp Mill</span><b id="pcYearElecPulp">0 Units</b></div>
+          <div><span>Electricity / Ton Pulp</span><b id="pcYearElecTonPulp">0 Units/Ton</b></div>
+          <div><span>Pulp Material Cost</span><b id="pcYearPulpMaterialCost">PKR 0.00</b></div>
+        </div>
+      </div>
+
+      <div class="pc-year-block">
+        <div class="pc-year-block-head">Previous Year Comparison</div>
+        <div class="pc-year-metric-table">
+          <div><span>Previous Year Production</span><b id="pcYearPrevProduction">0.000 Ton</b></div>
+          <div><span>Production Change</span><b id="pcYearProductionChange">0.00%</b></div>
+          <div><span>Previous Year Electricity</span><b id="pcYearPrevElectricity">0 Units</b></div>
+          <div><span>Electricity Change</span><b id="pcYearElectricityChange">0.00%</b></div>
+          <div><span>Previous Year Steam</span><b id="pcYearPrevSteam">0.000 Ton</b></div>
+          <div><span>Steam Change</span><b id="pcYearSteamChange">0.00%</b></div>
+          <div><span>Previous Year Material Cost</span><b id="pcYearPrevMaterialCost">PKR 0.00</b></div>
+          <div><span>Material Cost Change</span><b id="pcYearMaterialCostChange">0.00%</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc-year-section-title">Production Unit Summary</div>
+    <div id="pcYearUnitGrid" class="pc-year-unit-grid"></div>
+
+    <div class="pc-year-section-title">Material Cost by Section</div>
+    <div class="pc-year-material-grid">
+      ${pcSummaryMetric('Boiler House','pcYearCostBoiler')}
+      ${pcSummaryMetric('Pulp Mill','pcYearCostPulp')}
+      ${pcSummaryMetric('Sulphite Plant','pcYearCostSulphite')}
+      ${pcSummaryMetric('Production Units','pcYearCostUnits')}
+    </div>
+
+    <div class="pc-year-section-title">Monthly Breakdown</div>
+    <div class="dde-table-wrap">
+      <table class="dde-table pc-year-monthly-table">
+        <thead><tr>
+          <th>Month</th><th>Days</th><th>Production</th><th>Ash Avg</th><th>Electricity</th><th>Units/Ton</th>
+          <th>Steam Produced</th><th>Steam/Ton</th><th>Pulp Produced</th><th>Pulp Yield</th><th>Material Cost</th>
+        </tr></thead>
+        <tbody id="pcYearMonthlyBody"></tbody>
+      </table>
+    </div>
+
+    <div class="pc-year-note" id="pcYearNote">No saved Daily Consumption Reports for selected year.</div>
+  </div>`;
+  host.appendChild(sec);
+
+  pc$('#pcYearBack').onclick=pcOpen;
+  pc$('#pcYearRefresh').onclick=pcYearRefresh;
+  pc$('#pcYearYear').addEventListener('change',pcYearRefresh);
+}
+function pcYearRows(year){
+  return pcSummaryRows()
+    .filter(r=>{
+      const d=pcParseDailyDate(r.date);if(!d)return false;
+      return d.getFullYear()===year
+    })
+    .sort((a,b)=>(pcParseDailyDate(a.date)||0)-(pcParseDailyDate(b.date)||0))
+}
+function pcYearRefresh(){
+  if(!pc$('#panel-year-summary'))return;
+
+  const year=Number(pc$('#pcYearYear')?.value||new Date().getFullYear());
+  const list=pcYearRows(year);
+  const prev=pcYearRows(year-1);
+
+  const production=list.reduce((a,r)=>a+pcNum(r.totalProduction),0);
+  const active=list.filter(r=>pcNum(r.totalProduction)>0);
+  const ash=active.length?active.reduce((a,r)=>a+pcNum(r.ashAverage),0)/active.length:0;
+  const pulp=list.reduce((a,r)=>a+pcNum(r.pulpProduced),0);
+  const raw=list.reduce((a,r)=>a+pcNum(r.rawMaterialConsumed),0);
+  const pulpYield=raw>0?pulp/raw*100:0;
+
+  const wapda=list.reduce((a,r)=>a+pcNum(r.totalWapda),0);
+  const solar=list.reduce((a,r)=>a+pcNum(r.totalSolar),0);
+  const elecAvailable=list.reduce((a,r)=>a+pcNum(r.totalElectricity),0);
+  const elecConsumed=list.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
+  const elecCost=list.reduce((a,r)=>a+pcNum(r.electricityAmount),0);
+  const elecPulp=list.reduce((a,r)=>a+pcNum(r.consPulp),0);
+
+  const steamProduced=list.reduce((a,r)=>a+pcNum(r.steamProduction),0);
+  const steamConsumed=list.reduce((a,r)=>a+pcSummarySteamConsumed(r),0);
+  const steamPulp=list.reduce((a,r)=>a+pcNum(r.steamPulp),0);
+
+  const mt=pcMonthMaterialTotals(list);
+  const totalMaterialCost=mt.boiler+mt.pulp+mt.sulphite+mt.units;
+
+  const prevProduction=prev.reduce((a,r)=>a+pcNum(r.totalProduction),0);
+  const prevElectricity=prev.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
+  const prevSteam=prev.reduce((a,r)=>a+pcNum(r.steamProduction),0);
+  const prevMT=pcMonthMaterialTotals(prev);
+  const prevMaterialCost=prevMT.boiler+prevMT.pulp+prevMT.sulphite+prevMT.units;
+
+  const steamMaterialQty=list.reduce((sum,r)=>{
+    const mats=Array.isArray(r.boilerMaterials)?r.boilerMaterials:[];
+    return sum+mats.reduce((a,x)=>a+pcNum(x.finalReportQty??x.used),0)
+  },0);
+  const steamYield=steamMaterialQty>0?steamProduced/steamMaterialQty*100:0;
+
+  const activeMonths=[...new Set(list.map(r=>pcParseDailyDate(r.date)?.getMonth()).filter(x=>x!==undefined))].length;
+
+  pcSummaryValue('pcYearPeriodLabel',String(year));
+  pcSummaryValue('pcYearDays',String(list.length));
+  pcSummaryValue('pcYearPaper',production.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearPaperAvgMonth',(activeMonths?production/activeMonths:0).toFixed(3)+' Ton/Month');
+  pcSummaryValue('pcYearAshAvg',ash.toFixed(2)+'%');
+  pcSummaryValue('pcYearPulp',pulp.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearPulpYield',pulpYield.toFixed(2)+'%');
+  pcSummaryValue('pcYearMaterialCost',pcMoney(totalMaterialCost));
+  pcSummaryValue('pcYearMaterialCostTon',pcMoney(production>0?totalMaterialCost/production:0));
+
+  pcSummaryValue('pcYearWapda',Math.round(wapda).toLocaleString()+' Units');
+  pcSummaryValue('pcYearSolar',Math.round(solar).toLocaleString()+' Units');
+  pcSummaryValue('pcYearElectricityAvailable',Math.round(elecAvailable).toLocaleString()+' Units');
+  pcSummaryValue('pcYearElectricityConsumed',Math.round(elecConsumed).toLocaleString()+' Units');
+  pcSummaryValue('pcYearElectricityCost',pcMoney(elecCost));
+  pcSummaryValue('pcYearUnitsTonPaper',(production>0?elecConsumed/production:0).toFixed(2)+' Units/Ton');
+  pcSummaryValue('pcYearElecCostTonPaper',pcMoney(production>0?elecCost/production:0));
+  pcSummaryValue('pcYearElectricityBalance',Math.round(elecAvailable-elecConsumed).toLocaleString()+' Units');
+
+  pcSummaryValue('pcYearSteamProduced',steamProduced.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearSteamConsumed',steamConsumed.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearSteamTonPaper',(production>0?steamConsumed/production:0).toFixed(3)+' Ton/Ton');
+  pcSummaryValue('pcYearBoilerCost',pcMoney(mt.boiler));
+  pcSummaryValue('pcYearCostTonSteam',pcMoney(steamProduced>0?mt.boiler/steamProduced:0));
+  pcSummaryValue('pcYearSteamCostTonPaper',pcMoney(production>0?mt.boiler/production:0));
+  pcSummaryValue('pcYearSteamBalance',(steamProduced-steamConsumed).toFixed(3)+' Ton');
+  pcSummaryValue('pcYearSteamYield',steamYield.toFixed(2)+'%');
+
+  pcSummaryValue('pcYearRawMaterial',raw.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearPulpProduced',pulp.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearPulpYield2',pulpYield.toFixed(2)+'%');
+  pcSummaryValue('pcYearSteamPulp',steamPulp.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearSteamTonPulp',(pulp>0?steamPulp/pulp:0).toFixed(3)+' Ton/Ton');
+  pcSummaryValue('pcYearElecPulp',Math.round(elecPulp).toLocaleString()+' Units');
+  pcSummaryValue('pcYearElecTonPulp',(pulp>0?elecPulp/pulp:0).toFixed(2)+' Units/Ton');
+  pcSummaryValue('pcYearPulpMaterialCost',pcMoney(mt.pulp));
+
+  pcSummaryValue('pcYearPrevProduction',prevProduction.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearProductionChange',pcMonthPercentChange(production,prevProduction).toFixed(2)+'%');
+  pcSummaryValue('pcYearPrevElectricity',Math.round(prevElectricity).toLocaleString()+' Units');
+  pcSummaryValue('pcYearElectricityChange',pcMonthPercentChange(elecConsumed,prevElectricity).toFixed(2)+'%');
+  pcSummaryValue('pcYearPrevSteam',prevSteam.toFixed(3)+' Ton');
+  pcSummaryValue('pcYearSteamChange',pcMonthPercentChange(steamProduced,prevSteam).toFixed(2)+'%');
+  pcSummaryValue('pcYearPrevMaterialCost',pcMoney(prevMaterialCost));
+  pcSummaryValue('pcYearMaterialCostChange',pcMonthPercentChange(totalMaterialCost,prevMaterialCost).toFixed(2)+'%');
+
+  pcSummaryValue('pcYearCostBoiler',pcMoney(mt.boiler));
+  pcSummaryValue('pcYearCostPulp',pcMoney(mt.pulp));
+  pcSummaryValue('pcYearCostSulphite',pcMoney(mt.sulphite));
+  pcSummaryValue('pcYearCostUnits',pcMoney(mt.units));
+
+  const unitMap={};
+  list.forEach(r=>(Array.isArray(r.units)?r.units:[]).forEach(u=>{
+    const key=String(u.id||u.code||u.name||'').trim()||u.name;
+    if(!unitMap[key])unitMap[key]={name:u.name||u.code||key,production:0,ashSum:0,ashCount:0};
+    unitMap[key].production+=pcNum(u.production);
+    if(pcNum(u.production)>0){unitMap[key].ashSum+=pcNum(u.ash);unitMap[key].ashCount++}
+  }));
+  const unitHost=pc$('#pcYearUnitGrid');
+  if(unitHost){
+    const units=Object.values(unitMap);
+    unitHost.innerHTML=units.length?units.map(u=>`
+      <div class="pc-year-unit-card">
+        <strong>${u.name}</strong>
+        <div><span>Production</span><b>${u.production.toFixed(3)} Ton</b></div>
+        <div><span>Average Ash</span><b>${(u.ashCount?u.ashSum/u.ashCount:0).toFixed(2)}%</b></div>
+        <div><span>Production Share</span><b>${(production>0?u.production/production*100:0).toFixed(2)}%</b></div>
+        <div><span>Average / Active Month</span><b>${(activeMonths?u.production/activeMonths:0).toFixed(3)} Ton</b></div>
+      </div>`).join(''):'<div class="pc-year-empty">No production-unit records for this year.</div>'
+  }
+
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const body=pc$('#pcYearMonthlyBody');
+  if(body){
+    body.innerHTML=monthNames.map((name,idx)=>{
+      const rows=list.filter(r=>pcParseDailyDate(r.date)?.getMonth()===idx);
+      const p=rows.reduce((a,r)=>a+pcNum(r.totalProduction),0);
+      const aRows=rows.filter(r=>pcNum(r.totalProduction)>0);
+      const ashAvg=aRows.length?aRows.reduce((a,r)=>a+pcNum(r.ashAverage),0)/aRows.length:0;
+      const e=rows.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
+      const sp=rows.reduce((a,r)=>a+pcNum(r.steamProduction),0);
+      const sc=rows.reduce((a,r)=>a+pcSummarySteamConsumed(r),0);
+      const pp=rows.reduce((a,r)=>a+pcNum(r.pulpProduced),0);
+      const rm=rows.reduce((a,r)=>a+pcNum(r.rawMaterialConsumed),0);
+      const mc=rows.reduce((a,r)=>a+pcSummaryAllMaterialCost(r),0);
+      return `<tr>
+        <td><b>${name}</b></td>
+        <td>${rows.length}</td>
+        <td>${p.toFixed(3)} Ton</td>
+        <td>${ashAvg.toFixed(2)}%</td>
+        <td>${Math.round(e).toLocaleString()} Units</td>
+        <td>${(p>0?e/p:0).toFixed(2)}</td>
+        <td>${sp.toFixed(3)} Ton</td>
+        <td>${(p>0?sc/p:0).toFixed(3)}</td>
+        <td>${pp.toFixed(3)} Ton</td>
+        <td>${(rm>0?pp/rm*100:0).toFixed(2)}%</td>
+        <td>${pcMoney(mc)}</td>
+      </tr>`
+    }).join('')
+  }
+
+  pcSummaryValue('pcYearNote',list.length?`${list.length} saved daily report(s) included in ${year}.`:`No saved Daily Consumption Reports for ${year}.`)
+}
+function pcYearOpen(){
+  pcYearBuild();
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  pc$('#panel-year-summary')?.classList.add('active');
+  if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Year Summary';
+  if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Annual Production • Electricity • Steam • Pulp • Materials • Cost';
+  pcYearRefresh();
+  try{
+    localStorage.setItem('erpStudioLastPanel','year-summary');
+    localStorage.setItem(PC_LAST_PAGE_KEY,'year')
+  }catch(e){}
+}
+
 function pcRefresh(){
   if(!pc$('#panel-production-consumption'))return;
   pc$('#pcTodayLabel').textContent=pcDateLabel('today');
@@ -13830,6 +14129,7 @@ else pcStartup();
 window.ERPProductionConsumption={open:pcOpen,refresh:pcRefresh};
 window.ERPManagementSummary={open:pcSummaryOpen,refresh:pcSummaryRefresh};
 window.ERPMonthSummary={open:pcMonthOpen,refresh:pcMonthRefresh};
+window.ERPYearSummary={open:pcYearOpen,refresh:pcYearRefresh};
 })();
 </script>
 
@@ -17087,6 +17387,89 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   #panel-month-summary .pc-month-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
   #panel-month-summary .pc-month-two-col{grid-template-columns:1fr}
   #panel-month-summary .pc-month-unit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+
+
+<style id="yearSummaryV1540Style">
+#panel-year-summary{display:none}
+#panel-year-summary.active{display:block}
+#panel-year-summary .pc-year-page{padding:14px}
+#panel-year-summary .pc-year-filter{
+  display:flex;align-items:end;gap:8px;
+  padding:8px;margin:10px 0 12px;border:1px solid var(--border);
+  border-radius:9px;background:color-mix(in srgb,var(--bg) 55%,var(--surface))
+}
+#panel-year-summary .pc-year-filter>div{min-width:145px}
+#panel-year-summary .pc-year-filter label{
+  display:block;font-size:8px;font-weight:900;color:var(--muted);margin-bottom:3px;text-transform:uppercase
+}
+#panel-year-summary .pc-year-filter .dde-control{
+  width:100%;height:31px;min-height:31px;padding:4px 8px;font-size:10px;box-sizing:border-box
+}
+#panel-year-summary .pc-year-filter-actions{min-width:auto!important}
+#panel-year-summary .pc-year-filter-actions .btn{height:31px}
+#panel-year-summary .pc-year-period-label{
+  margin-left:auto;align-self:center!important;min-width:auto!important;font-size:16px;font-weight:900;color:var(--text)
+}
+#panel-year-summary .pc-year-kpi-grid{
+  display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px
+}
+#panel-year-summary .pc-summary-card{
+  border:1px solid var(--border);border-radius:9px;background:var(--surface);padding:9px 10px;min-height:55px
+}
+#panel-year-summary .pc-summary-card small{
+  display:block;font-size:8px;font-weight:900;color:var(--muted);text-transform:uppercase;line-height:1.25
+}
+#panel-year-summary .pc-summary-card strong{display:block;font-size:13px;margin-top:5px}
+#panel-year-summary .pc-year-two-col{
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px
+}
+#panel-year-summary .pc-year-block{
+  border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden
+}
+#panel-year-summary .pc-year-block-head{
+  padding:8px 10px;border-bottom:1px solid var(--border);
+  background:color-mix(in srgb,var(--bg) 70%,var(--surface));font-size:10px;font-weight:900
+}
+#panel-year-summary .pc-year-metric-table{padding:4px 10px 7px}
+#panel-year-summary .pc-year-metric-table>div{
+  display:flex;justify-content:space-between;gap:12px;align-items:center;
+  padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent)
+}
+#panel-year-summary .pc-year-metric-table>div:last-child{border-bottom:0}
+#panel-year-summary .pc-year-metric-table span{font-size:8px;font-weight:850;color:var(--muted);text-transform:uppercase}
+#panel-year-summary .pc-year-metric-table b{font-size:9px;text-align:right}
+#panel-year-summary .pc-year-section-title{
+  margin:11px 0 6px;font-size:11px;font-weight:900
+}
+#panel-year-summary .pc-year-unit-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px
+}
+#panel-year-summary .pc-year-unit-card{
+  border:1px solid var(--border);border-radius:9px;background:var(--surface);padding:9px 10px
+}
+#panel-year-summary .pc-year-unit-card>strong{display:block;font-size:11px;margin-bottom:5px}
+#panel-year-summary .pc-year-unit-card>div{
+  display:flex;justify-content:space-between;gap:8px;padding:5px 0;
+  border-top:1px solid color-mix(in srgb,var(--border) 65%,transparent)
+}
+#panel-year-summary .pc-year-unit-card span{font-size:8px;color:var(--muted);font-weight:800}
+#panel-year-summary .pc-year-unit-card b{font-size:9px}
+#panel-year-summary .pc-year-material-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px
+}
+#panel-year-summary .pc-year-monthly-table{min-width:1280px}
+#panel-year-summary .pc-year-note,
+#panel-year-summary .pc-year-empty{
+  margin-top:9px;padding:8px 10px;border-left:3px solid var(--primary);
+  border-radius:6px;background:color-mix(in srgb,var(--primary) 6%,var(--surface));
+  font-size:9px;color:var(--muted)
+}
+@media(max-width:1350px){
+  #panel-year-summary .pc-year-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #panel-year-summary .pc-year-two-col{grid-template-columns:1fr}
+  #panel-year-summary .pc-year-unit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 </style>
 
