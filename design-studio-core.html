@@ -15794,4 +15794,149 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+<script id="erpBrowserHistoryNavigationV1534">
+(function(){
+  const HISTORY_KEY='erpPanelHistoryV1534';
+
+  function allPanels(){
+    return Array.from(document.querySelectorAll('.panel[id], section.panel[id]'));
+  }
+
+  function currentPanelId(){
+    const panels=allPanels();
+    const visible=panels.find(p=>{
+      const cs=getComputedStyle(p);
+      return !p.hidden && cs.display!=='none' && cs.visibility!=='hidden' &&
+             (p.classList.contains('active') || p.classList.contains('show') || p.offsetParent!==null);
+    });
+    return visible ? visible.id : '';
+  }
+
+  function findPanel(id){
+    if(!id)return null;
+    return document.getElementById(id) ||
+           document.querySelector('[data-page-id="'+CSS.escape(id)+'"]') ||
+           document.querySelector('[data-panel-id="'+CSS.escape(id)+'"]');
+  }
+
+  function showPanelById(id, fromPopState){
+    const target=findPanel(id);
+    if(!target)return false;
+
+    const panels=allPanels();
+    panels.forEach(p=>{
+      if(p===target)return;
+      p.hidden=true;
+      p.style.display='none';
+      p.classList.remove('active','show');
+    });
+
+    target.hidden=false;
+    target.style.display='';
+    target.classList.add('active','show');
+
+    // Restore the page near the top.
+    requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'auto'}));
+
+    if(!fromPopState){
+      const state={erpPanel:id};
+      const hash='#'+id;
+      if(history.state && history.state.erpPanel===id){
+        history.replaceState(state,'',hash);
+      }else{
+        history.pushState(state,'',hash);
+      }
+    }
+    return true;
+  }
+
+  function panelIdFromElement(el){
+    if(!el)return '';
+    const direct =
+      el.getAttribute('data-target') ||
+      el.getAttribute('data-open') ||
+      el.getAttribute('data-panel-target') ||
+      el.getAttribute('data-page') ||
+      el.getAttribute('data-panel');
+    if(direct){
+      const cleaned=String(direct).replace(/^#/,'');
+      if(findPanel(cleaned))return cleaned;
+      if(findPanel('panel-'+cleaned))return 'panel-'+cleaned;
+    }
+
+    const href=el.getAttribute('href');
+    if(href && href.startsWith('#')){
+      const id=href.slice(1);
+      if(findPanel(id))return id;
+    }
+
+    // Known same-file navigation buttons may already have onclick logic.
+    // We detect their destination after the click by observing which panel becomes visible.
+    return '';
+  }
+
+  // Record the initially visible ERP page so Back has a real starting point.
+  function seedInitialState(){
+    let id='';
+    if(location.hash && findPanel(location.hash.slice(1))){
+      id=location.hash.slice(1);
+      showPanelById(id,true);
+    }else{
+      id=currentPanelId();
+    }
+    if(id){
+      history.replaceState({erpPanel:id},'', '#'+id);
+    }
+  }
+
+  // Capture clicks on navigation-like controls and record the page that becomes visible.
+  document.addEventListener('click',function(e){
+    const el=e.target.closest('a,button,[data-target],[data-open],[data-panel-target],[data-page],[data-panel]');
+    if(!el)return;
+
+    const explicit=panelIdFromElement(el);
+    if(explicit){
+      // Let existing click handlers run first; then normalize state.
+      setTimeout(()=>{
+        const now=currentPanelId();
+        const id=now||explicit;
+        if(id && (!history.state || history.state.erpPanel!==id)){
+          history.pushState({erpPanel:id},'', '#'+id);
+        }
+      },0);
+      return;
+    }
+
+    // For buttons using JavaScript routing without data attributes,
+    // compare visible panel before/after the existing click handlers.
+    const before=currentPanelId();
+    setTimeout(()=>{
+      const after=currentPanelId();
+      if(after && after!==before && (!history.state || history.state.erpPanel!==after)){
+        history.pushState({erpPanel:after},'', '#'+after);
+      }
+    },0);
+  },true);
+
+  window.addEventListener('popstate',function(e){
+    const id=e.state && e.state.erpPanel ? e.state.erpPanel :
+             (location.hash ? location.hash.slice(1) : '');
+    if(id)showPanelById(id,true);
+  });
+
+  // Expose a helper for future page buttons.
+  window.ERPBrowserHistory={
+    open:function(id){return showPanelById(id,false)},
+    current:currentPanelId
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',seedInitialState,{once:true});
+  }else{
+    seedInitialState();
+  }
+})();
+</script>
+
 </body></html>
