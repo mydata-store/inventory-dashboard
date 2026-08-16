@@ -18883,8 +18883,10 @@ function render(){
 }
 function open(){
   build();
+  const panel=$f('#panel-final-cost-report');
+  const alreadyActive=panel?.classList.contains('active');
   document.querySelectorAll('main.content > section.panel').forEach(x=>x.classList.remove('active'));
-  $f('#panel-final-cost-report')?.classList.add('active');
+  panel?.classList.add('active');
   if($f('#workspaceTitle'))$f('#workspaceTitle').textContent='Final Production & Cost Report';
   if($f('#workspaceSubtitle'))$f('#workspaceSubtitle').textContent='Daily • Monthly • Materials • Rates • Production Cost';
   try{
@@ -18892,9 +18894,12 @@ function open(){
     localStorage.setItem('erpProductionConsumptionLastPage','final-cost-report');
     localStorage.setItem('erpProductionConsumptionPageV1','final-cost-report');
     localStorage.setItem('erpProductionConsumptionLastPageV1','final-report');
-    history.replaceState({erpPanel:'panel-final-cost-report'},'','#panel-final-cost-report')
+    if(location.hash!=='#panel-final-cost-report'){
+      history.replaceState({erpPanel:'panel-final-cost-report'},'','#panel-final-cost-report')
+    }
   }catch(e){}
-  render()
+  if(!alreadyActive)render();
+  document.documentElement.classList.remove('erp-safe-boot','erp-route-restoring-v1545');
 }
 function addCard(){/* Intentionally disabled: report opens from Daily Consumption Report. */}
 window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash==='#panel-final-cost-report')open()};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,350));else setTimeout(boot,350);
@@ -18961,43 +18966,6 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
   text-align:center!important;
 }
 </style>
-
-
-<script id="fcrExactRefreshRestoreV1552">
-(function(){
-  function wantsFinalReport(){
-    try{
-      return location.hash==='#panel-final-cost-report' ||
-        localStorage.getItem('erpStudioLastPanel')==='final-cost-report' ||
-        localStorage.getItem('erpProductionConsumptionLastPage')==='final-cost-report' ||
-        localStorage.getItem('erpProductionConsumptionPageV1')==='final-cost-report';
-    }catch(e){return location.hash==='#panel-final-cost-report'}
-  }
-  function restore(){
-    if(!wantsFinalReport())return true;
-    if(window.ERPFinalCostReport?.open){
-      window.ERPFinalCostReport.open();
-      document.documentElement.classList.remove('erp-route-restoring-v1545');
-      return true
-    }
-    return false
-  }
-  function boot(){
-    if(restore())return;
-    let tries=0;
-    const t=setInterval(()=>{
-      tries++;
-      if(restore()||tries>=80){
-        clearInterval(t);
-        document.documentElement.classList.remove('erp-route-restoring-v1545')
-      }
-    },10)
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
-})();
-</script>
-
 
 
 <style id="erpPageViewScaleV1554">
@@ -19556,6 +19524,64 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
+})();
+</script>
+
+
+<script id="fcrSafeRefreshRestoreV1556">
+(function(){
+  let restored=false;
+
+  function requestedPanel(){
+    const hash=(location.hash||'').replace(/^#/,'');
+    if(hash==='panel-final-cost-report') return 'final-cost-report';
+    if(hash==='panel-daily-data-entry') return 'daily-data-entry';
+
+    try{
+      const last=localStorage.getItem('erpStudioLastPanel');
+      if(last==='final-cost-report' || last==='daily-data-entry') return last;
+    }catch(e){}
+    return '';
+  }
+
+  function restoreOnce(){
+    if(restored)return true;
+    const target=requestedPanel();
+    if(!target)return true;
+
+    if(target==='final-cost-report' && window.ERPFinalCostReport?.open){
+      restored=true;
+      window.ERPFinalCostReport.open();
+      document.documentElement.classList.remove('erp-safe-boot','erp-route-restoring-v1545');
+      return true;
+    }
+
+    if(target==='daily-data-entry' && window.ERPDailyDataEntry?.open){
+      restored=true;
+      window.ERPDailyDataEntry.open();
+      document.documentElement.classList.remove('erp-safe-boot','erp-route-restoring-v1545');
+      return true;
+    }
+    return false;
+  }
+
+  function boot(){
+    if(restoreOnce())return;
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      if(restoreOnce() || tries>=30){
+        clearInterval(timer);
+        document.documentElement.classList.remove('erp-safe-boot','erp-route-restoring-v1545');
+      }
+    },50);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,40),{once:true});
+  }else{
+    setTimeout(boot,40);
+  }
 })();
 </script>
 
