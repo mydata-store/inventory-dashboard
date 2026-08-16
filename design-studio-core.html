@@ -13131,6 +13131,11 @@ function pcBuild(){
         <strong>Material Master</strong>
         <span>Manage Pulp Mill, Boiler House, Sulphite Plant, Stock Pulp Plant, Lubricants and Other materials.</span>
       </button>
+      <button class="pc-nav-card" type="button" data-pc-page="summary">
+        <div class="pc-nav-icon">Σ</div>
+        <strong>Management Summary</strong>
+        <span>Automatic production, energy, steam, pulp and cost KPIs for any selected period.</span>
+      </button>
       <button class="pc-nav-card" type="button" data-pc-page="month">
         <div class="pc-nav-icon">▥</div>
         <strong>Month Summary</strong>
@@ -13198,10 +13203,253 @@ function pcBuild(){
     try{localStorage.setItem(PC_LAST_PAGE_KEY,page)}catch(e){}
     if(page==='daily')window.ERPDailyDataEntry.open();
     else if(page==='materials')window.ERPMaterialMaster?.open?.();
-    else if(page==='month')toast('Month Summary page will be built after Daily Data Entry is completed');
+    else if(page==='summary')pcSummaryOpen();
+    else if(page==='month')toast('Month Summary page will be built after Management Summary is completed');
     else toast('Year Summary page will be built after Month Summary')
   })
 }
+
+const PC_DAILY_KEY='erpProductionConsumptionDailyV1';
+
+function pcSummaryRows(){
+  try{
+    const r=JSON.parse(localStorage.getItem(PC_DAILY_KEY)||'[]');
+    return Array.isArray(r)?r:[]
+  }catch(e){return []}
+}
+function pcParseDailyDate(v){
+  const s=String(v||'').trim();
+  const mon=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+  if(mon){
+    const mm={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}[mon[2].toLowerCase()];
+    let y=Number(mon[3]);if(y<100)y+=2000;
+    const d=new Date(y,mm,Number(mon[1]));
+    return isNaN(d)?null:d
+  }
+  const dm=s.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);
+  if(dm){
+    let y=dm[3]?Number(dm[3]):new Date().getFullYear();if(y<100)y+=2000;
+    const d=new Date(y,Number(dm[2])-1,Number(dm[1]));
+    return isNaN(d)?null:d
+  }
+  const d=new Date(s);return isNaN(d)?null:d
+}
+function pcSummarySteamConsumed(r){
+  const units=Array.isArray(r.steamProductionUnits)?r.steamProductionUnits.reduce((a,x)=>a+pcNum(x.qty),0):0;
+  return pcNum(r.steamPulp)+pcNum(r.steamBoiler)+units
+}
+function pcSummaryMaterialCost(r,key){
+  const list=Array.isArray(r[key])?r[key]:[];
+  return list.reduce((a,x)=>a+pcNum(x.usedValue),0)
+}
+function pcSummaryAllMaterialCost(r){
+  return ['boilerMaterials','pulpMaterials','sulphiteMaterials','unitMaterials']
+    .reduce((sum,key)=>sum+pcSummaryMaterialCost(r,key),0)
+}
+function pcSummaryFilteredRows(){
+  const all=pcSummaryRows();
+  const type=pc$('#pcSumPeriod')?.value||'month';
+  const from=pcParseDailyDate(pc$('#pcSumFrom')?.value);
+  const to=pcParseDailyDate(pc$('#pcSumTo')?.value);
+  const month=Number(pc$('#pcSumMonth')?.value||0);
+  const year=Number(pc$('#pcSumYear')?.value||0);
+  const now=new Date();
+
+  return all.filter(r=>{
+    const d=pcParseDailyDate(r.date);if(!d)return false;
+    if(type==='today')return d.toDateString()===now.toDateString();
+    if(type==='range'){
+      if(from && d<from)return false;
+      if(to && d>to)return false;
+      return true
+    }
+    if(type==='month')return d.getMonth()+1===(month||now.getMonth()+1) && d.getFullYear()===(year||now.getFullYear());
+    if(type==='year')return d.getFullYear()===(year||now.getFullYear());
+    return true
+  }).sort((a,b)=>(pcParseDailyDate(a.date)||0)-(pcParseDailyDate(b.date)||0))
+}
+function pcSummaryValue(id,value){
+  const el=pc$('#'+id);if(el)el.textContent=value
+}
+function pcSummaryMetric(label,id){
+  return `<div class="pc-summary-card"><small>${label}</small><strong id="${id}">0</strong></div>`
+}
+function pcSummaryBuild(){
+  if(pc$('#panel-management-summary'))return;
+  const host=document.querySelector('main.content');if(!host)return;
+  const now=new Date();
+  const monthOptions=['January','February','March','April','May','June','July','August','September','October','November','December']
+    .map((x,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${x}</option>`).join('');
+  const years=[...new Set(pcSummaryRows().map(r=>pcParseDailyDate(r.date)?.getFullYear()).filter(Boolean).concat([now.getFullYear()]))]
+    .sort((a,b)=>b-a);
+
+  const sec=document.createElement('section');
+  sec.className='panel purchase-page';
+  sec.id='panel-management-summary';
+  sec.innerHTML=`<div class="card pc-summary-page">
+    <div class="inv-page-head">
+      <div>
+        <h2>Management Summary</h2>
+        <p>Automatic production, electricity, steam, pulp and material-cost overview from saved Daily Consumption Reports.</p>
+      </div>
+      <button class="btn" id="pcSummaryBack">← Production & Consumption</button>
+    </div>
+
+    <div class="pc-summary-filter">
+      <div><label>Period</label>
+        <select id="pcSumPeriod" class="dde-control">
+          <option value="today">Today</option>
+          <option value="range">Date Range</option>
+          <option value="month" selected>Month</option>
+          <option value="year">Year</option>
+          <option value="all">All Records</option>
+        </select>
+      </div>
+      <div id="pcSumFromWrap"><label>From</label><input id="pcSumFrom" class="dde-control" placeholder="1-8-26"></div>
+      <div id="pcSumToWrap"><label>To</label><input id="pcSumTo" class="dde-control" placeholder="31-8-26"></div>
+      <div id="pcSumMonthWrap"><label>Month</label><select id="pcSumMonth" class="dde-control">${monthOptions}</select></div>
+      <div id="pcSumYearWrap"><label>Year</label><select id="pcSumYear" class="dde-control">${years.map(y=>`<option value="${y}">${y}</option>`).join('')}</select></div>
+      <div class="pc-summary-filter-actions">
+        <button class="btn btn-sm" id="pcSumRefresh">Refresh Summary</button>
+      </div>
+    </div>
+
+    <div class="pc-summary-group-title">Overall Performance</div>
+    <div class="pc-summary-cards pc-summary-cards-main">
+      ${pcSummaryMetric('Total Days','pcSumDays')}
+      ${pcSummaryMetric('Paper Production','pcSumProduction')}
+      ${pcSummaryMetric('Average Ash','pcSumAsh')}
+      ${pcSummaryMetric('Pulp Produced','pcSumPulp')}
+      ${pcSummaryMetric('Pulp Yield','pcSumPulpYield')}
+      ${pcSummaryMetric('Total Material Cost','pcSumMaterialCost')}
+    </div>
+
+    <div class="pc-summary-two-col">
+      <div class="pc-summary-block">
+        <div class="pc-summary-block-head">Electricity</div>
+        <div class="pc-summary-cards pc-summary-cards-small">
+          ${pcSummaryMetric('Electricity Available','pcSumElectricityAvailable')}
+          ${pcSummaryMetric('Electricity Consumed','pcSumElectricityConsumed')}
+          ${pcSummaryMetric('Electricity Cost','pcSumElectricityCost')}
+          ${pcSummaryMetric('Units / Ton Paper','pcSumUnitsTonPaper')}
+          ${pcSummaryMetric('WAPDA Share','pcSumWapdaShare')}
+          ${pcSummaryMetric('Solar Share','pcSumSolarShare')}
+        </div>
+      </div>
+
+      <div class="pc-summary-block">
+        <div class="pc-summary-block-head">Steam</div>
+        <div class="pc-summary-cards pc-summary-cards-small">
+          ${pcSummaryMetric('Steam Produced','pcSumSteamProduced')}
+          ${pcSummaryMetric('Steam Consumed','pcSumSteamConsumed')}
+          ${pcSummaryMetric('Steam / Ton Paper','pcSumSteamTonPaper')}
+          ${pcSummaryMetric('Boiler Material Cost','pcSumBoilerCost')}
+          ${pcSummaryMetric('Cost / Ton Steam','pcSumCostTonSteam')}
+          ${pcSummaryMetric('Steam Balance','pcSumSteamBalance')}
+        </div>
+      </div>
+    </div>
+
+    <div class="pc-summary-group-title">Production Units</div>
+    <div id="pcSummaryUnits" class="pc-summary-unit-grid"></div>
+
+    <div class="pc-summary-period-note" id="pcSummaryPeriodNote">No records in selected period.</div>
+  </div>`;
+  host.appendChild(sec);
+
+  pc$('#pcSummaryBack').onclick=pcOpen;
+  ['pcSumPeriod','pcSumMonth','pcSumYear'].forEach(id=>pc$('#'+id)?.addEventListener('change',()=>{pcSummaryToggleFilters();pcSummaryRefresh()}));
+  ['pcSumFrom','pcSumTo'].forEach(id=>pc$('#'+id)?.addEventListener('change',pcSummaryRefresh));
+  pc$('#pcSumRefresh').onclick=pcSummaryRefresh;
+  pcSummaryToggleFilters();
+}
+function pcSummaryToggleFilters(){
+  const t=pc$('#pcSumPeriod')?.value||'month';
+  const show=(id,on)=>{const e=pc$('#'+id);if(e)e.style.display=on?'block':'none'};
+  show('pcSumFromWrap',t==='range');
+  show('pcSumToWrap',t==='range');
+  show('pcSumMonthWrap',t==='month');
+  show('pcSumYearWrap',t==='month'||t==='year');
+}
+function pcSummaryRefresh(){
+  if(!pc$('#panel-management-summary'))return;
+  const list=pcSummaryFilteredRows();
+  const totalProduction=list.reduce((a,r)=>a+pcNum(r.totalProduction),0);
+  const ashRows=list.filter(r=>pcNum(r.totalProduction)>0);
+  const avgAsh=ashRows.length?ashRows.reduce((a,r)=>a+pcNum(r.ashAverage),0)/ashRows.length:0;
+  const pulp=list.reduce((a,r)=>a+pcNum(r.pulpProduced),0);
+  const raw=list.reduce((a,r)=>a+pcNum(r.rawMaterialConsumed),0);
+  const pulpYield=raw>0?pulp/raw*100:0;
+
+  const electricAvailable=list.reduce((a,r)=>a+pcNum(r.totalElectricity),0);
+  const electricConsumed=list.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
+  const electricCost=list.reduce((a,r)=>a+pcNum(r.electricityAmount),0);
+  const wapda=list.reduce((a,r)=>a+pcNum(r.totalWapda),0);
+  const solar=list.reduce((a,r)=>a+pcNum(r.totalSolar),0);
+  const sourceTotal=wapda+solar;
+
+  const steamProduced=list.reduce((a,r)=>a+pcNum(r.steamProduction),0);
+  const steamConsumed=list.reduce((a,r)=>a+pcSummarySteamConsumed(r),0);
+  const boilerCost=list.reduce((a,r)=>a+pcSummaryMaterialCost(r,'boilerMaterials'),0);
+  const materialCost=list.reduce((a,r)=>a+pcSummaryAllMaterialCost(r),0);
+
+  pcSummaryValue('pcSumDays',String(list.length));
+  pcSummaryValue('pcSumProduction',totalProduction.toFixed(3)+' Ton');
+  pcSummaryValue('pcSumAsh',avgAsh.toFixed(2)+'%');
+  pcSummaryValue('pcSumPulp',pulp.toFixed(3)+' Ton');
+  pcSummaryValue('pcSumPulpYield',pulpYield.toFixed(2)+'%');
+  pcSummaryValue('pcSumMaterialCost',pcMoney(materialCost));
+
+  pcSummaryValue('pcSumElectricityAvailable',Math.round(electricAvailable).toLocaleString()+' Units');
+  pcSummaryValue('pcSumElectricityConsumed',Math.round(electricConsumed).toLocaleString()+' Units');
+  pcSummaryValue('pcSumElectricityCost',pcMoney(electricCost));
+  pcSummaryValue('pcSumUnitsTonPaper',(totalProduction>0?electricConsumed/totalProduction:0).toFixed(2)+' Units/Ton');
+  pcSummaryValue('pcSumWapdaShare',(sourceTotal>0?wapda/sourceTotal*100:0).toFixed(2)+'%');
+  pcSummaryValue('pcSumSolarShare',(sourceTotal>0?solar/sourceTotal*100:0).toFixed(2)+'%');
+
+  pcSummaryValue('pcSumSteamProduced',steamProduced.toFixed(3)+' Ton');
+  pcSummaryValue('pcSumSteamConsumed',steamConsumed.toFixed(3)+' Ton');
+  pcSummaryValue('pcSumSteamTonPaper',(totalProduction>0?steamConsumed/totalProduction:0).toFixed(3)+' Ton/Ton');
+  pcSummaryValue('pcSumBoilerCost',pcMoney(boilerCost));
+  pcSummaryValue('pcSumCostTonSteam',pcMoney(steamProduced>0?boilerCost/steamProduced:0));
+  pcSummaryValue('pcSumSteamBalance',(steamProduced-steamConsumed).toFixed(3)+' Ton');
+
+  const unitMap={};
+  list.forEach(r=>(Array.isArray(r.units)?r.units:[]).forEach(u=>{
+    const key=String(u.id||u.code||u.name||'').trim()||u.name;
+    if(!unitMap[key])unitMap[key]={name:u.name||u.code||key,production:0,ashSum:0,ashCount:0};
+    unitMap[key].production+=pcNum(u.production);
+    if(pcNum(u.production)>0){unitMap[key].ashSum+=pcNum(u.ash);unitMap[key].ashCount++}
+  }));
+  const unitHost=pc$('#pcSummaryUnits');
+  if(unitHost){
+    const units=Object.values(unitMap);
+    unitHost.innerHTML=units.length?units.map(u=>`
+      <div class="pc-summary-unit-card">
+        <strong>${u.name}</strong>
+        <div><span>Production</span><b>${u.production.toFixed(3)} Ton</b></div>
+        <div><span>Average Ash</span><b>${(u.ashCount?u.ashSum/u.ashCount:0).toFixed(2)}%</b></div>
+        <div><span>Share of Production</span><b>${(totalProduction>0?u.production/totalProduction*100:0).toFixed(2)}%</b></div>
+      </div>`).join(''):'<div class="pc-summary-empty">No production-unit data in selected period.</div>'
+  }
+
+  const period=pc$('#pcSumPeriod')?.selectedOptions?.[0]?.textContent||'Selected Period';
+  pcSummaryValue('pcSummaryPeriodNote',list.length?`${period}: ${list.length} saved daily report(s) included in this summary.`:'No saved Daily Consumption Reports in the selected period.')
+}
+function pcSummaryOpen(){
+  pcSummaryBuild();
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  pc$('#panel-management-summary')?.classList.add('active');
+  if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Management Summary';
+  if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Production • Electricity • Steam • Pulp • Cost';
+  pcSummaryToggleFilters();
+  pcSummaryRefresh();
+  try{
+    localStorage.setItem('erpStudioLastPanel','management-summary');
+    localStorage.setItem(PC_LAST_PAGE_KEY,'summary')
+  }catch(e){}
+}
+
 function pcRefresh(){
   if(!pc$('#panel-production-consumption'))return;
   pc$('#pcTodayLabel').textContent=pcDateLabel('today');
@@ -13270,6 +13518,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else pcStartup();
 
 window.ERPProductionConsumption={open:pcOpen,refresh:pcRefresh};
+window.ERPManagementSummary={open:pcSummaryOpen,refresh:pcSummaryRefresh};
 })();
 </script>
 
@@ -16368,6 +16617,82 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   #panel-daily-consumption-history .dch-history-toolbar-v1537{grid-template-columns:repeat(4,minmax(120px,1fr))}
   #panel-daily-consumption-history .dch-history-buttons-v1537{grid-column:span 2}
   #panel-daily-consumption-history .dch-adjustment-toolbar-v1537{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+</style>
+
+
+<style id="managementSummaryV1538Style">
+#panel-management-summary{display:none}
+#panel-management-summary.active{display:block}
+#panel-management-summary .pc-summary-page{padding:14px}
+#panel-management-summary .pc-summary-filter{
+  display:grid;
+  grid-template-columns:150px 125px 125px 145px 115px auto;
+  gap:7px;align-items:end;
+  padding:8px;margin:10px 0 12px;
+  border:1px solid var(--border);border-radius:9px;
+  background:color-mix(in srgb,var(--bg) 55%,var(--surface));
+}
+#panel-management-summary .pc-summary-filter label{
+  display:block;font-size:8px;font-weight:900;color:var(--muted);margin-bottom:3px;text-transform:uppercase
+}
+#panel-management-summary .pc-summary-filter .dde-control{
+  width:100%;height:31px;min-height:31px;padding:4px 8px;font-size:10px;box-sizing:border-box
+}
+#panel-management-summary .pc-summary-filter-actions{display:flex;align-items:end}
+#panel-management-summary .pc-summary-filter-actions .btn{height:31px;white-space:nowrap;padding:4px 11px}
+
+#panel-management-summary .pc-summary-group-title{
+  margin:9px 0 6px;font-size:11px;font-weight:900;color:var(--text)
+}
+#panel-management-summary .pc-summary-cards{
+  display:grid;gap:7px
+}
+#panel-management-summary .pc-summary-cards-main{grid-template-columns:repeat(6,minmax(0,1fr))}
+#panel-management-summary .pc-summary-cards-small{grid-template-columns:repeat(3,minmax(0,1fr))}
+#panel-management-summary .pc-summary-card{
+  border:1px solid var(--border);border-radius:9px;background:var(--surface);padding:9px 10px;min-height:55px
+}
+#panel-management-summary .pc-summary-card small{
+  display:block;font-size:8px;font-weight:900;color:var(--muted);text-transform:uppercase;line-height:1.25
+}
+#panel-management-summary .pc-summary-card strong{
+  display:block;font-size:14px;margin-top:5px;color:var(--text)
+}
+#panel-management-summary .pc-summary-two-col{
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px
+}
+#panel-management-summary .pc-summary-block{
+  border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden
+}
+#panel-management-summary .pc-summary-block-head{
+  padding:8px 10px;border-bottom:1px solid var(--border);
+  background:color-mix(in srgb,var(--bg) 70%,var(--surface));
+  font-size:10px;font-weight:900
+}
+#panel-management-summary .pc-summary-block .pc-summary-cards{padding:7px}
+#panel-management-summary .pc-summary-unit-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px
+}
+#panel-management-summary .pc-summary-unit-card{
+  border:1px solid var(--border);border-radius:9px;background:var(--surface);padding:9px 10px
+}
+#panel-management-summary .pc-summary-unit-card>strong{display:block;font-size:11px;margin-bottom:5px}
+#panel-management-summary .pc-summary-unit-card>div{
+  display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid color-mix(in srgb,var(--border) 65%,transparent)
+}
+#panel-management-summary .pc-summary-unit-card span{font-size:8px;color:var(--muted);font-weight:800}
+#panel-management-summary .pc-summary-unit-card b{font-size:9px}
+#panel-management-summary .pc-summary-period-note,
+#panel-management-summary .pc-summary-empty{
+  margin-top:9px;padding:8px 10px;border-left:3px solid var(--primary);
+  border-radius:6px;background:color-mix(in srgb,var(--primary) 6%,var(--surface));
+  font-size:9px;color:var(--muted)
+}
+@media(max-width:1250px){
+  #panel-management-summary .pc-summary-cards-main{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #panel-management-summary .pc-summary-filter{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #panel-management-summary .pc-summary-two-col{grid-template-columns:1fr}
 }
 </style>
 
