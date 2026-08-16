@@ -17585,6 +17585,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
 const OE_HEAD_KEY='erpOperatingExpenseHeadsV1';
 const OE_ROWS_KEY='erpOperatingExpensesV1';
+const OE_RULE_KEY='erpAutomaticCostRulesV1';
 const $o=s=>document.querySelector(s);
 const onum=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0};
 const omoney=v=>'PKR '+onum(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -17660,6 +17661,7 @@ function build(){
           <select id="oeView" class="dde-control">
             <option value="entry">Expense Entry</option>
             <option value="history">Expense History</option>
+            <option value="rules">Automatic Cost Rules</option>
             <option value="master">Expense Head Master</option>
           </select>
         </div>
@@ -17703,6 +17705,97 @@ function build(){
       </div>
     </div>
 
+
+    <div id="oeRulesPanel" style="display:none">
+      <div class="oe-rules-head-v1543">
+        <div>
+          <h3>Automatic Cost Rules</h3>
+          <p>Use provisional costs during the running month. When an actual Posted expense becomes available, it replaces the estimate while the variance remains visible.</p>
+        </div>
+        <div class="oe-rule-period-v1543">
+          <div><label>Preview Month</label><select id="oeRuleMonth" class="dde-control"></select></div>
+          <div><label>Year</label><select id="oeRuleYear" class="dde-control"></select></div>
+        </div>
+      </div>
+
+      <div class="oe-rules-grid-v1543">
+        <div class="oe-rule-card-v1543">
+          <div class="oe-rule-title-v1543"><strong>Salary</strong><span>Previous-month actual salary</span></div>
+          <div class="oe-rule-form-v1543">
+            <div><label>Automatic Rule</label><select id="oeSalaryRule" class="dde-control"><option value="previous">Previous Month Actual</option><option value="fixed">Fixed Monthly</option></select></div>
+            <div><label>Fallback / Fixed Amount</label><input id="oeSalaryFallback" class="dde-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Daily Allocation</label><select id="oeSalaryAllocation" class="dde-control"><option value="production">By Production Tons</option><option value="days">By Calendar Days</option></select></div>
+          </div>
+          <div class="oe-rule-preview-v1543">
+            <div><span>Estimated</span><b id="oeSalaryEstimated">PKR 0.00</b></div>
+            <div><span>Actual</span><b id="oeSalaryActual">—</b></div>
+            <div><span>Used in Costing</span><b id="oeSalaryUsed">PKR 0.00</b></div>
+            <div><span>Variance</span><b id="oeSalaryVariance">—</b></div>
+          </div>
+        </div>
+
+        <div class="oe-rule-card-v1543">
+          <div class="oe-rule-title-v1543"><strong>Sales Tax</strong><span>Fixed percentage from purchase data</span></div>
+          <div class="oe-rule-form-v1543">
+            <div><label>Sales Tax %</label><input id="oeTaxRate" class="dde-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Taxable Base</label>
+              <select id="oeTaxBase" class="dde-control">
+                <option value="purchaseValue">Purchase Value Before Tax</option>
+                <option value="boardOnly">Board / Paper Purchase Value</option>
+                <option value="localOnly">Local Purchase Value</option>
+                <option value="zafarOnly">Zafar Purchase Value</option>
+              </select>
+            </div>
+            <div><label>Daily Allocation</label><select id="oeTaxAllocation" class="dde-control"><option value="purchase">By Daily Purchase Value</option><option value="production">By Production Tons</option><option value="days">By Calendar Days</option></select></div>
+          </div>
+          <div class="oe-rule-preview-v1543">
+            <div><span>Taxable Base</span><b id="oeTaxBaseValue">PKR 0.00</b></div>
+            <div><span>Estimated Tax</span><b id="oeTaxEstimated">PKR 0.00</b></div>
+            <div><span>Actual</span><b id="oeTaxActual">—</b></div>
+            <div><span>Used in Costing</span><b id="oeTaxUsed">PKR 0.00</b></div>
+          </div>
+        </div>
+
+        <div class="oe-rule-card-v1543">
+          <div class="oe-rule-title-v1543"><strong>Contractor</strong><span>Configurable automatic contractor cost</span></div>
+          <div class="oe-rule-form-v1543">
+            <div><label>Rule</label>
+              <select id="oeContractorRule" class="dde-control">
+                <option value="previous">Previous Month Actual</option>
+                <option value="fixed">Fixed Monthly Amount</option>
+                <option value="perTon">Rate Per Ton Paper</option>
+              </select>
+            </div>
+            <div><label>Fixed / Rate</label><input id="oeContractorValue" class="dde-control" type="number" step="any" placeholder="0"></div>
+            <div><label>Daily Allocation</label><select id="oeContractorAllocation" class="dde-control"><option value="production">By Production Tons</option><option value="days">By Calendar Days</option></select></div>
+          </div>
+          <div class="oe-rule-preview-v1543">
+            <div><span>Estimated</span><b id="oeContractorEstimated">PKR 0.00</b></div>
+            <div><span>Actual</span><b id="oeContractorActual">—</b></div>
+            <div><span>Used in Costing</span><b id="oeContractorUsed">PKR 0.00</b></div>
+            <div><span>Variance</span><b id="oeContractorVariance">—</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="oe-rule-actions-v1543">
+        <button class="btn primary" id="oeSaveRules">Save Automatic Rules</button>
+        <span id="oeRuleStatus">Estimated values are used only until actual Posted values are available.</span>
+      </div>
+
+      <div class="oe-provisional-summary-v1543">
+        <div class="oe-summary-card"><small>Automatic Estimated</small><strong id="oeAutoEstimatedTotal">PKR 0.00</strong></div>
+        <div class="oe-summary-card"><small>Actual Available</small><strong id="oeAutoActualTotal">PKR 0.00</strong></div>
+        <div class="oe-summary-card"><small>Automatic Used in Costing</small><strong id="oeAutoUsedTotal">PKR 0.00</strong></div>
+        <div class="oe-summary-card"><small>Other Posted Expenses</small><strong id="oeOtherPostedTotal">PKR 0.00</strong></div>
+        <div class="oe-summary-card"><small>Provisional Operating Cost</small><strong id="oeProvisionalTotal">PKR 0.00</strong></div>
+      </div>
+
+      <div class="oe-rule-note-v1543">
+        <b>Costing rule:</b> Salary, Sales Tax and Contractor use <b>Actual</b> when a Posted expense exists for the selected month; otherwise the system uses the automatic <b>Estimated</b> value. Other expense heads continue to use Posted manual entries.
+      </div>
+    </div>
+
     <div id="oeMasterPanel" style="display:none">
       <div class="oe-master-form">
         <input type="hidden" id="oeHeadEditId">
@@ -17725,6 +17818,10 @@ function build(){
   $o('#oeView').onchange=()=>switchView($o('#oeView').value);
   $o('#oeSave').onclick=saveExpense;
   $o('#oeHeadSave').onclick=saveHead;
+  $o('#oeSaveRules').onclick=saveRules;
+  ['oeRuleMonth','oeRuleYear'].forEach(id=>$o('#'+id)?.addEventListener('change',renderRules));
+  ['oeSalaryRule','oeSalaryFallback','oeSalaryAllocation','oeTaxRate','oeTaxBase','oeTaxAllocation','oeContractorRule','oeContractorValue','oeContractorAllocation']
+    .forEach(id=>$o('#'+id)?.addEventListener('input',renderRulePreview));
   ['oeFrom','oeTo','oeFilterHead','oeFilterStatus','oeSearch'].forEach(id=>$o('#'+id)?.addEventListener('input',renderHistory));
   $o('#oeClearFilters').onclick=()=>{['oeFrom','oeTo','oeSearch'].forEach(id=>$o('#'+id).value='');$o('#oeFilterHead').value='';$o('#oeFilterStatus').value='';renderHistory()};
   renderAll()
@@ -17732,8 +17829,10 @@ function build(){
 function switchView(view){
   $o('#oeEntryPanel').style.display=view==='entry'?'block':'none';
   $o('#oeHistoryPanel').style.display=view==='history'?'block':'none';
+  $o('#oeRulesPanel').style.display=view==='rules'?'block':'none';
   $o('#oeMasterPanel').style.display=view==='master'?'block':'none';
   if(view==='history')renderHistory();
+  if(view==='rules')renderRules();
   if(view==='master')renderHeads()
 }
 function clearExpense(){
@@ -17816,11 +17915,228 @@ function renderSummary(){
   $o('#oeTotalEntries').textContent=String(loadRows().length);
   $o('#oeIncludedTotal').textContent=omoney(included.reduce((a,r)=>a+onum(r.amount),0))
 }
+
+function defaultRules(){
+  return {
+    salary:{rule:'previous',fallback:0,allocation:'production'},
+    salesTax:{rate:0,base:'purchaseValue',allocation:'purchase'},
+    contractor:{rule:'previous',value:0,allocation:'production'}
+  }
+}
+function loadRules(){
+  try{
+    const x=JSON.parse(localStorage.getItem(OE_RULE_KEY)||'null');
+    return x&&typeof x==='object'?Object.assign(defaultRules(),x):defaultRules()
+  }catch(e){return defaultRules()}
+}
+function saveRules(){
+  const rules={
+    salary:{rule:$o('#oeSalaryRule').value,fallback:onum($o('#oeSalaryFallback').value),allocation:$o('#oeSalaryAllocation').value},
+    salesTax:{rate:onum($o('#oeTaxRate').value),base:$o('#oeTaxBase').value,allocation:$o('#oeTaxAllocation').value},
+    contractor:{rule:$o('#oeContractorRule').value,value:onum($o('#oeContractorValue').value),allocation:$o('#oeContractorAllocation').value}
+  };
+  localStorage.setItem(OE_RULE_KEY,JSON.stringify(rules));
+  renderRules();
+  if(window.toast)toast('Automatic cost rules saved')
+}
+function ruleMonthYear(){
+  const now=new Date();
+  return {month:Number($o('#oeRuleMonth')?.value||now.getMonth()+1),year:Number($o('#oeRuleYear')?.value||now.getFullYear())}
+}
+function fillRulePeriods(){
+  const now=new Date(),m=$o('#oeRuleMonth'),y=$o('#oeRuleYear');
+  if(m&&!m.options.length){
+    const names=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    m.innerHTML=names.map((n,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${n}</option>`).join('')
+  }
+  if(y&&!y.options.length){
+    const years=new Set([now.getFullYear()]);
+    loadRows().forEach(r=>{const d=oParseDate(r.date);if(d)years.add(d.getFullYear())});
+    try{
+      const data=JSON.parse(localStorage.getItem('erpProductionConsumptionDailyV1')||'[]');
+      (Array.isArray(data)?data:[]).forEach(r=>{const d=oParseDate(r.date);if(d)years.add(d.getFullYear())})
+    }catch(e){}
+    y.innerHTML=[...years].sort((a,b)=>b-a).map(v=>`<option value="${v}">${v}</option>`).join('')
+  }
+}
+function monthDateRange(year,month){
+  return {from:new Date(year,month-1,1),to:new Date(year,month,0)}
+}
+function rowsForMonth(year,month){
+  return loadRows().filter(r=>{const d=oParseDate(r.date);return d&&d.getFullYear()===year&&d.getMonth()+1===month&&r.status==='posted'})
+}
+function headAmountForMonth(name,year,month){
+  const target=String(name||'').toLowerCase();
+  return rowsForMonth(year,month).reduce((sum,r)=>{
+    const h=headById(r.headId);
+    return sum+(String(h.name||'').toLowerCase()===target?onum(r.amount):0)
+  },0)
+}
+function previousMonth(year,month){
+  const d=new Date(year,month-2,1);
+  return {year:d.getFullYear(),month:d.getMonth()+1}
+}
+function dailyReportsForMonth(year,month){
+  try{
+    const x=JSON.parse(localStorage.getItem('erpProductionConsumptionDailyV1')||'[]');
+    return (Array.isArray(x)?x:[]).filter(r=>{const d=oParseDate(r.date);return d&&d.getFullYear()===year&&d.getMonth()+1===month})
+  }catch(e){return []}
+}
+function monthProduction(year,month){
+  return dailyReportsForMonth(year,month).reduce((a,r)=>a+onum(r.totalProduction),0)
+}
+function purchaseAllTenantRows(){
+  try{
+    const all=JSON.parse(localStorage.getItem('erpPurchaseDataV1')||'{}')||{};
+    const tenant=window.ERPTenant?.currentId?.()||'local';
+    const t=all[tenant]||{};
+    const out=[];
+    (Array.isArray(t.local)?t.local:[]).forEach(r=>out.push({register:'local',r}));
+    (Array.isArray(t.zafar)?t.zafar:[]).forEach(r=>out.push({register:'zafar',r}));
+    (Array.isArray(t.board)?t.board:[]).forEach(r=>out.push({register:'board',r}));
+    return out
+  }catch(e){return []}
+}
+function purchaseDate(r){return oParseDate(r?.date)}
+function purchaseBaseValue(r){
+  if(r?.register==='board')return onum(r.totalPrice||r.amount||r.netWeight*r.unitPrice);
+  return onum(r.amount||r.purchaseValue||r.qty*r.rate)
+}
+function purchaseMonthBase(year,month,base){
+  return purchaseAllTenantRows().reduce((sum,x)=>{
+    const d=purchaseDate(x.r);if(!d||d.getFullYear()!==year||d.getMonth()+1!==month)return sum;
+    if(base==='boardOnly'&&x.register!=='board')return sum;
+    if(base==='localOnly'&&x.register!=='local')return sum;
+    if(base==='zafarOnly'&&x.register!=='zafar')return sum;
+    return sum+purchaseBaseValue(x)
+  },0)
+}
+function otherPostedForMonth(year,month){
+  const autoNames=new Set(['salary','sales tax','contractor']);
+  return rowsForMonth(year,month).reduce((sum,r)=>{
+    const h=headById(r.headId);
+    if(h.include===false||autoNames.has(String(h.name||'').toLowerCase()))return sum;
+    return sum+onum(r.amount)
+  },0)
+}
+function ruleEstimate(year,month){
+  const rules=loadRules(),prev=previousMonth(year,month);
+  const salaryPrev=headAmountForMonth('Salary',prev.year,prev.month);
+  const salaryEstimate=rules.salary.rule==='fixed'?onum(rules.salary.fallback):(salaryPrev||onum(rules.salary.fallback));
+  const salaryActual=headAmountForMonth('Salary',year,month);
+
+  const taxBase=purchaseMonthBase(year,month,rules.salesTax.base);
+  const taxEstimate=taxBase*onum(rules.salesTax.rate)/100;
+  const taxActual=headAmountForMonth('Sales Tax',year,month);
+
+  const contractorPrev=headAmountForMonth('Contractor',prev.year,prev.month);
+  let contractorEstimate=0;
+  if(rules.contractor.rule==='fixed')contractorEstimate=onum(rules.contractor.value);
+  else if(rules.contractor.rule==='perTon')contractorEstimate=monthProduction(year,month)*onum(rules.contractor.value);
+  else contractorEstimate=contractorPrev||onum(rules.contractor.value);
+  const contractorActual=headAmountForMonth('Contractor',year,month);
+
+  const salaryUsed=salaryActual||salaryEstimate;
+  const taxUsed=taxActual||taxEstimate;
+  const contractorUsed=contractorActual||contractorEstimate;
+  const other=otherPostedForMonth(year,month);
+
+  return {
+    year,month,
+    salary:{estimated:salaryEstimate,actual:salaryActual,used:salaryUsed,variance:salaryActual?salaryActual-salaryEstimate:null},
+    salesTax:{base:taxBase,estimated:taxEstimate,actual:taxActual,used:taxUsed,variance:taxActual?taxActual-taxEstimate:null},
+    contractor:{estimated:contractorEstimate,actual:contractorActual,used:contractorUsed,variance:contractorActual?contractorActual-contractorEstimate:null},
+    other,
+    estimatedTotal:salaryEstimate+taxEstimate+contractorEstimate,
+    actualAvailable:(salaryActual||0)+(taxActual||0)+(contractorActual||0),
+    usedAutomatic:salaryUsed+taxUsed+contractorUsed,
+    provisionalTotal:salaryUsed+taxUsed+contractorUsed+other
+  }
+}
+function allocShare(date,allocation,year,month,type){
+  const d=oParseDate(date);if(!d)return 0;
+  const days=new Date(year,month,0).getDate();
+  if(allocation==='days')return 1/days;
+
+  const reports=dailyReportsForMonth(year,month);
+  const key=r=>oParseDate(r.date)?.toDateString()===d.toDateString();
+
+  if(allocation==='production'){
+    const total=reports.reduce((a,r)=>a+onum(r.totalProduction),0);
+    const day=reports.filter(key).reduce((a,r)=>a+onum(r.totalProduction),0);
+    return total>0?day/total:1/days
+  }
+  if(allocation==='purchase'){
+    const rules=loadRules();
+    const total=purchaseMonthBase(year,month,rules.salesTax.base);
+    let day=0;
+    purchaseAllTenantRows().forEach(x=>{
+      const pd=purchaseDate(x.r);
+      if(!pd||pd.toDateString()!==d.toDateString())return;
+      if(rules.salesTax.base==='boardOnly'&&x.register!=='board')return;
+      if(rules.salesTax.base==='localOnly'&&x.register!=='local')return;
+      if(rules.salesTax.base==='zafarOnly'&&x.register!=='zafar')return;
+      day+=purchaseBaseValue(x)
+    });
+    return total>0?day/total:1/days
+  }
+  return 1/days
+}
+function automaticDailyCost(date){
+  const d=oParseDate(date);if(!d)return {salary:0,salesTax:0,contractor:0,total:0,status:'No Date'};
+  const year=d.getFullYear(),month=d.getMonth()+1,rules=loadRules(),est=ruleEstimate(year,month);
+  const salary=est.salary.used*allocShare(date,rules.salary.allocation,year,month,'salary');
+  const salesTax=est.salesTax.used*allocShare(date,rules.salesTax.allocation,year,month,'tax');
+  const contractor=est.contractor.used*allocShare(date,rules.contractor.allocation,year,month,'contractor');
+  return {salary,salesTax,contractor,total:salary+salesTax+contractor,status:(est.salary.actual&&est.salesTax.actual&&est.contractor.actual)?'Actual':'Provisional'}
+}
+function setRuleText(id,val){const e=$o('#'+id);if(e)e.textContent=val}
+function renderRulePreview(){
+  if(!$o('#oeRulesPanel'))return;
+  const {year,month}=ruleMonthYear();
+  const est=ruleEstimate(year,month);
+
+  setRuleText('oeSalaryEstimated',omoney(est.salary.estimated));
+  setRuleText('oeSalaryActual',est.salary.actual?omoney(est.salary.actual):'—');
+  setRuleText('oeSalaryUsed',omoney(est.salary.used));
+  setRuleText('oeSalaryVariance',est.salary.variance==null?'—':omoney(est.salary.variance));
+
+  setRuleText('oeTaxBaseValue',omoney(est.salesTax.base));
+  setRuleText('oeTaxEstimated',omoney(est.salesTax.estimated));
+  setRuleText('oeTaxActual',est.salesTax.actual?omoney(est.salesTax.actual):'—');
+  setRuleText('oeTaxUsed',omoney(est.salesTax.used));
+
+  setRuleText('oeContractorEstimated',omoney(est.contractor.estimated));
+  setRuleText('oeContractorActual',est.contractor.actual?omoney(est.contractor.actual):'—');
+  setRuleText('oeContractorUsed',omoney(est.contractor.used));
+  setRuleText('oeContractorVariance',est.contractor.variance==null?'—':omoney(est.contractor.variance));
+
+  setRuleText('oeAutoEstimatedTotal',omoney(est.estimatedTotal));
+  setRuleText('oeAutoActualTotal',omoney(est.actualAvailable));
+  setRuleText('oeAutoUsedTotal',omoney(est.usedAutomatic));
+  setRuleText('oeOtherPostedTotal',omoney(est.other));
+  setRuleText('oeProvisionalTotal',omoney(est.provisionalTotal))
+}
+function renderRules(){
+  fillRulePeriods();
+  const rules=loadRules();
+  $o('#oeSalaryRule').value=rules.salary.rule||'previous';
+  $o('#oeSalaryFallback').value=onum(rules.salary.fallback)||'';
+  $o('#oeSalaryAllocation').value=rules.salary.allocation||'production';
+  $o('#oeTaxRate').value=onum(rules.salesTax.rate)||'';
+  $o('#oeTaxBase').value=rules.salesTax.base||'purchaseValue';
+  $o('#oeTaxAllocation').value=rules.salesTax.allocation||'purchase';
+  $o('#oeContractorRule').value=rules.contractor.rule||'previous';
+  $o('#oeContractorValue').value=onum(rules.contractor.value)||'';
+  $o('#oeContractorAllocation').value=rules.contractor.allocation||'production';
+  renderRulePreview()
+}
+
 function renderAll(){
   renderHeadOptions();
   const f=$o('#oeFilterHead');if(f){const cur=f.value;f.innerHTML='<option value="">All Heads</option>'+loadHeads().map(h=>`<option value="${oesc(h.id)}">${oesc(h.name)}</option>`).join('');if([...f.options].some(o=>o.value===cur))f.value=cur}
   if(!$o('#oeHeadCode').value)$o('#oeHeadCode').value=nextHeadCode();
-  renderSummary();renderHistory();renderHeads()
+  renderSummary();renderHistory();renderHeads();if($o('#oeView')?.value==='rules')renderRules()
 }
 function open(){
   build();
@@ -17839,9 +18155,39 @@ window.ERPOperatingExpenses={
   totalForRange:function(from,to){
     const f=oParseDate(from),t=oParseDate(to);
     return this.costRows().filter(r=>{const d=oParseDate(r.date);return (!f||d>=f)&&(!t||d<=t)}).reduce((a,r)=>a+onum(r.amount),0)
-  }
+  },
+  rules:loadRules,
+  monthCost:function(year,month){return ruleEstimate(Number(year),Number(month))},
+  dailyAutomaticCost:function(date){return automaticDailyCost(date)}
 };
 })();
 </script>
+
+
+<style id="automaticCostRulesV1543Style">
+#panel-operating-expenses .oe-rules-head-v1543{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin:4px 0 9px}
+#panel-operating-expenses .oe-rules-head-v1543 h3{margin:0;font-size:15px}
+#panel-operating-expenses .oe-rules-head-v1543 p{margin:3px 0 0;font-size:9px;color:var(--muted)}
+#panel-operating-expenses .oe-rule-period-v1543{display:flex;gap:7px}
+#panel-operating-expenses .oe-rule-period-v1543>div{width:140px}
+#panel-operating-expenses .oe-rules-grid-v1543{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+#panel-operating-expenses .oe-rule-card-v1543{border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden}
+#panel-operating-expenses .oe-rule-title-v1543{padding:9px 10px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 70%,var(--surface))}
+#panel-operating-expenses .oe-rule-title-v1543 strong{display:block;font-size:11px}
+#panel-operating-expenses .oe-rule-title-v1543 span{display:block;font-size:8px;color:var(--muted);margin-top:2px}
+#panel-operating-expenses .oe-rule-form-v1543{display:grid;grid-template-columns:1fr;gap:6px;padding:8px 10px}
+#panel-operating-expenses .oe-rule-preview-v1543{padding:0 10px 8px}
+#panel-operating-expenses .oe-rule-preview-v1543>div{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+#panel-operating-expenses .oe-rule-preview-v1543 span{font-size:8px;color:var(--muted);font-weight:800;text-transform:uppercase}
+#panel-operating-expenses .oe-rule-preview-v1543 b{font-size:9px;text-align:right}
+#panel-operating-expenses .oe-rule-actions-v1543{display:flex;align-items:center;gap:10px;margin:9px 0}
+#panel-operating-expenses .oe-rule-actions-v1543 span{font-size:9px;color:var(--muted)}
+#panel-operating-expenses .oe-provisional-summary-v1543{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+#panel-operating-expenses .oe-rule-note-v1543{margin-top:9px;padding:8px 10px;border-left:3px solid #e2a000;background:#fff8e5;border-radius:6px;font-size:9px}
+@media(max-width:1250px){
+ #panel-operating-expenses .oe-rules-grid-v1543{grid-template-columns:1fr}
+ #panel-operating-expenses .oe-provisional-summary-v1543{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+</style>
 
 </body></html>
