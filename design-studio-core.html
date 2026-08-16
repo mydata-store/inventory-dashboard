@@ -17821,6 +17821,20 @@ function build(){
         </div>
       </div>
 
+      <div class="oe-daily-preview-v1547">
+        <div class="oe-daily-preview-head-v1547">
+          <div><h4>Daily Cost Allocation Preview</h4><p>Check how monthly automatic costs will be allocated to a specific production date before final costing.</p></div>
+          <div class="oe-daily-preview-date-v1547"><label>Date</label><input id="oePreviewDate" class="dde-control" placeholder="Date"></div>
+        </div>
+        <div class="oe-daily-preview-grid-v1547">
+          <div><span>Salary Allocation</span><b id="oePreviewSalary">PKR 0.00</b></div>
+          <div><span>Sales Tax Allocation</span><b id="oePreviewTax">PKR 0.00</b></div>
+          <div><span>Contractor Allocation</span><b id="oePreviewContractor">PKR 0.00</b></div>
+          <div><span>Automatic Cost / Day</span><b id="oePreviewTotal">PKR 0.00</b></div>
+          <div><span>Cost Status</span><b id="oePreviewStatus">Provisional</b></div>
+        </div>
+      </div>
+
       <div class="oe-rule-actions-v1543">
         <button class="btn primary" id="oeSaveRules">Save Automatic Rules</button>
         <span id="oeRuleStatus">Estimated values are used only until actual Posted values are available.</span>
@@ -17877,6 +17891,16 @@ function build(){
   $o('#oeHeadSave').onclick=saveHead;
   $o('#oeSaveRules').onclick=saveRules;
   ['oeRuleMonth','oeRuleYear'].forEach(id=>$o('#'+id)?.addEventListener('change',renderRules));
+  if($o('#oePreviewDate')){
+    const normalizePreviewDate=()=>{
+      const v=String($o('#oePreviewDate').value||'').trim();
+      if(v)$o('#oePreviewDate').value=oFmtDate(v);
+      renderDailyPreview()
+    };
+    $o('#oePreviewDate').addEventListener('blur',normalizePreviewDate);
+    $o('#oePreviewDate').addEventListener('change',normalizePreviewDate);
+    $o('#oePreviewDate').addEventListener('keydown',e=>{if(e.key==='Enter')normalizePreviewDate()});
+  }
   ['oeSalaryRule','oeSalaryFallback','oeSalaryAllocation','oeTaxRate','oeTaxBase','oeTaxAllocation','oeContractorRule','oeContractorValue','oeContractorAllocation']
     .forEach(id=>$o('#'+id)?.addEventListener('input',renderRulePreview));
   ['oeFrom','oeTo','oeFilterHead','oeFilterStatus','oeSearch'].forEach(id=>$o('#'+id)?.addEventListener('input',renderHistory));
@@ -18047,6 +18071,11 @@ function headAmountForMonth(name,year,month){
     return sum+(String(h.name||'').toLowerCase()===target?onum(r.amount):0)
   },0)
 }
+function headActualForMonth(name,year,month){
+  const target=String(name||'').toLowerCase();
+  const matches=rowsForMonth(year,month).filter(r=>String(headById(r.headId).name||'').toLowerCase()===target);
+  return {exists:matches.length>0,amount:matches.reduce((a,r)=>a+onum(r.amount),0)}
+}
 function previousMonth(year,month){
   const d=new Date(year,month-2,1);
   return {year:d.getFullYear(),month:d.getMonth()+1}
@@ -18098,34 +18127,31 @@ function ruleEstimate(year,month){
   const rules=loadRules(),prev=previousMonth(year,month);
   const salaryPrev=headAmountForMonth('Salary',prev.year,prev.month);
   const salaryEstimate=rules.salary.rule==='fixed'?onum(rules.salary.fallback):(salaryPrev||onum(rules.salary.fallback));
-  const salaryActual=headAmountForMonth('Salary',year,month);
-
+  const salaryActualInfo=headActualForMonth('Salary',year,month),salaryActual=salaryActualInfo.amount;
   const taxBase=purchaseMonthBase(year,month,rules.salesTax.base);
   const taxEstimate=taxBase*onum(rules.salesTax.rate)/100;
-  const taxActual=headAmountForMonth('Sales Tax',year,month);
-
+  const taxActualInfo=headActualForMonth('Sales Tax',year,month),taxActual=taxActualInfo.amount;
   const contractorPrev=headAmountForMonth('Contractor',prev.year,prev.month);
   let contractorEstimate=0;
   if(rules.contractor.rule==='fixed')contractorEstimate=onum(rules.contractor.value);
   else if(rules.contractor.rule==='perTon')contractorEstimate=monthProduction(year,month)*onum(rules.contractor.value);
   else contractorEstimate=contractorPrev||onum(rules.contractor.value);
-  const contractorActual=headAmountForMonth('Contractor',year,month);
-
-  const salaryUsed=salaryActual||salaryEstimate;
-  const taxUsed=taxActual||taxEstimate;
-  const contractorUsed=contractorActual||contractorEstimate;
+  const contractorActualInfo=headActualForMonth('Contractor',year,month),contractorActual=contractorActualInfo.amount;
+  const salaryUsed=salaryActualInfo.exists?salaryActual:salaryEstimate;
+  const taxUsed=taxActualInfo.exists?taxActual:taxEstimate;
+  const contractorUsed=contractorActualInfo.exists?contractorActual:contractorEstimate;
   const other=otherPostedForMonth(year,month);
-
   return {
     year,month,
-    salary:{estimated:salaryEstimate,actual:salaryActual,used:salaryUsed,variance:salaryActual?salaryActual-salaryEstimate:null},
-    salesTax:{base:taxBase,estimated:taxEstimate,actual:taxActual,used:taxUsed,variance:taxActual?taxActual-taxEstimate:null},
-    contractor:{estimated:contractorEstimate,actual:contractorActual,used:contractorUsed,variance:contractorActual?contractorActual-contractorEstimate:null},
+    salary:{estimated:salaryEstimate,actual:salaryActual,actualExists:salaryActualInfo.exists,used:salaryUsed,variance:salaryActualInfo.exists?salaryActual-salaryEstimate:null},
+    salesTax:{base:taxBase,estimated:taxEstimate,actual:taxActual,actualExists:taxActualInfo.exists,used:taxUsed,variance:taxActualInfo.exists?taxActual-taxEstimate:null},
+    contractor:{estimated:contractorEstimate,actual:contractorActual,actualExists:contractorActualInfo.exists,used:contractorUsed,variance:contractorActualInfo.exists?contractorActual-contractorEstimate:null},
     other,
     estimatedTotal:salaryEstimate+taxEstimate+contractorEstimate,
-    actualAvailable:(salaryActual||0)+(taxActual||0)+(contractorActual||0),
+    actualAvailable:(salaryActualInfo.exists?salaryActual:0)+(taxActualInfo.exists?taxActual:0)+(contractorActualInfo.exists?contractorActual:0),
     usedAutomatic:salaryUsed+taxUsed+contractorUsed,
-    provisionalTotal:salaryUsed+taxUsed+contractorUsed+other
+    provisionalTotal:salaryUsed+taxUsed+contractorUsed+other,
+    allActual:salaryActualInfo.exists&&taxActualInfo.exists&&contractorActualInfo.exists
   }
 }
 function allocShare(date,allocation,year,month,type){
@@ -18163,26 +18189,42 @@ function automaticDailyCost(date){
   const salary=est.salary.used*allocShare(date,rules.salary.allocation,year,month,'salary');
   const salesTax=est.salesTax.used*allocShare(date,rules.salesTax.allocation,year,month,'tax');
   const contractor=est.contractor.used*allocShare(date,rules.contractor.allocation,year,month,'contractor');
-  return {salary,salesTax,contractor,total:salary+salesTax+contractor,status:(est.salary.actual&&est.salesTax.actual&&est.contractor.actual)?'Actual':'Provisional'}
+  return {salary,salesTax,contractor,total:salary+salesTax+contractor,status:est.allActual?'Actual':'Provisional'}
 }
 function setRuleText(id,val){const e=$o('#'+id);if(e)e.textContent=val}
+function ensurePreviewDate(){
+  const input=$o('#oePreviewDate');if(!input)return;
+  const {year,month}=ruleMonthYear();
+  const d=oParseDate(input.value);
+  if(!d || d.getFullYear()!==year || d.getMonth()+1!==month)input.value=oFmtDate(`1-${month}-${year}`)
+}
+function renderDailyPreview(){
+  const input=$o('#oePreviewDate');if(!input)return;
+  const date=oFmtDate(input.value||'');
+  if(!date){
+    setRuleText('oePreviewSalary',omoney(0));setRuleText('oePreviewTax',omoney(0));setRuleText('oePreviewContractor',omoney(0));setRuleText('oePreviewTotal',omoney(0));setRuleText('oePreviewStatus','No Date');return
+  }
+  const x=automaticDailyCost(date);
+  setRuleText('oePreviewSalary',omoney(x.salary));setRuleText('oePreviewTax',omoney(x.salesTax));setRuleText('oePreviewContractor',omoney(x.contractor));setRuleText('oePreviewTotal',omoney(x.total));setRuleText('oePreviewStatus',x.status||'Provisional')
+}
+
 function renderRulePreview(){
   if(!$o('#oeRulesPanel'))return;
   const {year,month}=ruleMonthYear();
   const est=ruleEstimate(year,month);
 
   setRuleText('oeSalaryEstimated',omoney(est.salary.estimated));
-  setRuleText('oeSalaryActual',est.salary.actual?omoney(est.salary.actual):'—');
+  setRuleText('oeSalaryActual',est.salary.actualExists?omoney(est.salary.actual):'—');
   setRuleText('oeSalaryUsed',omoney(est.salary.used));
   setRuleText('oeSalaryVariance',est.salary.variance==null?'—':omoney(est.salary.variance));
 
   setRuleText('oeTaxBaseValue',omoney(est.salesTax.base));
   setRuleText('oeTaxEstimated',omoney(est.salesTax.estimated));
-  setRuleText('oeTaxActual',est.salesTax.actual?omoney(est.salesTax.actual):'—');
+  setRuleText('oeTaxActual',est.salesTax.actualExists?omoney(est.salesTax.actual):'—');
   setRuleText('oeTaxUsed',omoney(est.salesTax.used));
 
   setRuleText('oeContractorEstimated',omoney(est.contractor.estimated));
-  setRuleText('oeContractorActual',est.contractor.actual?omoney(est.contractor.actual):'—');
+  setRuleText('oeContractorActual',est.contractor.actualExists?omoney(est.contractor.actual):'—');
   setRuleText('oeContractorUsed',omoney(est.contractor.used));
   setRuleText('oeContractorVariance',est.contractor.variance==null?'—':omoney(est.contractor.variance));
 
@@ -18190,7 +18232,9 @@ function renderRulePreview(){
   setRuleText('oeAutoActualTotal',omoney(est.actualAvailable));
   setRuleText('oeAutoUsedTotal',omoney(est.usedAutomatic));
   setRuleText('oeOtherPostedTotal',omoney(est.other));
-  setRuleText('oeProvisionalTotal',omoney(est.provisionalTotal))
+  setRuleText('oeProvisionalTotal',omoney(est.provisionalTotal));
+  ensurePreviewDate();
+  renderDailyPreview()
 }
 function renderRules(){
   fillRulePeriods();
@@ -18353,4 +18397,14 @@ window.ERPOperatingExpenses={
 }
 </style>
 
+<style id="automaticCostRulesFinalizeV1547">
+#panel-operating-expenses .oe-daily-preview-v1547{margin-top:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden}
+#panel-operating-expenses .oe-daily-preview-head-v1547{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:9px 10px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 70%,var(--surface))}
+#panel-operating-expenses .oe-daily-preview-head-v1547 h4{margin:0;font-size:11px}#panel-operating-expenses .oe-daily-preview-head-v1547 p{margin:3px 0 0;font-size:8px;color:var(--muted)}
+#panel-operating-expenses .oe-daily-preview-date-v1547{width:150px}#panel-operating-expenses #oePreviewDate{text-align:center!important}
+#panel-operating-expenses .oe-daily-preview-grid-v1547{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0}
+#panel-operating-expenses .oe-daily-preview-grid-v1547>div{padding:9px 10px;border-right:1px solid var(--border)}#panel-operating-expenses .oe-daily-preview-grid-v1547>div:last-child{border-right:0}
+#panel-operating-expenses .oe-daily-preview-grid-v1547 span{display:block;font-size:8px;font-weight:850;color:var(--muted);text-transform:uppercase}#panel-operating-expenses .oe-daily-preview-grid-v1547 b{display:block;margin-top:5px;font-size:11px;color:var(--text)}
+@media(max-width:1200px){#panel-operating-expenses .oe-daily-preview-grid-v1547{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
 </body></html>
