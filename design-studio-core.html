@@ -18424,6 +18424,99 @@ window.ERPOperatingExpenses={
 'use strict';
 const $f=s=>document.querySelector(s), n=v=>{const x=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(x)?x:0}, money=v=>'PKR '+n(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}), qty=v=>n(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:3});
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+
+function readCompanyProfile(){
+  const defaults={
+    name:'FPM PAPER MILLS',
+    address:'',
+    phone:'',
+    department:'Production & Costing Department',
+    logo:''
+  };
+  try{
+    if(typeof state!=='undefined' && state && state.company){
+      const c=state.company;
+      return {
+        name:c.companyName||defaults.name,
+        address:c.address||'',
+        phone:c.telephone||c.mobile||'',
+        department:c.tagline||defaults.department,
+        logo:c.logo||''
+      }
+    }
+  }catch(e){}
+  const keys=[
+    'erpCompanyProfileV1',
+    'erpCompanyProfile',
+    'companyProfile',
+    'erpTitleCompanyProfileV1',
+    'erpProgramCompanyProfileV1',
+    'erpCompanyIdentityV1'
+  ];
+  for(const key of keys){
+    try{
+      const raw=localStorage.getItem(key);
+      if(!raw)continue;
+      const x=JSON.parse(raw);
+      if(!x||typeof x!=='object')continue;
+      const p=x.company&&typeof x.company==='object'?x.company:x;
+      const name=p.companyName||p.name||p.title||p.programName||'';
+      const address=p.address||p.companyAddress||'';
+      const phone=p.phone||p.telephone||p.tel||p.companyPhone||'';
+      const department=p.department||p.reportDepartment||p.subtitle||'';
+      const logo=p.logo||p.logoData||p.logoUrl||p.companyLogo||'';
+      if(name||address||phone||department||logo){
+        return {
+          name:name||defaults.name,
+          address,
+          phone,
+          department:department||defaults.department,
+          logo
+        }
+      }
+    }catch(e){}
+  }
+
+  // Fallback: read visible Company Profile / Title Studio inputs if they exist.
+  const byIds=(ids)=>{
+    for(const id of ids){
+      const el=document.getElementById(id);
+      if(el && String(el.value||el.textContent||'').trim())return String(el.value||el.textContent||'').trim()
+    }
+    return ''
+  };
+  const name=byIds(['companyName','cpCompanyName','titleCompanyName','profileCompanyName','programCompanyName']);
+  const address=byIds(['companyAddress','cpCompanyAddress','titleCompanyAddress','profileCompanyAddress']);
+  const phone=byIds(['companyPhone','companyTelephone','cpCompanyPhone','cpTelephone','titleCompanyPhone']);
+  const department=byIds(['companyDepartment','reportDepartment','cpDepartment']);
+  let logo='';
+  for(const id of ['companyLogoPreview','cpLogoPreview','titleLogoPreview','companyLogo']){
+    const el=document.getElementById(id);
+    if(el){
+      logo=el.src||el.value||el.dataset?.src||'';
+      if(logo)break
+    }
+  }
+  return {name:name||defaults.name,address,phone,department:department||defaults.department,logo}
+}
+function applyCompanyProfileToReport(){
+  const p=readCompanyProfile();
+  const name=$f('#fcrCompanyName'), sub=$f('#fcrCompanyDept'), logo=$f('#fcrCompanyLogo'), addr=$f('#fcrCompanyAddress'), phone=$f('#fcrCompanyPhone');
+  if(name)name.textContent=p.name;
+  if(sub)sub.textContent=p.department;
+  if(addr)addr.textContent=p.address||'';
+  if(phone)phone.textContent=p.phone||'';
+  if(logo){
+    if(p.logo){
+      logo.innerHTML=`<img src="${esc(p.logo)}" alt="Company Logo">`;
+      logo.classList.add('has-logo')
+    }else{
+      logo.innerHTML='▥';
+      logo.classList.remove('has-logo')
+    }
+  }
+}
+
 function parseDate(v){try{return typeof oParseDate==='function'?oParseDate(v):pcParseDailyDate(v)}catch(e){return pcParseDailyDate(v)}}
 function fmtDate(v){try{return typeof oFmtDate==='function'?oFmtDate(v):v}catch(e){return v}}
 function dailyRows(){try{const a=JSON.parse(localStorage.getItem('erpProductionConsumptionDailyV1')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
@@ -18483,7 +18576,7 @@ function build(){
   sec.id='panel-final-cost-report';sec.className='panel purchase-page';
   sec.innerHTML=`<div class="card fcr-page fcr-approved">
     <div class="fcr-report-banner">
-      <div class="fcr-company"><div class="fcr-factory">▥</div><div><b>FPM PAPER MILLS</b><span>Production & Costing Department</span></div></div>
+      <div class="fcr-company"><div class="fcr-factory" id="fcrCompanyLogo">▥</div><div><b id="fcrCompanyName">FPM PAPER MILLS</b><span id="fcrCompanyDept">Production & Costing Department</span><small id="fcrCompanyAddress"></small><small id="fcrCompanyPhone"></small></div></div>
       <div class="fcr-main-title"><h2>FINAL PRODUCTION & COST REPORT</h2><span>Detailed Consumption, Rate, Amount & Cost Statement</span></div>
       <div class="fcr-report-meta"><span>Report Date</span><b id="fcrMetaDate"></b><span>Currency</span><b>PKR</b></div>
     </div>
@@ -18527,11 +18620,27 @@ function build(){
     render()
   }
   document.querySelectorAll('[data-fcr-mode]').forEach(b=>b.onclick=()=>syncMode(b.dataset.fcrMode));
-  ['fcrDate','fcrFrom','fcrTo'].forEach(id=>$f('#'+id).onblur=e=>{e.target.value=fmtDate(e.target.value);render()});
+  function normalizeFcrDateInput(el){
+    if(!el)return;
+    const raw=String(el.value||'').trim();
+    if(!raw)return;
+    el.value=fmtDate(raw)
+  }
+  ['fcrDate','fcrFrom','fcrTo'].forEach(id=>{
+    const el=$f('#'+id);
+    if(!el)return;
+    el.addEventListener('blur',()=>{normalizeFcrDateInput(el);render()});
+    el.addEventListener('change',()=>{normalizeFcrDateInput(el);render()});
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){normalizeFcrDateInput(el);render()}
+    })
+  });
   $f('#fcrRefresh').onclick=render;$f('#fcrMonth').onchange=render;$f('#fcrYear').onchange=render;
-  $f('#fcrPrint').onclick=()=>window.print();$f('#fcrBack').onclick=()=>window.ERPDailyDataEntry?.open?.()
+  $f('#fcrPrint').onclick=()=>window.print();$f('#fcrBack').onclick=()=>window.ERPDailyDataEntry?.open?.();
+  applyCompanyProfileToReport()
 }
 function render(){
+  applyCompanyProfileToReport();
   const p=period(),list=dailyRows().filter(r=>inPeriod(r.date,p)),materials=aggregateMaterials(list);
   const prod=list.reduce((a,r)=>a+n(r.totalProduction),0);
   const pulp=list.reduce((a,r)=>a+n(r.pulpProduced),0);
@@ -18747,6 +18856,35 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
  #panel-final-cost-report .fcr-bottom-grid{grid-template-columns:1.1fr .48fr 1.05fr 1fr!important}
  #panel-final-cost-report .fcr-daily-details{display:none!important}
  @page{size:A3 landscape;margin:7mm}
+}
+</style>
+
+
+<style id="fcrCompanyProfileDateFixV1551">
+#panel-final-cost-report .fcr-company small{
+  display:block;
+  font-size:7px;
+  line-height:1.2;
+  color:#66758c;
+  margin-top:1px;
+}
+#panel-final-cost-report .fcr-factory{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+#panel-final-cost-report .fcr-factory.has-logo img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+#panel-final-cost-report #fcrDate,
+#panel-final-cost-report #fcrFrom,
+#panel-final-cost-report #fcrTo{
+  text-align:center!important;
 }
 </style>
 
