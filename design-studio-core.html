@@ -4596,6 +4596,7 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn" id="ddeHistoryPageBtn">Consumption History</button>
+        <button class="btn" id="ddeBalanceReportBtn">Balance Report</button>
         <button class="btn" id="ddeCostReportBtn">Production Cost Report</button>
         <button class="btn" id="ddeBackBtn">← Production & Consumption</button>
         <button class="btn purchase-controller-btn" type="button">⚙ Page Controller</button>
@@ -4939,6 +4940,169 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
 </section>
 
 
+
+
+<section class="panel purchase-page" id="panel-material-balance-report">
+  <div class="card mbr-card">
+    <div class="inv-page-head mbr-page-head">
+      <div>
+        <h2>Daily Material Balance Report</h2>
+        <p>Opening • Received • Consumed • Closing Balance • Section & Material-wise Analysis</p>
+      </div>
+      <div class="mbr-top-actions">
+        <button class="btn" id="mbrPrintBtn">Print Report</button>
+        <button class="btn" id="mbrBackBtn">← Daily Consumption Report</button>
+        <button class="btn purchase-controller-btn" type="button">⚙ Page Controller</button>
+      </div>
+    </div>
+
+    <div class="mbr-filter-panel">
+      <div class="mbr-filter-grid">
+        <div class="mbr-field">
+          <label>Report View</label>
+          <select id="mbrView" class="dde-control">
+            <option value="detail">Detailed Daily Balances</option>
+            <option value="latest">Latest Balance Only</option>
+          </select>
+        </div>
+
+        <div class="mbr-field">
+          <label>Period</label>
+          <select id="mbrPeriod" class="dde-control">
+            <option value="all">All Saved Days</option>
+            <option value="daily">Daily</option>
+            <option value="monthly">Monthly</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+        </div>
+
+        <div class="mbr-field mbr-period-daily">
+          <label>Date</label>
+          <input id="mbrDate" class="dde-control" placeholder="25-8">
+        </div>
+
+        <div class="mbr-field mbr-period-monthly">
+          <label>Month</label>
+          <select id="mbrMonth" class="dde-control">
+            <option value="">Month</option>
+            <option value="1">January</option><option value="2">February</option>
+            <option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+
+        <div class="mbr-field mbr-period-monthly">
+          <label>Year</label>
+          <select id="mbrYear" class="dde-control"></select>
+        </div>
+
+        <div class="mbr-field mbr-period-custom">
+          <label>From Date</label>
+          <input id="mbrFrom" class="dde-control" placeholder="01-8">
+        </div>
+
+        <div class="mbr-field mbr-period-custom">
+          <label>To Date</label>
+          <input id="mbrTo" class="dde-control" placeholder="31-8">
+        </div>
+
+        <div class="mbr-field">
+          <label>Material Section</label>
+          <select id="mbrGroup" class="dde-control">
+            <option value="">All Materials</option>
+            <option value="boiler">Boiler House</option>
+            <option value="pulp">Pulp Mill</option>
+            <option value="sulphite">Sulphite Plant</option>
+            <option value="units">Production Units</option>
+          </select>
+        </div>
+
+        <div class="mbr-field">
+          <label>Sort By</label>
+          <select id="mbrSort" class="dde-control">
+            <option value="date">Date</option>
+            <option value="material">Material</option>
+            <option value="group">Section</option>
+            <option value="balance">Closing Balance</option>
+          </select>
+        </div>
+
+        <div class="mbr-field">
+          <label>Order</label>
+          <select id="mbrOrder" class="dde-control">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mbr-material-picker">
+        <div class="mbr-material-head">
+          <div>
+            <b>Material Selection</b>
+            <span>Select none to include all materials, or select one/multiple materials.</span>
+          </div>
+          <div class="mbr-picker-actions">
+            <button class="btn btn-sm" id="mbrSelectAllBtn" type="button">Select All</button>
+            <button class="btn btn-sm" id="mbrClearMaterialsBtn" type="button">Clear</button>
+          </div>
+        </div>
+        <input id="mbrMaterialSearch" class="dde-control" placeholder="Search materials...">
+        <div id="mbrMaterialChoices" class="mbr-material-choices"></div>
+      </div>
+
+      <div class="mbr-filter-actions">
+        <button class="btn btn-primary" id="mbrGenerateBtn">Generate Report</button>
+        <button class="btn" id="mbrResetBtn">Reset Filters</button>
+      </div>
+    </div>
+
+    <div class="mbr-summary-grid">
+      <div class="mbr-summary-card"><span>Days in Report</span><b id="mbrDays">0</b></div>
+      <div class="mbr-summary-card"><span>Materials</span><b id="mbrMaterials">0</b></div>
+      <div class="mbr-summary-card"><span>Balance Rows</span><b id="mbrRowsCount">0</b></div>
+      <div class="mbr-summary-card"><span>Zero / Negative</span><b id="mbrLowCount">0</b></div>
+      <div class="mbr-summary-card"><span>Current Selection</span><b id="mbrSelection">All Materials</b></div>
+    </div>
+
+    <div class="mbr-report-titlebar">
+      <div>
+        <h3 id="mbrReportTitle">All Material Daily Balance Report</h3>
+        <p id="mbrReportSubtitle">All saved daily records</p>
+      </div>
+      <div id="mbrGeneratedAt"></div>
+    </div>
+
+    <div class="dde-table-wrap mbr-table-wrap">
+      <table class="dde-table mbr-table" id="mbrTable">
+        <thead>
+          <tr>
+            <th>DATE</th>
+            <th>SECTION</th>
+            <th>MATERIAL</th>
+            <th>UNIT</th>
+            <th>OPENING</th>
+            <th>RECEIVED</th>
+            <th>CONSUMED</th>
+            <th>CLOSING BALANCE</th>
+            <th>NET MOVEMENT</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody id="mbrBody">
+          <tr><td colspan="10" class="mbr-empty">No balance report generated yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mbr-note">
+      Closing Balance = Opening + Received − Consumed. Production Units consumption is the total material used across all active production units.
+    </div>
+  </div>
+</section>
 
 <section class="panel purchase-page" id="panel-daily-consumption-history">
   <div class="card dch-workspace-v1537">
@@ -20424,6 +20588,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
     'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
     'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
+    'panel-material-balance-report':()=>window.ERPMaterialBalanceReport?.open?.(),
     'panel-material-master':()=>window.ERPMaterialMaster?.open?.(),
     'panel-management-summary':()=>window.ERPManagementSummary?.open?.(),
     'panel-month-summary':()=>window.ERPMonthSummary?.open?.(),
@@ -20473,6 +20638,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
         'panel-production-consumption':!!window.ERPProductionConsumption?.open,
         'panel-daily-data-entry':!!window.ERPDailyDataEntry?.open,
         'panel-daily-consumption-history':!!window.ERPConsumptionHistory?.open,
+        'panel-material-balance-report':!!window.ERPMaterialBalanceReport?.open,
         'panel-material-master':!!window.ERPMaterialMaster?.open,
         'panel-management-summary':!!window.ERPManagementSummary?.open,
         'panel-month-summary':!!window.ERPMonthSummary?.open,
@@ -20839,6 +21005,394 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   else reapply();
 
   window.ERPColumnSummaryDesigner={capture,applySaved:rebuild,previewColumn,previewSummary};
+})();
+</script>
+
+
+<style id="materialBalanceReportV1518Style">
+#panel-material-balance-report .mbr-card{padding:14px}
+.mbr-top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mbr-filter-panel{border:1px solid var(--border);border-radius:12px;padding:12px;background:color-mix(in srgb,var(--card) 94%,var(--primary) 6%);margin:12px 0}
+.mbr-filter-grid{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:9px}
+.mbr-field{display:flex;flex-direction:column;gap:4px}
+.mbr-field label{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+.mbr-period-daily,.mbr-period-monthly,.mbr-period-custom{display:none}
+.mbr-material-picker{margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--card)}
+.mbr-material-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
+.mbr-material-head>div:first-child{display:flex;flex-direction:column;gap:2px}
+.mbr-material-head b{font-size:12px}
+.mbr-material-head span{font-size:9px;color:var(--muted)}
+.mbr-picker-actions{display:flex;gap:6px}
+#mbrMaterialSearch{max-width:360px;margin-bottom:8px}
+.mbr-material-choices{display:flex;flex-wrap:wrap;gap:6px;max-height:115px;overflow:auto;padding:2px}
+.mbr-material-option{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:999px;padding:5px 9px;background:var(--card);font-size:10px;font-weight:700;cursor:pointer}
+.mbr-material-option:has(input:checked){border-color:var(--primary);background:color-mix(in srgb,var(--primary) 11%,var(--card))}
+.mbr-material-option input{margin:0}
+.mbr-filter-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.mbr-summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
+.mbr-summary-card{border:1px solid var(--border);border-radius:10px;padding:9px 11px;background:var(--card);display:flex;flex-direction:column;gap:3px;min-height:58px}
+.mbr-summary-card span{font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+.mbr-summary-card b{font-size:15px;color:var(--heading)}
+#mbrSelection{font-size:11px;line-height:1.25}
+.mbr-report-titlebar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:9px 10px;background:var(--primary);color:#fff;border-radius:8px 8px 0 0}
+.mbr-report-titlebar h3{margin:0;font-size:13px;color:inherit}
+.mbr-report-titlebar p{margin:2px 0 0;font-size:9px;opacity:.9}
+#mbrGeneratedAt{font-size:9px;text-align:right}
+.mbr-table-wrap{border-radius:0 0 8px 8px}
+.mbr-table th{font-size:9px!important}
+.mbr-table td{font-size:10px}
+.mbr-table .mbr-num{text-align:right;font-variant-numeric:tabular-nums}
+.mbr-status{display:inline-block;border-radius:999px;padding:3px 7px;font-size:8px;font-weight:900}
+.mbr-status.positive{background:#e8f7ef;color:#087a45}
+.mbr-status.zero{background:#fff4ce;color:#795d00}
+.mbr-status.negative{background:#ffe9e9;color:#b42318}
+.mbr-empty{text-align:center!important;padding:28px!important;color:var(--muted)}
+.mbr-note{margin-top:8px;padding:8px 10px;border-left:3px solid var(--primary);background:color-mix(in srgb,var(--primary) 6%,var(--card));font-size:9px;color:var(--muted)}
+@media(max-width:1200px){.mbr-filter-grid{grid-template-columns:repeat(3,1fr)}.mbr-summary-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.mbr-filter-grid{grid-template-columns:1fr 1fr}.mbr-summary-grid{grid-template-columns:1fr 1fr}}
+</style>
+
+<script id="materialBalanceReportV1518">
+(function(){
+  const DATA_KEY='erpProductionConsumptionDailyV1';
+  const $=id=>document.getElementById(id);
+  const GROUPS={
+    boiler:{label:'Boiler House',key:'boilerMaterials'},
+    pulp:{label:'Pulp Mill',key:'pulpMaterials'},
+    sulphite:{label:'Sulphite Plant',key:'sulphiteMaterials'},
+    units:{label:'Production Units',key:'unitMaterials'}
+  };
+  let renderedRows=[];
+
+  function num(v){
+    const n=parseFloat(String(v??'').replace(/,/g,''));
+    return Number.isFinite(n)?n:0
+  }
+  function records(){
+    try{
+      const r=JSON.parse(localStorage.getItem(DATA_KEY)||'[]');
+      return Array.isArray(r)?r:[]
+    }catch(e){return []}
+  }
+  function parseDate(v){
+    const s=String(v||'').trim();
+    if(!s)return null;
+    let m=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+    if(m){
+      const mons={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+      let y=+m[3];if(y<100)y+=2000;
+      const mi=mons[m[2].toLowerCase()];
+      if(mi===undefined)return null;
+      return new Date(y,mi,+m[1])
+    }
+    m=s.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);
+    if(m){
+      let y=m[3]?+m[3]:new Date().getFullYear();if(y<100)y+=2000;
+      return new Date(y,+m[2]-1,+m[1])
+    }
+    const d=new Date(s);
+    return isNaN(d)?null:d
+  }
+  function fmtDateInput(v){
+    const d=parseDate(v);if(!d)return String(v||'');
+    const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return String(d.getDate()).padStart(2,'0')+'-'+mons[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2)
+  }
+  function esc(s){
+    return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
+  }
+  function quantityUsed(x,group){
+    if(group==='units'){
+      if(Array.isArray(x.consumptionByUnit))return x.consumptionByUnit.reduce((a,u)=>a+num(u.qty),0);
+      return num(x.totalConsumed??x.used)
+    }
+    return num(x.used??x.totalConsumed)
+  }
+  function flatten(){
+    const out=[];
+    records().forEach(rec=>{
+      Object.entries(GROUPS).forEach(([group,meta])=>{
+        const list=Array.isArray(rec[meta.key])?rec[meta.key]:[];
+        list.forEach(x=>{
+          const used=quantityUsed(x,group);
+          const opening=num(x.opening),received=num(x.received);
+          out.push({
+            date:rec.date||'',
+            dateObj:parseDate(rec.date),
+            recordId:rec.id||'',
+            group,
+            groupLabel:meta.label,
+            material:String(x.item||'').trim(),
+            unit:x.unit||x.reportUnit||x.finalReportUnit||'',
+            opening,
+            received,
+            consumed:used,
+            balance:opening+received-used,
+            movement:received-used
+          })
+        })
+      })
+    });
+    return out.filter(x=>x.material)
+  }
+  function selectedMaterials(){
+    return new Set(
+      Array.from(document.querySelectorAll('#mbrMaterialChoices input:checked'))
+        .map(x=>x.value)
+    )
+  }
+  function materialNamesForGroup(){
+    const group=$('mbrGroup')?.value||'';
+    return [...new Set(flatten().filter(x=>!group||x.group===group).map(x=>x.material))]
+      .sort((a,b)=>a.localeCompare(b))
+  }
+  function renderMaterialChoices(){
+    const host=$('mbrMaterialChoices');if(!host)return;
+    const selected=selectedMaterials();
+    const search=String($('mbrMaterialSearch')?.value||'').trim().toLowerCase();
+    const names=materialNamesForGroup().filter(x=>!search||x.toLowerCase().includes(search));
+    host.innerHTML=names.length?names.map(name=>`
+      <label class="mbr-material-option">
+        <input type="checkbox" value="${esc(name)}" ${selected.has(name)?'checked':''}>
+        <span>${esc(name)}</span>
+      </label>`).join(''):'<span style="font-size:10px;color:var(--muted)">No materials found.</span>';
+    host.querySelectorAll('input').forEach(ch=>ch.addEventListener('change',renderReport))
+  }
+  function populateYears(){
+    const years=[...new Set(flatten().map(x=>x.dateObj?.getFullYear()).filter(Boolean))].sort((a,b)=>b-a);
+    const el=$('mbrYear');if(!el)return;
+    const current=el.value;
+    el.innerHTML='<option value="">Year</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    if(years.map(String).includes(current))el.value=current;
+    else if(years.length)el.value=String(years[0])
+  }
+  function syncPeriodControls(){
+    const p=$('mbrPeriod')?.value||'all';
+    document.querySelectorAll('.mbr-period-daily').forEach(x=>x.style.display=p==='daily'?'flex':'none');
+    document.querySelectorAll('.mbr-period-monthly').forEach(x=>x.style.display=p==='monthly'?'flex':'none');
+    document.querySelectorAll('.mbr-period-custom').forEach(x=>x.style.display=p==='custom'?'flex':'none')
+  }
+  function filterRows(){
+    let rows=flatten();
+    const group=$('mbrGroup')?.value||'';
+    const mats=selectedMaterials();
+    const period=$('mbrPeriod')?.value||'all';
+
+    if(group)rows=rows.filter(x=>x.group===group);
+    if(mats.size)rows=rows.filter(x=>mats.has(x.material));
+
+    if(period==='daily'){
+      const target=parseDate($('mbrDate')?.value);
+      if(target)rows=rows.filter(x=>x.dateObj&&x.dateObj.toDateString()===target.toDateString())
+    }else if(period==='monthly'){
+      const month=+$('mbrMonth')?.value||0,year=+$('mbrYear')?.value||0;
+      if(month)rows=rows.filter(x=>x.dateObj&&x.dateObj.getMonth()+1===month);
+      if(year)rows=rows.filter(x=>x.dateObj&&x.dateObj.getFullYear()===year)
+    }else if(period==='custom'){
+      const from=parseDate($('mbrFrom')?.value),to=parseDate($('mbrTo')?.value);
+      if(from)rows=rows.filter(x=>x.dateObj&&x.dateObj>=from);
+      if(to){const end=new Date(to);end.setHours(23,59,59,999);rows=rows.filter(x=>x.dateObj&&x.dateObj<=end)}
+    }
+
+    if(($('mbrView')?.value||'detail')==='latest'){
+      const latest=new Map();
+      rows.forEach(x=>{
+        const key=x.group+'||'+x.material.toLowerCase();
+        const old=latest.get(key);
+        if(!old || (x.dateObj||0)>(old.dateObj||0))latest.set(key,x)
+      });
+      rows=[...latest.values()]
+    }
+
+    const sort=$('mbrSort')?.value||'date';
+    const order=$('mbrOrder')?.value||'asc';
+    rows.sort((a,b)=>{
+      let v=0;
+      if(sort==='material')v=a.material.localeCompare(b.material)||((a.dateObj||0)-(b.dateObj||0));
+      else if(sort==='group')v=a.groupLabel.localeCompare(b.groupLabel)||a.material.localeCompare(b.material);
+      else if(sort==='balance')v=a.balance-b.balance;
+      else v=(a.dateObj||0)-(b.dateObj||0)||a.material.localeCompare(b.material);
+      return order==='desc'?-v:v
+    });
+    return rows
+  }
+  function periodLabel(){
+    const p=$('mbrPeriod')?.value||'all';
+    if(p==='daily')return $('mbrDate')?.value?fmtDateInput($('mbrDate').value):'Selected Day';
+    if(p==='monthly'){
+      const m=$('mbrMonth'),y=$('mbrYear')?.value||'';
+      return (m?.selectedOptions?.[0]?.text||'Month')+(y?' '+y:'')
+    }
+    if(p==='custom')return (fmtDateInput($('mbrFrom')?.value)||'Start')+' to '+(fmtDateInput($('mbrTo')?.value)||'End');
+    return 'All Saved Days'
+  }
+  function reportName(){
+    const group=$('mbrGroup')?.value||'';
+    const mats=[...selectedMaterials()];
+    const base=group?GROUPS[group].label:'All Materials';
+    if(mats.length===1)return base+' — '+mats[0]+' Balance Report';
+    if(mats.length>1)return base+' — Selected Materials Balance Report';
+    return base+' Daily Balance Report'
+  }
+  function status(balance){
+    if(balance<0)return ['Negative','negative'];
+    if(Math.abs(balance)<0.0000001)return ['Zero','zero'];
+    return ['Available','positive']
+  }
+  function formatQty(v){
+    return num(v).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})
+  }
+  function renderReport(){
+    syncPeriodControls();
+    renderedRows=filterRows();
+    const body=$('mbrBody');if(!body)return;
+
+    body.innerHTML=renderedRows.length?renderedRows.map(x=>{
+      const st=status(x.balance);
+      return `<tr>
+        <td><b>${esc(x.date)}</b></td>
+        <td>${esc(x.groupLabel)}</td>
+        <td><b>${esc(x.material)}</b></td>
+        <td>${esc(x.unit)}</td>
+        <td class="mbr-num">${formatQty(x.opening)}</td>
+        <td class="mbr-num">${formatQty(x.received)}</td>
+        <td class="mbr-num">${formatQty(x.consumed)}</td>
+        <td class="mbr-num"><b>${formatQty(x.balance)}</b></td>
+        <td class="mbr-num">${x.movement>0?'+':''}${formatQty(x.movement)}</td>
+        <td><span class="mbr-status ${st[1]}">${st[0]}</span></td>
+      </tr>`
+    }).join(''):'<tr><td colspan="10" class="mbr-empty">No matching material balances found.</td></tr>';
+
+    const days=new Set(renderedRows.map(x=>x.date)).size;
+    const materials=new Set(renderedRows.map(x=>x.group+'||'+x.material.toLowerCase())).size;
+    const low=renderedRows.filter(x=>x.balance<=0).length;
+    const mats=[...selectedMaterials()];
+    const group=$('mbrGroup')?.value||'';
+
+    $('mbrDays').textContent=days;
+    $('mbrMaterials').textContent=materials;
+    $('mbrRowsCount').textContent=renderedRows.length;
+    $('mbrLowCount').textContent=low;
+    $('mbrSelection').textContent=mats.length?mats.join(', '):(group?GROUPS[group].label:'All Materials');
+    $('mbrReportTitle').textContent=reportName();
+    $('mbrReportSubtitle').textContent=periodLabel()+' • '+(($('mbrView')?.value==='latest')?'Latest balance per material':'Daily opening-to-closing movement');
+    $('mbrGeneratedAt').textContent='Generated '+new Date().toLocaleString()
+  }
+  function reset(){
+    $('mbrView').value='detail';
+    $('mbrPeriod').value='all';
+    $('mbrDate').value='';
+    $('mbrMonth').value='';
+    $('mbrFrom').value='';
+    $('mbrTo').value='';
+    $('mbrGroup').value='';
+    $('mbrSort').value='date';
+    $('mbrOrder').value='asc';
+    $('mbrMaterialSearch').value='';
+    renderMaterialChoices();
+    renderReport()
+  }
+  function open(){
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    $('panel-material-balance-report')?.classList.add('active');
+    if($('workspaceTitle'))$('workspaceTitle').textContent='Daily Material Balance Report';
+    if($('workspaceSubtitle'))$('workspaceSubtitle').textContent='Daily • Monthly • Section • Material • Closing Balance';
+    try{
+      localStorage.setItem('erpStudioLastPanel','material-balance-report');
+      localStorage.setItem('erpActiveStudioPanel','material-balance-report');
+      history.replaceState(null,'','#panel-material-balance-report')
+    }catch(e){}
+    populateYears();
+    syncPeriodControls();
+    renderMaterialChoices();
+    renderReport();
+    window.scrollTo({top:0,behavior:'auto'})
+  }
+  function back(){
+    if(window.ERPDailyDataEntry?.open)window.ERPDailyDataEntry.open();
+    else{
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      $('panel-daily-data-entry')?.classList.add('active')
+    }
+  }
+  function printReport(){
+    if(!renderedRows.length){if(window.toast)toast('No balance rows to print');return}
+    const company=document.getElementById('sideCompanyName')?.textContent?.trim()||'Company Name';
+    const subtitle=$('mbrReportSubtitle')?.textContent||'';
+    const title=$('mbrReportTitle')?.textContent||'Material Balance Report';
+    const primary=getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()||'#174f7a';
+    const rowsHtml=renderedRows.map(x=>{
+      const st=status(x.balance);
+      return `<tr><td>${esc(x.date)}</td><td>${esc(x.groupLabel)}</td><td>${esc(x.material)}</td><td>${esc(x.unit)}</td>
+      <td class="n">${formatQty(x.opening)}</td><td class="n">${formatQty(x.received)}</td><td class="n">${formatQty(x.consumed)}</td>
+      <td class="n"><b>${formatQty(x.balance)}</b></td><td class="n">${x.movement>0?'+':''}${formatQty(x.movement)}</td><td>${st[0]}</td></tr>`
+    }).join('');
+    const w=window.open('','_blank','width=1200,height=800');
+    if(!w)return;
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+      <style>
+      @page{size:A4 landscape;margin:9mm}
+      *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#142033;margin:0;font-size:10px}
+      .head{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;border-bottom:2px solid ${primary};padding-bottom:8px;margin-bottom:8px}
+      .company{font-size:17px;font-weight:800}.center{text-align:center}.center h1{margin:0;font-size:20px;color:${primary}}.center p{margin:3px 0 0;font-size:9px}
+      .meta{text-align:right;font-size:9px}.filters{padding:6px 8px;background:#f3f6f8;border:1px solid #ccd6df;margin-bottom:8px;font-size:9px}
+      table{width:100%;border-collapse:collapse}th{background:${primary};color:#fff;padding:6px;border:1px solid #aebbc7;font-size:8px}
+      td{padding:5px 6px;border:1px solid #c9d2db}.n{text-align:right;font-variant-numeric:tabular-nums}
+      tbody tr:nth-child(even){background:#f8fafb}.footer{display:flex;justify-content:space-between;margin-top:8px;border-top:1px solid #ccd6df;padding-top:5px;font-size:8px}
+      </style></head><body>
+      <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
+      <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
+      <div class="filters">Selection: ${esc($('mbrSelection')?.textContent||'All Materials')} &nbsp; | &nbsp; Sort: ${esc($('mbrSort')?.selectedOptions?.[0]?.text||'')} (${esc($('mbrOrder')?.value||'')})</div>
+      <table><thead><tr><th>Date</th><th>Section</th><th>Material</th><th>Unit</th><th>Opening</th><th>Received</th><th>Consumed</th><th>Closing Balance</th><th>Net Movement</th><th>Status</th></tr></thead>
+      <tbody>${rowsHtml}</tbody></table>
+      <div class="footer"><span>This is computer generated report.</span><span>${esc(title)}</span></div>
+      <script>window.onload=()=>{window.print()}<\/script>
+      </body></html>`);
+    w.document.close()
+  }
+  function bind(){
+    const dailyBtn=$('ddeBalanceReportBtn');if(dailyBtn)dailyBtn.onclick=open;
+    $('mbrBackBtn')?.addEventListener('click',back);
+    $('mbrPrintBtn')?.addEventListener('click',printReport);
+    $('mbrGenerateBtn')?.addEventListener('click',renderReport);
+    $('mbrResetBtn')?.addEventListener('click',reset);
+    $('mbrView')?.addEventListener('change',renderReport);
+    $('mbrPeriod')?.addEventListener('change',()=>{syncPeriodControls();renderReport()});
+    $('mbrGroup')?.addEventListener('change',()=>{renderMaterialChoices();renderReport()});
+    $('mbrSort')?.addEventListener('change',renderReport);
+    $('mbrOrder')?.addEventListener('change',renderReport);
+    $('mbrMonth')?.addEventListener('change',renderReport);
+    $('mbrYear')?.addEventListener('change',renderReport);
+    $('mbrMaterialSearch')?.addEventListener('input',renderMaterialChoices);
+    ['mbrDate','mbrFrom','mbrTo'].forEach(id=>{
+      const el=$(id);if(!el)return;
+      el.addEventListener('blur',()=>{if(el.value)el.value=fmtDateInput(el.value);renderReport()});
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'){el.value=fmtDateInput(el.value);renderReport()}})
+    });
+    $('mbrSelectAllBtn')?.addEventListener('click',()=>{
+      document.querySelectorAll('#mbrMaterialChoices input').forEach(x=>x.checked=true);
+      renderReport()
+    });
+    $('mbrClearMaterialsBtn')?.addEventListener('click',()=>{
+      document.querySelectorAll('#mbrMaterialChoices input').forEach(x=>x.checked=false);
+      renderReport()
+    })
+  }
+
+  function startup(){
+    bind();
+    populateYears();
+    syncPeriodControls();
+    renderMaterialChoices();
+    if(location.hash==='#panel-material-balance-report'){
+      setTimeout(open,60)
+    }
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startup,{once:true});
+  else startup();
+
+  window.ERPMaterialBalanceReport={open,refresh:renderReport,print:printReport}
 })();
 </script>
 
