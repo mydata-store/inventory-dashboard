@@ -13671,7 +13671,7 @@ function pcMonthBuild(){
         <p>Monthly production, ash, electricity, steam, pulp, material consumption and cost analysis.</p>
       </div>
       <div class="pc-month-head-actions">
-        <button class="btn" id="pcVarianceReportBtn">Comparison Report</button>
+        <button class="btn pc-variance-report-btn" id="pcVarianceReportBtn" type="button">Comparison Report</button>
         <button class="btn" id="pcMonthBack">← Production & Consumption</button>
       </div>
     </div>
@@ -13955,6 +13955,7 @@ function pcMonthRefresh(){
 }
 function pcMonthOpen(){
   pcMonthBuild();
+  window.ERPComparisonButtonFixV1520?.ensure?.();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   pc$('#panel-month-summary')?.classList.add('active');
   if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Month Summary';
@@ -21670,6 +21671,89 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   }
   window.ERPComparisonVarianceReport={open,generate};
   if(location.hash==='#panel-comparison-variance-report')setTimeout(open,80)
+})();
+</script>
+
+
+<style id="pcComparisonButtonFixV1520Style">
+#panel-month-summary .pc-month-head-actions{
+  display:flex!important;
+  gap:8px!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+}
+#panel-month-summary #pcVarianceReportBtn{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:36px!important;
+  padding:0 14px!important;
+  visibility:visible!important;
+  opacity:1!important;
+  font-weight:800!important;
+}
+</style>
+
+<script id="pcComparisonButtonFixV1520">
+(function(){
+  function ensure(){
+    const panel=document.getElementById('panel-month-summary');
+    if(!panel)return false;
+
+    let back=panel.querySelector('#pcMonthBack');
+    if(!back)return false;
+
+    let btn=panel.querySelector('#pcVarianceReportBtn');
+    if(!btn){
+      btn=document.createElement('button');
+      btn.className='btn pc-variance-report-btn';
+      btn.id='pcVarianceReportBtn';
+      btn.type='button';
+      btn.textContent='Comparison Report';
+      back.parentNode.insertBefore(btn,back);
+    }
+
+    btn.style.setProperty('display','inline-flex','important');
+    btn.style.setProperty('visibility','visible','important');
+    btn.style.setProperty('opacity','1','important');
+
+    btn.onclick=function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(window.ERPComparisonVarianceReport?.open){
+        window.ERPComparisonVarianceReport.open();
+      }
+    };
+    return true;
+  }
+
+  // Month Summary may be created after startup.
+  // These hooks run only around real page navigation; no polling loop.
+  document.addEventListener('click',function(){
+    setTimeout(function(){
+      const p=document.getElementById('panel-month-summary');
+      if(p?.classList.contains('active'))ensure();
+    },0);
+  },true);
+
+  window.addEventListener('hashchange',function(){
+    if(location.hash==='#panel-month-summary')setTimeout(ensure,0);
+  });
+
+  window.addEventListener('popstate',function(){
+    if(location.hash==='#panel-month-summary')setTimeout(ensure,0);
+  });
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){
+      setTimeout(ensure,0);
+    },{once:true});
+  }else{
+    setTimeout(ensure,0);
+  }
+
+  window.ERPComparisonButtonFixV1520={ensure};
 })();
 </script>
 
