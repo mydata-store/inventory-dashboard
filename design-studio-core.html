@@ -13670,7 +13670,10 @@ function pcMonthBuild(){
         <h2>Month Summary</h2>
         <p>Monthly production, ash, electricity, steam, pulp, material consumption and cost analysis.</p>
       </div>
-      <button class="btn" id="pcMonthBack">← Production & Consumption</button>
+      <div class="pc-month-head-actions">
+        <button class="btn" id="pcVarianceReportBtn">Comparison Report</button>
+        <button class="btn" id="pcMonthBack">← Production & Consumption</button>
+      </div>
     </div>
 
     <div class="pc-month-filter">
@@ -13788,6 +13791,7 @@ function pcMonthBuild(){
   host.appendChild(sec);
 
   pc$('#pcMonthBack').onclick=pcOpen;
+  pc$('#pcVarianceReportBtn').onclick=()=>window.ERPComparisonVarianceReport?.open?.();
   pc$('#pcMonthRefresh').onclick=pcMonthRefresh;
   pc$('#pcMonthMonth').addEventListener('change',pcMonthRefresh);
   pc$('#pcMonthYear').addEventListener('change',pcMonthRefresh);
@@ -14328,7 +14332,7 @@ function pcStartup(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',pcStartup);
 else pcStartup();
 
-window.ERPProductionConsumption={open:pcOpen,refresh:pcRefresh};
+window.ERPProductionConsumption={open:pcOpen,monthOpen:pcMonthOpen,refresh:pcRefresh};
 window.ERPManagementSummary={open:pcSummaryOpen,refresh:pcSummaryRefresh};
 window.ERPMonthSummary={open:pcMonthOpen,refresh:pcMonthRefresh};
 window.ERPYearSummary={open:pcYearOpen,refresh:pcYearRefresh};
@@ -21393,6 +21397,279 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   else startup();
 
   window.ERPMaterialBalanceReport={open,refresh:renderReport,print:printReport}
+})();
+</script>
+
+
+<style id="pcComparisonVarianceV1519Style">
+.pc-month-head-actions{display:flex;gap:8px;align-items:center}
+#panel-comparison-variance-report{display:none}
+#panel-comparison-variance-report.active{display:block}
+#panel-comparison-variance-report .cvr-page{padding:14px}
+.cvr-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cvr-filter{display:grid;grid-template-columns:140px 1fr 54px 1fr 150px;gap:9px;align-items:end;padding:11px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--card) 95%,var(--primary) 5%);margin:12px 0}
+.cvr-field{display:flex;flex-direction:column;gap:4px}.cvr-field label{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+.cvr-period-box{display:grid;grid-template-columns:1fr 1fr;gap:7px}.cvr-vs{text-align:center;font-size:13px;font-weight:900;padding-bottom:8px;color:var(--primary)}
+.cvr-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px}
+.cvr-kpi{border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:var(--card);min-height:67px}
+.cvr-kpi small{display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+.cvr-kpi strong{display:block;font-size:14px;margin-top:5px;color:var(--heading)}
+.cvr-kpi em{display:block;font-style:normal;font-size:9px;margin-top:3px}.cvr-up{color:#b42318!important}.cvr-down{color:#087a45!important}.cvr-neutral{color:var(--muted)!important}
+.cvr-section{margin-top:11px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.cvr-section-head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;background:var(--primary);color:#fff;font-size:11px;font-weight:900}
+.cvr-section-head span{font-size:8px;font-weight:600;opacity:.9}
+.cvr-table-wrap{overflow:auto}.cvr-table{width:100%;border-collapse:collapse}.cvr-table th{font-size:8px!important;text-transform:uppercase;background:color-mix(in srgb,var(--primary) 12%,var(--card));color:var(--heading);padding:7px;border:1px solid var(--border);white-space:nowrap}
+.cvr-table td{font-size:9px;padding:6px 7px;border:1px solid var(--border)}.cvr-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cvr-driver{font-weight:800}.cvr-badge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:8px;font-weight:900}.cvr-bad{background:#ffe9e9;color:#b42318}.cvr-good{background:#e8f7ef;color:#087a45}.cvr-flat{background:#eef2f6;color:#536170}
+.cvr-reasons{padding:10px}.cvr-reason{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:start;padding:7px 0;border-bottom:1px dashed var(--border)}.cvr-reason:last-child{border-bottom:0}
+.cvr-rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--primary) 12%,var(--card));font-size:9px;font-weight:900}.cvr-reason b{font-size:10px}.cvr-reason p{margin:2px 0 0;font-size:9px;color:var(--muted);line-height:1.4}.cvr-impact{font-size:10px;font-weight:900;white-space:nowrap}
+.cvr-analysis-box{padding:11px;background:color-mix(in srgb,var(--primary) 5%,var(--card));font-size:10px;line-height:1.55}.cvr-analysis-box b{color:var(--heading)}
+.cvr-empty{text-align:center!important;padding:22px!important;color:var(--muted)}
+@media(max-width:1200px){.cvr-kpis{grid-template-columns:repeat(3,1fr)}.cvr-filter{grid-template-columns:1fr 1fr}.cvr-vs{display:none}}
+@media print{.sidebar,.topbar,.cvr-head-actions,.cvr-filter{display:none!important}#panel-comparison-variance-report .cvr-page{padding:0}.cvr-section{break-inside:avoid}}
+</style>
+
+<script id="pcComparisonVarianceV1519">
+(function(){
+  const $=id=>document.getElementById(id);
+  const DATA_KEY='erpProductionConsumptionDailyV1';
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const GROUPS=[
+    ['boilerMaterials','Boiler House'],['pulpMaterials','Pulp Mill'],
+    ['sulphiteMaterials','Sulphite Plant'],['unitMaterials','Production Units']
+  ];
+  let current=null;
+
+  function n(v){const x=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(x)?x:0}
+  function rows(){try{const a=JSON.parse(localStorage.getItem(DATA_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+  function pd(v){
+    const s=String(v||'').trim();if(!s)return null;
+    let m=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+    if(m){const mm={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}[m[2].toLowerCase()];let y=+m[3];if(y<100)y+=2000;return new Date(y,mm,+m[1])}
+    m=s.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);
+    if(m){let y=m[3]?+m[3]:new Date().getFullYear();if(y<100)y+=2000;return new Date(y,+m[2]-1,+m[1])}
+    const d=new Date(s);return isNaN(d)?null:d
+  }
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function money(v){return 'PKR '+n(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
+  function qty(v,d=3){return n(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d})}
+  function pct(v){return (n(v)>=0?'+':'')+n(v).toFixed(2)+'%'}
+  function change(b,a){if(a===0)return b===0?0:100;return (b-a)/Math.abs(a)*100}
+  function rateOf(x){
+    const q=n(x.finalReportQty??x.totalConsumed??x.used);
+    const cost=n(x.finalReportValue??x.usedValue);
+    return n(x.finalReportRate??x.rate??(q?cost/q:0))
+  }
+  function qOf(x){return n(x.finalReportQty??x.totalConsumed??x.used)}
+  function costOf(x){const c=n(x.finalReportValue??x.usedValue);return c||qOf(x)*rateOf(x)}
+  function periodRows(type,a,b){
+    return rows().filter(r=>{
+      const d=pd(r.date);if(!d)return false;
+      if(type==='day')return d.toDateString()===a.toDateString();
+      if(type==='month')return d.getMonth()===a.getMonth()&&d.getFullYear()===a.getFullYear();
+      if(type==='year')return d.getFullYear()===a.getFullYear();
+      return d>=a&&d<=b
+    })
+  }
+  function steamConsumed(r){
+    const units=Array.isArray(r.steamProductionUnits)?r.steamProductionUnits.reduce((s,x)=>s+n(x.qty),0):0;
+    return n(r.steamPulp)+n(r.steamBoiler)+units
+  }
+  function aggregate(list){
+    const production=list.reduce((s,r)=>s+n(r.totalProduction),0);
+    const electricity=list.reduce((s,r)=>s+n(r.totalConsumption),0);
+    const electricityCost=list.reduce((s,r)=>s+n(r.electricityAmount),0);
+    const steam=list.reduce((s,r)=>s+steamConsumed(r),0);
+    const pulp=list.reduce((s,r)=>s+n(r.pulpProduced),0);
+    const raw=list.reduce((s,r)=>s+n(r.rawMaterialConsumed),0);
+    const materials={};
+    GROUPS.forEach(([key,label])=>list.forEach(r=>(Array.isArray(r[key])?r[key]:[]).forEach(x=>{
+      const name=String(x.item||'').trim();if(!name)return;
+      const k=label+'||'+name.toLowerCase();
+      if(!materials[k])materials[k]={section:label,item:name,qty:0,cost:0};
+      materials[k].qty+=qOf(x);materials[k].cost+=costOf(x)
+    })));
+    Object.values(materials).forEach(x=>x.rate=x.qty?x.cost/x.qty:0);
+    const materialCost=Object.values(materials).reduce((s,x)=>s+x.cost,0);
+    return {
+      days:list.length,production,electricity,electricityCost,steam,pulp,raw,
+      pulpYield:raw?pulp/raw*100:0,materials,materialCost,
+      analyzedCost:materialCost+electricityCost,
+      costTon:production?(materialCost+electricityCost)/production:0,
+      unitsTon:production?electricity/production:0,
+      steamTon:production?steam/production:0
+    }
+  }
+  function parseControl(prefix,type){
+    if(type==='day'){
+      const d=pd($(prefix+'Day')?.value);return {a:d,b:d,label:d?fmt(d):'Date'}
+    }
+    if(type==='month'){
+      const y=+$(prefix+'Year')?.value,m=+$(prefix+'Month')?.value;
+      const d=new Date(y,m-1,1);return {a:d,b:new Date(y,m,0),label:MONTHS[m-1]+' '+y}
+    }
+    if(type==='year'){
+      const y=+$(prefix+'Year')?.value;return {a:new Date(y,0,1),b:new Date(y,11,31),label:String(y)}
+    }
+    const a=pd($(prefix+'From')?.value),b=pd($(prefix+'To')?.value);return {a,b,label:(a?fmt(a):'Start')+' to '+(b?fmt(b):'End')}
+  }
+  function fmt(d){return String(d.getDate()).padStart(2,'0')+'-'+MONTHS[d.getMonth()].slice(0,3)+'-'+String(d.getFullYear()).slice(-2)}
+  function build(){
+    if($('panel-comparison-variance-report'))return;
+    const host=document.querySelector('main.content');if(!host)return;
+    const now=new Date(),prev=new Date(now.getFullYear(),now.getMonth()-1,1);
+    const years=[...new Set(rows().map(r=>pd(r.date)?.getFullYear()).filter(Boolean).concat([now.getFullYear()]))].sort((a,b)=>b-a);
+    const sec=document.createElement('section');sec.className='panel purchase-page';sec.id='panel-comparison-variance-report';
+    const periodBox=(p,base)=>`<div class="cvr-period-box cvr-${p}">
+      <input id="${p}Day" class="dde-control cvr-day" placeholder="25-8" value="${fmt(base)}">
+      <select id="${p}Month" class="dde-control cvr-month">${MONTHS.map((x,i)=>`<option value="${i+1}" ${i===base.getMonth()?'selected':''}>${x}</option>`).join('')}</select>
+      <select id="${p}Year" class="dde-control cvr-month cvr-year">${years.map(y=>`<option value="${y}" ${y===base.getFullYear()?'selected':''}>${y}</option>`).join('')}</select>
+      <input id="${p}From" class="dde-control cvr-custom" placeholder="From" value="${fmt(new Date(base.getFullYear(),base.getMonth(),1))}">
+      <input id="${p}To" class="dde-control cvr-custom" placeholder="To" value="${fmt(new Date(base.getFullYear(),base.getMonth()+1,0))}">
+    </div>`;
+    sec.innerHTML=`<div class="card cvr-page">
+      <div class="inv-page-head"><div><h2>Cost & Performance Comparison Report</h2><p>Compare periods, identify cost differences, and explain quantity, rate, production-volume and efficiency effects.</p></div>
+      <div class="cvr-head-actions"><button class="btn" id="cvrPrint">Print Report</button><button class="btn" id="cvrBack">← Month Summary</button><button class="btn purchase-controller-btn">⚙ Page Controller</button></div></div>
+      <div class="cvr-filter">
+        <div class="cvr-field"><label>Compare By</label><select id="cvrType" class="dde-control"><option value="month">Month</option><option value="day">Day</option><option value="year">Year</option><option value="custom">Custom Range</option></select></div>
+        <div class="cvr-field"><label>Period A</label>${periodBox('cvrA',prev)}</div><div class="cvr-vs">VS</div>
+        <div class="cvr-field"><label>Period B</label>${periodBox('cvrB',now)}</div>
+        <div class="cvr-field"><label>&nbsp;</label><button class="btn btn-primary" id="cvrGenerate">Generate Comparison</button></div>
+      </div>
+      <div class="cvr-kpis">
+        <div class="cvr-kpi"><small>Paper Production</small><strong id="cvrKProd">0</strong><em id="cvrKProdC"></em></div>
+        <div class="cvr-kpi"><small>Analyzed Cost</small><strong id="cvrKCost">PKR 0</strong><em id="cvrKCostC"></em></div>
+        <div class="cvr-kpi"><small>Cost / Ton</small><strong id="cvrKCostTon">PKR 0</strong><em id="cvrKCostTonC"></em></div>
+        <div class="cvr-kpi"><small>Electricity / Ton</small><strong id="cvrKElec">0</strong><em id="cvrKElecC"></em></div>
+        <div class="cvr-kpi"><small>Steam / Ton</small><strong id="cvrKSteam">0</strong><em id="cvrKSteamC"></em></div>
+        <div class="cvr-kpi"><small>Pulp Yield</small><strong id="cvrKPulp">0%</strong><em id="cvrKPulpC"></em></div>
+      </div>
+      <div class="cvr-section"><div class="cvr-section-head">Main Comparison <span id="cvrPeriods"></span></div><div class="cvr-table-wrap"><table class="cvr-table"><thead><tr><th>Particular</th><th>Period A</th><th>Period B</th><th>Difference</th><th>Change %</th><th>Status</th></tr></thead><tbody id="cvrMainBody"></tbody></table></div></div>
+      <div class="cvr-section"><div class="cvr-section-head">Reasons for Cost Difference <span>Production effect + Efficiency/Quantity effect + Rate effect</span></div><div id="cvrReasons" class="cvr-reasons"></div></div>
+      <div class="cvr-section"><div class="cvr-section-head">Material Variance Detail <span>Section and material-wise cost explanation</span></div><div class="cvr-table-wrap"><table class="cvr-table"><thead><tr><th>Section</th><th>Material</th><th>Qty A</th><th>Qty B</th><th>Rate A</th><th>Rate B</th><th>Cost A</th><th>Cost B</th><th>Production Effect</th><th>Efficiency / Qty Effect</th><th>Rate Effect</th><th>Total Difference</th></tr></thead><tbody id="cvrMaterialBody"></tbody></table></div></div>
+      <div class="cvr-section"><div class="cvr-section-head">Expected Cost vs Actual Cost <span>Period B expected at Period A efficiency and rates</span></div><div class="cvr-table-wrap"><table class="cvr-table"><thead><tr><th>Analysis</th><th>Amount</th><th>Explanation</th></tr></thead><tbody id="cvrExpectedBody"></tbody></table></div></div>
+      <div class="cvr-section"><div class="cvr-section-head">Management Conclusion <span>Automatic explanation from saved production and consumption data</span></div><div id="cvrConclusion" class="cvr-analysis-box"></div></div>
+    </div>`;
+    host.appendChild(sec);
+    $('cvrBack').onclick=()=>window.ERPProductionConsumption?.monthOpen?.()||history.back();
+    $('cvrGenerate').onclick=generate;$('cvrPrint').onclick=()=>window.print();$('cvrType').onchange=toggle;
+    ['cvrADay','cvrBDay','cvrAFrom','cvrATo','cvrBFrom','cvrBTo'].forEach(id=>$(id)?.addEventListener('blur',e=>{const d=pd(e.target.value);if(d)e.target.value=fmt(d)}));
+    toggle()
+  }
+  function toggle(){
+    const type=$('cvrType')?.value||'month';
+    document.querySelectorAll('.cvr-day,.cvr-month,.cvr-year,.cvr-custom').forEach(x=>x.style.display='none');
+    if(type==='day')document.querySelectorAll('.cvr-day').forEach(x=>x.style.display='block');
+    if(type==='month')document.querySelectorAll('.cvr-month').forEach(x=>x.style.display='block');
+    if(type==='year')document.querySelectorAll('.cvr-year').forEach(x=>x.style.display='block');
+    if(type==='custom')document.querySelectorAll('.cvr-custom').forEach(x=>x.style.display='block')
+  }
+  function materialVariance(A,B){
+    const keys=new Set([...Object.keys(A.materials),...Object.keys(B.materials)]);
+    const ratio=A.production>0?B.production/A.production:1;
+    return [...keys].map(k=>{
+      const a=A.materials[k]||{section:B.materials[k]?.section,item:B.materials[k]?.item,qty:0,cost:0,rate:0};
+      const b=B.materials[k]||{section:a.section,item:a.item,qty:0,cost:0,rate:0};
+      const expectedQty=a.qty*ratio;
+      const productionEffect=(expectedQty-a.qty)*a.rate;
+      const efficiencyEffect=(b.qty-expectedQty)*a.rate;
+      const rateEffect=b.qty*(b.rate-a.rate);
+      return {...b,section:b.section||a.section,item:b.item||a.item,qtyA:a.qty,qtyB:b.qty,rateA:a.rate,rateB:b.rate,costA:a.cost,costB:b.cost,productionEffect,efficiencyEffect,rateEffect,total:b.cost-a.cost}
+    }).sort((x,y)=>Math.abs(y.total)-Math.abs(x.total))
+  }
+  function cls(v,badWhenPositive=true){
+    if(Math.abs(v)<0.00001)return ['cvr-flat','No Change'];
+    const bad=badWhenPositive?v>0:v<0;return bad?['cvr-bad','Unfavorable']:['cvr-good','Favorable']
+  }
+  function metricRow(name,a,b,format,badPositive=true){
+    const d=b-a,c=change(b,a),s=cls(d,badPositive);
+    return `<tr><td class="cvr-driver">${name}</td><td class="cvr-num">${format(a)}</td><td class="cvr-num">${format(b)}</td><td class="cvr-num">${d>=0?'+':''}${format(d)}</td><td class="cvr-num">${pct(c)}</td><td><span class="cvr-badge ${s[0]}">${s[1]}</span></td></tr>`
+  }
+  function setK(id,val,ch,badPositive=true){
+    $(id).textContent=val;const e=$(id+'C'),s=cls(ch,badPositive);e.textContent=(ch>=0?'▲ ':'▼ ')+Math.abs(ch).toFixed(2)+'% vs Period A';e.className=s[0]==='cvr-bad'?'cvr-up':s[0]==='cvr-good'?'cvr-down':'cvr-neutral'
+  }
+  function generate(){
+    const type=$('cvrType').value,Aper=parseControl('cvrA',type),Bper=parseControl('cvrB',type);
+    if(!Aper.a||!Bper.a||!Aper.b||!Bper.b)return;
+    const A=aggregate(periodRows(type,Aper.a,Aper.b)),B=aggregate(periodRows(type,Bper.a,Bper.b)),vars=materialVariance(A,B);
+    current={A,B,Aper,Bper,vars};$('cvrPeriods').textContent=Aper.label+'  VS  '+Bper.label;
+    setK('cvrKProd',qty(B.production)+' Ton',change(B.production,A.production),false);
+    setK('cvrKCost',money(B.analyzedCost),change(B.analyzedCost,A.analyzedCost),true);
+    setK('cvrKCostTon',money(B.costTon),change(B.costTon,A.costTon),true);
+    setK('cvrKElec',B.unitsTon.toFixed(2)+' Units/Ton',change(B.unitsTon,A.unitsTon),true);
+    setK('cvrKSteam',B.steamTon.toFixed(3)+' Ton/Ton',change(B.steamTon,A.steamTon),true);
+    setK('cvrKPulp',B.pulpYield.toFixed(2)+'%',change(B.pulpYield,A.pulpYield),false);
+
+    $('cvrMainBody').innerHTML=
+      metricRow('Paper Production',A.production,B.production,v=>qty(v)+' Ton',false)+
+      metricRow('Pulp Production',A.pulp,B.pulp,v=>qty(v)+' Ton',false)+
+      metricRow('Pulp Yield',A.pulpYield,B.pulpYield,v=>n(v).toFixed(2)+'%',false)+
+      metricRow('Electricity Consumption',A.electricity,B.electricity,v=>Math.round(v).toLocaleString()+' Units',true)+
+      metricRow('Electricity / Ton Paper',A.unitsTon,B.unitsTon,v=>n(v).toFixed(2)+' Units/Ton',true)+
+      metricRow('Electricity Cost',A.electricityCost,B.electricityCost,money,true)+
+      metricRow('Steam / Ton Paper',A.steamTon,B.steamTon,v=>n(v).toFixed(3)+' Ton/Ton',true)+
+      metricRow('Material Cost',A.materialCost,B.materialCost,money,true)+
+      metricRow('Analyzed Cost (Materials + Electricity)',A.analyzedCost,B.analyzedCost,money,true)+
+      metricRow('Analyzed Cost / Ton',A.costTon,B.costTon,money,true);
+
+    $('cvrMaterialBody').innerHTML=vars.length?vars.map(v=>`<tr><td>${esc(v.section)}</td><td><b>${esc(v.item)}</b></td>
+      <td class="cvr-num">${qty(v.qtyA)}</td><td class="cvr-num">${qty(v.qtyB)}</td><td class="cvr-num">${money(v.rateA)}</td><td class="cvr-num">${money(v.rateB)}</td>
+      <td class="cvr-num">${money(v.costA)}</td><td class="cvr-num">${money(v.costB)}</td><td class="cvr-num">${money(v.productionEffect)}</td>
+      <td class="cvr-num">${money(v.efficiencyEffect)}</td><td class="cvr-num">${money(v.rateEffect)}</td><td class="cvr-num"><b>${money(v.total)}</b></td></tr>`).join(''):'<tr><td colspan="12" class="cvr-empty">No material data for selected periods.</td></tr>';
+
+    const ratio=A.production>0?B.production/A.production:1;
+    const expectedMaterial=A.materialCost*ratio;
+    const avgElecRateA=A.electricity?A.electricityCost/A.electricity:0;
+    const expectedElecUnits=A.unitsTon*B.production;
+    const expectedElecCost=expectedElecUnits*avgElecRateA;
+    const expected=expectedMaterial+expectedElecCost;
+    const productionExpected=A.analyzedCost*ratio;
+    const unexplained=B.analyzedCost-expected;
+    $('cvrExpectedBody').innerHTML=`
+      <tr><td>Period A Actual Analyzed Cost</td><td class="cvr-num">${money(A.analyzedCost)}</td><td>Saved material + electricity cost in ${esc(Aper.label)}.</td></tr>
+      <tr><td>Cost Expected from Period B Production Volume</td><td class="cvr-num">${money(productionExpected)}</td><td>Period A analyzed cost scaled to Period B production.</td></tr>
+      <tr><td><b>Expected Period B Cost at Period A Efficiency & Rates</b></td><td class="cvr-num"><b>${money(expected)}</b></td><td>Expected material quantities and electricity units at Period A per-ton efficiency and rates.</td></tr>
+      <tr><td>Period B Actual Analyzed Cost</td><td class="cvr-num">${money(B.analyzedCost)}</td><td>Actual saved material + electricity cost in ${esc(Bper.label)}.</td></tr>
+      <tr><td><b>Efficiency / Rate Variance vs Expected</b></td><td class="cvr-num"><b>${money(unexplained)}</b></td><td>${unexplained>0?'Actual cost exceeded the production-adjusted expectation.':'Actual cost was below the production-adjusted expectation.'}</td></tr>`;
+
+    const elecProd=(A.unitsTon*B.production-A.electricity)*avgElecRateA;
+    const elecEff=(B.electricity-A.unitsTon*B.production)*avgElecRateA;
+    const avgElecRateB=B.electricity?B.electricityCost/B.electricity:0;
+    const elecRate=B.electricity*(avgElecRateB-avgElecRateA);
+    const drivers=[
+      ...vars.flatMap(v=>[
+        {name:v.item+' — higher/lower production volume',section:v.section,type:'Production',impact:v.productionEffect},
+        {name:v.item+' — consumption efficiency / quantity',section:v.section,type:'Efficiency',impact:v.efficiencyEffect},
+        {name:v.item+' — rate change',section:v.section,type:'Rate',impact:v.rateEffect}
+      ]),
+      {name:'Electricity — production volume',section:'Electricity',type:'Production',impact:elecProd},
+      {name:'Electricity — units per ton efficiency',section:'Electricity',type:'Efficiency',impact:elecEff},
+      {name:'Electricity — average rate change',section:'Electricity',type:'Rate',impact:elecRate}
+    ].filter(x=>Math.abs(x.impact)>0.01).sort((a,b)=>Math.abs(b.impact)-Math.abs(a.impact));
+    const top=drivers.slice(0,7);
+    $('cvrReasons').innerHTML=top.length?top.map((d,i)=>{
+      const s=cls(d.impact,true);
+      return `<div class="cvr-reason"><div class="cvr-rank">${i+1}</div><div><b>${esc(d.name)}</b><p>${esc(d.section)} • ${esc(d.type)} effect. ${d.impact>0?'This increased Period B cost.':'This reduced Period B cost.'}</p></div><div class="cvr-impact ${d.impact>0?'cvr-up':'cvr-down'}">${d.impact>0?'+':''}${money(d.impact)}</div></div>`
+    }).join(''):'<div class="cvr-empty">No cost drivers found.</div>';
+
+    const diff=B.analyzedCost-A.analyzedCost,prodCh=change(B.production,A.production),costTonCh=change(B.costTon,A.costTon);
+    const biggestBad=drivers.find(x=>x.impact>0),biggestGood=drivers.find(x=>x.impact<0);
+    $('cvrConclusion').innerHTML=`<b>${esc(Bper.label)} vs ${esc(Aper.label)}:</b> analyzed cost ${diff>=0?'increased':'decreased'} by <b>${money(Math.abs(diff))} (${Math.abs(change(B.analyzedCost,A.analyzedCost)).toFixed(2)}%)</b>.
+      Paper production changed by <b>${pct(prodCh)}</b>, while analyzed cost per ton changed by <b>${pct(costTonCh)}</b>.
+      ${biggestBad?`The largest unfavorable driver was <b>${esc(biggestBad.name)}</b> (${money(biggestBad.impact)}).`:''}
+      ${biggestGood?`The strongest saving/improvement was <b>${esc(biggestGood.name)}</b> (${money(Math.abs(biggestGood.impact))} favorable).`:''}
+      ${unexplained>0?`After adjusting for Period B production using Period A efficiency and rates, actual analyzed cost was <b>${money(unexplained)} above expected</b>.`:`After adjusting for production, actual analyzed cost was <b>${money(Math.abs(unexplained))} below expected</b>.`}
+      <br><small>Analyzed Cost currently includes saved material cost and electricity cost. It does not claim unsupported salary, contractor, finance, or other overhead costs.</small>`;
+  }
+  function open(){
+    build();document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));$('panel-comparison-variance-report').classList.add('active');
+    if($('workspaceTitle'))$('workspaceTitle').textContent='Comparison Report';
+    if($('workspaceSubtitle'))$('workspaceSubtitle').textContent='Difference • Reasons • Quantity • Rate • Efficiency • Expected vs Actual';
+    toggle();generate();try{localStorage.setItem('erpStudioLastPanel','comparison-variance-report');history.replaceState(null,'','#panel-comparison-variance-report')}catch(e){}
+    window.scrollTo({top:0,behavior:'auto'})
+  }
+  window.ERPComparisonVarianceReport={open,generate};
+  if(location.hash==='#panel-comparison-variance-report')setTimeout(open,80)
 })();
 </script>
 
