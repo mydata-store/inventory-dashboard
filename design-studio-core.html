@@ -19768,7 +19768,14 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
       if(out)out.textContent=el.id==='apdPageZoom'?el.value+'%':(el.id==='apdPageWidth'?el.value+'%':el.value+'px')
     })
   }
-  function preview(){if(page)apply(page,values());syncOutputs()}
+  function preview(){
+    if(page){
+      const current=values();
+      apply(page,current);
+      window.ERPPerPageDesign?.preview?.(current);
+    }
+    syncOutputs()
+  }
 
   function open(p){
     page=p||activePanel();if(!page)return;
@@ -19788,12 +19795,13 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
     }
     $('#advancedPageDesignerModal').classList.remove('open');
     $('#advancedPageDesignerModal').setAttribute('aria-hidden','true');
+    window.ERPPerPageDesign?.apply?.();
     page=null;pageId='';sessionBase=null;savedBefore=null
   }
 
   function saveCurrent(){
     if(!page)return;
-    const s=values();save(pageId,s);apply(page,s);
+    const s=values();save(pageId,s);apply(page,s);window.ERPPerPageDesign?.preview?.(s);
     try{window.ERPAudit?.log?.({module:'Page Control Studio',page:pageId,action:'Save Page Design',detail:'Advanced presentation settings saved'})}catch(e){}
     close(false);
     if(window.toast)toast('Page design saved')
@@ -19806,7 +19814,7 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
     const t=titleEl(page),s=subtitleEl(page);
     if(t?.dataset.apdOriginalText!==undefined)base.titleText=t.dataset.apdOriginalText;
     if(s?.dataset.apdOriginalText!==undefined)base.subtitleText=s.dataset.apdOriginalText;
-    sessionBase=base;setUI(base);preview();
+    sessionBase=base;setUI(base);preview();window.ERPPerPageDesign?.preview?.(base);
     if(window.toast)toast('Current page defaults restored in preview')
   }
 
@@ -20333,7 +20341,26 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   }
 
   // Expose so Page Control Studio can force an immediate refresh after Save/Reset.
-  window.ERPPerPageDesign={apply:applyCurrentDesign,buildCss};
+  
+  function previewCurrentDesign(settings){
+    const p=activePanel(),id=pageId(p),el=styleEl();
+    if(!el)return;
+    el.textContent='';
+    if(!p||!id)return;
+    if(settings && typeof settings==='object'){
+      el.textContent=buildCss(id,settings);
+      return;
+    }
+    const saved=loadDesign(id);
+    if(saved)el.textContent=buildCss(id,saved);
+  }
+
+  window.ERPPerPageDesign={
+    apply:applyCurrentDesign,
+    preview:previewCurrentDesign,
+    buildCss
+  };
+
 
   // Existing APD Save/Reset buttons.
   document.getElementById('apdSave')?.addEventListener('click',()=>setTimeout(applyCurrentDesign,0),true);
