@@ -20175,10 +20175,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   function tab(el){if(el===wsTitle()||el===wsSubtitle()||el.closest?.('header.top'))return'workspace';if(el===notice()||el.closest?.('.notice'))return'notice';if(el.closest?.('button'))return'buttons';
     if(el.closest?.('input,select,textarea,label'))return'fields';if(el.closest?.('table,thead,tbody,tr,th,td'))return'tables';
     if(el.closest?.('.dde-section,.dde-subcard,.fcr-block,.summary-card,.metric-card,.kpi-card,.card'))return'cards';return'identity'}
-  function pick(e){if(!selecting||e.target.closest('#advancedPageDesignerModal'))return;e.preventDefault();e.stopPropagation();selecting=false;document.body.classList.remove('apd-selecting-element');$('apdSelectElement').textContent='⌖ Select';
-    modal.classList.remove('apd-minimized');selected?.classList.remove('apd-selected-element');selected=e.target;selected.classList.add('apd-selected-element');
-    const t=tab(selected);modal.querySelector(`#apdTabs button[data-apd-tab="${t}"]`)?.click();if($('apdSelectedStatus'))$('apdSelectedStatus').textContent='Selected: '+name(selected)+' → '+t+' controls';
-    setTimeout(()=>selected?.classList.remove('apd-selected-element'),1800);document.removeEventListener('click',pick,true)}
+  function pick(e){if(!selecting||e.target.closest('#advancedPageDesignerModal'))return;e.preventDefault();e.stopPropagation();selected?.classList.remove('apd-selected-element');selected=e.target;selected.classList.add('apd-selected-element');const ext=window.ERPColumnSummaryDesigner?.capture?.(selected)||null;selecting=false;document.body.classList.remove('apd-selecting-element');$('apdSelectElement').textContent='⌖ Select';modal.classList.remove('apd-minimized');const t=ext?.tab||tab(selected);modal.querySelector(`#apdTabs button[data-apd-tab="${t}"]`)?.click();if($('apdSelectedStatus'))$('apdSelectedStatus').textContent='Selected: '+(ext?.label||name(selected))+' → '+t+' controls';setTimeout(()=>selected?.classList.remove('apd-selected-element'),1800);document.removeEventListener('click',pick,true)}
   $('apdSelectElement').onclick=()=>{selecting=!selecting;document.body.classList.toggle('apd-selecting-element',selecting);$('apdSelectElement').textContent=selecting?'✕ Cancel':'⌖ Select';modal.classList.toggle('apd-minimized',selecting);
     if(selecting)document.addEventListener('click',pick,true);else document.removeEventListener('click',pick,true)};
 
@@ -20530,8 +20527,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   function summaryRoot(el){
     if(!el)return null;
     const selectors=[
-      '.dde-production-summary','.dde-subcard','.summary-card','.metric-card','.kpi-card',
-      '.pc-summary-card','.dde-boiler-kpis-v1522','.fcr-indicators','.fcr-block'
+      '.dde-production-summary','.dde-electricity-summary-shell-v1515','.dde-steam-summary-shell-v1518','.dde-boiler-summary-strip-v1524','.dde-boiler-summary-card-v1524','.dde-analysis-summary-grid','.dde-summary-matrix','.dde-subcard','.summary-card','.metric-card','.kpi-card','.pc-summary-card','.dde-boiler-kpis-v1522','.fcr-indicators','.fcr-block'
     ];
     let r=el.closest(selectors.join(','));
     if(r)return r;
@@ -20741,51 +20737,15 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     e.addEventListener(e.type==='range'?'input':'change',previewSummary);
   });
 
-  // Capture the element selected by the existing Select mode.
-  document.addEventListener('click',e=>{
-    if(!document.body.classList.contains('apd-selecting-element') || e.target.closest('#advancedPageDesignerModal'))return;
-
-    const cell=e.target.closest('td,th');
-    if(cell){
-      selectedCell=cell;
-      selectedColumn=cell.cellIndex;
-      selectedTableKey=tableKey(cell.closest('table'));
-      selectedSummary=null;
-      selectedSummaryKey='';
-
-      const d=load();
-      const s=d.columns?.[selectedTableKey+'::'+selectedColumn]||{};
-      setColumnUI(s);
-
-      const head=cell.closest('table')?.querySelectorAll('thead th')?.[selectedColumn];
-      setTimeout(()=>{
-        modal.querySelector('#apdTabs button[data-apd-tab="columns"]')?.click();
-        if($('apdColumnTarget'))$('apdColumnTarget').textContent='Selected: '+(norm(head?.textContent)||'Column '+(selectedColumn+1));
-      },0);
-      return;
-    }
-
-    const r=summaryRoot(e.target);
-    if(r){
-      selectedSummary=r;
-      selectedSummaryKey=summaryKey(r);
-      selectedCell=null;
-      selectedColumn=-1;
-      selectedTableKey='';
-
-      const d=load();
-      const s=d.summaries?.[selectedSummaryKey]||{};
-      setSummaryUI(s);
-
-      setTimeout(()=>{
-        modal.querySelector('#apdTabs button[data-apd-tab="summary"]')?.click();
-        const title=norm(r.querySelector('h1,h2,h3,h4,.dde-production-summary-title,.fcr-blue-head')?.textContent)
-          || norm(leafTextEls(r).find(x=>/summary/i.test(norm(x.textContent)))?.textContent)
-          || 'Summary / KPI Panel';
-        if($('apdSummaryTarget'))$('apdSummaryTarget').textContent='Selected: '+title;
-      },0);
-    }
-  },true);
+  // Direct element binding from the original Select handler.
+  function captureSelection(target){
+    if(!target||target.closest?.('#advancedPageDesignerModal'))return null;
+    const cell=target.closest?.('td,th');
+    if(cell){selectedCell=cell;selectedColumn=cell.cellIndex;selectedTableKey=tableKey(cell.closest('table'));selectedSummary=null;selectedSummaryKey='';const d=load(),s=d.columns?.[selectedTableKey+'::'+selectedColumn]||{};setColumnUI(s);const head=cell.closest('table')?.querySelectorAll('thead th')?.[selectedColumn],label=norm(head?.textContent)||('Column '+(selectedColumn+1));if($('apdColumnTarget'))$('apdColumnTarget').textContent='Selected: '+label+' • '+(cell.closest('table')?.id||'Current Table');return {tab:'columns',label:'Table Column — '+label};}
+    const r=summaryRoot(target);
+    if(r){selectedSummary=r;selectedSummaryKey=summaryKey(r);selectedCell=null;selectedColumn=-1;selectedTableKey='';const d=load(),s=d.summaries?.[selectedSummaryKey]||{};setSummaryUI(s);const title=norm(r.querySelector('h1,h2,h3,h4,.dde-production-summary-title,.dde-electricity-summary-title-v1515,.dde-steam-summary-title-v1518,.fcr-blue-head')?.textContent)||norm(leafTextEls(r).find(x=>/summary/i.test(norm(x.textContent)))?.textContent)||norm(r.querySelector('.dde-boiler-summary-card-v1524 span')?.textContent)||'Summary / KPI Panel';if($('apdSummaryTarget'))$('apdSummaryTarget').textContent='Selected: '+title;return {tab:'summary',label:'Summary / KPI — '+title};}
+    return null;
+  }
 
   // Save only the selected column/summary for the current page.
   $('apdSave')?.addEventListener('click',()=>{
@@ -20825,7 +20785,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     setTimeout(applySaved,10);
   }
 
-  window.ERPColumnSummaryDesigner={applySaved};
+  window.ERPColumnSummaryDesigner={applySaved,capture:captureSelection};
 })();
 </script>
 
