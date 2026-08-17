@@ -20500,230 +20500,124 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 .apd-selected-column-v1512{outline:2px solid #2b7cff!important;outline-offset:-2px}
 .apd-selected-summary-v1512{outline:2px solid #15a36d!important;outline-offset:-2px}
 </style>
-<script id="apdColumnSummaryDesignerV1516">
+
+<style id="apdNativeColumnSummaryV1517">
+/* Column rules read variables from the TABLE itself.
+   Dynamic tbody rows automatically inherit these rules. */
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(1),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(2),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(3),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(4),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(5),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(6),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(7),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(8),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(9),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(10),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(11),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(12),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(13),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(14),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(15),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(16),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(17),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(18),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(19),
+#panel-daily-data-entry table[data-apd-native-table="1"] tr > *:nth-child(20){
+  box-sizing:border-box;
+}
+
+/* Rules are generated per selected column by JS into this style tag. */
+</style>
+<style id="apdNativeColumnDynamicV1517"></style>
+<script id="apdColumnSummaryDesignerV1517">
 (function(){
   const $=id=>document.getElementById(id);
   const modal=$('advancedPageDesignerModal');
   if(!modal)return;
 
-  const KEY='erp:apd-element-design:v1516:';
-  const STYLE_ID='apd-element-rules-v1516';
+  const KEY='erp:apd-native-element-design:v1517:';
+  const DYN_STYLE='apdNativeColumnDynamicV1517';
 
-  let selectedCell=null;
-  let selectedSummary=null;
+  let selectedTable=null;
   let selectedColumn=-1;
+  let selectedSummary=null;
   let selectedTableKey='';
   let selectedSummaryKey='';
 
-  function panel(){
-    return document.querySelector(
-      'main.content > section.panel.active,main.content section.panel.active,section.panel.active'
-    )
+  function root(){
+    return document.querySelector('#panel-daily-data-entry');
   }
   function pageId(){
-    return (panel()?.id||'page').replace(/^panel-/,'')
+    return (document.querySelector('main.content > section.panel.active,main.content section.panel.active,section.panel.active')?.id||'page').replace(/^panel-/,'');
   }
-  function norm(s){
-    return (s||'').replace(/\s+/g,' ').trim()
-  }
+  function norm(s){return (s||'').replace(/\s+/g,' ').trim()}
   function safe(s){
-    return norm(s).toLowerCase()
-      .replace(/[^a-z0-9]+/g,'-')
-      .replace(/^-|-$/g,'')
-      .slice(0,80)||'unnamed'
-  }
-  function cssEsc(s){
-    try{return CSS.escape(s)}
-    catch(e){return String(s||'').replace(/[^a-zA-Z0-9_-]/g,'\\$&')}
-  }
-
-  function styleEl(){
-    let el=$(STYLE_ID);
-    if(!el){
-      el=document.createElement('style');
-      el.id=STYLE_ID;
-      document.head.appendChild(el)
-    }
-    return el
-  }
-
-  function storeKey(){
-    return KEY+pageId()
+    return norm(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'unnamed'
   }
   function load(){
     try{
-      const d=JSON.parse(
-        localStorage.getItem(storeKey())||
-        '{"columns":{},"summaries":{}}'
-      );
-      d.columns=d.columns||{};
-      d.summaries=d.summaries||{};
+      const d=JSON.parse(localStorage.getItem(KEY+pageId())||'{"columns":{},"summaries":{}}');
+      d.columns=d.columns||{};d.summaries=d.summaries||{};
       return d
-    }catch(e){
-      return {columns:{},summaries:{}}
-    }
+    }catch(e){return {columns:{},summaries:{}}}
   }
-  function save(d){
-    localStorage.setItem(storeKey(),JSON.stringify(d))
+  function save(d){localStorage.setItem(KEY+pageId(),JSON.stringify(d))}
+  function num(id,d){const v=Number($(id)?.value);return Number.isFinite(v)?v:d}
+
+  function tableKey(t){
+    if(!t)return '';
+    if(t.id)return t.id;
+    if(!t.dataset.apdNativeKey){
+      const h=norm(Array.from(t.querySelectorAll('thead th')).map(x=>x.textContent).join('|'));
+      t.dataset.apdNativeKey=safe(h||('table-'+Array.from(root()?.querySelectorAll('table')||[]).indexOf(t)));
+    }
+    return 'data-'+t.dataset.apdNativeKey
   }
-
-  function tableKey(table){
-    if(!table)return '';
-    if(table.id)return 'id:'+table.id;
-
-    if(!table.dataset.apdTableKeyV1516){
-      const heads=norm(
-        Array.from(table.querySelectorAll('thead th'))
-          .map(x=>x.textContent)
-          .join('|')
-      );
-      const sectionTitle=norm(
-        table.closest('.dde-section,.dde-subcard,.card,.fcr-block')
-          ?.querySelector('h1,h2,h3,h4,.dde-section-title h3,.fcr-blue-head')
-          ?.textContent
-      );
-      const index=Array.from(panel()?.querySelectorAll('table')||[])
-        .indexOf(table);
-
-      table.dataset.apdTableKeyV1516=
-        safe(sectionTitle||heads||('table-'+index))
+  function findTable(key){
+    if(!root())return null;
+    const byId=document.getElementById(key);
+    if(byId && byId.tagName==='TABLE' && root().contains(byId))return byId;
+    if(key.startsWith('data-')){
+      return root().querySelector('table[data-apd-native-key="'+key.slice(5).replace(/"/g,'\\"')+'"]')
     }
-
-    return 'data:'+table.dataset.apdTableKeyV1516
-  }
-
-  function tableSelector(key){
-    const root='#panel-'+cssEsc(pageId());
-
-    if(key.startsWith('id:')){
-      return root+' #'+cssEsc(key.slice(3))
-    }
-
-    if(key.startsWith('data:')){
-      return root+' table[data-apd-table-key-v1516="'+
-        key.slice(5).replace(/"/g,'\\"')+'"]'
-    }
-
-    return ''
+    return null
   }
 
   function summaryRoot(el){
     if(!el)return null;
-
-    const direct=el.closest(
+    return el.closest(
       '.dde-production-summary,'+
       '.dde-electricity-summary-shell-v1515,'+
       '.dde-steam-summary-shell-v1518,'+
       '.dde-boiler-summary-strip-v1524,'+
-      '.dde-boiler-summary-card-v1524,'+
       '.dde-analysis-summary-grid,'+
       '.dde-summary-matrix,'+
-      '.dde-boiler-kpis-v1522,'+
-      '.dde-subcard,'+
-      '.summary-card,.metric-card,.kpi-card,.pc-summary-card,'+
-      '.fcr-indicators,.fcr-block'
+      '.dde-boiler-kpis-v1522'
+    )
+  }
+  function summaryKey(s){
+    if(!s)return '';
+    if(s.id)return 'id-'+s.id;
+    const cls=Array.from(s.classList).find(c=>
+      /dde-(production-summary|electricity-summary-shell|steam-summary-shell|boiler-summary-strip|analysis-summary-grid|summary-matrix|boiler-kpis)/.test(c)
     );
-    if(direct)return direct;
-
-    let node=el;
-    for(let i=0;i<7 && node && node!==panel();i++,node=node.parentElement){
-      const title=node.querySelector?.(
-        'h1,h2,h3,h4,'+
-        '.dde-production-summary-title,'+
-        '.dde-electricity-summary-title-v1515,'+
-        '.dde-steam-summary-title-v1518,'+
-        '.fcr-blue-head'
-      );
-      if(/summary/i.test(norm(title?.textContent))){
-        return node
-      }
-    }
-
+    return cls?'class-'+cls:'data-'+safe(norm(s.textContent).slice(0,50))
+  }
+  function findSummary(key){
+    if(!root())return null;
+    if(key.startsWith('id-'))return root().querySelector('#'+CSS.escape(key.slice(3)));
+    if(key.startsWith('class-'))return root().querySelector('.'+CSS.escape(key.slice(6)));
     return null
   }
 
-  function summaryTitle(root){
-    if(!root)return '';
-
-    const title=root.querySelector(
-      'h1,h2,h3,h4,'+
-      '.dde-production-summary-title,'+
-      '.dde-electricity-summary-title-v1515,'+
-      '.dde-steam-summary-title-v1518,'+
-      '.fcr-blue-head'
-    );
-    if(title)return norm(title.textContent);
-
-    const leaf=Array.from(root.querySelectorAll('div,span,b,strong'))
-      .find(x=>x.children.length===0 && /summary/i.test(norm(x.textContent)));
-
-    return norm(leaf?.textContent)
-  }
-
-  function summaryKey(root){
-    if(!root)return '';
-
-    if(root.id)return 'id:'+root.id;
-
-    // Existing Daily Data Entry classes are stable across renders.
-    const stable=Array.from(root.classList||[]).find(c=>
-      /dde-(production-summary|electricity-summary-shell|steam-summary-shell|boiler-summary-strip|analysis-summary-grid|summary-matrix|boiler-kpis)|fcr-|summary-card|metric-card|kpi-card|pc-summary-card/.test(c)
-    );
-    if(stable)return 'class:'+stable;
-
-    if(!root.dataset.apdSummaryKeyV1516){
-      const title=summaryTitle(root);
-      const index=Array.from(panel()?.querySelectorAll('div,section')||[])
-        .indexOf(root);
-      root.dataset.apdSummaryKeyV1516=
-        safe(title||('summary-'+index))
-    }
-
-    return 'data:'+root.dataset.apdSummaryKeyV1516
-  }
-
-  function summarySelector(key){
-    const root='#panel-'+cssEsc(pageId());
-
-    if(key.startsWith('id:')){
-      return root+' #'+cssEsc(key.slice(3))
-    }
-    if(key.startsWith('class:')){
-      return root+' .'+cssEsc(key.slice(6))
-    }
-    if(key.startsWith('data:')){
-      return root+' [data-apd-summary-key-v1516="'+
-        key.slice(5).replace(/"/g,'\\"')+'"]'
-    }
-    return ''
-  }
-
-  function n(id,d){
-    const v=Number($(id)?.value);
-    return Number.isFinite(v)?v:d
-  }
-  function updateOutput(id){
-    const el=$(id),out=$(id+'Val');
-    if(el&&out)out.textContent=el.value+'px'
-  }
-
-  const outputs=[
-    'apdColumnFontSize','apdColumnPadding','apdColumnWidth',
-    'apdSummaryTitleSize','apdSummaryLabelSize','apdSummaryValueSize',
-    'apdSummaryRowHeight','apdSummaryPadding',
-    'apdSummaryBorder','apdSummaryRadius'
-  ];
-  outputs.forEach(id=>{
-    $(id)?.addEventListener('input',()=>updateOutput(id))
-  });
-
-  function columnSettings(){
+  function colSettings(){
     return {
-      fontSize:n('apdColumnFontSize',12),
+      fontSize:num('apdColumnFontSize',12),
       weight:$('apdColumnWeight')?.value||'600',
       align:$('apdColumnAlign')?.value||'left',
-      padding:n('apdColumnPadding',7),
-      width:n('apdColumnWidth',140),
+      padding:num('apdColumnPadding',7),
+      width:num('apdColumnWidth',140),
       wrap:$('apdColumnWrap')?.value||'normal',
       color:$('apdColumnColor')?.value||'#10253f',
       bg:$('apdColumnBg')?.value||'#ffffff',
@@ -20731,76 +20625,66 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       visible:$('apdColumnVisible')?.checked!==false
     }
   }
-
-  function summarySettings(){
+  function sumSettings(){
     return {
       visible:$('apdSummaryVisible')?.checked!==false,
-      titleSize:n('apdSummaryTitleSize',12),
-      labelSize:n('apdSummaryLabelSize',10),
-      valueSize:n('apdSummaryValueSize',12),
-      rowHeight:n('apdSummaryRowHeight',32),
-      padding:n('apdSummaryPadding',8),
-      border:n('apdSummaryBorder',1),
-      radius:n('apdSummaryRadius',8),
+      titleSize:num('apdSummaryTitleSize',12),
+      labelSize:num('apdSummaryLabelSize',10),
+      valueSize:num('apdSummaryValueSize',12),
+      rowHeight:num('apdSummaryRowHeight',32),
+      padding:num('apdSummaryPadding',8),
+      border:num('apdSummaryBorder',1),
+      radius:num('apdSummaryRadius',8),
       labelAlign:$('apdSummaryLabelAlign')?.value||'left',
       valueAlign:$('apdSummaryValueAlign')?.value||'right',
       valueBold:!!$('apdSummaryValueBold')?.checked
     }
   }
 
-  function setColumnUI(s={}){
+  function setColUI(s={}){
     const map={
-      apdColumnFontSize:s.fontSize??12,
-      apdColumnWeight:s.weight??'600',
-      apdColumnAlign:s.align??'left',
-      apdColumnPadding:s.padding??7,
-      apdColumnWidth:s.width??140,
-      apdColumnWrap:s.wrap??'normal',
-      apdColumnColor:s.color??'#10253f',
-      apdColumnBg:s.bg??'#ffffff'
+      apdColumnFontSize:s.fontSize??12,apdColumnWeight:s.weight??'600',
+      apdColumnAlign:s.align??'left',apdColumnPadding:s.padding??7,
+      apdColumnWidth:s.width??140,apdColumnWrap:s.wrap??'normal',
+      apdColumnColor:s.color??'#10253f',apdColumnBg:s.bg??'#ffffff'
     };
-
-    Object.entries(map).forEach(([id,v])=>{
-      if($(id))$(id).value=v;
-      updateOutput(id)
-    });
-
+    Object.entries(map).forEach(([id,v])=>{if($(id))$(id).value=v});
     if($('apdColumnPlain'))$('apdColumnPlain').checked=!!s.plain;
-    if($('apdColumnVisible'))$('apdColumnVisible').checked=s.visible!==false
+    if($('apdColumnVisible'))$('apdColumnVisible').checked=s.visible!==false;
+    syncOutputs()
   }
-
-  function setSummaryUI(s={}){
+  function setSumUI(s={}){
     const map={
-      apdSummaryTitleSize:s.titleSize??12,
-      apdSummaryLabelSize:s.labelSize??10,
-      apdSummaryValueSize:s.valueSize??12,
-      apdSummaryRowHeight:s.rowHeight??32,
-      apdSummaryPadding:s.padding??8,
-      apdSummaryBorder:s.border??1,
-      apdSummaryRadius:s.radius??8,
-      apdSummaryLabelAlign:s.labelAlign??'left',
+      apdSummaryTitleSize:s.titleSize??12,apdSummaryLabelSize:s.labelSize??10,
+      apdSummaryValueSize:s.valueSize??12,apdSummaryRowHeight:s.rowHeight??32,
+      apdSummaryPadding:s.padding??8,apdSummaryBorder:s.border??1,
+      apdSummaryRadius:s.radius??8,apdSummaryLabelAlign:s.labelAlign??'left',
       apdSummaryValueAlign:s.valueAlign??'right'
     };
-
-    Object.entries(map).forEach(([id,v])=>{
-      if($(id))$(id).value=v;
-      updateOutput(id)
-    });
-
+    Object.entries(map).forEach(([id,v])=>{if($(id))$(id).value=v});
     if($('apdSummaryVisible'))$('apdSummaryVisible').checked=s.visible!==false;
-    if($('apdSummaryValueBold'))$('apdSummaryValueBold').checked=s.valueBold!==false
+    if($('apdSummaryValueBold'))$('apdSummaryValueBold').checked=s.valueBold!==false;
+    syncOutputs()
+  }
+  function syncOutputs(){
+    ['apdColumnFontSize','apdColumnPadding','apdColumnWidth',
+     'apdSummaryTitleSize','apdSummaryLabelSize','apdSummaryValueSize',
+     'apdSummaryRowHeight','apdSummaryPadding','apdSummaryBorder','apdSummaryRadius']
+      .forEach(id=>{const e=$(id),o=$(id+'Val');if(e&&o)o.textContent=e.value+'px'})
   }
 
-  function columnCss(tableKeyValue,index,s){
-    const table=tableSelector(tableKeyValue);
-    if(!table)return '';
-
-    const col=index+1;
-    const cell=
-      table+' tr > *:nth-child('+col+')';
+  function cssForColumn(table,index,s){
+    if(!table||index<0)return '';
+    table.dataset.apdNativeTable='1';
+    const id=table.id;
+    const selector=id
+      ? '#panel-daily-data-entry #'+CSS.escape(id)
+      : '#panel-daily-data-entry table[data-apd-native-key="'+table.dataset.apdNativeKey+'"]';
+    const n=index+1;
+    const cell=selector+' tr > *:nth-child('+n+')';
 
     let css=cell+'{';
-    css+='display:'+(s.visible===false?'none':'table-cell')+' !important;';
+    css+='display:'+(s.visible?'table-cell':'none')+' !important;';
     css+='font-size:'+s.fontSize+'px !important;';
     css+='font-weight:'+s.weight+' !important;';
     css+='text-align:'+s.align+' !important;';
@@ -20810,352 +20694,151 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     css+='max-width:'+s.width+'px !important;';
     css+='white-space:'+s.wrap+' !important;';
     css+='color:'+s.color+' !important;';
-    css+='background-color:'+s.bg+' !important;';
+    css+='background:'+s.bg+' !important;';
     css+='}';
 
-    // Child item/unit/numeric labels often have their own font rules.
-    css+=cell+' .dde-master-item,'+
-         cell+' .dde-mat-unit,'+
-         cell+' .dde-mat-source-note,'+
-         cell+' b,'+
-         cell+' strong,'+
-         cell+' span,'+
-         cell+' div{'+
-         'font-size:inherit !important;'+
-         'font-weight:inherit !important;'+
-         'text-align:inherit !important;'+
-         'color:inherit !important;'+
-         '}';
+    css+=cell+' .dde-master-item,'+cell+' .dde-mat-unit,'+cell+' .dde-mat-source-note,'+
+         cell+' b,'+cell+' strong,'+cell+' span,'+cell+' div{'+
+         'font-size:inherit !important;font-weight:inherit !important;color:inherit !important;text-align:inherit !important;}';
 
     if(s.plain){
-      css+=cell+' .dde-master-item,'+
-           cell+' span,'+
-           cell+' div{'+
-           'background:transparent !important;'+
-           'border:0 !important;'+
-           'box-shadow:none !important;'+
-           'border-radius:0 !important;'+
-           'padding:0 !important;'+
-           '}';
+      css+=cell+' .dde-master-item,'+cell+' div,'+cell+' span{'+
+           'background:transparent !important;border:0 !important;box-shadow:none !important;'+
+           'border-radius:0 !important;padding:0 !important;}';
     }
-
     return css
   }
 
-  function summaryCss(summaryKeyValue,s){
-    const root=summarySelector(summaryKeyValue);
-    if(!root)return '';
+  function applySummary(summ,s){
+    if(!summ)return;
+    summ.style.setProperty('display',s.visible?((summ.dataset.apdNativeDisplay)||getComputedStyle(summ).display||'block'):'none','important');
+    if(!summ.dataset.apdNativeDisplay && s.visible){
+      summ.dataset.apdNativeDisplay=getComputedStyle(summ).display||'block'
+    }
+    summ.style.setProperty('padding',s.padding+'px','important');
+    summ.style.setProperty('border-width',s.border+'px','important');
+    summ.style.setProperty('border-style','solid','important');
+    summ.style.setProperty('border-radius',s.radius+'px','important');
 
-    let css='';
+    const title=summ.querySelector(
+      '.dde-production-summary-title,.dde-electricity-summary-title-v1515,.dde-steam-summary-title-v1518,h1,h2,h3,h4'
+    );
+    if(title)title.style.setProperty('font-size',s.titleSize+'px','important');
 
-    css+=root+'{'+
-      'display:'+(s.visible===false?'none':'block')+' !important;'+
-      'padding:'+s.padding+'px !important;'+
-      'border-width:'+s.border+'px !important;'+
-      'border-style:solid !important;'+
-      'border-radius:'+s.radius+'px !important;'+
-      '}';
-
-    css+=root+' h1,'+
-         root+' h2,'+
-         root+' h3,'+
-         root+' h4,'+
-         root+' .dde-production-summary-title,'+
-         root+' .dde-electricity-summary-title-v1515,'+
-         root+' .dde-steam-summary-title-v1518,'+
-         root+' .fcr-blue-head{'+
-         'font-size:'+s.titleSize+'px !important;'+
-         '}';
-
-    css+=root+' .dde-summary-row-v1515,'+
-         root+' .dde-summary-row-v1518,'+
-         root+' .dde-boiler-summary-card-v1524,'+
-         root+' tr{'+
-         'min-height:'+s.rowHeight+'px !important;'+
-         'height:'+s.rowHeight+'px !important;'+
-         '}';
-
-    css+=root+' .dde-summary-row-v1515 span,'+
-         root+' .dde-summary-row-v1518 span,'+
-         root+' .dde-boiler-summary-card-v1524 span,'+
-         root+' td:first-child,'+
-         root+' label,'+
-         root+' small{'+
-         'font-size:'+s.labelSize+'px !important;'+
-         'text-align:'+s.labelAlign+' !important;'+
-         '}';
-
-    css+=root+' .dde-summary-row-v1515 b,'+
-         root+' .dde-summary-row-v1518 b,'+
-         root+' .dde-boiler-summary-card-v1524 b,'+
-         root+' td:last-child,'+
-         root+' strong{'+
-         'font-size:'+s.valueSize+'px !important;'+
-         'text-align:'+s.valueAlign+' !important;'+
-         'font-weight:'+(s.valueBold?'800':'600')+' !important;'+
-         '}';
-
-    return css
-  }
-
-  function buildCss(data,preview=null){
-    let css='';
-
-    Object.entries(data.columns||{}).forEach(([key,s])=>{
-      const m=key.match(/^(.*)::(\d+)$/);
-      if(!m)return;
-      css+=columnCss(m[1],Number(m[2]),s)
+    summ.querySelectorAll('.dde-summary-row-v1515,.dde-summary-row-v1518').forEach(row=>{
+      row.style.setProperty('min-height',s.rowHeight+'px','important');
+      row.style.setProperty('height',s.rowHeight+'px','important');
+      row.querySelector('span')?.style.setProperty('font-size',s.labelSize+'px','important');
+      row.querySelector('span')?.style.setProperty('text-align',s.labelAlign,'important');
+      row.querySelector('b,strong')?.style.setProperty('font-size',s.valueSize+'px','important');
+      row.querySelector('b,strong')?.style.setProperty('text-align',s.valueAlign,'important');
+      row.querySelector('b,strong')?.style.setProperty('font-weight',s.valueBold?'800':'600','important');
     });
 
-    Object.entries(data.summaries||{}).forEach(([key,s])=>{
-      css+=summaryCss(key,s)
+    summ.querySelectorAll('.dde-boiler-summary-card-v1524').forEach(card=>{
+      card.style.setProperty('min-height',s.rowHeight+'px','important');
+      card.querySelector('span')?.style.setProperty('font-size',s.labelSize+'px','important');
+      card.querySelector('b,strong')?.style.setProperty('font-size',s.valueSize+'px','important');
+    });
+  }
+
+  function rebuild(preview=null){
+    const data=load();
+    let css='';
+
+    Object.entries(data.columns).forEach(([key,s])=>{
+      const m=key.match(/^(.*)::(\d+)$/);if(!m)return;
+      const table=findTable(m[1]);if(table)css+=cssForColumn(table,Number(m[2]),s)
     });
 
     if(preview?.type==='column'){
-      css+=columnCss(preview.key,preview.index,preview.settings)
+      const table=findTable(preview.key)||selectedTable;
+      if(table)css+=cssForColumn(table,preview.index,preview.settings)
     }
+
+    $(DYN_STYLE).textContent=css;
+
+    Object.entries(data.summaries).forEach(([key,s])=>{
+      const sm=findSummary(key);if(sm)applySummary(sm,s)
+    });
 
     if(preview?.type==='summary'){
-      css+=summaryCss(preview.key,preview.settings)
+      const sm=findSummary(preview.key)||selectedSummary;
+      if(sm)applySummary(sm,preview.settings)
     }
-
-    return css
-  }
-
-  function applySaved(){
-    const el=styleEl();
-    el.textContent=buildCss(load())
   }
 
   function previewColumn(){
-    if(!selectedTableKey || selectedColumn<0)return;
-
-    styleEl().textContent=buildCss(
-      load(),
-      {
-        type:'column',
-        key:selectedTableKey,
-        index:selectedColumn,
-        settings:columnSettings()
-      }
-    )
+    if(!selectedTableKey||selectedColumn<0)return;
+    rebuild({type:'column',key:selectedTableKey,index:selectedColumn,settings:colSettings()})
   }
-
   function previewSummary(){
     if(!selectedSummaryKey)return;
-
-    styleEl().textContent=buildCss(
-      load(),
-      {
-        type:'summary',
-        key:selectedSummaryKey,
-        settings:summarySettings()
-      }
-    )
+    rebuild({type:'summary',key:selectedSummaryKey,settings:sumSettings()})
   }
 
-  const columnControls=[
-    'apdColumnFontSize','apdColumnWeight','apdColumnAlign',
-    'apdColumnPadding','apdColumnWidth','apdColumnWrap',
-    'apdColumnColor','apdColumnBg',
-    'apdColumnPlain','apdColumnVisible'
-  ];
-
-  columnControls.forEach(id=>{
-    const el=$(id);
-    if(!el)return;
-    const ev=(el.type==='range'||el.type==='color')?'input':'change';
-    el.addEventListener(ev,previewColumn)
-  });
-
-  const summaryControls=[
-    'apdSummaryVisible',
-    'apdSummaryTitleSize','apdSummaryLabelSize','apdSummaryValueSize',
-    'apdSummaryRowHeight','apdSummaryPadding',
-    'apdSummaryBorder','apdSummaryRadius',
-    'apdSummaryLabelAlign','apdSummaryValueAlign',
-    'apdSummaryValueBold'
-  ];
-
-  summaryControls.forEach(id=>{
-    const el=$(id);
-    if(!el)return;
-    const ev=el.type==='range'?'input':'change';
-    el.addEventListener(ev,previewSummary)
-  });
-
-  // Called directly by the existing Select handler.
   function capture(target){
-    if(!target || target.closest?.('#advancedPageDesignerModal')){
-      return null
-    }
-
-    const cell=target.closest?.('td,th');
-
-    if(cell){
-      const table=cell.closest('table');
-      selectedCell=cell;
+    // IMPORTANT: prefer table cell before generic field detection.
+    const cell=target?.closest?.('td,th');
+    if(cell && root()?.contains(cell)){
+      selectedTable=cell.closest('table');
       selectedColumn=cell.cellIndex;
-      selectedTableKey=tableKey(table);
+      selectedTableKey=tableKey(selectedTable);
+      selectedSummary=null;selectedSummaryKey='';
 
-      selectedSummary=null;
-      selectedSummaryKey='';
+      const d=load();
+      setColUI(d.columns[selectedTableKey+'::'+selectedColumn]||{});
 
-      const data=load();
-      const saved=
-        data.columns?.[
-          selectedTableKey+'::'+selectedColumn
-        ]||{};
+      const head=selectedTable.querySelectorAll('thead th')[selectedColumn];
+      const label=norm(head?.textContent)||('Column '+(selectedColumn+1));
+      if($('apdColumnTarget'))$('apdColumnTarget').textContent='Selected: '+label+' • '+(selectedTable.id||selectedTableKey);
 
-      setColumnUI(saved);
-
-      const head=table
-        ?.querySelectorAll('thead th')
-        ?.[selectedColumn];
-
-      const label=
-        norm(head?.textContent)||
-        ('Column '+(selectedColumn+1));
-
-      if($('apdColumnTarget')){
-        $('apdColumnTarget').textContent=
-          'Selected: '+label+
-          ' • Table: '+(table?.id||selectedTableKey)
-      }
-
-      return {
-        tab:'columns',
-        label:'Table Column — '+label
-      }
+      return {tab:'columns',label:'Table Column — '+label}
     }
 
-    const summary=summaryRoot(target);
+    const sm=summaryRoot(target);
+    if(sm && root()?.contains(sm)){
+      selectedSummary=sm;selectedSummaryKey=summaryKey(sm);
+      selectedTable=null;selectedTableKey='';selectedColumn=-1;
 
-    if(summary){
-      selectedSummary=summary;
-      selectedSummaryKey=summaryKey(summary);
-
-      selectedCell=null;
-      selectedColumn=-1;
-      selectedTableKey='';
-
-      const data=load();
-      const saved=
-        data.summaries?.[selectedSummaryKey]||{};
-
-      setSummaryUI(saved);
-
-      const label=
-        summaryTitle(summary)||
-        norm(summary.querySelector('.dde-boiler-summary-card-v1524 span')?.textContent)||
-        'Summary / KPI Panel';
-
-      if($('apdSummaryTarget')){
-        $('apdSummaryTarget').textContent=
-          'Selected: '+label
-      }
-
-      return {
-        tab:'summary',
-        label:'Summary / KPI — '+label
-      }
+      const d=load();setSumUI(d.summaries[selectedSummaryKey]||{});
+      const title=norm(sm.querySelector('.dde-steam-summary-title-v1518,.dde-electricity-summary-title-v1515,.dde-production-summary-title,h1,h2,h3,h4')?.textContent)||'Summary / KPI';
+      if($('apdSummaryTarget'))$('apdSummaryTarget').textContent='Selected: '+title;
+      return {tab:'summary',label:'Summary / KPI — '+title}
     }
-
     return null
   }
 
-  // Save selected element settings.
+  ['apdColumnFontSize','apdColumnPadding','apdColumnWidth','apdColumnColor','apdColumnBg'].forEach(id=>$(id)?.addEventListener('input',previewColumn));
+  ['apdColumnWeight','apdColumnAlign','apdColumnWrap','apdColumnPlain','apdColumnVisible'].forEach(id=>$(id)?.addEventListener('change',previewColumn));
+
+  ['apdSummaryTitleSize','apdSummaryLabelSize','apdSummaryValueSize','apdSummaryRowHeight','apdSummaryPadding','apdSummaryBorder','apdSummaryRadius'].forEach(id=>$(id)?.addEventListener('input',previewSummary));
+  ['apdSummaryVisible','apdSummaryLabelAlign','apdSummaryValueAlign','apdSummaryValueBold'].forEach(id=>$(id)?.addEventListener('change',previewSummary));
+
   $('apdSave')?.addEventListener('click',()=>{
-    const data=load();
-
-    if(selectedTableKey && selectedColumn>=0){
-      data.columns[
-        selectedTableKey+'::'+selectedColumn
-      ]=columnSettings()
-    }
-
-    if(selectedSummaryKey){
-      data.summaries[
-        selectedSummaryKey
-      ]=summarySettings()
-    }
-
-    save(data);
-
-    // Rebuild stylesheet from saved values only.
-    setTimeout(applySaved,0)
+    const d=load();
+    if(selectedTableKey&&selectedColumn>=0)d.columns[selectedTableKey+'::'+selectedColumn]=colSettings();
+    if(selectedSummaryKey)d.summaries[selectedSummaryKey]=sumSettings();
+    save(d);
+    setTimeout(()=>rebuild(),0)
   },true);
 
-  // Cancel/Close remove only unsaved preview.
-  $('apdCancel')?.addEventListener(
-    'click',
-    ()=>setTimeout(applySaved,0),
-    true
-  );
+  $('apdCancel')?.addEventListener('click',()=>setTimeout(()=>rebuild(),0),true);
+  $('apdClose')?.addEventListener('click',()=>setTimeout(()=>rebuild(),0),true);
 
-  $('apdClose')?.addEventListener(
-    'click',
-    ()=>setTimeout(applySaved,0),
-    true
-  );
-
-  // Reset this page's element-specific profile.
   $('apdResetCurrent')?.addEventListener('click',()=>{
-    try{
-      localStorage.removeItem(storeKey())
-    }catch(e){}
-    selectedCell=null;
-    selectedSummary=null;
-    selectedColumn=-1;
-    selectedTableKey='';
-    selectedSummaryKey='';
-    setTimeout(applySaved,0)
+    try{localStorage.removeItem(KEY+pageId())}catch(e){}
+    setTimeout(()=>{$(DYN_STYLE).textContent='';},0)
   },true);
 
-  // Navigation: stylesheet is rebuilt for the new page profile.
-  function pageChanged(){
-    selectedCell=null;
-    selectedSummary=null;
-    selectedColumn=-1;
-    selectedTableKey='';
-    selectedSummaryKey='';
-    setTimeout(applySaved,0)
-  }
+  function reapply(){setTimeout(()=>rebuild(),0)}
+  window.addEventListener('hashchange',reapply);
+  window.addEventListener('popstate',reapply);
 
-  window.addEventListener('hashchange',pageChanged);
-  window.addEventListener('popstate',pageChanged);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',reapply,{once:true});
+  else reapply();
 
-  let lastPage=pageId();
-
-  document.addEventListener('click',()=>{
-    setTimeout(()=>{
-      const now=pageId();
-      if(now!==lastPage){
-        lastPage=now;
-        pageChanged()
-      }
-    },0)
-  },false);
-
-  // IMPORTANT:
-  // material rows can be rebuilt after page open. CSS rules are selector-based,
-  // so no re-binding is required when tbody HTML is regenerated.
-  if(document.readyState==='loading'){
-    document.addEventListener(
-      'DOMContentLoaded',
-      ()=>setTimeout(applySaved,0),
-      {once:true}
-    )
-  }else{
-    setTimeout(applySaved,0)
-  }
-
-  window.ERPColumnSummaryDesigner={
-    capture,
-    applySaved,
-    previewColumn,
-    previewSummary
-  }
+  window.ERPColumnSummaryDesigner={capture,applySaved:rebuild,previewColumn,previewSummary};
 })();
 </script>
 
