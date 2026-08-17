@@ -19949,10 +19949,12 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 .apd-profile-status{display:inline-flex;align-items:center;gap:6px;margin-top:5px;padding:4px 8px;border:1px solid var(--border,#ccd7e3);border-radius:999px;background:#fff;font-size:9px;font-weight:850;color:var(--muted,#617387)}
 .apd-profile-status.custom{color:#087d50;border-color:#9eddbd;background:#eaf9f1}
 .apd-profile-status.default{color:#6a7280;background:#f7f8fa}
+
+.apd-profile-status strong{font-weight:900}
 </style>
 
 
-<script id="apdSafeUpgradeV1508">
+<script id="apdSafeUpgradeV1509">
 (function(){
   const modal=document.getElementById('advancedPageDesignerModal');if(!modal)return;
   const shell=modal.querySelector('.apd-shell'),$=id=>document.getElementById(id);
@@ -19966,6 +19968,29 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   const wsSubtitle=()=>document.getElementById('workspaceSubtitle');
   const wsHeader=()=>wsTitle()?.closest('header.top')||document.querySelector('header.top');
   const notice=()=>document.querySelector('main.content > .notice');
+
+  // Canonical native workspace identity for Production & Consumption pages.
+  // These are the titles the ERP itself owns before any Page Designer override.
+  const nativePageMeta={
+    'production-consumption':{title:'Production & Consumption',subtitle:'Daily Operations • Month Summary • Year Summary'},
+    'daily-data-entry':{title:'Daily Data Entry',subtitle:'Production • Ash • Electricity • Consumption'},
+    'daily-consumption-history':{title:'Consumption History & Analysis',subtitle:'Daily • Material • Cost • Yield Analysis'},
+    'material-master':{title:'Material Group & Rate Master',subtitle:'Materials • Units • Cost Centres • Standards • Effective Rates'},
+    'management-summary':{title:'Management Summary',subtitle:'Production • Electricity • Steam • Pulp • Cost'},
+    'month-summary':{title:'Month Summary',subtitle:'Production • Electricity • Steam • Pulp • Materials • Cost'},
+    'year-summary':{title:'Year Summary',subtitle:'Annual Production • Electricity • Steam • Pulp • Materials • Cost'},
+    'operating-expenses':{title:'Operating Expenses',subtitle:'Expense Entry • History • Automatic Cost Rules • Expense Head Master'},
+    'final-cost-report':{title:'Final Production & Cost Report',subtitle:'Daily • Monthly • Materials • Rates • Production Cost'},
+    'formula-control-center':{title:'Formula Control Center',subtitle:'Approved production, costing, filler, pulp and ash reporting calculations.'},
+    'costing-analysis':{title:'Costing & Analysis',subtitle:'Item Costing • Department Costing • Raw Material • Mess • Cattle Farm • RGP / Repair'}
+  };
+  function nativeMeta(id){
+    if(nativePageMeta[id])return nativePageMeta[id];
+    const p=activePanel();
+    const innerTitle=p?.querySelector('.inv-page-head h2,.purchase-page-head h2,.page-head h2,.fcr-main-title h2,.card > h2')?.textContent?.trim();
+    const innerSub=p?.querySelector('.inv-page-head p,.purchase-page-head p,.page-head p,.fcr-main-title span,.card > .sub')?.textContent?.trim();
+    return {title:innerTitle||id.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),subtitle:innerSub||''}
+  }
 
   // Capture one clean shell baseline. Text is intentionally NOT stored for workspace
   // because native page navigation owns the title/subtitle text for each page.
@@ -20002,16 +20027,18 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   function px(v,d){const n=parseFloat(v);return Number.isFinite(n)?Math.round(n):d}
   function has(k){try{return localStorage.getItem(k)!==null}catch(e){return false}}
 
-  function resetSharedShell(){
-    const h=wsHeader(),t=wsTitle(),s=wsSubtitle(),n=notice();
+  function resetSharedShell(id=getPageId()){
+    const h=wsHeader(),t=wsTitle(),s=wsSubtitle(),n=notice(),meta=nativeMeta(id);
     if(h){
       h.style.removeProperty('display');h.style.removeProperty('min-height');h.style.removeProperty('height');
       h.style.removeProperty('padding-left');h.style.removeProperty('padding-right');h.style.removeProperty('margin-bottom')
     }
     if(t){
+      t.textContent=meta.title;
       t.style.removeProperty('font-size');t.style.removeProperty('text-align');t.style.removeProperty('color')
     }
     if(s){
+      s.textContent=meta.subtitle;
       s.style.removeProperty('display');s.style.removeProperty('font-size');s.style.removeProperty('text-align');s.style.removeProperty('color')
     }
     if(n){
@@ -20064,7 +20091,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 
   function loadPageExtras(id){
     // Always start from clean defaults so previous page can never leak.
-    resetSharedShell();
+    resetSharedShell(id);
     const wb=workspaceBase(),nb=noticeBase();
     let w=null,n=null;
     try{w=JSON.parse(localStorage.getItem(workspaceKey(id))||'null');n=JSON.parse(localStorage.getItem(noticeKey(id))||'null')}catch(e){}
@@ -20152,30 +20179,34 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   // scheduling one isolated reapply after navigation clicks.
   let lastId='';
   function isolateAfterNavigation(){
-    const id=getPageId();
-    if(!id)return;
-    // Native page opener gets one event-loop turn to set its own title/subtitle first.
+    // Give the ERP page opener one turn to activate its panel, then impose that page's own profile.
     setTimeout(()=>{
-      const current=getPageId();
-      if(current!==id)return;
-      loadPageExtras(current);
-      lastId=current
+      const current=getPageId();if(!current)return;
+      loadPageExtras(current);lastId=current
     },0)
   }
   window.addEventListener('hashchange',isolateAfterNavigation);
   window.addEventListener('popstate',isolateAfterNavigation);
 
-  // Lightweight delegated navigation hook: only reacts when active page ID actually changed.
+  // One delegated hook, but only when the active panel actually changes.
   document.addEventListener('click',()=>{
     const before=getPageId();
     setTimeout(()=>{
       const after=getPageId();
-      if(after!==lastId || after!==before){loadPageExtras(after);lastId=after}
+      if(after && after!==before){loadPageExtras(after);lastId=after}
     },0)
   },true);
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{lastId=getPageId();loadPageExtras(lastId)},{once:true});
   else{lastId=getPageId();loadPageExtras(lastId)}
+
+  function wrapOpen(objName){
+    const obj=window[objName];if(!obj||typeof obj.open!=='function'||obj.open.__apdIsolated)return;
+    const original=obj.open;
+    const wrapped=function(){const r=original.apply(this,arguments);setTimeout(()=>{const id=getPageId();loadPageExtras(id);lastId=id},0);return r};
+    wrapped.__apdIsolated=true;obj.open=wrapped
+  }
+  ['ERPProductionConsumption','ERPDailyDataEntry','ERPMaterialMaster','ERPManagementSummary','ERPMonthSummary','ERPYearSummary','ERPOperatingExpenses','ERPFinalCostReport'].forEach(wrapOpen);
 
   window.ERPPageControlExtras={applySaved:()=>loadPageExtras(getPageId()),loadDesigner};
 })();
