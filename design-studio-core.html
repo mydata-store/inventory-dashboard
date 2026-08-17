@@ -18937,42 +18937,6 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 </style>
 
 
-<script id="fcrExactRefreshRestoreV1552">
-(function(){
-  function wantsFinalReport(){
-    try{
-      return location.hash==='#panel-final-cost-report' ||
-        localStorage.getItem('erpStudioLastPanel')==='final-cost-report' ||
-        localStorage.getItem('erpProductionConsumptionLastPage')==='final-cost-report' ||
-        localStorage.getItem('erpProductionConsumptionPageV1')==='final-cost-report';
-    }catch(e){return location.hash==='#panel-final-cost-report'}
-  }
-  function restore(){
-    if(!wantsFinalReport())return true;
-    if(window.ERPFinalCostReport?.open){
-      window.ERPFinalCostReport.open();
-      document.documentElement.classList.remove('erp-route-restoring-v1545');
-      return true
-    }
-    return false
-  }
-  function boot(){
-    if(restore())return;
-    let tries=0;
-    const t=setInterval(()=>{
-      tries++;
-      if(restore()||tries>=80){
-        clearInterval(t);
-        document.documentElement.classList.remove('erp-route-restoring-v1545')
-      }
-    },10)
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
-})();
-</script>
-
-
 <style id="fcrThemeLinkSafeV1501">
 /* ==========================================================
    SAFE STEP 1 — Final Production & Cost Report theme linkage
@@ -20209,6 +20173,264 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   ['ERPProductionConsumption','ERPDailyDataEntry','ERPMaterialMaster','ERPManagementSummary','ERPMonthSummary','ERPYearSummary','ERPOperatingExpenses','ERPFinalCostReport'].forEach(wrapOpen);
 
   window.ERPPageControlExtras={applySaved:()=>loadPageExtras(getPageId()),loadDesigner};
+})();
+</script>
+
+
+<style id="apdPerPageOverrideBaseV1510">
+/* Dynamic styles are written into #apdPerPageOverrideDynamicV1510. */
+</style>
+<style id="apdPerPageOverrideDynamicV1510"></style>
+
+<script id="apdPerPageBindingRefreshV1510">
+(function(){
+  const DESIGN_KEY='erp:advanced-page-design:v1:';
+  const STYLE_ID='apdPerPageOverrideDynamicV1510';
+
+  function activePanel(){
+    return document.querySelector('main.content > section.panel.active,main.content section.panel.active,section.panel.active');
+  }
+  function pageId(p=activePanel()){
+    return (p?.id||'').replace(/^panel-/,'');
+  }
+  function esc(s){
+    try{return CSS.escape(s)}catch(e){return String(s||'').replace(/[^a-zA-Z0-9_-]/g,'\\$&')}
+  }
+  function loadDesign(id){
+    try{
+      const v=JSON.parse(localStorage.getItem(DESIGN_KEY+id)||'null');
+      return v && typeof v==='object' ? v : null;
+    }catch(e){return null}
+  }
+  function styleEl(){
+    return document.getElementById(STYLE_ID);
+  }
+
+  function buildCss(id,s){
+    if(!id||!s)return '';
+    const root='#panel-'+esc(id);
+    const px=(v,d)=>Number.isFinite(Number(v))?Number(v):d;
+    const yn=v=>v===false?'none':'';
+    let css='';
+
+    // Buttons — deliberately broad inside the selected page, excluding designer modal.
+    css += `${root} button:not(.apd-mini-tool):not(#apdClose){`;
+    if(s.buttonsVisible===false)css+='display:none !important;';
+    if(s.buttonFontSize!=null)css+=`font-size:${px(s.buttonFontSize,12)}px !important;`;
+    if(s.buttonHeight!=null)css+=`min-height:${px(s.buttonHeight,38)}px !important;height:auto !important;`;
+    if(s.buttonPadding!=null)css+=`padding-left:${px(s.buttonPadding,14)}px !important;padding-right:${px(s.buttonPadding,14)}px !important;`;
+    if(s.buttonRadius!=null)css+=`border-radius:${px(s.buttonRadius,8)}px !important;`;
+    if(s.buttonTextAlign)css+=`text-align:${s.buttonTextAlign} !important;`;
+    css+='}';
+
+    const actionSel=[
+      '.inv-page-head > div:last-child','.purchase-page-head > div:last-child',
+      '.gate-top-actions','.fcr-actions','.purchase-actions','.issue-footer',
+      '.daily-actions','.page-actions'
+    ].map(x=>`${root} ${x}`).join(',');
+    css += `${actionSel}{`;
+    if(s.buttonPlacement)css+=`justify-content:${s.buttonPlacement} !important;`;
+    if(s.buttonGap!=null)css+=`gap:${px(s.buttonGap,8)}px !important;`;
+    css+='}';
+
+    // Fields.
+    css += `${root} input:not([type="hidden"]):not([type="checkbox"]):not([type="range"]),${root} select,${root} textarea{`;
+    if(s.fieldFontSize!=null)css+=`font-size:${px(s.fieldFontSize,12)}px !important;`;
+    if(s.fieldHeight!=null)css+=`min-height:${px(s.fieldHeight,36)}px !important;`;
+    if(s.fieldRadius!=null)css+=`border-radius:${px(s.fieldRadius,7)}px !important;`;
+    if(s.fieldAlign)css+=`text-align:${s.fieldAlign} !important;`;
+    if(s.fieldBorderWidth!=null)css+=`border-width:${px(s.fieldBorderWidth,1)}px !important;`;
+    css+='}';
+    if(s.labelFontSize!=null)css+=`${root} label{font-size:${px(s.labelFontSize,10)}px !important;}`;
+
+    // Tables.
+    if(s.tablesVisible===false)css+=`${root} table{display:none !important;}`;
+    css += `${root} table thead th{`;
+    if(s.tableHeaderSize!=null)css+=`font-size:${px(s.tableHeaderSize,10)}px !important;`;
+    if(s.tableHeaderHeight!=null)css+=`height:${px(s.tableHeaderHeight,32)}px !important;min-height:${px(s.tableHeaderHeight,32)}px !important;`;
+    if(s.tableHeaderAlign)css+=`text-align:${s.tableHeaderAlign} !important;`;
+    if(s.tableHeaderBold!=null)css+=`font-weight:${s.tableHeaderBold?'900':'600'} !important;`;
+    if(s.tableWrap)css+=`white-space:${s.tableWrap} !important;`;
+    css+='}';
+
+    css += `${root} table tbody td{`;
+    if(s.tableDataSize!=null)css+=`font-size:${px(s.tableDataSize,11)}px !important;`;
+    if(s.tableRowHeight!=null)css+=`height:${px(s.tableRowHeight,34)}px !important;min-height:${px(s.tableRowHeight,34)}px !important;`;
+    if(s.tableDataAlign)css+=`text-align:${s.tableDataAlign} !important;`;
+    if(s.tableCellPadding!=null)css+=`padding:${px(s.tableCellPadding,7)}px !important;`;
+    if(s.tableWrap)css+=`white-space:${s.tableWrap} !important;`;
+    if(s.tableDataBold!=null)css+=`font-weight:${s.tableDataBold?'800':'600'} !important;`;
+    css+='}';
+
+    // Cards/sections.
+    const cards=[
+      '.dde-section','.dde-subcard','.dde-production-summary','.summary-card',
+      '.metric-card','.kpi-card','.fcr-block','.pc-summary-card','.card-grid > div'
+    ].map(x=>`${root} ${x}`).join(',');
+    css += `${cards}{`;
+    if(s.cardsVisible===false)css+='display:none !important;';
+    if(s.cardPadding!=null)css+=`padding:${px(s.cardPadding,12)}px !important;`;
+    if(s.cardRadius!=null)css+=`border-radius:${px(s.cardRadius,10)}px !important;`;
+    if(s.cardBorderWidth!=null)css+=`border-width:${px(s.cardBorderWidth,1)}px !important;`;
+    if(s.sectionGap!=null)css+=`margin-bottom:${px(s.sectionGap,12)}px !important;`;
+    if(s.cardAlign)css+=`text-align:${s.cardAlign} !important;`;
+    css+='}';
+
+    if(s.cardTitleSize!=null){
+      css += `${root} .dde-section-title h3,${root} .dde-subcard h4,${root} .dde-production-summary-title,${root} .fcr-blue-head,${root} .summary-card h3,${root} .metric-card h3,${root} .kpi-card h3{font-size:${px(s.cardTitleSize,12)}px !important;}`;
+    }
+    if(s.cardValueSize!=null){
+      css += `${root} .dde-boiler-kpis-v1522 b,${root} .dde-boiler-kpis-v1522 strong,${root} .fcr-ind-row b,${root} .summary-card strong,${root} .metric-card strong,${root} .kpi-card strong{font-size:${px(s.cardValueSize,14)}px !important;}`;
+    }
+
+    // Page title / inner subtitle / descriptions.
+    const titleSel=`${root} .inv-page-head h2,${root} .purchase-page-head h2,${root} .page-head h2,${root} .fcr-main-title h2,${root} .card > h2`;
+    css += `${titleSel}{`;
+    if(s.titleVisible===false)css+='display:none !important;';
+    if(s.titleSize!=null)css+=`font-size:${px(s.titleSize,22)}px !important;`;
+    if(s.titleAlign)css+=`text-align:${s.titleAlign} !important;`;
+    if(s.titleWeight)css+=`font-weight:${s.titleWeight} !important;`;
+    css+='}';
+
+    const subSel=`${root} .inv-page-head p,${root} .purchase-page-head p,${root} .page-head p,${root} .fcr-main-title span,${root} .card > .sub`;
+    css += `${subSel}{`;
+    if(s.subtitleVisible===false)css+='display:none !important;';
+    if(s.subtitleSize!=null)css+=`font-size:${px(s.subtitleSize,13)}px !important;`;
+    if(s.subtitleAlign)css+=`text-align:${s.subtitleAlign} !important;`;
+    css+='}';
+
+    if(s.descriptionVisible===false){
+      css+=`${root} .dde-section-title p,${root} .purchase-note,${root} .issue-note,${root} .subcard-note,${root} .fcr-report-meta{display:none !important;}`;
+    }else{
+      css+=`${root} .dde-section-title p,${root} .purchase-note,${root} .issue-note,${root} .subcard-note,${root} .fcr-report-meta{`;
+      if(s.descriptionSize!=null)css+=`font-size:${px(s.descriptionSize,10)}px !important;`;
+      if(s.descriptionAlign)css+=`text-align:${s.descriptionAlign} !important;`;
+      css+='}';
+    }
+
+    // Page width/padding/font family.
+    css += `${root}{`;
+    if(s.pageWidth!=null)css+=`width:${Math.max(70,Math.min(100,px(s.pageWidth,100)))}% !important;margin-left:auto !important;margin-right:auto !important;`;
+    if(s.pagePadding!=null)css+=`padding-left:${px(s.pagePadding,0)}px !important;padding-right:${px(s.pagePadding,0)}px !important;`;
+    if(s.fontFamily)css+=`font-family:${s.fontFamily} !important;`;
+    css+='}';
+
+    // Zoom only content card so sidebar stays unchanged.
+    const zoom=Math.max(.75,Math.min(1.5,px(s.pageZoom,100)/100));
+    css += `${root} > .card{zoom:${zoom} !important;}`;
+
+    return css;
+  }
+
+  function applyCurrentDesign(){
+    const p=activePanel(),id=pageId(p),el=styleEl();
+    if(!el)return;
+    // Clear previous page's dynamic override first.
+    el.textContent='';
+    if(!p||!id)return;
+    const s=loadDesign(id);
+    if(s)el.textContent=buildCss(id,s);
+  }
+
+  // Expose so Page Control Studio can force an immediate refresh after Save/Reset.
+  window.ERPPerPageDesign={apply:applyCurrentDesign,buildCss};
+
+  // Existing APD Save/Reset buttons.
+  document.getElementById('apdSave')?.addEventListener('click',()=>setTimeout(applyCurrentDesign,0),true);
+  document.getElementById('apdResetCurrent')?.addEventListener('click',()=>setTimeout(applyCurrentDesign,0),true);
+
+  // Apply when hash or history changes.
+  window.addEventListener('hashchange',()=>setTimeout(applyCurrentDesign,0));
+  window.addEventListener('popstate',()=>setTimeout(applyCurrentDesign,0));
+
+  // Lightweight active-page click check. No interval/observer.
+  let lastId='';
+  document.addEventListener('click',()=>{
+    setTimeout(()=>{
+      const id=pageId();
+      if(id!==lastId){lastId=id;applyCurrentDesign()}
+    },0)
+  },true);
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>{lastId=pageId();applyCurrentDesign()},{once:true});
+  }else{
+    lastId=pageId();applyCurrentDesign()
+  }
+
+  // ---------------- UNIVERSAL REFRESH RESTORE ----------------
+  const routes={
+    'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
+    'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
+    'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
+    'panel-material-master':()=>window.ERPMaterialMaster?.open?.(),
+    'panel-management-summary':()=>window.ERPManagementSummary?.open?.(),
+    'panel-month-summary':()=>window.ERPMonthSummary?.open?.(),
+    'panel-year-summary':()=>window.ERPYearSummary?.open?.(),
+    'panel-operating-expenses':()=>window.ERPOperatingExpenses?.open?.(),
+    'panel-final-cost-report':()=>window.ERPFinalCostReport?.open?.()
+  };
+
+  function exactHashPanel(){
+    const h=(location.hash||'').replace(/^#/,'');
+    return routes[h]?h:'';
+  }
+
+  function restoreExactHash(){
+    const target=exactHashPanel();
+    if(!target){
+      document.documentElement.classList.remove('erp-route-restoring-v1545');
+      return true;
+    }
+    const fn=routes[target];
+    if(typeof fn!=='function')return false;
+    // route wrapper exists even if module isn't ready; verify corresponding global manually.
+    try{
+      const result=fn();
+      setTimeout(()=>{
+        applyCurrentDesign();
+        window.ERPPageControlExtras?.applySaved?.();
+        document.documentElement.classList.remove('erp-route-restoring-v1545');
+      },0);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  function bootRestore(){
+    const target=exactHashPanel();
+    if(!target){
+      document.documentElement.classList.remove('erp-route-restoring-v1545');
+      return;
+    }
+    let tries=0;
+    const tryOnce=()=>{
+      tries++;
+      // Determine module readiness explicitly.
+      const ready={
+        'panel-production-consumption':!!window.ERPProductionConsumption?.open,
+        'panel-daily-data-entry':!!window.ERPDailyDataEntry?.open,
+        'panel-daily-consumption-history':!!window.ERPConsumptionHistory?.open,
+        'panel-material-master':!!window.ERPMaterialMaster?.open,
+        'panel-management-summary':!!window.ERPManagementSummary?.open,
+        'panel-month-summary':!!window.ERPMonthSummary?.open,
+        'panel-year-summary':!!window.ERPYearSummary?.open,
+        'panel-operating-expenses':!!window.ERPOperatingExpenses?.open,
+        'panel-final-cost-report':!!window.ERPFinalCostReport?.open
+      }[target];
+      if(ready){
+        restoreExactHash();
+        return;
+      }
+      if(tries<40)setTimeout(tryOnce,25);
+      else document.documentElement.classList.remove('erp-route-restoring-v1545');
+    };
+    tryOnce();
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootRestore,{once:true});
+  else bootRestore();
 })();
 </script>
 
