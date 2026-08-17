@@ -19415,6 +19415,7 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
       <div>
         <h2>Page Control Studio</h2>
         <p id="apdPageLabel">Presentation controls for the current ERP page.</p>
+        <div id="apdProfileStatus" class="apd-profile-status">Page profile: Default</div>
       </div>
       <div class="apd-head-actions">
         <span class="apd-live-badge">LIVE PREVIEW</span>
@@ -19848,19 +19849,22 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
   function applySimilar(){
     if(!page)return;
     const s=values(),hasTables=!!page.querySelector('table'),hasForms=!!page.querySelector('input,select,textarea');
-    const candidates=$$('main.content > section.panel,main.content section.panel').filter(p=>p!==page);
+    const candidates=$$('main.content > section.panel,main.content section.panel').filter(p=>p!==page)
+      .filter(p=>(!!p.querySelector('table'))===hasTables && (!!p.querySelector('input,select,textarea'))===hasForms);
+    const names=candidates.slice(0,10).map(p=>(titleEl(p)?.textContent||idFor(p)).trim());
+    const extra=candidates.length>10?`\n…and ${candidates.length-10} more page(s).`:'';
+    if(!candidates.length){if(window.toast)toast('No similar pages found');return}
+    if(!confirm(`Apply shared visual controls from this page to ${candidates.length} similar page(s)?\n\n${names.join('\n')}${extra}\n\nThis does not copy page title text, workspace header, notice bar, zoom or page-specific visibility.`))return;
     let count=0;
     candidates.forEach(p=>{
-      if((!!p.querySelector('table'))===hasTables && (!!p.querySelector('input,select,textarea'))===hasForms){
-        const id=idFor(p);save(id,{...load(id),
-          buttonFontSize:s.buttonFontSize,buttonHeight:s.buttonHeight,buttonPadding:s.buttonPadding,buttonRadius:s.buttonRadius,buttonTextAlign:s.buttonTextAlign,buttonPlacement:s.buttonPlacement,buttonGap:s.buttonGap,
-          fieldFontSize:s.fieldFontSize,fieldHeight:s.fieldHeight,fieldRadius:s.fieldRadius,fieldAlign:s.fieldAlign,labelFontSize:s.labelFontSize,fieldBorderWidth:s.fieldBorderWidth,
-          tableHeaderSize:s.tableHeaderSize,tableHeaderHeight:s.tableHeaderHeight,tableHeaderAlign:s.tableHeaderAlign,tableHeaderBold:s.tableHeaderBold,
-          tableDataSize:s.tableDataSize,tableRowHeight:s.tableRowHeight,tableDataAlign:s.tableDataAlign,tableCellPadding:s.tableCellPadding,tableWrap:s.tableWrap,tableDataBold:s.tableDataBold
-        });count++
-      }
+      const id=idFor(p);save(id,{...load(id),
+        buttonFontSize:s.buttonFontSize,buttonHeight:s.buttonHeight,buttonPadding:s.buttonPadding,buttonRadius:s.buttonRadius,buttonTextAlign:s.buttonTextAlign,buttonPlacement:s.buttonPlacement,buttonGap:s.buttonGap,
+        fieldFontSize:s.fieldFontSize,fieldHeight:s.fieldHeight,fieldRadius:s.fieldRadius,fieldAlign:s.fieldAlign,labelFontSize:s.labelFontSize,fieldBorderWidth:s.fieldBorderWidth,
+        tableHeaderSize:s.tableHeaderSize,tableHeaderHeight:s.tableHeaderHeight,tableHeaderAlign:s.tableHeaderAlign,tableHeaderBold:s.tableHeaderBold,
+        tableDataSize:s.tableDataSize,tableRowHeight:s.tableRowHeight,tableDataAlign:s.tableDataAlign,tableCellPadding:s.tableCellPadding,tableWrap:s.tableWrap,tableDataBold:s.tableDataBold
+      });count++
     });
-    if(window.toast)toast('Shared controls saved for '+count+' similar pages')
+    if(window.toast)toast('Shared visual controls saved for '+count+' similar pages')
   }
 
   function injectFinalReportButton(){
@@ -19941,79 +19945,239 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 body.apd-selecting-element main.content *,body.apd-selecting-element header.top *{cursor:crosshair !important}
 .apd-select-status{margin-top:8px;padding:8px 10px;border:1px dashed var(--border,#ccd7e3);border-radius:8px;background:#fff;font-size:10px;font-weight:750}
 #apdUndoDesign:disabled,#apdRedoDesign:disabled{opacity:.4;cursor:not-allowed}
+
+.apd-profile-status{display:inline-flex;align-items:center;gap:6px;margin-top:5px;padding:4px 8px;border:1px solid var(--border,#ccd7e3);border-radius:999px;background:#fff;font-size:9px;font-weight:850;color:var(--muted,#617387)}
+.apd-profile-status.custom{color:#087d50;border-color:#9eddbd;background:#eaf9f1}
+.apd-profile-status.default{color:#6a7280;background:#f7f8fa}
 </style>
 
 
-<script id="apdSafeUpgradeV1507">
+<script id="apdSafeUpgradeV1508">
 (function(){
   const modal=document.getElementById('advancedPageDesignerModal');if(!modal)return;
   const shell=modal.querySelector('.apd-shell'),$=id=>document.getElementById(id);
+
   const activePanel=()=>document.querySelector('main.content > section.panel.active,main.content section.panel.active,section.panel.active');
-  const pageId=()=>((activePanel()?.id||'page').replace(/^panel-/,''));
-  const workspaceKey=()=>`erp:workspace-header-design:v2:${pageId()}`;
-  const noticeKey=()=>`erp:notice-bar-design:v1:${pageId()}`;
+  const getPageId=()=>((activePanel()?.id||'page').replace(/^panel-/,''));
+  const workspaceKey=id=>`erp:workspace-header-design:v3:${id}`;
+  const noticeKey=id=>`erp:notice-bar-design:v2:${id}`;
+  const baseDesignerKey=id=>`erp:advanced-page-design:v1:${id}`;
   const wsTitle=()=>document.getElementById('workspaceTitle');
   const wsSubtitle=()=>document.getElementById('workspaceSubtitle');
   const wsHeader=()=>wsTitle()?.closest('header.top')||document.querySelector('header.top');
   const notice=()=>document.querySelector('main.content > .notice');
 
+  // Capture one clean shell baseline. Text is intentionally NOT stored for workspace
+  // because native page navigation owns the title/subtitle text for each page.
+  const shellBaseline=(()=>{
+    const h=wsHeader(),n=notice();
+    const hc=h?getComputedStyle(h):{},nc=n?getComputedStyle(n):{};
+    return {
+      header:{
+        display:hc.display||'',minHeight:hc.minHeight||'',height:hc.height||'',
+        paddingLeft:hc.paddingLeft||'',paddingRight:hc.paddingRight||'',marginBottom:hc.marginBottom||''
+      },
+      title:{
+        fontSize:getComputedStyle(wsTitle()||document.body).fontSize,
+        textAlign:getComputedStyle(wsTitle()||document.body).textAlign,
+        color:getComputedStyle(wsTitle()||document.body).color
+      },
+      subtitle:{
+        display:getComputedStyle(wsSubtitle()||document.body).display,
+        fontSize:getComputedStyle(wsSubtitle()||document.body).fontSize,
+        textAlign:getComputedStyle(wsSubtitle()||document.body).textAlign,
+        color:getComputedStyle(wsSubtitle()||document.body).color
+      },
+      notice:{
+        html:n?.innerHTML||'Changes preview instantly. <b>Save & Apply</b> stores the shared design settings for connected ERP modules.',
+        display:nc.display||'',fontSize:nc.fontSize||'',textAlign:nc.textAlign||'',
+        minHeight:nc.minHeight||'',height:nc.height||'',paddingLeft:nc.paddingLeft||'',
+        paddingRight:nc.paddingRight||'',borderRadius:nc.borderRadius||'',marginBottom:nc.marginBottom||'',
+        background:nc.background||'',color:nc.color||''
+      }
+    }
+  })();
+
   function rgbHex(c,f='#10253f'){if(!c)return f;if(c.startsWith('#'))return c;const m=c.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join(''):f}
   function px(v,d){const n=parseFloat(v);return Number.isFinite(n)?Math.round(n):d}
+  function has(k){try{return localStorage.getItem(k)!==null}catch(e){return false}}
 
-  function workspaceBase(){const t=wsTitle(),s=wsSubtitle(),h=wsHeader(),tc=t?getComputedStyle(t):{},sc=s?getComputedStyle(s):{},hc=h?getComputedStyle(h):{};return{visible:h?hc.display!=='none':true,title:t?.textContent||'',titleSize:px(tc.fontSize,28),titleAlign:tc.textAlign||'left',subtitleVisible:s?sc.display!=='none':true,subtitle:s?.textContent||'',subtitleSize:px(sc.fontSize,13),subtitleAlign:sc.textAlign||'left',height:px(hc.minHeight||hc.height,92),padding:px(hc.paddingLeft,22),gap:px(hc.marginBottom,0),color:rgbHex(tc.color)}}
-  function loadWorkspace(){const b=workspaceBase();try{return Object.assign(b,JSON.parse(localStorage.getItem(workspaceKey())||'{}'))}catch(e){return b}}
-  function workspaceUI(){return{visible:$('apdWsVisible').checked,title:$('apdWsTitle').value,titleSize:+$('apdWsTitleSize').value,titleAlign:$('apdWsTitleAlign').value,subtitleVisible:$('apdWsSubtitleVisible').checked,subtitle:$('apdWsSubtitle').value,subtitleSize:+$('apdWsSubtitleSize').value,subtitleAlign:$('apdWsSubtitleAlign').value,height:+$('apdWsHeight').value,padding:+$('apdWsPadding').value,gap:+$('apdWsGap').value,color:$('apdWsColor').value}}
-  function setWorkspaceUI(v){$('apdWsVisible').checked=!!v.visible;$('apdWsTitle').value=v.title||'';$('apdWsTitleSize').value=v.titleSize;$('apdWsTitleAlign').value=v.titleAlign;$('apdWsSubtitleVisible').checked=!!v.subtitleVisible;$('apdWsSubtitle').value=v.subtitle||'';$('apdWsSubtitleSize').value=v.subtitleSize;$('apdWsSubtitleAlign').value=v.subtitleAlign;$('apdWsHeight').value=v.height;$('apdWsPadding').value=v.padding;$('apdWsGap').value=v.gap;$('apdWsColor').value=v.color;['TitleSize','SubtitleSize','Height','Padding','Gap'].forEach(n=>{const e=$('apdWs'+n),o=$('apdWs'+n+'Val');if(e&&o)o.textContent=e.value+'px'})}
-  function applyWorkspace(v){const t=wsTitle(),s=wsSubtitle(),h=wsHeader();if(!h)return;h.style.display=v.visible?'':'none';h.style.minHeight=v.height+'px';h.style.paddingLeft=v.padding+'px';h.style.paddingRight=v.padding+'px';h.style.marginBottom=v.gap+'px';if(t){t.textContent=v.title;t.style.fontSize=v.titleSize+'px';t.style.textAlign=v.titleAlign;t.style.color=v.color}if(s){s.style.display=v.subtitleVisible?'':'none';s.textContent=v.subtitle;s.style.fontSize=v.subtitleSize+'px';s.style.textAlign=v.subtitleAlign;s.style.color=v.color}}
+  function resetSharedShell(){
+    const h=wsHeader(),t=wsTitle(),s=wsSubtitle(),n=notice();
+    if(h){
+      h.style.removeProperty('display');h.style.removeProperty('min-height');h.style.removeProperty('height');
+      h.style.removeProperty('padding-left');h.style.removeProperty('padding-right');h.style.removeProperty('margin-bottom')
+    }
+    if(t){
+      t.style.removeProperty('font-size');t.style.removeProperty('text-align');t.style.removeProperty('color')
+    }
+    if(s){
+      s.style.removeProperty('display');s.style.removeProperty('font-size');s.style.removeProperty('text-align');s.style.removeProperty('color')
+    }
+    if(n){
+      n.innerHTML=shellBaseline.notice.html;
+      ['display','font-size','text-align','min-height','height','padding-left','padding-right','border-radius','margin-bottom','background','color']
+        .forEach(p=>n.style.removeProperty(p))
+    }
+  }
 
-  function noticeBase(){const n=notice(),c=n?getComputedStyle(n):{};return{visible:n?c.display!=='none':true,text:n?.textContent?.replace(/\s+/g,' ').trim()||'Changes preview instantly. Save & Apply stores the shared design settings for connected ERP modules.',size:px(c.fontSize,12),align:c.textAlign||'left',height:px(c.minHeight||c.height,44),padding:px(c.paddingLeft,14),radius:px(c.borderRadius,8),gap:px(c.marginBottom,0),bgMode:'theme',bg:rgbHex(c.backgroundColor,'#fff6d9'),colorMode:'theme',color:rgbHex(c.color,'#17314e')}}
-  function loadNotice(){const b=noticeBase();try{return Object.assign(b,JSON.parse(localStorage.getItem(noticeKey())||'{}'))}catch(e){return b}}
-  function noticeUI(){return{visible:$('apdNoticeVisible').checked,text:$('apdNoticeText').value,size:+$('apdNoticeSize').value,align:$('apdNoticeAlign').value,height:+$('apdNoticeHeight').value,padding:+$('apdNoticePadding').value,radius:+$('apdNoticeRadius').value,gap:+$('apdNoticeGap').value,bgMode:$('apdNoticeBgMode').value,bg:$('apdNoticeBg').value,colorMode:$('apdNoticeColorMode').value,color:$('apdNoticeColor').value}}
-  function setNoticeUI(v){$('apdNoticeVisible').checked=!!v.visible;$('apdNoticeText').value=v.text||'';$('apdNoticeSize').value=v.size;$('apdNoticeAlign').value=v.align;$('apdNoticeHeight').value=v.height;$('apdNoticePadding').value=v.padding;$('apdNoticeRadius').value=v.radius;$('apdNoticeGap').value=v.gap;$('apdNoticeBgMode').value=v.bgMode;$('apdNoticeBg').value=v.bg;$('apdNoticeColorMode').value=v.colorMode;$('apdNoticeColor').value=v.color;['Size','Height','Padding','Radius','Gap'].forEach(n=>{const e=$('apdNotice'+n),o=$('apdNotice'+n+'Val');if(e&&o)o.textContent=e.value+'px'})}
-  function applyNotice(v){const n=notice();if(!n)return;n.style.display=v.visible?'':'none';const txt=String(v.text||''),phrase='Save & Apply';if(txt.includes(phrase)){const parts=txt.split(phrase);n.textContent=parts[0];const b=document.createElement('b');b.textContent=phrase;n.appendChild(b);n.appendChild(document.createTextNode(parts.slice(1).join(phrase)))}else n.textContent=txt;n.style.fontSize=v.size+'px';n.style.textAlign=v.align;n.style.minHeight=v.height+'px';n.style.paddingLeft=v.padding+'px';n.style.paddingRight=v.padding+'px';n.style.borderRadius=v.radius+'px';n.style.marginBottom=v.gap+'px';if(v.bgMode==='custom')n.style.background=v.bg;else n.style.removeProperty('background');if(v.colorMode==='custom')n.style.color=v.color;else n.style.removeProperty('color')}
+  function workspaceBase(){
+    const t=wsTitle(),s=wsSubtitle(),h=wsHeader(),tc=t?getComputedStyle(t):{},sc=s?getComputedStyle(s):{},hc=h?getComputedStyle(h):{};
+    return{visible:h?hc.display!=='none':true,title:t?.textContent||'',titleSize:px(tc.fontSize,28),titleAlign:tc.textAlign||'left',
+      subtitleVisible:s?sc.display!=='none':true,subtitle:s?.textContent||'',subtitleSize:px(sc.fontSize,13),subtitleAlign:sc.textAlign||'left',
+      height:px(hc.minHeight||hc.height,92),padding:px(hc.paddingLeft,22),gap:px(hc.marginBottom,0),color:rgbHex(tc.color)}
+  }
+  function workspaceUI(){return{visible:$('apdWsVisible').checked,title:$('apdWsTitle').value,titleSize:+$('apdWsTitleSize').value,titleAlign:$('apdWsTitleAlign').value,
+    subtitleVisible:$('apdWsSubtitleVisible').checked,subtitle:$('apdWsSubtitle').value,subtitleSize:+$('apdWsSubtitleSize').value,subtitleAlign:$('apdWsSubtitleAlign').value,
+    height:+$('apdWsHeight').value,padding:+$('apdWsPadding').value,gap:+$('apdWsGap').value,color:$('apdWsColor').value}}
+  function setWorkspaceUI(v){$('apdWsVisible').checked=!!v.visible;$('apdWsTitle').value=v.title||'';$('apdWsTitleSize').value=v.titleSize;$('apdWsTitleAlign').value=v.titleAlign;
+    $('apdWsSubtitleVisible').checked=!!v.subtitleVisible;$('apdWsSubtitle').value=v.subtitle||'';$('apdWsSubtitleSize').value=v.subtitleSize;$('apdWsSubtitleAlign').value=v.subtitleAlign;
+    $('apdWsHeight').value=v.height;$('apdWsPadding').value=v.padding;$('apdWsGap').value=v.gap;$('apdWsColor').value=v.color;
+    ['TitleSize','SubtitleSize','Height','Padding','Gap'].forEach(n=>{const e=$('apdWs'+n),o=$('apdWs'+n+'Val');if(e&&o)o.textContent=e.value+'px'})}
+  function applyWorkspace(v){const t=wsTitle(),s=wsSubtitle(),h=wsHeader();if(!h)return;h.style.display=v.visible?'':'none';h.style.minHeight=v.height+'px';h.style.paddingLeft=v.padding+'px';h.style.paddingRight=v.padding+'px';h.style.marginBottom=v.gap+'px';
+    if(t){t.textContent=v.title;t.style.fontSize=v.titleSize+'px';t.style.textAlign=v.titleAlign;t.style.color=v.color}
+    if(s){s.style.display=v.subtitleVisible?'':'none';s.textContent=v.subtitle;s.style.fontSize=v.subtitleSize+'px';s.style.textAlign=v.subtitleAlign;s.style.color=v.color}}
 
+  function noticeBase(){
+    const n=notice(),c=n?getComputedStyle(n):{};
+    return{visible:n?c.display!=='none':true,text:n?.textContent?.replace(/\s+/g,' ').trim()||'Changes preview instantly. Save & Apply stores the shared design settings for connected ERP modules.',
+      size:px(c.fontSize,12),align:c.textAlign||'left',height:px(c.minHeight||c.height,44),padding:px(c.paddingLeft,14),radius:px(c.borderRadius,8),
+      gap:px(c.marginBottom,0),bgMode:'theme',bg:rgbHex(c.backgroundColor,'#fff6d9'),colorMode:'theme',color:rgbHex(c.color,'#17314e')}
+  }
+  function noticeUI(){return{visible:$('apdNoticeVisible').checked,text:$('apdNoticeText').value,size:+$('apdNoticeSize').value,align:$('apdNoticeAlign').value,
+    height:+$('apdNoticeHeight').value,padding:+$('apdNoticePadding').value,radius:+$('apdNoticeRadius').value,gap:+$('apdNoticeGap').value,
+    bgMode:$('apdNoticeBgMode').value,bg:$('apdNoticeBg').value,colorMode:$('apdNoticeColorMode').value,color:$('apdNoticeColor').value}}
+  function setNoticeUI(v){$('apdNoticeVisible').checked=!!v.visible;$('apdNoticeText').value=v.text||'';$('apdNoticeSize').value=v.size;$('apdNoticeAlign').value=v.align;
+    $('apdNoticeHeight').value=v.height;$('apdNoticePadding').value=v.padding;$('apdNoticeRadius').value=v.radius;$('apdNoticeGap').value=v.gap;
+    $('apdNoticeBgMode').value=v.bgMode;$('apdNoticeBg').value=v.bg;$('apdNoticeColorMode').value=v.colorMode;$('apdNoticeColor').value=v.color;
+    ['Size','Height','Padding','Radius','Gap'].forEach(n=>{const e=$('apdNotice'+n),o=$('apdNotice'+n+'Val');if(e&&o)o.textContent=e.value+'px'})}
+  function applyNotice(v){const n=notice();if(!n)return;n.style.display=v.visible?'':'none';const txt=String(v.text||''),phrase='Save & Apply';
+    if(txt.includes(phrase)){const parts=txt.split(phrase);n.textContent=parts[0];const b=document.createElement('b');b.textContent=phrase;n.appendChild(b);n.appendChild(document.createTextNode(parts.slice(1).join(phrase)))}else n.textContent=txt;
+    n.style.fontSize=v.size+'px';n.style.textAlign=v.align;n.style.minHeight=v.height+'px';n.style.paddingLeft=v.padding+'px';n.style.paddingRight=v.padding+'px';n.style.borderRadius=v.radius+'px';n.style.marginBottom=v.gap+'px';
+    if(v.bgMode==='custom')n.style.background=v.bg;else n.style.removeProperty('background');if(v.colorMode==='custom')n.style.color=v.color;else n.style.removeProperty('color')}
+
+  function profileStatus(id){
+    const custom=has(baseDesignerKey(id))||has(workspaceKey(id))||has(noticeKey(id));
+    const el=$('apdProfileStatus');if(el){el.textContent=`Page profile: ${custom?'Custom Design Saved':'Using Default Design'} • ${id}`;el.classList.toggle('custom',custom);el.classList.toggle('default',!custom)}
+    const label=$('apdPageLabel');if(label){const p=activePanel();const inner=p?.querySelector('.inv-page-head h2,.purchase-page-head h2,.page-head h2,.fcr-main-title h2,.card > h2');label.textContent=`Editing page: ${inner?.textContent?.trim()||wsTitle()?.textContent?.trim()||id} • Page ID: ${id}`}
+  }
+
+  function loadPageExtras(id){
+    // Always start from clean defaults so previous page can never leak.
+    resetSharedShell();
+    const wb=workspaceBase(),nb=noticeBase();
+    let w=null,n=null;
+    try{w=JSON.parse(localStorage.getItem(workspaceKey(id))||'null');n=JSON.parse(localStorage.getItem(noticeKey(id))||'null')}catch(e){}
+    if(w)applyWorkspace(Object.assign(wb,w));
+    if(n)applyNotice(Object.assign(nb,n));
+    profileStatus(id)
+  }
+
+  function loadDesigner(){
+    const id=getPageId();
+    loadPageExtras(id);
+    let w=workspaceBase(),n=noticeBase();
+    try{w=Object.assign(w,JSON.parse(localStorage.getItem(workspaceKey(id))||'{}'));n=Object.assign(n,JSON.parse(localStorage.getItem(noticeKey(id))||'{}'))}catch(e){}
+    setWorkspaceUI(w);setNoticeUI(n);undo=[];redo=[];push(true);profileStatus(id)
+  }
+
+  // -------- History --------
   let undo=[],redo=[],historyTimer=null,restoring=false;
   function state(){const o={};modal.querySelectorAll('input,select,textarea').forEach(e=>{if(e.id)o[e.id]=e.type==='checkbox'?e.checked:e.value});return o}
   function same(a,b){return JSON.stringify(a)===JSON.stringify(b)}
   function updateHistory(){if($('apdUndoDesign'))$('apdUndoDesign').disabled=undo.length<2;if($('apdRedoDesign'))$('apdRedoDesign').disabled=!redo.length}
   function push(force=false){if(restoring)return;const s=state();if(force||!undo.length||!same(undo[undo.length-1],s)){undo.push(s);if(undo.length>50)undo.shift();redo=[];updateHistory()}}
   function queue(){if(restoring)return;clearTimeout(historyTimer);historyTimer=setTimeout(()=>push(false),160)}
-  function restore(s){restoring=true;Object.entries(s||{}).forEach(([id,v])=>{const e=$(id);if(!e)return;if(e.type==='checkbox')e.checked=!!v;else e.value=v});modal.querySelectorAll('input,select,textarea').forEach(e=>{if(!e.id)return;e.dispatchEvent(new Event((e.type==='range'||e.type==='text'||e.type==='color')?'input':'change',{bubbles:true}))});applyWorkspace(workspaceUI());applyNotice(noticeUI());restoring=false;updateHistory()}
+  function restore(s){restoring=true;Object.entries(s||{}).forEach(([id,v])=>{const e=$(id);if(!e)return;if(e.type==='checkbox')e.checked=!!v;else e.value=v});
+    modal.querySelectorAll('input,select,textarea').forEach(e=>{if(!e.id)return;e.dispatchEvent(new Event((e.type==='range'||e.type==='text'||e.type==='color')?'input':'change',{bubbles:true}))});
+    applyWorkspace(workspaceUI());applyNotice(noticeUI());restoring=false;updateHistory()}
   $('apdUndoDesign').onclick=()=>{if(undo.length<2)return;redo.push(undo.pop());restore(undo[undo.length-1])};
   $('apdRedoDesign').onclick=()=>{if(!redo.length)return;const s=redo.pop();undo.push(s);restore(s)};
   modal.querySelectorAll('input,select,textarea').forEach(e=>e.addEventListener((e.type==='range'||e.type==='text'||e.type==='color')?'input':'change',queue));
 
-  const extra=['apdWsVisible','apdWsTitle','apdWsTitleSize','apdWsTitleAlign','apdWsSubtitleVisible','apdWsSubtitle','apdWsSubtitleSize','apdWsSubtitleAlign','apdWsHeight','apdWsPadding','apdWsGap','apdWsColor','apdNoticeVisible','apdNoticeText','apdNoticeSize','apdNoticeAlign','apdNoticeHeight','apdNoticePadding','apdNoticeRadius','apdNoticeGap','apdNoticeBgMode','apdNoticeBg','apdNoticeColorMode','apdNoticeColor'];
+  const extra=['apdWsVisible','apdWsTitle','apdWsTitleSize','apdWsTitleAlign','apdWsSubtitleVisible','apdWsSubtitle','apdWsSubtitleSize','apdWsSubtitleAlign','apdWsHeight','apdWsPadding','apdWsGap','apdWsColor',
+    'apdNoticeVisible','apdNoticeText','apdNoticeSize','apdNoticeAlign','apdNoticeHeight','apdNoticePadding','apdNoticeRadius','apdNoticeGap','apdNoticeBgMode','apdNoticeBg','apdNoticeColorMode','apdNoticeColor'];
   extra.forEach(id=>{const e=$(id);if(!e)return;e.addEventListener((e.type==='text'||e.type==='range'||e.type==='color')?'input':'change',()=>{applyWorkspace(workspaceUI());applyNotice(noticeUI())})});
 
-  function loadDesigner(){const w=loadWorkspace(),n=loadNotice();setWorkspaceUI(w);applyWorkspace(w);setNoticeUI(n);applyNotice(n);undo=[];redo=[];push(true)}
-  $('apdSave')?.addEventListener('click',()=>{try{localStorage.setItem(workspaceKey(),JSON.stringify(workspaceUI()));localStorage.setItem(noticeKey(),JSON.stringify(noticeUI()))}catch(e){}},true);
+  $('apdSave')?.addEventListener('click',()=>{
+    const id=getPageId();
+    try{localStorage.setItem(workspaceKey(id),JSON.stringify(workspaceUI()));localStorage.setItem(noticeKey(id),JSON.stringify(noticeUI()))}catch(e){}
+    profileStatus(id)
+  },true);
 
-  function bindLaunchers(){document.querySelectorAll('.apd-launch,#purchasePcAdvanced,.purchase-controller-btn:not([data-purchase-controller])').forEach(b=>{if(b.dataset.apdExtraBound)return;b.dataset.apdExtraBound='1';b.addEventListener('click',()=>setTimeout(loadDesigner,0))})}
+  // Reset Current Page should also remove shell extras for this page only.
+  $('apdResetCurrent')?.addEventListener('click',()=>{
+    const id=getPageId();
+    try{localStorage.removeItem(workspaceKey(id));localStorage.removeItem(noticeKey(id))}catch(e){}
+    setTimeout(()=>{loadPageExtras(id);setWorkspaceUI(workspaceBase());setNoticeUI(noticeBase());profileStatus(id)},0)
+  },true);
+
+  function bindLaunchers(){document.querySelectorAll('.apd-launch,#purchasePcAdvanced,.purchase-controller-btn:not([data-purchase-controller])').forEach(b=>{
+    if(b.dataset.apdExtraBound)return;b.dataset.apdExtraBound='1';b.addEventListener('click',()=>setTimeout(loadDesigner,0))
+  })}
   bindLaunchers();
 
+  // -------- Move / Dock --------
   function clearDock(){modal.classList.remove('apd-dock-left','apd-dock-right');shell.style.right=''}
   $('apdDockLeft').onclick=()=>{modal.classList.remove('apd-dock-right','apd-minimized');modal.classList.add('apd-dock-left')};
   $('apdDockRight').onclick=()=>{modal.classList.remove('apd-dock-left','apd-minimized');modal.classList.add('apd-dock-right')};
   $('apdCenter').onclick=()=>{clearDock();shell.style.left='50%';shell.style.top='72px';shell.style.transform='translateX(-50%)'};
   $('apdMinimize').onclick=()=>{modal.classList.toggle('apd-minimized');$('apdMinimize').textContent=modal.classList.contains('apd-minimized')?'□':'—'};
-
   const move=$('apdMoveHandle');let drag=null;
   move.addEventListener('pointerdown',e=>{if(e.button!==0)return;clearDock();const r=shell.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top,id:e.pointerId};move.setPointerCapture?.(e.pointerId);e.preventDefault();e.stopPropagation()});
   move.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const x=Math.max(0,Math.min(innerWidth-shell.offsetWidth,e.clientX-drag.dx)),y=Math.max(0,Math.min(innerHeight-70,e.clientY-drag.dy));shell.style.left=x+'px';shell.style.top=y+'px';shell.style.transform='none'});
   function end(){if(!drag)return;try{move.releasePointerCapture?.(drag.id)}catch(e){}drag=null}
   move.addEventListener('pointerup',end);move.addEventListener('pointercancel',end);
 
+  // -------- Select Element --------
   let selecting=false,selected=null;
-  function name(el){if(el===wsTitle())return 'Workspace Title — '+(el.textContent||'').trim();if(el===wsSubtitle())return 'Workspace Subtitle — '+(el.textContent||'').trim();if(el===notice()||el.closest?.('.notice'))return 'Notice / Information Bar';if(el.closest?.('button'))return 'Button — '+(el.closest('button').textContent||'').trim();if(el.closest?.('input,select,textarea'))return 'Field — '+(el.closest('input,select,textarea').placeholder||el.closest('input,select,textarea').id||'Input');if(el.closest?.('th'))return 'Table Header — '+(el.closest('th').textContent||'').trim();if(el.closest?.('td'))return 'Table Data Cell';const h=el.closest?.('h1,h2,h3,h4');if(h)return 'Title / Heading — '+(h.textContent||'').trim();return el.tagName.toLowerCase()+(el.id?' #'+el.id:'')}
-  function tab(el){if(el===wsTitle()||el===wsSubtitle()||el.closest?.('header.top'))return'workspace';if(el===notice()||el.closest?.('.notice'))return'notice';if(el.closest?.('button'))return'buttons';if(el.closest?.('input,select,textarea,label'))return'fields';if(el.closest?.('table,thead,tbody,tr,th,td'))return'tables';if(el.closest?.('.dde-section,.dde-subcard,.fcr-block,.summary-card,.metric-card,.kpi-card,.card'))return'cards';return'identity'}
-  function pick(e){if(!selecting||e.target.closest('#advancedPageDesignerModal'))return;e.preventDefault();e.stopPropagation();selecting=false;document.body.classList.remove('apd-selecting-element');$('apdSelectElement').textContent='⌖ Select';modal.classList.remove('apd-minimized');selected?.classList.remove('apd-selected-element');selected=e.target;selected.classList.add('apd-selected-element');const t=tab(selected);modal.querySelector(`#apdTabs button[data-apd-tab="${t}"]`)?.click();if($('apdSelectedStatus'))$('apdSelectedStatus').textContent='Selected: '+name(selected)+' → '+t+' controls';setTimeout(()=>selected?.classList.remove('apd-selected-element'),1800);document.removeEventListener('click',pick,true)}
-  $('apdSelectElement').onclick=()=>{selecting=!selecting;document.body.classList.toggle('apd-selecting-element',selecting);$('apdSelectElement').textContent=selecting?'✕ Cancel':'⌖ Select';modal.classList.toggle('apd-minimized',selecting);if(selecting)document.addEventListener('click',pick,true);else document.removeEventListener('click',pick,true)};
+  function name(el){if(el===wsTitle())return 'Workspace Title — '+(el.textContent||'').trim();if(el===wsSubtitle())return 'Workspace Subtitle — '+(el.textContent||'').trim();
+    if(el===notice()||el.closest?.('.notice'))return 'Notice / Information Bar';if(el.closest?.('button'))return 'Button — '+(el.closest('button').textContent||'').trim();
+    if(el.closest?.('input,select,textarea'))return 'Field — '+(el.closest('input,select,textarea').placeholder||el.closest('input,select,textarea').id||'Input');
+    if(el.closest?.('th'))return 'Table Header — '+(el.closest('th').textContent||'').trim();if(el.closest?.('td'))return 'Table Data Cell';
+    const h=el.closest?.('h1,h2,h3,h4');if(h)return 'Title / Heading — '+(h.textContent||'').trim();return el.tagName.toLowerCase()+(el.id?' #'+el.id:'')}
+  function tab(el){if(el===wsTitle()||el===wsSubtitle()||el.closest?.('header.top'))return'workspace';if(el===notice()||el.closest?.('.notice'))return'notice';if(el.closest?.('button'))return'buttons';
+    if(el.closest?.('input,select,textarea,label'))return'fields';if(el.closest?.('table,thead,tbody,tr,th,td'))return'tables';
+    if(el.closest?.('.dde-section,.dde-subcard,.fcr-block,.summary-card,.metric-card,.kpi-card,.card'))return'cards';return'identity'}
+  function pick(e){if(!selecting||e.target.closest('#advancedPageDesignerModal'))return;e.preventDefault();e.stopPropagation();selecting=false;document.body.classList.remove('apd-selecting-element');$('apdSelectElement').textContent='⌖ Select';
+    modal.classList.remove('apd-minimized');selected?.classList.remove('apd-selected-element');selected=e.target;selected.classList.add('apd-selected-element');
+    const t=tab(selected);modal.querySelector(`#apdTabs button[data-apd-tab="${t}"]`)?.click();if($('apdSelectedStatus'))$('apdSelectedStatus').textContent='Selected: '+name(selected)+' → '+t+' controls';
+    setTimeout(()=>selected?.classList.remove('apd-selected-element'),1800);document.removeEventListener('click',pick,true)}
+  $('apdSelectElement').onclick=()=>{selecting=!selecting;document.body.classList.toggle('apd-selecting-element',selecting);$('apdSelectElement').textContent=selecting?'✕ Cancel':'⌖ Select';modal.classList.toggle('apd-minimized',selecting);
+    if(selecting)document.addEventListener('click',pick,true);else document.removeEventListener('click',pick,true)};
 
-  function applySaved(){try{const w=JSON.parse(localStorage.getItem(workspaceKey())||'null');if(w)applyWorkspace(Object.assign(workspaceBase(),w));const n=JSON.parse(localStorage.getItem(noticeKey())||'null');if(n)applyNotice(Object.assign(noticeBase(),n))}catch(e){}}
-  window.addEventListener('hashchange',()=>setTimeout(applySaved,0));window.addEventListener('popstate',()=>setTimeout(applySaved,0));
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applySaved,{once:true});else applySaved();
-  window.ERPPageControlExtras={applySaved,loadDesigner};
+  // -------- Page isolation hook --------
+  // We intentionally avoid MutationObserver/setInterval. Existing page navigation changes
+  // the hash; browser Back/Forward uses popstate. We also patch common open calls by
+  // scheduling one isolated reapply after navigation clicks.
+  let lastId='';
+  function isolateAfterNavigation(){
+    const id=getPageId();
+    if(!id)return;
+    // Native page opener gets one event-loop turn to set its own title/subtitle first.
+    setTimeout(()=>{
+      const current=getPageId();
+      if(current!==id)return;
+      loadPageExtras(current);
+      lastId=current
+    },0)
+  }
+  window.addEventListener('hashchange',isolateAfterNavigation);
+  window.addEventListener('popstate',isolateAfterNavigation);
+
+  // Lightweight delegated navigation hook: only reacts when active page ID actually changed.
+  document.addEventListener('click',()=>{
+    const before=getPageId();
+    setTimeout(()=>{
+      const after=getPageId();
+      if(after!==lastId || after!==before){loadPageExtras(after);lastId=after}
+    },0)
+  },true);
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{lastId=getPageId();loadPageExtras(lastId)},{once:true});
+  else{lastId=getPageId();loadPageExtras(lastId)}
+
+  window.ERPPageControlExtras={applySaved:()=>loadPageExtras(getPageId()),loadDesigner};
 })();
 </script>
 
