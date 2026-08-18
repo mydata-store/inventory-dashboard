@@ -22012,4 +22012,193 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 })();
 </script>
 
+
+<style id="erpUniversalSamePageControllerV1525Style">
+/* Universal launcher only. It does not alter page business layout or data logic. */
+.erp-universal-page-controller-v1525{
+  flex:0 0 auto;
+  white-space:nowrap;
+}
+.erp-universal-controller-actions-v1525{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-left:auto;
+}
+.erp-universal-controller-fallback-v1525{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  margin:0 0 8px;
+}
+</style>
+
+<script id="erpUniversalSamePageControllerV1525">
+(function(){
+  const BTN_CLASS='erp-universal-page-controller-v1525';
+
+  function panelId(panel){
+    return String(panel?.id||'').replace(/^panel-/,'').trim();
+  }
+
+  function hasController(panel){
+    if(!panel)return true;
+    return !!panel.querySelector(
+      '.erp-universal-page-controller-v1525,'+
+      '.purchase-controller-btn,'+
+      '.apd-launch,'+
+      '[data-purchase-controller],'+
+      '[data-page-controller]'
+    );
+  }
+
+  function controllerTextExists(panel){
+    return [...panel.querySelectorAll('button')].some(b=>
+      /page\s*(controller|designer)/i.test(String(b.textContent||'').trim())
+    );
+  }
+
+  function makeButton(panel){
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn '+BTN_CLASS;
+    btn.textContent='⚙ Page Controller';
+    btn.title='Design this page without leaving it';
+    btn.dataset.pageId=panelId(panel);
+
+    btn.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Open the existing Page Control Studio against THIS panel.
+      // No route change and no business function is called.
+      if(window.ERPAdvancedPageDesigner?.openPage){
+        window.ERPAdvancedPageDesigner.openPage(panel);
+        setTimeout(()=>{
+          window.ERPPageControlExtras?.loadDesigner?.();
+          window.ERPColumnSummaryDesigner?.applySaved?.();
+        },0);
+      }else if(window.ERPAdvancedPageDesigner?.open){
+        window.ERPAdvancedPageDesigner.open();
+      }else if(window.toast){
+        toast('Page Controller is not ready yet');
+      }
+    },true);
+
+    return btn;
+  }
+
+  function actionHost(panel){
+    // Prefer an existing action/button area so the page structure is not changed.
+    const selectors=[
+      '.inv-page-head .actions',
+      '.purchase-page-head .actions',
+      '.page-head .actions',
+      '.fcr-actions',
+      '.mbr-top-actions',
+      '.cvr-head-actions',
+      '.pc-month-head-actions',
+      '.dde-head-actions',
+      '.header-actions',
+      '.page-actions',
+      '.toolbar-actions'
+    ];
+    for(const sel of selectors){
+      const el=panel.querySelector(sel);
+      if(el)return {host:el,fallback:false};
+    }
+
+    // If the header itself already contains buttons, create a small action group inside it.
+    const heads=[
+      '.inv-page-head',
+      '.purchase-page-head',
+      '.page-head',
+      '.module-head',
+      '.section-head'
+    ];
+    for(const sel of heads){
+      const head=panel.querySelector(sel);
+      if(head){
+        const existing=[...head.children].find(x=>
+          x.matches?.('.erp-universal-controller-actions-v1525')
+        );
+        if(existing)return {host:existing,fallback:false};
+
+        const actions=document.createElement('div');
+        actions.className='erp-universal-controller-actions-v1525';
+        head.appendChild(actions);
+        return {host:actions,fallback:false};
+      }
+    }
+
+    // Last-resort launcher row inside the panel. No existing element is modified.
+    let row=panel.querySelector(':scope > .erp-universal-controller-fallback-v1525');
+    if(!row){
+      row=document.createElement('div');
+      row.className='erp-universal-controller-fallback-v1525';
+      panel.insertBefore(row,panel.firstChild);
+    }
+    return {host:row,fallback:true};
+  }
+
+  function ensurePanel(panel){
+    if(!panel || !panel.matches('section.panel'))return;
+
+    // Existing dedicated controllers are kept exactly as they are.
+    if(hasController(panel) || controllerTextExists(panel))return;
+
+    const {host}=actionHost(panel);
+    if(!host)return;
+    host.appendChild(makeButton(panel));
+  }
+
+  function ensureAll(){
+    document.querySelectorAll('main.content section.panel').forEach(ensurePanel);
+  }
+
+  function ensureActive(){
+    const active=document.querySelector('main.content section.panel.active');
+    if(active)ensurePanel(active);
+  }
+
+  function bind(){
+    ensureAll();
+
+    // Pages in this ERP are frequently built only when opened.
+    // Re-check immediately after normal navigation without changing routing.
+    document.addEventListener('click',function(e){
+      if(e.target.closest('#advancedPageDesignerModal'))return;
+      setTimeout(()=>{
+        ensureActive();
+        ensureAll();
+      },0);
+    },true);
+
+    window.addEventListener('hashchange',()=>setTimeout(()=>{
+      ensureActive();
+      ensureAll();
+    },0));
+
+    window.addEventListener('popstate',()=>setTimeout(()=>{
+      ensureActive();
+      ensureAll();
+    },0));
+
+    // Expose a harmless refresh hook for dynamically-created future pages.
+    window.ERPUniversalPageController={
+      refresh:ensureAll,
+      ensurePage:ensurePanel
+    };
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',bind,{once:true});
+  }else{
+    bind();
+  }
+})();
+</script>
+
 </body></html>
