@@ -13346,11 +13346,6 @@ function pcBuild(){
         <strong>Month Summary</strong>
         <span>Open monthly production, energy, ash, steam and cost analysis.</span>
       </button>
-      <button class="pc-nav-card" type="button" data-pc-page="month" style="display:none">
-        <div class="pc-nav-icon">▧</div>
-        <strong>Year Summary</strong>
-        <span>Open yearly totals, monthly comparison and annual performance.</span>
-      </button>
     </div>
 
     <div class="pc-dashboard-grid">
@@ -13398,7 +13393,7 @@ function pcBuild(){
     </div>
 
     <div class="pc-dashboard-note">
-      This dashboard is the main Production & Consumption home page. Daily Data Entry and Material Master are connected; Month Summary and Year Summary will be built next.
+      This dashboard is the main Production & Consumption home page. Daily Data Entry, Material Master, Management Summary, Operating Expenses and Production Summary are connected.
     </div>
   </div>`;
   host.appendChild(sec);
@@ -14281,7 +14276,7 @@ function pcOpen(){
   document.querySelectorAll('[data-production-consumption-open]').forEach(x=>x.classList.add('active'));
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Production & Consumption';
-  if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Daily Operations • Month Summary • Year Summary';
+  if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Daily Operations • Production Summary • Materials • Cost';
   try{
     localStorage.setItem('erpStudioLastPanel','production-consumption');
     localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'production-consumption')
@@ -19951,7 +19946,7 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
     if(sub){sub.style.display=s.subtitleVisible?'':'none';if(s.subtitleText!==undefined)sub.textContent=s.subtitleText;sub.style.fontSize=s.subtitleSize+'px';sub.style.textAlign=s.subtitleAlign}
     descriptions(p).forEach(x=>{x.style.display=s.descriptionVisible?'':'none';x.style.fontSize=s.descriptionSize+'px';x.style.textAlign=s.descriptionAlign});
 
-    buttons(p).forEach(b=>{b.style.display=s.buttonsVisible?'':'none';b.style.fontSize=s.buttonFontSize+'px';b.style.minHeight=s.buttonHeight+'px';b.style.height='auto';b.style.paddingLeft=s.buttonPadding+'px';b.style.paddingRight=s.buttonPadding+'px';b.style.borderRadius=s.buttonRadius+'px';b.style.textAlign=s.buttonTextAlign});
+    buttons(p).forEach(b=>{b.style.display=s.buttonsVisible?'':'none';b.style.fontSize=s.buttonFontSize+'px';b.style.minHeight=s.buttonHeight+'px';b.style.height='auto';b.style.paddingLeft=s.buttonPadding+'px';b.style.paddingRight=s.buttonPadding+'px';b.style.borderRadius=s.buttonRadius+'px';b.style.textAlign=s.buttonTextAlign;b.style.alignItems='center';b.style.justifyContent=s.buttonTextAlign==='left'?'flex-start':(s.buttonTextAlign==='right'?'flex-end':'center')});
     actionContainers(p).forEach(x=>{x.style.justifyContent=s.buttonPlacement;x.style.gap=s.buttonGap+'px'});
 
     fieldsEls(p).forEach(x=>{x.style.fontSize=s.fieldFontSize+'px';x.style.minHeight=s.fieldHeight+'px';x.style.height=(x.tagName==='TEXTAREA'?'auto':s.fieldHeight+'px');x.style.borderRadius=s.fieldRadius+'px';x.style.textAlign=s.fieldAlign;x.style.borderWidth=s.fieldBorderWidth+'px'});
@@ -20026,10 +20021,19 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 
   function saveCurrent(){
     if(!page)return;
-    const s=values();save(pageId,s);apply(page,s);window.ERPPerPageDesign?.preview?.(s);
-    try{window.ERPAudit?.log?.({module:'Page Control Studio',page:pageId,action:'Save Page Design',detail:'Advanced presentation settings saved'})}catch(e){}
+    const targetPage=page,targetId=pageId,s=values();
+    save(targetId,s);
+    apply(targetPage,s);
+    window.ERPPerPageDesign?.preview?.(s);
+    try{window.ERPAudit?.log?.({module:'Page Control Studio',page:targetId,action:'Save Page Design',detail:'Advanced presentation settings saved'})}catch(e){}
     close(false);
-    if(window.toast)toast('Page design saved')
+    // Reapply after close because other presentation helpers run during close.
+    setTimeout(()=>{
+      const p=document.getElementById('panel-'+targetId);
+      const raw=localStorage.getItem(storeKey(targetId));
+      if(p&&raw){try{apply(p,{...readCurrentAsDefaults(p),...JSON.parse(raw)})}catch(e){}}
+    },0);
+    if(window.toast)toast('Page design saved for '+targetId)
   }
   function resetCurrent(){
     if(!page)return;
@@ -20107,17 +20111,35 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
       $('#purchasePcModal')?.classList.remove('open');open(p)
     });
 
-    // Apply stored settings on initial load and whenever active panel changes.
+    // Apply stored settings on initial load, page navigation, and after an
+    // active page rebuilds its inner HTML. This keeps saved Page Control Studio
+    // profiles persistent after refresh without changing business logic.
     const main=document.querySelector('main.content');
+    let applyTimer=null;
+    const scheduleApply=(delay=0)=>{
+      clearTimeout(applyTimer);
+      applyTimer=setTimeout(()=>{
+        applySavedToActive();
+        // Some modules finish rendering one tick later.
+        setTimeout(applySavedToActive,35);
+      },delay)
+    };
     if(main){
       const obs=new MutationObserver(ms=>{
-        if(ms.some(m=>m.type==='attributes'&&m.attributeName==='class'&&m.target.matches?.('section.panel')))setTimeout(applySavedToActive,0)
+        const active=activePanel();
+        const needsApply=ms.some(m=>
+          (m.type==='attributes'&&m.attributeName==='class'&&m.target.matches?.('section.panel')) ||
+          (m.type==='childList'&&active&&(m.target===active||active.contains(m.target)))
+        );
+        if(needsApply)scheduleApply(0)
       });
-      obs.observe(main,{subtree:true,attributes:true,attributeFilter:['class']})
+      obs.observe(main,{subtree:true,attributes:true,attributeFilter:['class'],childList:true})
     }
-    window.addEventListener('hashchange',()=>setTimeout(applySavedToActive,0));
-    document.addEventListener('click',()=>setTimeout(applySavedToActive,0),true);
-    setTimeout(applySavedToActive,60)
+    window.addEventListener('hashchange',()=>scheduleApply(0));
+    window.addEventListener('popstate',()=>scheduleApply(0));
+    document.addEventListener('click',()=>scheduleApply(0),true);
+    window.addEventListener('load',()=>scheduleApply(0),{once:true});
+    scheduleApply(60)
   }
 
   window.ERPAdvancedPageDesigner={open:()=>open(activePanel()),openPage:open,applySaved:applySavedToActive};
@@ -20169,7 +20191,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   // Canonical native workspace identity for Production & Consumption pages.
   // These are the titles the ERP itself owns before any Page Designer override.
   const nativePageMeta={
-    'production-consumption':{title:'Production & Consumption',subtitle:'Daily Operations • Month Summary • Year Summary'},
+    'production-consumption':{title:'Production & Consumption',subtitle:'Daily Operations • Production Summary • Materials • Cost'},
     'daily-data-entry':{title:'Daily Data Entry',subtitle:'Production • Ash • Electricity • Consumption'},
     'daily-consumption-history':{title:'Consumption History & Analysis',subtitle:'Daily • Material • Cost • Yield Analysis'},
     'material-master':{title:'Material Group & Rate Master',subtitle:'Materials • Units • Cost Centres • Standards • Effective Rates'},
@@ -22195,6 +22217,31 @@ main.content section.panel .erp-universal-page-controller-v1526{
   }else{
     bind();
   }
+})();
+</script>
+
+
+<script id="erpPageDesignPersistenceV1528">
+(function(){
+  function reapply(){
+    const p=document.querySelector('main.content section.panel.active');
+    if(!p)return;
+    window.ERPAdvancedPageDesigner?.applySaved?.();
+    window.ERPPerPageDesign?.apply?.();
+  }
+  function scheduled(){
+    setTimeout(reapply,0);
+    setTimeout(reapply,60);
+    setTimeout(reapply,180);
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',scheduled,{once:true});
+  }else{
+    scheduled();
+  }
+  window.addEventListener('hashchange',scheduled);
+  window.addEventListener('popstate',scheduled);
+  window.ERPPageDesignPersistenceV1528={reapply:scheduled};
 })();
 </script>
 
