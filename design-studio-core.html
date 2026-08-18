@@ -3191,7 +3191,7 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
       <div class="cgp-entry-grid">
         <div><label>CGP Number *</label><input id="cgpNo" placeholder="CGP-00000"></div>
         <div><label>CGP Date *</label><input id="cgpDate" placeholder="Date"></div>
-        <div><label>Scrapper / Buyer *</label><div class="purchase-auto-wrap"><input id="cgpParty" autocomplete="off" placeholder="Type scrapper / buyer..."><div class="purchase-auto-list"></div></div></div>
+        <div><label>Scrapper / Buyer *</label><div class="purchase-auto-wrap"><input id="cgpParty" autocomplete="off" placeholder="Search Scrapper Master..."><div class="purchase-auto-list"></div></div></div>
         <div><label>Department / Location</label><div class="purchase-auto-wrap"><input id="cgpDepartment" autocomplete="off" placeholder="Type department / location..."><div class="purchase-auto-list"></div></div></div>
         <div><label>Phone</label><input id="cgpPhone" placeholder="Phone number"></div>
         <div><label>Vehicle No.</label><div class="purchase-auto-wrap"><input id="cgpVehicle" autocomplete="off" placeholder="Vehicle number"><div class="purchase-auto-list"></div></div></div>
@@ -5454,6 +5454,21 @@ const MASTER_TYPES={
   carriers:{name:'Carriers',singular:'Carrier',code:'CAR',fields:[
     ['name','Carrier Name','text',true],['phone','Phone','text',false],['vehicleNo','Vehicle No','text',false],['status','Status','select',false,['active','inactive']]
   ],columns:[['code','Code'],['name','Carrier'],['phone','Phone'],['vehicleNo','Vehicle No'],['status','Status']]},
+  scrappers:{name:'Scrappers',singular:'Scrapper / Scrap Dealer',code:'SCR',fields:[
+    ['name','Scrapper / Dealer Name','text',true],
+    ['contactPerson','Proprietor / Contact Person','text',false],
+    ['phone','Phone','text',false],
+    ['alternatePhone','Alternate Phone','text',false],
+    ['cnicCardNo','CNIC / Card No.','text',false],
+    ['vehicleNo','Vehicle No.','text',false],
+    ['scrapTypes','Scrap Types / Materials Dealt In','tags-specialty',false],
+    ['address','Address','textarea',false],
+    ['remarks','Remarks','textarea',false],
+    ['status','Status','select',false,['active','inactive']]
+  ],columns:[
+    ['code','Code'],['name','Scrapper / Dealer'],['contactPerson','Contact Person'],['phone','Phone'],
+    ['vehicleNo','Vehicle No.'],['scrapTypes','Scrap Types'],['address','Address'],['status','Status']
+  ]},
   authorization:{name:'Authorization',singular:'Authorization',code:'AUT',fields:[
     ['name','Authorized Person','text',true],['designation','Designation','text',false],['department','Department','text',false],['status','Status','select',false,['active','inactive']]
   ],columns:[['code','Code'],['name','Authorized Person'],['designation','Designation'],['department','Department'],['status','Status']]},
@@ -5967,6 +5982,9 @@ function masterSearchHaystack(record){
   }
   if(masterCurrent==='workshops' && Array.isArray(record?.specializedIn)){
     return (base+' '+record.specializedIn.join(' ')).toLowerCase()
+  }
+  if(masterCurrent==='scrappers' && Array.isArray(record?.scrapTypes)){
+    return (base+' '+record.scrapTypes.join(' ')).toLowerCase()
   }
   return base
 }
@@ -9804,7 +9822,40 @@ function cgpQty(r){return cgpItems(r).reduce((n,x)=>n+purchaseNum(x.qty),0)}
 function cgpDateKey(v){const t=ogpDateComparable(v);return t||''}
 function cgpSetContext(id){try{localStorage.setItem(CGP_DETAIL_CONTEXT_KEY,String(id||''))}catch(e){}}
 function cgpGetContext(){try{return String(localStorage.getItem(CGP_DETAIL_CONTEXT_KEY)||'')}catch(e){return''}}
-function cgpExistingParties(q){const query=String(q||'').toLowerCase().trim(),seen=new Set(),rows=[];cgpLoad().forEach(r=>{const n=String(r.scrapper||r.party||'').trim();if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());rows.push({name:n,phone:r.phone||''})}});try{(window.ERPMasters?.list?.('workshops')||[]).forEach(r=>{const n=String(r.name||'').trim();if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());rows.push(r)}})}catch(e){};return rows.filter(r=>String(r.name||'').toLowerCase().includes(query)).slice(0,40)}
+function cgpExistingParties(q){
+  const query=String(q||'').toLowerCase().trim(),seen=new Set(),rows=[];
+  try{
+    (window.ERPMasters?.list?.('scrappers')||[])
+      .filter(r=>String(r.status||'active').toLowerCase()!=='inactive')
+      .forEach(r=>{
+        const n=String(r.name||'').trim();
+        if(n&&!seen.has(n.toLowerCase())){
+          seen.add(n.toLowerCase());
+          rows.push({...r,_source:'Scrapper Master'})
+        }
+      })
+  }catch(e){}
+  cgpLoad().forEach(r=>{
+    const n=String(r.scrapper||r.party||'').trim();
+    if(n&&!seen.has(n.toLowerCase())){
+      seen.add(n.toLowerCase());
+      rows.push({name:n,phone:r.phone||'',vehicleNo:r.vehicleNo||'',_source:'CGP History'})
+    }
+  });
+  try{
+    (window.ERPMasters?.list?.('workshops')||[]).forEach(r=>{
+      const n=String(r.name||'').trim();
+      if(n&&!seen.has(n.toLowerCase())){
+        seen.add(n.toLowerCase());
+        rows.push({...r,_source:'Workshop / Party'})
+      }
+    })
+  }catch(e){}
+  return rows.filter(r=>{
+    const hay=[r.name,r.contactPerson,r.phone,r.alternatePhone,r.address,r.vehicleNo,(r.scrapTypes||[]).join(' ')].filter(Boolean).join(' ').toLowerCase();
+    return !query||hay.includes(query)
+  }).slice(0,40)
+}
 function cgpMaterialRows(q){const query=String(q||'').toLowerCase().trim(),seen=new Set(),rows=[];try{(window.ERPMasters?.list?.('items')||[]).forEach(r=>{const n=[r.name,r.size].filter(Boolean).join(' ');if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());rows.push({name:n,unit:r.unit||'',code:r.code||''})}})}catch(e){};cgpLoad().forEach(r=>cgpItems(r).forEach(it=>{const n=String(it.material||'').trim();if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());rows.push({name:n,unit:it.unit||''})}}));return rows.filter(r=>String(r.name||'').toLowerCase().includes(query)).slice(0,50)}
 function cgpSimpleSearch(input,source,onChoose){if(!input||input.dataset.cgpBound)return;input.dataset.cgpBound='1';const wrap=input.closest('.purchase-auto-wrap');if(!wrap)return;let list=wrap.querySelector('.purchase-auto-list');if(!list)return;let shown=[],active=-1;const close=()=>{list.classList.remove('open');active=-1};const draw=()=>{const q=input.value.trim();if(!q)return close();shown=source(q);active=-1;list.innerHTML=shown.length?shown.map((r,i)=>`<div class="purchase-auto-option" data-cgp-opt="${i}"><b>${escHtml(r.name||'')}</b><small>${escHtml([r.code,r.unit,r.phone].filter(Boolean).join(' • '))}</small></div>`).join(''):'<div class="purchase-empty">No matching record.</div>';list.querySelectorAll('[data-cgp-opt]').forEach(el=>el.onmousedown=e=>{e.preventDefault();choose(+el.dataset.cgpOpt)});list.classList.add('open')};const choose=i=>{const r=shown[i];if(!r)return;input.value=r.name||'';close();if(onChoose)onChoose(r,input)};input.addEventListener('input',draw);input.addEventListener('keydown',e=>{if(!list.classList.contains('open'))return;const opts=[...list.querySelectorAll('[data-cgp-opt]')];if(e.key==='ArrowDown'){e.preventDefault();active=opts.length?(active+1)%opts.length:-1}else if(e.key==='ArrowUp'){e.preventDefault();active=opts.length?(active<=0?opts.length-1:active-1):-1}else if((e.key==='Enter'||e.key==='Tab')&&shown.length){e.preventDefault();choose(active>=0?active:0);return}else if(e.key==='Escape'){close();return}else return;opts.forEach((x,i)=>x.classList.toggle('active',i===active))});input.addEventListener('blur',()=>setTimeout(close,120))}
 function cgpMakeRow(data={}){const tr=document.createElement('tr');tr.innerHTML=`<td class="cgp-row-no"></td><td><div class="purchase-auto-wrap"><input class="cgp-material" value="${escHtml(data.material||'')}" autocomplete="off"><div class="purchase-auto-list"></div></div></td><td><input class="cgp-unit" value="${escHtml(data.unit||'')}"></td><td><input class="cgp-qty" inputmode="decimal" value="${data.qty??''}"></td><td><input class="cgp-rate" inputmode="decimal" value="${data.rate??''}"></td><td><input class="cgp-gross" readonly value="${data.gross??''}"></td><td><input class="cgp-discount" inputmode="decimal" value="${data.discount??''}"></td><td><input class="cgp-amount" readonly value="${data.amount??''}"></td><td><input class="cgp-item-remarks" value="${escHtml(data.remarks||'')}"></td><td><button class="btn ogp-entry-delete cgp-delete" type="button">Delete</button></td>`;$('#cgpEntryBody').appendChild(tr);cgpBindRow(tr);cgpRenumber();cgpUpdateTotals();return tr}
@@ -9823,7 +9874,10 @@ function cgpRenderList(){const rows=cgpFilterCache||cgpFilteredRows(),body=$('#c
 function cgpOpenDetail(id){if(!cgpLoad().some(r=>r.id===id))return toast('CGP not found');cgpSetContext(id);gateOpenPanel('cgp-detail');cgpRenderDetail()}
 function cgpRenderDetail(){const r=cgpLoad().find(x=>x.id===cgpGetContext());if(!r)return;const set=(id,v)=>{$('#'+id)&&($('#'+id).textContent=String(v||'—'))};set('cgpDetailNo',r.cgpNo);set('cgpDetailDate',r.date);set('cgpDetailParty',r.scrapper);set('cgpDetailDepartment',r.department);set('cgpDetailPhone',r.phone);set('cgpDetailVehicle',r.vehicleNo);set('cgpDetailRemarks',r.remarks);const body=$('#cgpDetailItemsBody');body.innerHTML=cgpItems(r).length?cgpItems(r).map((x,i)=>`<tr><td>${i+1}</td><td><b>${escHtml(x.material||'')}</b></td><td>${escHtml(x.unit||'')}</td><td>${purchaseMoney(x.qty)}</td><td>${purchaseMoney(x.rate)}</td><td>PKR ${purchaseMoney(x.qty*x.rate)}</td><td>PKR ${purchaseMoney(x.discount)}</td><td>PKR ${purchaseMoney(x.amount)}</td><td>${escHtml(x.remarks||'')}</td></tr>`).join(''):'<tr><td colspan="9" class="purchase-empty">No CGP items.</td></tr>';set('cgpDetailQty',purchaseMoney(cgpQty(r)));set('cgpDetailGross','PKR '+purchaseMoney(cgpGross(r)));set('cgpDetailDiscount','PKR '+purchaseMoney(cgpDiscount(r)));set('cgpDetailPayable','PKR '+purchaseMoney(cgpPayable(r)));$('#cgpDetailEditBtn')&&($('#cgpDetailEditBtn').onclick=()=>cgpEdit(r.id))}
 function cgpRenderAll(){cgpDashboardRender();cgpRenderList();gateDashboardRender()}
-function cgpBind(){document.querySelectorAll('[data-cgp-go]').forEach(b=>{if(b.dataset.bound)return;b.dataset.bound='1';b.onclick=()=>{if(b.dataset.cgpGo==='cgp-detail'&&!cgpGetContext())return toast('Open CGP Detail from CGP List');gateOpenPanel(b.dataset.cgpGo)}});if($('#cgpNo')&&!$('#cgpNo').dataset.bound){$('#cgpNo').dataset.bound='1';$('#cgpNo').addEventListener('blur',e=>e.target.value=cgpFormatNo(e.target.value));$('#cgpDate').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpVehicle').addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());cgpSimpleSearch($('#cgpParty'),cgpExistingParties,(r)=>{if(r.phone&&!$('#cgpPhone').value)$('#cgpPhone').value=r.phone});cgpSimpleSearch($('#cgpDepartment'),q=>ogpMasterRows('departments',q));cgpSimpleSearch($('#cgpVehicle'),q=>ogpMasterRows('vehicles',q),(r,input)=>input.value=String(r.name||r.vehicleNo||'').toUpperCase());$('#cgpAddRowBtn').onclick=()=>cgpMakeRow();$('#cgpSaveBtn').onclick=cgpSave;$('#cgpEntryClearBtn').onclick=cgpClearEntry;$('#cgpEntryClearTop').onclick=cgpClearEntry;$('#cgpCancelEditBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-list')};if(!$('#cgpEntryBody').children.length)cgpMakeRow()}if($('#cgpSearchBtn')&&!$('#cgpSearchBtn').dataset.bound){$('#cgpSearchBtn').dataset.bound='1';$('#cgpSearchBtn').onclick=()=>{cgpFilterCache=cgpFilteredRows();cgpRenderList()};$('#cgpClearSearchBtn').onclick=()=>{['cgpFilterNo','cgpFilterMaterial','cgpFilterParty','cgpFilterDepartment','cgpFilterVehicle','cgpFilterFrom','cgpFilterTo','cgpFilterAny'].forEach(id=>$('#'+id).value='');cgpFilterCache=null;cgpRenderList()};$('#cgpFilterFrom').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpFilterTo').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpNewBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-entry')};$('#cgpPrintListBtn').onclick=()=>window.print();$('#cgpExportBtn').onclick=()=>toast('CGP Excel export will use the filtered CGP list')};if($('#cgpDetailBackBtn')&&!$('#cgpDetailBackBtn').dataset.bound){$('#cgpDetailBackBtn').dataset.bound='1';$('#cgpDetailBackBtn').onclick=()=>gateOpenPanel('cgp-list');$('#cgpDetailPrintBtn').onclick=()=>window.print()}purchaseApplyPc('cgp-dashboard');purchaseApplyPc('cgp-list');purchaseApplyPc('cgp-entry');purchaseApplyPc('cgp-detail');cgpRenderAll()}
+function cgpBind(){document.querySelectorAll('[data-cgp-go]').forEach(b=>{if(b.dataset.bound)return;b.dataset.bound='1';b.onclick=()=>{if(b.dataset.cgpGo==='cgp-detail'&&!cgpGetContext())return toast('Open CGP Detail from CGP List');gateOpenPanel(b.dataset.cgpGo)}});if($('#cgpNo')&&!$('#cgpNo').dataset.bound){$('#cgpNo').dataset.bound='1';$('#cgpNo').addEventListener('blur',e=>e.target.value=cgpFormatNo(e.target.value));$('#cgpDate').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpVehicle').addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());cgpSimpleSearch($('#cgpParty'),cgpExistingParties,(r)=>{
+  if(r.phone&&!$('#cgpPhone').value)$('#cgpPhone').value=r.phone;
+  if(r.vehicleNo&&!$('#cgpVehicle').value)$('#cgpVehicle').value=String(r.vehicleNo).toUpperCase()
+});cgpSimpleSearch($('#cgpDepartment'),q=>ogpMasterRows('departments',q));cgpSimpleSearch($('#cgpVehicle'),q=>ogpMasterRows('vehicles',q),(r,input)=>input.value=String(r.name||r.vehicleNo||'').toUpperCase());$('#cgpAddRowBtn').onclick=()=>cgpMakeRow();$('#cgpSaveBtn').onclick=cgpSave;$('#cgpEntryClearBtn').onclick=cgpClearEntry;$('#cgpEntryClearTop').onclick=cgpClearEntry;$('#cgpCancelEditBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-list')};if(!$('#cgpEntryBody').children.length)cgpMakeRow()}if($('#cgpSearchBtn')&&!$('#cgpSearchBtn').dataset.bound){$('#cgpSearchBtn').dataset.bound='1';$('#cgpSearchBtn').onclick=()=>{cgpFilterCache=cgpFilteredRows();cgpRenderList()};$('#cgpClearSearchBtn').onclick=()=>{['cgpFilterNo','cgpFilterMaterial','cgpFilterParty','cgpFilterDepartment','cgpFilterVehicle','cgpFilterFrom','cgpFilterTo','cgpFilterAny'].forEach(id=>$('#'+id).value='');cgpFilterCache=null;cgpRenderList()};$('#cgpFilterFrom').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpFilterTo').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpNewBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-entry')};$('#cgpPrintListBtn').onclick=()=>window.print();$('#cgpExportBtn').onclick=()=>toast('CGP Excel export will use the filtered CGP list')};if($('#cgpDetailBackBtn')&&!$('#cgpDetailBackBtn').dataset.bound){$('#cgpDetailBackBtn').dataset.bound='1';$('#cgpDetailBackBtn').onclick=()=>gateOpenPanel('cgp-list');$('#cgpDetailPrintBtn').onclick=()=>window.print()}purchaseApplyPc('cgp-dashboard');purchaseApplyPc('cgp-list');purchaseApplyPc('cgp-entry');purchaseApplyPc('cgp-detail');cgpRenderAll()}
 
 function gateOpenPanel(panel){
   const target=document.querySelector('#panel-'+panel);
