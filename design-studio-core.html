@@ -19637,6 +19637,24 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
           <div class="apd-field"><label>Text Color Mode</label><select id="apdNoticeColorMode"><option value="theme">Theme / Existing</option><option value="custom">Custom Color</option></select></div>
           <div class="apd-field"><label>Text Color</label><input id="apdNoticeColor" type="color" value="#17314e" style="width:100%;height:34px"></div>
         </div>
+        <div class="apd-section-title" style="margin-top:16px">
+          <h3>Page Notice / Rule Bar</h3>
+          <span id="apdLocalNoticeStatus">Controls the notice or rule strip inside this page only.</span>
+        </div>
+        <div class="apd-grid" id="apdLocalNoticeControls">
+          <label class="apd-check"><input type="checkbox" id="apdLocalNoticeVisible"> Show page notice</label>
+          <div class="apd-field wide"><label>Page Notice Text</label><input id="apdLocalNoticeText" type="text"></div>
+          <div class="apd-field"><label>Font Size</label><input id="apdLocalNoticeSize" type="range" min="8" max="22" step="1"><output id="apdLocalNoticeSizeVal"></output></div>
+          <div class="apd-field"><label>Text Alignment</label><select id="apdLocalNoticeAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+          <div class="apd-field"><label>Bar Height</label><input id="apdLocalNoticeHeight" type="range" min="24" max="120" step="2"><output id="apdLocalNoticeHeightVal"></output></div>
+          <div class="apd-field"><label>Horizontal Padding</label><input id="apdLocalNoticePadding" type="range" min="4" max="60" step="1"><output id="apdLocalNoticePaddingVal"></output></div>
+          <div class="apd-field"><label>Border Radius</label><input id="apdLocalNoticeRadius" type="range" min="0" max="24" step="1"><output id="apdLocalNoticeRadiusVal"></output></div>
+          <div class="apd-field"><label>Spacing Below</label><input id="apdLocalNoticeGap" type="range" min="0" max="40" step="1"><output id="apdLocalNoticeGapVal"></output></div>
+          <div class="apd-field"><label>Background Mode</label><select id="apdLocalNoticeBgMode"><option value="theme">Theme / Existing</option><option value="custom">Custom Color</option></select></div>
+          <div class="apd-field"><label>Background Color</label><input id="apdLocalNoticeBg" type="color" value="#fff6d9" style="width:100%;height:34px"></div>
+          <div class="apd-field"><label>Text Color Mode</label><select id="apdLocalNoticeColorMode"><option value="theme">Theme / Existing</option><option value="custom">Custom Color</option></select></div>
+          <div class="apd-field"><label>Text Color</label><input id="apdLocalNoticeColor" type="color" value="#17314e" style="width:100%;height:34px"></div>
+        </div>
       </section>
 
       <section class="apd-pane" data-apd-pane="identity">
@@ -20182,11 +20200,24 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   const getPageId=()=>((activePanel()?.id||'page').replace(/^panel-/,''));
   const workspaceKey=id=>`erp:workspace-header-design:v3:${id}`;
   const noticeKey=id=>`erp:notice-bar-design:v2:${id}`;
+  const localNoticeKey=id=>`erp:page-local-notice-design:v1:${id}`;
   const baseDesignerKey=id=>`erp:advanced-page-design:v1:${id}`;
   const wsTitle=()=>document.getElementById('workspaceTitle');
   const wsSubtitle=()=>document.getElementById('workspaceSubtitle');
   const wsHeader=()=>wsTitle()?.closest('header.top')||document.querySelector('header.top');
   const notice=()=>document.querySelector('main.content > .notice');
+  const pageNotice=()=>{
+    const p=activePanel();if(!p)return null;
+    const selectors=[
+      '.cost-note','.oe-rule-note-v1543','.pc-dashboard-note','.purchase-note','.issue-note',
+      '.inv-note','.mbr-note','.mgr-note','.mc-note','.sc-note','.rgp-return-note',
+      '.ogp-entry-key-note','.dde-master-control-note','.dde-mat-source-note',
+      '.fcc-std-rule-note','.ccmp-note','.container-auto-note','.ua-page-reg-note',
+      '.ua-password-note','.oe-note'
+    ];
+    for(const sel of selectors){const el=p.querySelector(sel);if(el)return el}
+    return null
+  };
 
   // Canonical native workspace identity for Production & Consumption pages.
   // These are the titles the ERP itself owns before any Page Designer override.
@@ -20302,8 +20333,40 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     n.style.fontSize=v.size+'px';n.style.textAlign=v.align;n.style.minHeight=v.height+'px';n.style.paddingLeft=v.padding+'px';n.style.paddingRight=v.padding+'px';n.style.borderRadius=v.radius+'px';n.style.marginBottom=v.gap+'px';
     if(v.bgMode==='custom')n.style.background=v.bg;else n.style.removeProperty('background');if(v.colorMode==='custom')n.style.color=v.color;else n.style.removeProperty('color')}
 
+  function localNoticeBase(){
+    const n=pageNotice(),c=n?getComputedStyle(n):{};
+    return{visible:n?c.display!=='none':true,text:n?.textContent?.replace(/\s+/g,' ').trim()||'',
+      size:px(c.fontSize,11),align:c.textAlign||'left',height:px(c.minHeight||c.height,34),padding:px(c.paddingLeft,12),radius:px(c.borderRadius,8),
+      gap:px(c.marginBottom,10),bgMode:'theme',bg:rgbHex(c.backgroundColor,'#fff6d9'),colorMode:'theme',color:rgbHex(c.color,'#17314e')}
+  }
+  function localNoticeUI(){return{
+    visible:$('apdLocalNoticeVisible').checked,text:$('apdLocalNoticeText').value,size:+$('apdLocalNoticeSize').value,align:$('apdLocalNoticeAlign').value,
+    height:+$('apdLocalNoticeHeight').value,padding:+$('apdLocalNoticePadding').value,radius:+$('apdLocalNoticeRadius').value,gap:+$('apdLocalNoticeGap').value,
+    bgMode:$('apdLocalNoticeBgMode').value,bg:$('apdLocalNoticeBg').value,colorMode:$('apdLocalNoticeColorMode').value,color:$('apdLocalNoticeColor').value
+  }}
+  function setLocalNoticeUI(v){
+    $('apdLocalNoticeVisible').checked=!!v.visible;$('apdLocalNoticeText').value=v.text||'';$('apdLocalNoticeSize').value=v.size;$('apdLocalNoticeAlign').value=v.align;
+    $('apdLocalNoticeHeight').value=v.height;$('apdLocalNoticePadding').value=v.padding;$('apdLocalNoticeRadius').value=v.radius;$('apdLocalNoticeGap').value=v.gap;
+    $('apdLocalNoticeBgMode').value=v.bgMode;$('apdLocalNoticeBg').value=v.bg;$('apdLocalNoticeColorMode').value=v.colorMode;$('apdLocalNoticeColor').value=v.color;
+    ['Size','Height','Padding','Radius','Gap'].forEach(n=>{const e=$('apdLocalNotice'+n),o=$('apdLocalNotice'+n+'Val');if(e&&o)o.textContent=e.value+'px'});
+    const found=pageNotice(),status=$('apdLocalNoticeStatus'),controls=$('apdLocalNoticeControls');
+    if(status)status.textContent=found?'Detected page notice: '+(found.className||found.tagName):'No page-level notice detected on this page.';
+    if(controls)controls.style.opacity=found?'1':'.55'
+  }
+  function applyLocalNotice(v){
+    const n=pageNotice();if(!n)return;
+    n.style.display=v.visible?'':'none';
+    const txt=String(v.text||'').replace(/\s+/g,' ').trim();
+    const current=String(n.textContent||'').replace(/\s+/g,' ').trim();
+    if(txt && txt!==current)n.textContent=txt;
+    n.style.fontSize=v.size+'px';n.style.textAlign=v.align;n.style.minHeight=v.height+'px';
+    n.style.paddingLeft=v.padding+'px';n.style.paddingRight=v.padding+'px';n.style.borderRadius=v.radius+'px';n.style.marginBottom=v.gap+'px';
+    if(v.bgMode==='custom')n.style.background=v.bg;else n.style.removeProperty('background');
+    if(v.colorMode==='custom')n.style.color=v.color;else n.style.removeProperty('color')
+  }
+
   function profileStatus(id){
-    const custom=has(baseDesignerKey(id))||has(workspaceKey(id))||has(noticeKey(id));
+    const custom=has(baseDesignerKey(id))||has(workspaceKey(id))||has(noticeKey(id))||has(localNoticeKey(id));
     const el=$('apdProfileStatus');if(el){el.textContent=`Page profile: ${custom?'Custom Design Saved':'Using Default Design'} • ${id}`;el.classList.toggle('custom',custom);el.classList.toggle('default',!custom)}
     const label=$('apdPageLabel');if(label){const p=activePanel();const inner=p?.querySelector('.inv-page-head h2,.purchase-page-head h2,.page-head h2,.fcr-main-title h2,.card > h2');label.textContent=`Editing page: ${inner?.textContent?.trim()||wsTitle()?.textContent?.trim()||id} • Page ID: ${id}`}
   }
@@ -20311,20 +20374,29 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   function loadPageExtras(id){
     // Always start from clean defaults so previous page can never leak.
     resetSharedShell(id);
-    const wb=workspaceBase(),nb=noticeBase();
-    let w=null,n=null;
-    try{w=JSON.parse(localStorage.getItem(workspaceKey(id))||'null');n=JSON.parse(localStorage.getItem(noticeKey(id))||'null')}catch(e){}
+    const wb=workspaceBase(),nb=noticeBase(),lb=localNoticeBase();
+    let w=null,n=null,l=null;
+    try{
+      w=JSON.parse(localStorage.getItem(workspaceKey(id))||'null');
+      n=JSON.parse(localStorage.getItem(noticeKey(id))||'null');
+      l=JSON.parse(localStorage.getItem(localNoticeKey(id))||'null')
+    }catch(e){}
     if(w)applyWorkspace(Object.assign(wb,w));
     if(n)applyNotice(Object.assign(nb,n));
+    if(l)applyLocalNotice(Object.assign(lb,l));
     profileStatus(id)
   }
 
   function loadDesigner(){
     const id=getPageId();
     loadPageExtras(id);
-    let w=workspaceBase(),n=noticeBase();
-    try{w=Object.assign(w,JSON.parse(localStorage.getItem(workspaceKey(id))||'{}'));n=Object.assign(n,JSON.parse(localStorage.getItem(noticeKey(id))||'{}'))}catch(e){}
-    setWorkspaceUI(w);setNoticeUI(n);undo=[];redo=[];push(true);profileStatus(id)
+    let w=workspaceBase(),n=noticeBase(),l=localNoticeBase();
+    try{
+      w=Object.assign(w,JSON.parse(localStorage.getItem(workspaceKey(id))||'{}'));
+      n=Object.assign(n,JSON.parse(localStorage.getItem(noticeKey(id))||'{}'));
+      l=Object.assign(l,JSON.parse(localStorage.getItem(localNoticeKey(id))||'{}'))
+    }catch(e){}
+    setWorkspaceUI(w);setNoticeUI(n);setLocalNoticeUI(l);undo=[];redo=[];push(true);profileStatus(id)
   }
 
   // -------- History --------
@@ -20336,26 +20408,35 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   function queue(){if(restoring)return;clearTimeout(historyTimer);historyTimer=setTimeout(()=>push(false),160)}
   function restore(s){restoring=true;Object.entries(s||{}).forEach(([id,v])=>{const e=$(id);if(!e)return;if(e.type==='checkbox')e.checked=!!v;else e.value=v});
     modal.querySelectorAll('input,select,textarea').forEach(e=>{if(!e.id)return;e.dispatchEvent(new Event((e.type==='range'||e.type==='text'||e.type==='color')?'input':'change',{bubbles:true}))});
-    applyWorkspace(workspaceUI());applyNotice(noticeUI());restoring=false;updateHistory()}
+    applyWorkspace(workspaceUI());applyNotice(noticeUI());applyLocalNotice(localNoticeUI());restoring=false;updateHistory()}
   $('apdUndoDesign').onclick=()=>{if(undo.length<2)return;redo.push(undo.pop());restore(undo[undo.length-1])};
   $('apdRedoDesign').onclick=()=>{if(!redo.length)return;const s=redo.pop();undo.push(s);restore(s)};
   modal.querySelectorAll('input,select,textarea').forEach(e=>e.addEventListener((e.type==='range'||e.type==='text'||e.type==='color')?'input':'change',queue));
 
   const extra=['apdWsVisible','apdWsTitle','apdWsTitleSize','apdWsTitleAlign','apdWsSubtitleVisible','apdWsSubtitle','apdWsSubtitleSize','apdWsSubtitleAlign','apdWsHeight','apdWsPadding','apdWsGap','apdWsColor',
-    'apdNoticeVisible','apdNoticeText','apdNoticeSize','apdNoticeAlign','apdNoticeHeight','apdNoticePadding','apdNoticeRadius','apdNoticeGap','apdNoticeBgMode','apdNoticeBg','apdNoticeColorMode','apdNoticeColor'];
-  extra.forEach(id=>{const e=$(id);if(!e)return;e.addEventListener((e.type==='text'||e.type==='range'||e.type==='color')?'input':'change',()=>{applyWorkspace(workspaceUI());applyNotice(noticeUI())})});
+    'apdNoticeVisible','apdNoticeText','apdNoticeSize','apdNoticeAlign','apdNoticeHeight','apdNoticePadding','apdNoticeRadius','apdNoticeGap','apdNoticeBgMode','apdNoticeBg','apdNoticeColorMode','apdNoticeColor',
+    'apdLocalNoticeVisible','apdLocalNoticeText','apdLocalNoticeSize','apdLocalNoticeAlign','apdLocalNoticeHeight','apdLocalNoticePadding','apdLocalNoticeRadius','apdLocalNoticeGap','apdLocalNoticeBgMode','apdLocalNoticeBg','apdLocalNoticeColorMode','apdLocalNoticeColor'];
+  extra.forEach(id=>{const e=$(id);if(!e)return;e.addEventListener((e.type==='text'||e.type==='range'||e.type==='color')?'input':'change',()=>{applyWorkspace(workspaceUI());applyNotice(noticeUI());applyLocalNotice(localNoticeUI())})});
 
   $('apdSave')?.addEventListener('click',()=>{
     const id=getPageId();
-    try{localStorage.setItem(workspaceKey(id),JSON.stringify(workspaceUI()));localStorage.setItem(noticeKey(id),JSON.stringify(noticeUI()))}catch(e){}
+    try{
+      localStorage.setItem(workspaceKey(id),JSON.stringify(workspaceUI()));
+      localStorage.setItem(noticeKey(id),JSON.stringify(noticeUI()));
+      if(pageNotice())localStorage.setItem(localNoticeKey(id),JSON.stringify(localNoticeUI()))
+    }catch(e){}
     profileStatus(id)
   },true);
 
   // Reset Current Page should also remove shell extras for this page only.
   $('apdResetCurrent')?.addEventListener('click',()=>{
     const id=getPageId();
-    try{localStorage.removeItem(workspaceKey(id));localStorage.removeItem(noticeKey(id))}catch(e){}
-    setTimeout(()=>{loadPageExtras(id);setWorkspaceUI(workspaceBase());setNoticeUI(noticeBase());profileStatus(id)},0)
+    try{
+      localStorage.removeItem(workspaceKey(id));
+      localStorage.removeItem(noticeKey(id));
+      localStorage.removeItem(localNoticeKey(id))
+    }catch(e){}
+    setTimeout(()=>{loadPageExtras(id);setWorkspaceUI(workspaceBase());setNoticeUI(noticeBase());setLocalNoticeUI(localNoticeBase());profileStatus(id)},0)
   },true);
 
   function bindLaunchers(){document.querySelectorAll('.apd-launch,#purchasePcAdvanced,.purchase-controller-btn:not([data-purchase-controller])').forEach(b=>{
@@ -21525,6 +21606,10 @@ main.content section.panel .erp-universal-page-controller-v1526{
 }
 </style>
 
+<style id="apdLocalNoticeV1529Style">
+#apdLocalNoticeControls{border-top:1px dashed var(--border);padding-top:12px}
+#apdLocalNoticeStatus{max-width:520px}
+</style>
 </head><body>
       <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
       <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
