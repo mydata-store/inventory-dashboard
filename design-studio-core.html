@@ -8322,7 +8322,17 @@ window.ERPPrintEngine={getContracts:printContracts,getGallery:printGallery,getAs
 
 function restoreLastStudioPanel(){
   let panel='theme';
-  try{panel=localStorage.getItem(ACTIVE_STUDIO_PANEL_KEY)||'theme'}catch(e){}
+  const hashPanel=String(location.hash||'').replace(/^#panel-/,'').trim();
+  if(hashPanel && $('#panel-'+hashPanel)){
+    panel=hashPanel;
+    try{
+      localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel);
+      localStorage.setItem('erpStudioLastPanel',panel);
+      localStorage.setItem('erpActiveStudioPanel',panel);
+    }catch(e){}
+  }else{
+    try{panel=localStorage.getItem(ACTIVE_STUDIO_PANEL_KEY)||'theme'}catch(e){}
+  }
   const target=$('#panel-'+panel);
   if(!target)panel='theme';
 
@@ -19793,7 +19803,8 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
         <div class="apd-grid">
           <div class="apd-field"><label>Font Size</label><input id="apdColumnFontSize" type="range" min="7" max="24" step="1" value="12"><output id="apdColumnFontSizeVal">12px</output></div>
           <div class="apd-field"><label>Font Weight</label><select id="apdColumnWeight"><option value="400">Regular</option><option value="600">Semi Bold</option><option value="700">Bold</option><option value="800">Heavy</option></select></div>
-          <div class="apd-field"><label>Text Alignment</label><select id="apdColumnAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+          <div class="apd-field"><label>Header Alignment</label><select id="apdColumnHeaderAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+          <div class="apd-field"><label>Data Alignment</label><select id="apdColumnAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
           <div class="apd-field"><label>Cell Padding</label><input id="apdColumnPadding" type="range" min="1" max="20" step="1" value="7"><output id="apdColumnPaddingVal">7px</output></div>
           <div class="apd-field"><label>Column Width</label><input id="apdColumnWidth" type="range" min="50" max="420" step="5" value="140"><output id="apdColumnWidthVal">140px</output></div>
           <div class="apd-field"><label>Text Wrap</label><select id="apdColumnWrap"><option value="normal">Wrap</option><option value="nowrap">No Wrap</option></select></div>
@@ -20974,6 +20985,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     return {
       fontSize:num('apdColumnFontSize',12),
       weight:$('apdColumnWeight')?.value||'600',
+      headerAlign:$('apdColumnHeaderAlign')?.value||$('apdColumnAlign')?.value||'left',
       align:$('apdColumnAlign')?.value||'left',
       padding:num('apdColumnPadding',7),
       width:num('apdColumnWidth',140),
@@ -21005,6 +21017,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   function setColUI(s={}){
     const map={
       apdColumnFontSize:s.fontSize??12,apdColumnWeight:s.weight??'600',
+      apdColumnHeaderAlign:s.headerAlign??s.align??'left',
       apdColumnAlign:s.align??'left',apdColumnPadding:s.padding??7,
       apdColumnWidth:s.width??140,apdColumnWrap:s.wrap??'normal',
       apdColumnColor:s.color??'#10253f',apdColumnBg:s.bg??'#ffffff',
@@ -21045,13 +21058,14 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       ? panelSel+' #'+CSS.escape(id)
       : panelSel+' table[data-apd-native-key="'+table.dataset.apdNativeKey+'"]';
     const n=index+1;
-    const cell=selector+' tr > *:nth-child('+n+')';
+    const all=selector+' tr > *:nth-child('+n+')';
+    const head=selector+' thead tr > *:nth-child('+n+')';
+    const data=selector+' tbody tr > *:nth-child('+n+')';
 
-    let css=cell+'{';
+    let css=all+'{';
     css+='display:'+(s.visible?'table-cell':'none')+' !important;';
     css+='font-size:'+s.fontSize+'px !important;';
     css+='font-weight:'+s.weight+' !important;';
-    css+='text-align:'+s.align+' !important;';
     css+='padding:'+s.padding+'px !important;';
     css+='width:'+s.width+'px !important;';
     css+='min-width:'+s.width+'px !important;';
@@ -21060,18 +21074,59 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     css+='color:'+s.color+' !important;';
     css+='background:'+s.bg+' !important;';
     css+='}';
-
-    css+=cell+' input,'+cell+' select,'+cell+' textarea,'+
-         cell+' .dde-master-item,'+cell+' .dde-mat-unit,'+cell+' .dde-mat-source-note,'+
-         cell+' b,'+cell+' strong,'+cell+' span,'+cell+' div{'+
-         'font-size:inherit !important;font-weight:inherit !important;color:inherit !important;text-align:inherit !important;}';
-
+    css+=head+'{text-align:'+(s.headerAlign||s.align||'left')+' !important;}';
+    css+=data+'{text-align:'+(s.align||'left')+' !important;}';
+    css+=data+' input,'+data+' select,'+data+' textarea,'+
+         data+' .dde-master-item,'+data+' .dde-mat-unit,'+data+' .dde-mat-source-note,'+
+         data+' b,'+data+' strong,'+data+' span,'+data+' div{'+
+         'font-size:inherit !important;font-weight:inherit !important;color:inherit !important;'+
+         'text-align:'+(s.align||'left')+' !important;}';
     if(s.plain){
-      css+=cell+' .dde-master-item,'+cell+' div,'+cell+' span{'+
+      css+=data+' .dde-master-item,'+data+' div,'+data+' span{'+
            'background:transparent !important;border:0 !important;box-shadow:none !important;'+
            'border-radius:0 !important;padding:0 !important;}';
     }
     return css
+  }
+
+  function setImportant(el,prop,val){
+    if(el)el.style.setProperty(prop,val,'important')
+  }
+
+  function applyColumnDirect(table,index,s){
+    if(!table||index<0||!s)return;
+    const headRows=table.tHead?Array.from(table.tHead.rows):[];
+    const bodyRows=table.tBodies?Array.from(table.tBodies).flatMap(tb=>Array.from(tb.rows)):[];
+    [...headRows,...bodyRows].forEach(tr=>{
+      const cell=tr.cells?.[index];if(!cell)return;
+      const isHeader=headRows.includes(tr);
+      const align=isHeader?(s.headerAlign||s.align||'left'):(s.align||'left');
+      setImportant(cell,'display',s.visible?'table-cell':'none');
+      setImportant(cell,'font-size',s.fontSize+'px');
+      setImportant(cell,'font-weight',String(s.weight));
+      setImportant(cell,'text-align',align);
+      setImportant(cell,'padding',s.padding+'px');
+      setImportant(cell,'width',s.width+'px');
+      setImportant(cell,'min-width',s.width+'px');
+      setImportant(cell,'max-width',s.width+'px');
+      setImportant(cell,'white-space',s.wrap);
+      setImportant(cell,'color',s.color);
+      setImportant(cell,'background',s.bg);
+      if(!isHeader){
+        cell.querySelectorAll('input,select,textarea,.dde-master-item,.dde-mat-unit,.dde-mat-source-note,b,strong,span,div').forEach(ch=>{
+          setImportant(ch,'font-size','inherit');
+          setImportant(ch,'font-weight','inherit');
+          setImportant(ch,'color','inherit');
+          setImportant(ch,'text-align',s.align||'left');
+        });
+      }
+    });
+    const col=table.querySelectorAll('colgroup col')[index];
+    if(col){
+      setImportant(col,'width',s.width+'px');
+      setImportant(col,'min-width',s.width+'px');
+      setImportant(col,'max-width',s.width+'px');
+    }
   }
 
   function applySummary(summ,s){
@@ -21114,9 +21169,17 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     return Number.isFinite(n)?n:null
   }
   function formatNumeric(v,s){
-    if(!s || s.numberFormat==='auto')return String(v??'');
-    const n=parseNumeric(v);if(n===null)return String(v??'');
-    const decimals=Math.max(0,Math.min(4,Number(s.numberFormat)||0));
+    if(!s)return String(v??'');
+    const original=String(v??'').trim();
+    const n=parseNumeric(original);if(n===null)return original;
+    let decimals;
+    if(s.numberFormat==='auto'){
+      const clean=original.replace(/,/g,'');
+      const dot=clean.indexOf('.');
+      decimals=dot>=0?Math.min(4,Math.max(0,clean.length-dot-1)):0;
+    }else{
+      decimals=Math.max(0,Math.min(4,Number(s.numberFormat)||0));
+    }
     return n.toLocaleString('en-US',{
       useGrouping:!!s.thousands,
       minimumFractionDigits:decimals,
@@ -21124,7 +21187,8 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     })
   }
   function applyNumberFormat(table,index,s){
-    if(!table||index<0||!s||s.numberFormat==='auto')return;
+    if(!table||index<0||!s)return;
+    if(s.numberFormat==='auto'&&!s.thousands)return;
     const rows=Array.from(table.querySelectorAll('tbody tr'));
     rows.forEach(tr=>{
       const cell=tr.children[index];if(!cell)return;
@@ -21144,7 +21208,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
           input.addEventListener('blur',()=>{
             const data=load(),key=tableKey(table)+'::'+index;
             const latest=data.columns[key]||s;
-            if(latest.numberFormat!=='auto')input.value=formatNumeric(input.value,latest)
+            if(latest.numberFormat!=='auto'||latest.thousands)input.value=formatNumeric(input.value,latest)
           })
         }
       }else{
@@ -21163,12 +21227,20 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 
     Object.entries(data.columns).forEach(([key,s])=>{
       const m=key.match(/^(.*)::(\d+)$/);if(!m)return;
-      const table=findTable(m[1]);if(table){css+=cssForColumn(table,Number(m[2]),s);applyNumberFormat(table,Number(m[2]),s)}
+      const table=findTable(m[1]);if(table){
+        css+=cssForColumn(table,Number(m[2]),s);
+        applyColumnDirect(table,Number(m[2]),s);
+        applyNumberFormat(table,Number(m[2]),s)
+      }
     });
 
     if(preview?.type==='column'){
       const table=findTable(preview.key)||selectedTable;
-      if(table){css+=cssForColumn(table,preview.index,preview.settings);applyNumberFormat(table,preview.index,preview.settings)}
+      if(table){
+        css+=cssForColumn(table,preview.index,preview.settings);
+        applyColumnDirect(table,preview.index,preview.settings);
+        applyNumberFormat(table,preview.index,preview.settings)
+      }
     }
 
     $(DYN_STYLE).textContent=css;
@@ -21225,7 +21297,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   }
 
   ['apdColumnFontSize','apdColumnPadding','apdColumnWidth','apdColumnColor','apdColumnBg'].forEach(id=>$(id)?.addEventListener('input',previewColumn));
-  ['apdColumnWeight','apdColumnAlign','apdColumnWrap','apdColumnNumberFormat','apdColumnThousands','apdColumnPlain','apdColumnVisible'].forEach(id=>$(id)?.addEventListener('change',previewColumn));
+  ['apdColumnWeight','apdColumnHeaderAlign','apdColumnAlign','apdColumnWrap','apdColumnNumberFormat','apdColumnThousands','apdColumnPlain','apdColumnVisible'].forEach(id=>$(id)?.addEventListener('change',previewColumn));
 
   ['apdSummaryTitleSize','apdSummaryLabelSize','apdSummaryValueSize','apdSummaryRowHeight','apdSummaryPadding','apdSummaryBorder','apdSummaryRadius'].forEach(id=>$(id)?.addEventListener('input',previewSummary));
   ['apdSummaryVisible','apdSummaryLabelAlign','apdSummaryValueAlign','apdSummaryValueBold'].forEach(id=>$(id)?.addEventListener('change',previewSummary));
@@ -22213,13 +22285,20 @@ main.content section.panel .erp-universal-page-controller-v1526{
 
   function exactTarget(){
     const h=String(location.hash||'').replace(/^#/,'');
-    return routes[h]?h:'';
+    if(routes[h])return h;
+    if(h&&document.getElementById(h)?.matches?.('section.panel'))return h;
+    return ''
   }
 
   function restore(){
     const target=exactTarget();
     if(!target)return;
-    const run=routes[target];
+    const run=routes[target]||(()=>{
+      const page=target.replace(/^panel-/,'');
+      const nav=document.querySelector('[data-panel="'+CSS.escape(page)+'"]');
+      if(nav){nav.click();return}
+      document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active',p.id===target))
+    });
     let tries=0;
 
     const attempt=()=>{
@@ -22464,6 +22543,29 @@ main.content section.panel .erp-universal-page-controller-v1526{
   document.addEventListener('click',reapply,true);
   window.addEventListener('hashchange',reapply);
   window.addEventListener('load',reapply,{once:true});
+})();
+</script>
+
+
+<script id="erpColumnWisePersistenceV1532">
+(function(){
+  let timer=null;
+  function apply(){
+    clearTimeout(timer);
+    timer=setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),0)
+  }
+  const main=document.querySelector('main.content');
+  if(main){
+    const obs=new MutationObserver(records=>{
+      const active=document.querySelector('main.content section.panel.active');
+      if(!active)return;
+      if(records.some(r=>r.type==='childList'&&(r.target===active||active.contains(r.target))))apply()
+    });
+    obs.observe(main,{subtree:true,childList:true})
+  }
+  window.addEventListener('hashchange',apply);
+  window.addEventListener('popstate',apply);
+  window.addEventListener('load',apply,{once:true});
 })();
 </script>
 
