@@ -19799,7 +19799,12 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 
 
       <section class="apd-pane" data-apd-pane="columns">
-        <div class="apd-section-title"><h3>Selected Column / Cell</h3><span id="apdColumnTarget">Use ⌖ Select and click a table cell or item/material name.</span></div>
+        <div class="apd-section-title"><h3>Column Designer</h3><span id="apdColumnTarget">Choose a table and column, or use ⌖ Select.</span></div>
+        <div class="apd-grid" style="margin-bottom:10px">
+          <div class="apd-field wide"><label>Table</label><select id="apdColumnTableSelect"></select></div>
+          <div class="apd-field wide"><label>Column</label><select id="apdColumnSelect"></select></div>
+          <div class="apd-field"><label>Selected Column</label><div id="apdColumnSelectionName" style="min-height:34px;display:flex;align-items:center;font-weight:800">None</div></div>
+        </div>
         <div class="apd-grid">
           <div class="apd-field"><label>Font Size</label><input id="apdColumnFontSize" type="range" min="7" max="24" step="1" value="12"><output id="apdColumnFontSizeVal">12px</output></div>
           <div class="apd-field"><label>Font Weight</label><select id="apdColumnWeight"><option value="400">Regular</option><option value="600">Semi Bold</option><option value="700">Bold</option><option value="800">Heavy</option></select></div>
@@ -20860,8 +20865,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     tryOnce();
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootRestore,{once:true});
-  else bootRestore();
+  // V15.33: disabled here. Exact refresh is handled once, globally, at the end of the file.
 })();
 </script>
 
@@ -20952,6 +20956,69 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       return root().querySelector('table[data-apd-native-key="'+key.slice(5).replace(/"/g,'\\"')+'"]')
     }
     return null
+  }
+
+  function visibleTables(){
+    const r=root();if(!r)return [];
+    return Array.from(r.querySelectorAll('table')).filter(t=>{
+      const cs=getComputedStyle(t);
+      return cs.display!=='none' && t.getBoundingClientRect().width>0
+    })
+  }
+  function tableLabel(t,i){
+    if(!t)return 'Table '+(i+1);
+    const id=t.id||'';
+    const cap=norm(t.closest('section,.card,.purchase-entry-card,.inv-card,.cost-card')?.querySelector('h1,h2,h3,h4,.title')?.textContent);
+    if(cap)return cap+(id?' • '+id:'');
+    const heads=Array.from(t.querySelectorAll('thead th')).slice(0,4).map(x=>norm(x.textContent)).filter(Boolean).join(' / ');
+    return (heads||('Table '+(i+1)))+(id?' • '+id:'')
+  }
+  function columnLabel(t,i){
+    const th=t?.querySelectorAll('thead th')?.[i];
+    return norm(th?.textContent)||('Column '+(i+1))
+  }
+  function populateTableSelect(preferredKey=''){
+    const sel=$('apdColumnTableSelect');if(!sel)return;
+    const tables=visibleTables();
+    sel.innerHTML=tables.length?tables.map((t,i)=>{
+      const key=tableKey(t);
+      return '<option value="'+key.replace(/"/g,'&quot;')+'">'+tableLabel(t,i).replace(/</g,'&lt;')+'</option>'
+    }).join(''):'<option value="">No table found</option>';
+    if(preferredKey && tables.some(t=>tableKey(t)===preferredKey))sel.value=preferredKey;
+    else if(selectedTableKey && tables.some(t=>tableKey(t)===selectedTableKey))sel.value=selectedTableKey;
+    else if(tables[0])sel.value=tableKey(tables[0]);
+    populateColumnSelect()
+  }
+  function populateColumnSelect(preferredIndex=null){
+    const tsel=$('apdColumnTableSelect'),csel=$('apdColumnSelect');
+    if(!tsel||!csel)return;
+    const table=findTable(tsel.value);
+    if(!table){csel.innerHTML='<option value="">No column</option>';return}
+    const count=Math.max(
+      table.querySelectorAll('thead tr:last-child th').length,
+      table.rows?.[0]?.cells?.length||0
+    );
+    csel.innerHTML=Array.from({length:count},(_,i)=>
+      '<option value="'+i+'">'+(i+1)+'. '+columnLabel(table,i).replace(/</g,'&lt;')+'</option>'
+    ).join('');
+    if(preferredIndex!==null && preferredIndex>=0 && preferredIndex<count)csel.value=String(preferredIndex);
+    else if(selectedTable===table && selectedColumn>=0)csel.value=String(selectedColumn);
+    else csel.value='0';
+    selectFromDropdowns()
+  }
+  function selectFromDropdowns(){
+    const tsel=$('apdColumnTableSelect'),csel=$('apdColumnSelect');
+    if(!tsel||!csel||!tsel.value||csel.value==='')return;
+    const table=findTable(tsel.value),index=Number(csel.value);
+    if(!table||!Number.isInteger(index)||index<0)return;
+    selectedTable=table;selectedTableKey=tableKey(table);selectedColumn=index;
+    selectedSummary=null;selectedSummaryKey='';
+    const d=load();
+    setColUI(d.columns[selectedTableKey+'::'+selectedColumn]||{});
+    const label=columnLabel(table,index);
+    if($('apdColumnTarget'))$('apdColumnTarget').textContent='Editing only: '+label+' • '+(table.id||selectedTableKey);
+    if($('apdColumnSelectionName'))$('apdColumnSelectionName').textContent=label;
+    previewColumn()
   }
 
   function summaryRoot(el){
@@ -21278,7 +21345,11 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 
       const head=selectedTable.querySelectorAll('thead th')[selectedColumn];
       const label=norm(head?.textContent)||('Column '+(selectedColumn+1));
-      if($('apdColumnTarget'))$('apdColumnTarget').textContent='Selected: '+label+' • '+(selectedTable.id||selectedTableKey);
+      if($('apdColumnTarget'))$('apdColumnTarget').textContent='Editing only: '+label+' • '+(selectedTable.id||selectedTableKey);
+      if($('apdColumnSelectionName'))$('apdColumnSelectionName').textContent=label;
+      populateTableSelect(selectedTableKey);
+      if($('apdColumnTableSelect'))$('apdColumnTableSelect').value=selectedTableKey;
+      populateColumnSelect(selectedColumn);
 
       return {tab:'columns',label:'Table Column — '+label}
     }
@@ -21295,6 +21366,9 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     }
     return null
   }
+
+  $('apdColumnTableSelect')?.addEventListener('change',()=>populateColumnSelect());
+  $('apdColumnSelect')?.addEventListener('change',selectFromDropdowns);
 
   ['apdColumnFontSize','apdColumnPadding','apdColumnWidth','apdColumnColor','apdColumnBg'].forEach(id=>$(id)?.addEventListener('input',previewColumn));
   ['apdColumnWeight','apdColumnHeaderAlign','apdColumnAlign','apdColumnWrap','apdColumnNumberFormat','apdColumnThousands','apdColumnPlain','apdColumnVisible'].forEach(id=>$(id)?.addEventListener('change',previewColumn));
@@ -21318,7 +21392,14 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     setTimeout(()=>{$(DYN_STYLE).textContent='';},0)
   },true);
 
-  function reapply(){setTimeout(()=>rebuild(),0)}
+  function reapply(){
+    setTimeout(()=>{
+      rebuild();
+      if(modal.classList.contains('open')){
+        populateTableSelect(selectedTableKey)
+      }
+    },0)
+  }
   window.addEventListener('hashchange',reapply);
   window.addEventListener('popstate',reapply);
 
@@ -21804,6 +21885,11 @@ main.content section.panel .erp-universal-page-controller-v1526{
 #apdLocalNoticeControls{border-top:1px dashed var(--border);padding-top:12px}
 #apdLocalNoticeStatus{max-width:520px}
 </style>
+
+<style id="apdColumnSelectorV1533Style">
+#apdColumnTableSelect,#apdColumnSelect{font-weight:700}
+#apdColumnSelectionName{border:1px solid var(--border);border-radius:8px;padding:0 10px;background:color-mix(in srgb,var(--primary) 6%,var(--card))}
+</style>
 </head><body>
       <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
       <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
@@ -22270,7 +22356,40 @@ main.content section.panel .erp-universal-page-controller-v1526{
 
 <script id="erpExactRefreshRestoreV1524">
 (function(){
-  const routes={
+  function hashTarget(){
+    const h=String(location.hash||'').replace(/^#/,'').trim();
+    return h&&document.getElementById(h)?.matches?.('section.panel')?h:''
+  }
+
+  function activateStatic(target){
+    const page=target.replace(/^panel-/,'');
+    const panel=document.getElementById(target);
+    if(!panel)return false;
+
+    document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active',p===panel));
+    document.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===page));
+
+    try{
+      localStorage.setItem('erpActiveStudioPanel',page);
+      localStorage.setItem('erpStudioLastPanel',page);
+      if(typeof ACTIVE_STUDIO_PANEL_KEY!=='undefined')localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,page)
+    }catch(e){}
+
+    // Render only the module needed by the selected page.
+    try{
+      if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(page)){
+        purchaseRenderAll?.()
+      }else if(['issue-entry','issue-history'].includes(page)){
+        issueRenderHistory?.()
+      }else if(page==='masters'){
+        masterRenderAll?.()
+      }
+    }catch(e){}
+
+    return document.querySelector('section.panel.active')?.id===target
+  }
+
+  const dynamic={
     'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
     'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
     'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
@@ -22283,54 +22402,39 @@ main.content section.panel .erp-universal-page-controller-v1526{
     'panel-comparison-variance-report':()=>window.ERPComparisonVarianceReport?.open?.()
   };
 
-  function exactTarget(){
-    const h=String(location.hash||'').replace(/^#/,'');
-    if(routes[h])return h;
-    if(h&&document.getElementById(h)?.matches?.('section.panel'))return h;
-    return ''
-  }
-
   function restore(){
-    const target=exactTarget();
+    const target=hashTarget();
     if(!target)return;
-    const run=routes[target]||(()=>{
-      const page=target.replace(/^panel-/,'');
-      const nav=document.querySelector('[data-panel="'+CSS.escape(page)+'"]');
-      if(nav){nav.click();return}
-      document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active',p.id===target))
-    });
-    let tries=0;
 
-    const attempt=()=>{
-      tries++;
+    const run=()=>{
       try{
-        const before=document.querySelector('.panel.active')?.id||'';
-        run();
-        const after=document.querySelector('.panel.active')?.id||'';
-        if(after===target){
-          try{
-            localStorage.setItem('erpStudioLastPanel',target.replace(/^panel-/,''));
-            localStorage.setItem('erpActiveStudioPanel',target.replace(/^panel-/,''));
-          }catch(e){}
-          document.documentElement.classList.remove('erp-route-restoring-v1545');
-          window.ERPSidebarStartClosedV1524?.closeAll?.();
-          return;
-        }
+        if(dynamic[target])dynamic[target]();
+        // Whether dynamic or static, the URL target wins.
+        activateStatic(target);
+        window.ERPAdvancedPageDesigner?.applySaved?.();
+        window.ERPPageControlExtras?.applySaved?.();
+        window.ERPColumnSummaryDesigner?.applySaved?.();
+        window.ERPSidebarStartClosedV1524?.closeAll?.();
       }catch(e){}
-      if(tries<40)setTimeout(attempt,25);
-      else document.documentElement.classList.remove('erp-route-restoring-v1545');
     };
-    attempt();
+
+    // Run after each startup layer has finished. No other page is allowed
+    // to replace the exact page named in the browser URL.
+    run();
+    setTimeout(run,25);
+    setTimeout(run,100);
+    setTimeout(run,300);
+    setTimeout(run,700);
   }
 
-  // Run after modules have had a chance to register their open() methods.
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',()=>setTimeout(restore,0),{once:true});
-  }else{
-    setTimeout(restore,0);
-  }
+    document.addEventListener('DOMContentLoaded',restore,{once:true});
+  }else restore();
+  window.addEventListener('load',restore,{once:true});
+  window.addEventListener('hashchange',restore);
+  window.addEventListener('popstate',restore);
 
-  window.addEventListener('hashchange',()=>setTimeout(restore,0));
+  window.ERPExactPageRestoreV1533={restore};
 })();
 </script>
 
@@ -22374,6 +22478,7 @@ main.content section.panel .erp-universal-page-controller-v1526{
       setTimeout(()=>{
         window.ERPPageControlExtras?.loadDesigner?.();
         window.ERPColumnSummaryDesigner?.applySaved?.();
+        window.ERPColumnSummaryDesigner?.prepare?.();
         window.ERPPerPageDesign?.apply?.();
       },0);
       return;
