@@ -1955,6 +1955,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
       hash==='panel-production-consumption' ||
       hash==='panel-daily-data-entry' ||
       hash==='panel-daily-consumption-history' ||
+      hash==='panel-material-balance-report' ||
       hash==='panel-material-master' ||
       hash==='panel-management-summary' ||
       hash==='panel-month-summary' ||
@@ -17725,6 +17726,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       'production-consumption':()=>window.ERPProductionConsumption?.open?.(),
       'daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
       'daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
+      'material-balance-report':()=>window.ERPMaterialBalanceReport?.open?.(),
       'material-master':()=>window.ERPMaterialMaster?.open?.(),
       'management-summary':()=>window.ERPManagementSummary?.open?.(),
       'month-summary':()=>window.ERPMonthSummary?.open?.(),
@@ -21883,6 +21885,130 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   }
 
   window.ERPComparisonButtonFixV1520={ensure};
+})();
+</script>
+
+
+<script id="erpSidebarStartClosedV1524">
+(function(){
+  const GROUPS=['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'];
+
+  function closeAllSidebarGroups(){
+    GROUPS.forEach(id=>document.getElementById(id)?.classList.remove('open'));
+  }
+
+  function bind(){
+    const sidebar=document.getElementById('studioSidebar');
+    const app=document.getElementById('app');
+    if(!sidebar || sidebar.dataset.startClosedV1524==='1')return;
+    sidebar.dataset.startClosedV1524='1';
+
+    // Initial ERP load: no submenu is left open from a previous page.
+    closeAllSidebarGroups();
+
+    // A new visit/open of the sidebar always begins clean.
+    // Once the pointer is inside, clicking a group still opens it normally.
+    sidebar.addEventListener('mouseenter',()=>{
+      if(sidebar.dataset.pointerInsideV1524==='1')return;
+      sidebar.dataset.pointerInsideV1524='1';
+      closeAllSidebarGroups();
+    });
+
+    // Leaving the sidebar ends the current visit and closes any open group.
+    sidebar.addEventListener('mouseleave',()=>{
+      sidebar.dataset.pointerInsideV1524='0';
+      closeAllSidebarGroups();
+    });
+
+    // Any direct page navigation also closes expanded groups.
+    document.addEventListener('click',e=>{
+      const pageButton=e.target.closest('[data-panel],[data-inventory-open],[data-production-consumption-open]');
+      if(!pageButton)return;
+      setTimeout(closeAllSidebarGroups,0);
+    },true);
+
+    // If sidebar expansion is triggered programmatically, keep its first
+    // expanded state clean as well without using an interval/observer.
+    document.addEventListener('click',()=>{
+      setTimeout(()=>{
+        if(!app)return;
+        if(!app.classList.contains('collapsed') && sidebar.dataset.wasExpandedV1524!=='1'){
+          sidebar.dataset.wasExpandedV1524='1';
+          closeAllSidebarGroups();
+        }else if(app.classList.contains('collapsed')){
+          sidebar.dataset.wasExpandedV1524='0';
+        }
+      },0);
+    },true);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',bind,{once:true});
+  }else{
+    bind();
+  }
+
+  window.ERPSidebarStartClosedV1524={closeAll:closeAllSidebarGroups};
+})();
+</script>
+
+
+<script id="erpExactRefreshRestoreV1524">
+(function(){
+  const routes={
+    'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
+    'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
+    'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
+    'panel-material-balance-report':()=>window.ERPMaterialBalanceReport?.open?.(),
+    'panel-material-master':()=>window.ERPMaterialMaster?.open?.(),
+    'panel-management-summary':()=>window.ERPManagementSummary?.open?.(),
+    'panel-month-summary':()=>window.ERPMonthSummary?.open?.(),
+    'panel-operating-expenses':()=>window.ERPOperatingExpenses?.open?.(),
+    'panel-final-cost-report':()=>window.ERPFinalCostReport?.open?.(),
+    'panel-comparison-variance-report':()=>window.ERPComparisonVarianceReport?.open?.()
+  };
+
+  function exactTarget(){
+    const h=String(location.hash||'').replace(/^#/,'');
+    return routes[h]?h:'';
+  }
+
+  function restore(){
+    const target=exactTarget();
+    if(!target)return;
+    const run=routes[target];
+    let tries=0;
+
+    const attempt=()=>{
+      tries++;
+      try{
+        const before=document.querySelector('.panel.active')?.id||'';
+        run();
+        const after=document.querySelector('.panel.active')?.id||'';
+        if(after===target){
+          try{
+            localStorage.setItem('erpStudioLastPanel',target.replace(/^panel-/,''));
+            localStorage.setItem('erpActiveStudioPanel',target.replace(/^panel-/,''));
+          }catch(e){}
+          document.documentElement.classList.remove('erp-route-restoring-v1545');
+          window.ERPSidebarStartClosedV1524?.closeAll?.();
+          return;
+        }
+      }catch(e){}
+      if(tries<40)setTimeout(attempt,25);
+      else document.documentElement.classList.remove('erp-route-restoring-v1545');
+    };
+    attempt();
+  }
+
+  // Run after modules have had a chance to register their open() methods.
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>setTimeout(restore,0),{once:true});
+  }else{
+    setTimeout(restore,0);
+  }
+
+  window.addEventListener('hashchange',()=>setTimeout(restore,0));
 })();
 </script>
 
