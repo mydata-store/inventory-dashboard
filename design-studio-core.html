@@ -5046,6 +5046,7 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
             <span>Select none to include all materials, or select one/multiple materials.</span>
           </div>
           <div class="mbr-picker-actions">
+            <button class="btn btn-sm" id="mbrMaterialDetailBtn" type="button">Material Detail</button>
             <button class="btn btn-sm" id="mbrSelectAllBtn" type="button">Select All</button>
             <button class="btn btn-sm" id="mbrClearMaterialsBtn" type="button">Clear</button>
           </div>
@@ -5090,10 +5091,11 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
             <th>CLOSING BALANCE</th>
             <th>NET MOVEMENT</th>
             <th>STATUS</th>
+            <th>ACTION</th>
           </tr>
         </thead>
         <tbody id="mbrBody">
-          <tr><td colspan="10" class="mbr-empty">No balance report generated yet.</td></tr>
+          <tr><td colspan="11" class="mbr-empty">No balance report generated yet.</td></tr>
         </tbody>
       </table>
     </div>
@@ -5215,6 +5217,7 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
         <div><span>First Opening</span><b id="dchInvFirstOpening">0.000</b></div>
         <div><span>Total Received</span><b id="dchInvReceived">0.000</b></div>
         <div><span>Total Used</span><b id="dchInvUsed">0.000</b></div>
+        <div><span>Total Used Value</span><b id="dchInvUsedValue">PKR 0.00</b></div>
         <div><span>Total Adjustments</span><b id="dchInvAdjustments">0.000</b></div>
         <div><span>System Closing</span><b id="dchInvClosing">0.000</b></div>
         <div><span>Difference</span><b id="dchInvDifference">—</b></div>
@@ -5227,7 +5230,7 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
       <div id="dchInvestigationTableWrap" class="dde-table-wrap" style="display:none">
         <table class="dde-table dch-investigation-table-v1536">
           <thead><tr>
-            <th>Date</th><th>Section</th><th>Opening</th><th>Received</th><th>Used</th><th>Adjustment</th><th>Closing</th><th>Status</th><th>Action</th>
+            <th>Date</th><th>Section</th><th>Opening</th><th>Received</th><th>Used</th><th>Rate</th><th>Used Value</th><th>Adjustment</th><th>Closing</th><th>Status</th><th>Action</th>
           </tr></thead>
           <tbody id="dchInvestigationBody"></tbody>
         </table>
@@ -15695,8 +15698,10 @@ function dchMaterialLedger(material,group=''){
       if(used===0 && (received>0 || opening>0))suspicious.push('Zero used');
       if(closing<0)suspicious.push('Negative balance');
 
+      const rate=num(item.finalReportRate??item.rate);
+      const usedValue=num(item.finalReportValue??item.usedValue) || used*rate;
       ledger.push({
-        record:r,group:g,item:item.item,opening,originalOpening,received,used,adjustment,closing,
+        record:r,group:g,item:item.item,opening,originalOpening,received,used,rate,usedValue,adjustment,closing,
         status:suspicious.length?suspicious.join(' • '):'OK'
       });
       running=closing
@@ -15715,7 +15720,7 @@ function dchRenderInvestigation(){
 
   const ledger=dchMaterialLedger(material,group);
   if(!ledger.length){
-    body.innerHTML='<tr><td colspan="9" style="text-align:center;padding:18px">No history found for this material.</td></tr>';
+    body.innerHTML='<tr><td colspan="11" style="text-align:center;padding:18px">No history found for this material.</td></tr>';
     wrap.style.display='block'; summary.style.display='none'; return
   }
 
@@ -15726,17 +15731,20 @@ function dchRenderInvestigation(){
       <td>${fmt(x.opening)}</td>
       <td>${fmt(x.received)}</td>
       <td>${fmt(x.used)}</td>
+      <td>PKR ${money(x.rate)}</td>
+      <td>PKR ${money(x.usedValue)}</td>
       <td>${fmt(x.adjustment)}</td>
       <td>${fmt(x.closing)}</td>
       <td><span class="${x.status==='OK'?'dch-status-ok-v1536':'dch-status-warn-v1536'}">${x.status}</span></td>
       <td>
-        <button class="btn btn-sm" data-inv-edit="${dchRecordKey(x.record)}" data-inv-group="${x.group}" data-inv-item="${encodeURIComponent(x.item)}">Correct</button>
+        <button class="btn btn-sm" data-inv-edit="${dchRecordKey(x.record)}" data-inv-group="${x.group}" data-inv-item="${encodeURIComponent(x.item)}">Edit Entry</button>
       </td>
     </tr>`).join('');
 
   const first=ledger[0], last=ledger[ledger.length-1];
   const totalReceived=ledger.reduce((a,x)=>a+x.received,0);
   const totalUsed=ledger.reduce((a,x)=>a+x.used,0);
+  const totalUsedValue=ledger.reduce((a,x)=>a+x.usedValue,0);
   const totalAdj=ledger.reduce((a,x)=>a+x.adjustment,0);
   const physicalRaw=String($d('#dchInvestigatePhysical')?.value||'').trim();
   const physical=physicalRaw===''?null:num(physicalRaw);
@@ -15744,6 +15752,7 @@ function dchRenderInvestigation(){
   setText('dchInvFirstOpening',fmt(first.opening));
   setText('dchInvReceived',fmt(totalReceived));
   setText('dchInvUsed',fmt(totalUsed));
+  setText('dchInvUsedValue','PKR '+money(totalUsedValue));
   setText('dchInvAdjustments',fmt(totalAdj));
   setText('dchInvClosing',fmt(last.closing));
   setText('dchInvDifference',physical==null?'—':fmt(physical-last.closing));
@@ -15890,6 +15899,23 @@ function dchSetWorkspaceMode(mode){
 function dchSetMode(mode){dchMode=mode;const d=mode==='daily';$d('#dchDailyTableWrap').style.display=d?'block':'none';$d('#dchMaterialTableWrap').style.display=d?'none':'block';$d('#dchDailyMode')?.classList.toggle('active',d);$d('#dchMaterialMode')?.classList.toggle('active',!d)}
 function openHistoryPage(){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));$d('#panel-daily-consumption-history')?.classList.add('active');if($d('#workspaceTitle'))$d('#workspaceTitle').textContent='Consumption History & Analysis';if($d('#workspaceSubtitle'))$d('#workspaceSubtitle').textContent='Daily • Material • Cost • Yield Analysis';dchSetWorkspaceMode('history')}
 
+function openMaterialHistory(material,group=''){
+  openHistoryPage();
+  dchSetWorkspaceMode('finder');
+  const mat=$d('#dchInvestigateMaterial');
+  const grp=$d('#dchInvestigateGroup');
+  if(mat)mat.value=material||'';
+  if(grp)grp.value=['boiler','pulp','sulphite','units'].includes(group)?group:'';
+  dchRenderInvestigation();
+  try{
+    localStorage.setItem('erpStudioLastPanel','daily-consumption-history');
+    localStorage.setItem('erpActiveStudioPanel','daily-consumption-history');
+    history.replaceState(null,'','#panel-daily-consumption-history')
+  }catch(e){}
+  const host=$d('#dchModeFinder');
+  host?.scrollIntoView({behavior:'smooth',block:'start'})
+}
+
 function init(){
   let ddeIsCurrent=false;
   try{ddeIsCurrent=localStorage.getItem('erpStudioLastPanel')==='daily-data-entry'}catch(e){}
@@ -15990,6 +16016,11 @@ function refreshMasterControlledDailySections(){
   recalc()
 }
 window.ERPDailyDataEntry={open:()=>{openPage();refreshMasterControlledDailySections()},refresh:()=>{refreshMasterControlledDailySections();feedDashboard()}};
+window.ERPConsumptionHistory={
+  open:openHistoryPage,
+  openMaterial:openMaterialHistory,
+  refresh:renderDailyConsumptionHistory
+};
 })();
 </script>
 
@@ -21324,8 +21355,14 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
         <td class="mbr-num"><b>${formatQty(x.balance)}</b></td>
         <td class="mbr-num">${x.movement>0?'+':''}${formatQty(x.movement)}</td>
         <td><span class="mbr-status ${st[1]}">${st[0]}</span></td>
+        <td><button class="btn btn-sm mbr-detail-btn" type="button"
+          data-mbr-material="${esc(x.material)}" data-mbr-group="${esc(x.group)}">Detail</button></td>
       </tr>`
-    }).join(''):'<tr><td colspan="10" class="mbr-empty">No matching material balances found.</td></tr>';
+    }).join(''):'<tr><td colspan="11" class="mbr-empty">No matching material balances found.</td></tr>';
+
+    body.querySelectorAll('.mbr-detail-btn').forEach(btn=>{
+      btn.onclick=()=>openMaterialDetail(btn.dataset.mbrMaterial||'',btn.dataset.mbrGroup||'')
+    });
 
     const days=new Set(renderedRows.map(x=>x.date)).size;
     const materials=new Set(renderedRows.map(x=>x.group+'||'+x.material.toLowerCase())).size;
@@ -21342,6 +21379,25 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     $('mbrReportSubtitle').textContent=periodLabel()+' • '+(($('mbrView')?.value==='latest')?'Latest balance per material':'Daily opening-to-closing movement');
     $('mbrGeneratedAt').textContent='Generated '+new Date().toLocaleString()
   }
+  function openMaterialDetail(material,group){
+    if(!material)return;
+    if(window.ERPConsumptionHistory?.openMaterial){
+      window.ERPConsumptionHistory.openMaterial(material,group);
+      return;
+    }
+    if(window.toast)toast('Material History is not ready yet');
+  }
+
+  function openSelectedMaterialDetail(){
+    const mats=[...selectedMaterials()];
+    if(mats.length!==1){
+      if(window.toast)toast(mats.length?'Select only one material for detail':'Select one material for detail');
+      return;
+    }
+    const group=$('mbrGroup')?.value||'';
+    openMaterialDetail(mats[0],group);
+  }
+
   function reset(){
     $('mbrView').value='latest';
     $('mbrPeriod').value='all';
@@ -21409,6 +21465,13 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 #panel-month-summary .pc-summary-viewbar .btn.active{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
 #panel-month-summary .pc-month-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 </style>
+
+<style id="mbrMaterialDetailV1523Style">
+#mbrMaterialDetailBtn{font-weight:800}
+#mbrTable .mbr-detail-btn{white-space:nowrap}
+#panel-daily-consumption-history .dch-investigation-table-v1536{min-width:1220px}
+#panel-daily-consumption-history #dchInvUsedValue{white-space:nowrap}
+</style>
 </head><body>
       <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
       <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
@@ -21439,6 +21502,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       el.addEventListener('blur',()=>{if(el.value)el.value=fmtDateInput(el.value);renderReport()});
       el.addEventListener('keydown',e=>{if(e.key==='Enter'){el.value=fmtDateInput(el.value);renderReport()}})
     });
+    $('mbrMaterialDetailBtn')?.addEventListener('click',openSelectedMaterialDetail);
     $('mbrSelectAllBtn')?.addEventListener('click',()=>{
       document.querySelectorAll('#mbrMaterialChoices input').forEach(x=>x.checked=true);
       renderReport()
