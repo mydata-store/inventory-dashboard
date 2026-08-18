@@ -13342,7 +13342,7 @@ function pcBuild(){
         <strong>Month Summary</strong>
         <span>Open monthly production, energy, ash, steam and cost analysis.</span>
       </button>
-      <button class="pc-nav-card" type="button" data-pc-page="year">
+      <button class="pc-nav-card" type="button" data-pc-page="month" style="display:none">
         <div class="pc-nav-icon">▧</div>
         <strong>Year Summary</strong>
         <span>Open yearly totals, monthly comparison and annual performance.</span>
@@ -13407,7 +13407,6 @@ function pcBuild(){
     else if(page==='summary')pcSummaryOpen();
     else if(page==='expenses')window.ERPOperatingExpenses?.open?.();
     else if(page==='month')pcMonthOpen();
-    else if(page==='year')pcYearOpen()
   })
 }
 
@@ -13653,6 +13652,8 @@ function pcSummaryOpen(){
 }
 
 
+let pcProductionSummaryMode='monthly';
+
 function pcMonthBuild(){
   if(pc$('#panel-month-summary'))return;
   const host=document.querySelector('main.content');if(!host)return;
@@ -13667,8 +13668,8 @@ function pcMonthBuild(){
   sec.innerHTML=`<div class="card pc-month-page">
     <div class="inv-page-head">
       <div>
-        <h2>Month Summary</h2>
-        <p>Monthly production, ash, electricity, steam, pulp, material consumption and cost analysis.</p>
+        <h2>Production Summary</h2>
+        <p>Monthly or yearly production, electricity, steam, pulp, material consumption and cost analysis.</p>
       </div>
       <div class="pc-month-head-actions">
         <button class="btn pc-variance-report-btn" id="pcVarianceReportBtn" type="button">Comparison Report</button>
@@ -13676,13 +13677,18 @@ function pcMonthBuild(){
       </div>
     </div>
 
+    <div class="pc-summary-viewbar">
+      <button class="btn btn-sm active" id="pcSummaryMonthlyView" type="button">Monthly</button>
+      <button class="btn btn-sm" id="pcSummaryYearlyView" type="button">Yearly</button>
+    </div>
+
     <div class="pc-month-filter">
-      <div><label>Month</label>
+      <div id="pcMonthMonthWrap"><label>Month</label>
         <select id="pcMonthMonth" class="dde-control">
           ${monthNames.map((x,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${x}</option>`).join('')}
         </select>
       </div>
-      <div><label>Year</label>
+      <div id="pcMonthYearWrap"><label>Year</label>
         <select id="pcMonthYear" class="dde-control">
           ${years.map(y=>`<option value="${y}">${y}</option>`).join('')}
         </select>
@@ -13792,10 +13798,22 @@ function pcMonthBuild(){
 
   pc$('#pcMonthBack').onclick=pcOpen;
   pc$('#pcVarianceReportBtn').onclick=()=>window.ERPComparisonVarianceReport?.open?.();
+  pc$('#pcSummaryMonthlyView').onclick=()=>pcSetProductionSummaryMode('monthly');
+  pc$('#pcSummaryYearlyView').onclick=()=>pcSetProductionSummaryMode('yearly');
   pc$('#pcMonthRefresh').onclick=pcMonthRefresh;
   pc$('#pcMonthMonth').addEventListener('change',pcMonthRefresh);
   pc$('#pcMonthYear').addEventListener('change',pcMonthRefresh);
 }
+
+function pcSetProductionSummaryMode(mode){
+  pcProductionSummaryMode=mode==='yearly'?'yearly':'monthly';
+  const monthly=pcProductionSummaryMode==='monthly';
+  pc$('#pcSummaryMonthlyView')?.classList.toggle('active',monthly);
+  pc$('#pcSummaryYearlyView')?.classList.toggle('active',!monthly);
+  if(pc$('#pcMonthMonthWrap'))pc$('#pcMonthMonthWrap').style.display=monthly?'block':'none';
+  pcMonthRefresh();
+}
+
 function pcMonthRows(month,year){
   return pcSummaryRows()
     .filter(r=>{
@@ -13818,149 +13836,117 @@ function pcMonthMaterialTotals(list){
 }
 function pcMonthRefresh(){
   if(!pc$('#panel-month-summary'))return;
-
   const month=Number(pc$('#pcMonthMonth')?.value||new Date().getMonth()+1);
   const year=Number(pc$('#pcMonthYear')?.value||new Date().getFullYear());
-  const list=pcMonthRows(month,year);
+  const yearly=pcProductionSummaryMode==='yearly';
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  const prevDate=new Date(year,month-2,1);
-  const prev=pcMonthRows(prevDate.getMonth()+1,prevDate.getFullYear());
+  const list=yearly
+    ? pcSummaryRows().filter(r=>{const d=pcParseDailyDate(r.date);return d&&d.getFullYear()===year})
+    : pcMonthRows(month,year);
 
-  const production=list.reduce((a,r)=>a+pcNum(r.totalProduction),0);
-  const active=list.filter(r=>pcNum(r.totalProduction)>0);
-  const ash=active.length?active.reduce((a,r)=>a+pcNum(r.ashAverage),0)/active.length:0;
-  const pulp=list.reduce((a,r)=>a+pcNum(r.pulpProduced),0);
-  const raw=list.reduce((a,r)=>a+pcNum(r.rawMaterialConsumed),0);
-  const pulpYield=raw>0?pulp/raw*100:0;
+  const prevList=yearly
+    ? pcSummaryRows().filter(r=>{const d=pcParseDailyDate(r.date);return d&&d.getFullYear()===year-1})
+    : pcMonthRows(month===1?12:month-1,month===1?year-1:year);
 
-  const wapda=list.reduce((a,r)=>a+pcNum(r.totalWapda),0);
-  const solar=list.reduce((a,r)=>a+pcNum(r.totalSolar),0);
-  const elecAvailable=list.reduce((a,r)=>a+pcNum(r.totalElectricity),0);
-  const elecConsumed=list.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
-  const elecCost=list.reduce((a,r)=>a+pcNum(r.electricityAmount),0);
-  const elecPulp=list.reduce((a,r)=>a+pcNum(r.consPulp),0);
+  const label=yearly?String(year):`${monthNames[month-1]} ${year}`;
+  pcSummaryValue('pcMonthPeriodLabel',label);
 
-  const steamProduced=list.reduce((a,r)=>a+pcNum(r.steamProduction),0);
+  const days=list.length;
+  const paper=list.reduce((a,r)=>a+pcNum(r.totalProduction),0);
+  const electricity=list.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
+  const electricityAvailable=list.reduce((a,r)=>a+pcNum(r.totalElectricity),0);
+  const electricityCost=list.reduce((a,r)=>a+pcNum(r.electricityAmount),0);
+  const steamProduced=list.reduce((a,r)=>a+pcNum(r.steamProduced),0);
   const steamConsumed=list.reduce((a,r)=>a+pcSummarySteamConsumed(r),0);
-  const steamPulp=list.reduce((a,r)=>a+pcNum(r.steamPulp),0);
+  const pulpProduced=list.reduce((a,r)=>a+pcNum(r.pulpProduced),0);
+  const rawMaterial=list.reduce((a,r)=>a+pcNum(r.rawMaterialConsumed),0);
+  const ashVals=list.map(r=>pcNum(r.ashAverage));
+  const ashAvg=ashVals.length?ashVals.reduce((a,b)=>a+b,0)/ashVals.length:0;
+  const mat=pcMonthMaterialTotals(list);
+  const totalMaterial=mat.boiler+mat.pulp+mat.sulphite+mat.units;
 
-  const mt=pcMonthMaterialTotals(list);
-  const totalMaterialCost=mt.boiler+mt.pulp+mt.sulphite+mt.units;
+  const prevPaper=prevList.reduce((a,r)=>a+pcNum(r.totalProduction),0);
+  const prevElectricity=prevList.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
+  const prevSteam=prevList.reduce((a,r)=>a+pcNum(r.steamProduced),0);
+  const pm=pcMonthMaterialTotals(prevList);
+  const prevMaterial=pm.boiler+pm.pulp+pm.sulphite+pm.units;
 
-  const prevProduction=prev.reduce((a,r)=>a+pcNum(r.totalProduction),0);
-  const prevElectricity=prev.reduce((a,r)=>a+pcNum(r.totalConsumption),0);
-  const prevSteam=prev.reduce((a,r)=>a+pcNum(r.steamProduction),0);
-  const prevMT=pcMonthMaterialTotals(prev);
-  const prevMaterialCost=prevMT.boiler+prevMT.pulp+prevMT.sulphite+prevMT.units;
+  pcSummaryValue('pcMonthDays',days);
+  pcSummaryValue('pcMonthPaper',`${paper.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthPaperAvg',`${(days?paper/days:0).toFixed(3)} Ton/Day`);
+  pcSummaryValue('pcMonthAshAvg',`${ashAvg.toFixed(2)}%`);
+  pcSummaryValue('pcMonthPulp',`${pulpProduced.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthPulpYield',`${(rawMaterial?pulpProduced/rawMaterial*100:0).toFixed(2)}%`);
+  pcSummaryValue('pcMonthMaterialCost',pcMoney(totalMaterial));
+  pcSummaryValue('pcMonthCostTonPaper',pcMoney(paper?totalMaterial/paper:0));
 
-  const steamMaterialQty=list.reduce((sum,r)=>{
-    const mats=Array.isArray(r.boilerMaterials)?r.boilerMaterials:[];
-    return sum+mats.reduce((a,x)=>a+pcNum(x.finalReportQty??x.used),0)
-  },0);
-  const steamYield=steamMaterialQty>0?steamProduced/steamMaterialQty*100:0;
+  pcSummaryValue('pcMonthWapda',`${list.reduce((a,r)=>a+pcNum(r.wapdaTotal),0).toFixed(0)} Units`);
+  pcSummaryValue('pcMonthSolar',`${list.reduce((a,r)=>a+pcNum(r.solarTotal),0).toFixed(0)} Units`);
+  pcSummaryValue('pcMonthElecAvailable',`${electricityAvailable.toFixed(0)} Units`);
+  pcSummaryValue('pcMonthElecConsumed',`${electricity.toFixed(0)} Units`);
+  pcSummaryValue('pcMonthElecCost',pcMoney(electricityCost));
+  pcSummaryValue('pcMonthUnitsTon',`${(paper?electricity/paper:0).toFixed(2)} Units/Ton`);
+  pcSummaryValue('pcMonthElecCostTon',pcMoney(paper?electricityCost/paper:0));
+  pcSummaryValue('pcMonthElecBalance',`${(electricityAvailable-electricity).toFixed(0)} Units`);
 
-  const monthName=pc$('#pcMonthMonth')?.selectedOptions?.[0]?.textContent||'';
-  pcSummaryValue('pcMonthPeriodLabel',`${monthName} ${year}`);
+  pcSummaryValue('pcMonthSteamProduced',`${steamProduced.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthSteamConsumed',`${steamConsumed.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthSteamTonPaper',`${(paper?steamConsumed/paper:0).toFixed(3)} Ton/Ton`);
+  pcSummaryValue('pcMonthBoilerCost',pcMoney(mat.boiler));
+  pcSummaryValue('pcMonthSteamCostTonSteam',pcMoney(steamProduced?mat.boiler/steamProduced:0));
+  pcSummaryValue('pcMonthSteamCostTonPaper',pcMoney(paper?mat.boiler/paper:0));
+  pcSummaryValue('pcMonthSteamBalance',`${(steamProduced-steamConsumed).toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthSteamYield',`${(steamProduced?steamConsumed/steamProduced*100:0).toFixed(2)}%`);
 
-  pcSummaryValue('pcMonthDays',String(list.length));
-  pcSummaryValue('pcMonthPaper',production.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthPaperAvg',(list.length?production/list.length:0).toFixed(3)+' Ton/Day');
-  pcSummaryValue('pcMonthAshAvg',ash.toFixed(2)+'%');
-  pcSummaryValue('pcMonthPulp',pulp.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthPulpYield',pulpYield.toFixed(2)+'%');
-  pcSummaryValue('pcMonthMaterialCost',pcMoney(totalMaterialCost));
-  pcSummaryValue('pcMonthMaterialCostTon',pcMoney(production>0?totalMaterialCost/production:0));
+  pcSummaryValue('pcMonthRawMaterial',`${rawMaterial.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthPulpProduced2',`${pulpProduced.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthPulpYield2',`${(rawMaterial?pulpProduced/rawMaterial*100:0).toFixed(2)}%`);
+  pcSummaryValue('pcMonthSteamPulp',`${list.reduce((a,r)=>a+pcNum(r.steamPulp),0).toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthSteamTonPulp',`${(pulpProduced?list.reduce((a,r)=>a+pcNum(r.steamPulp),0)/pulpProduced:0).toFixed(3)} Ton/Ton`);
+  pcSummaryValue('pcMonthElectricityPulp',`${list.reduce((a,r)=>a+pcNum(r.electricityPulp),0).toFixed(0)} Units`);
+  pcSummaryValue('pcMonthElectricityTonPulp',`${(pulpProduced?list.reduce((a,r)=>a+pcNum(r.electricityPulp),0)/pulpProduced:0).toFixed(2)} Units/Ton`);
+  pcSummaryValue('pcMonthPulpMaterialCost',pcMoney(mat.pulp));
 
-  pcSummaryValue('pcMonthWapda',Math.round(wapda).toLocaleString()+' Units');
-  pcSummaryValue('pcMonthSolar',Math.round(solar).toLocaleString()+' Units');
-  pcSummaryValue('pcMonthElectricityAvailable',Math.round(elecAvailable).toLocaleString()+' Units');
-  pcSummaryValue('pcMonthElectricityConsumed',Math.round(elecConsumed).toLocaleString()+' Units');
-  pcSummaryValue('pcMonthElectricityCost',pcMoney(elecCost));
-  pcSummaryValue('pcMonthUnitsTonPaper',(production>0?elecConsumed/production:0).toFixed(2)+' Units/Ton');
-  pcSummaryValue('pcMonthElecCostTonPaper',pcMoney(production>0?elecCost/production:0));
-  pcSummaryValue('pcMonthElectricityBalance',Math.round(elecAvailable-elecConsumed).toLocaleString()+' Units');
+  pcSummaryValue('pcMonthPrevProduction',`${prevPaper.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthProductionChange',`${pcMonthPercentChange(paper,prevPaper).toFixed(2)}%`);
+  pcSummaryValue('pcMonthPrevElectricity',`${prevElectricity.toFixed(0)} Units`);
+  pcSummaryValue('pcMonthElectricityChange',`${pcMonthPercentChange(electricity,prevElectricity).toFixed(2)}%`);
+  pcSummaryValue('pcMonthPrevSteam',`${prevSteam.toFixed(3)} Ton`);
+  pcSummaryValue('pcMonthSteamChange',`${pcMonthPercentChange(steamProduced,prevSteam).toFixed(2)}%`);
+  pcSummaryValue('pcMonthPrevMaterialCost',pcMoney(prevMaterial));
+  pcSummaryValue('pcMonthMaterialChange',`${pcMonthPercentChange(totalMaterial,prevMaterial).toFixed(2)}%`);
 
-  pcSummaryValue('pcMonthSteamProduced',steamProduced.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthSteamConsumed',steamConsumed.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthSteamTonPaper',(production>0?steamConsumed/production:0).toFixed(3)+' Ton/Ton');
-  pcSummaryValue('pcMonthBoilerCost',pcMoney(mt.boiler));
-  pcSummaryValue('pcMonthCostTonSteam',pcMoney(steamProduced>0?mt.boiler/steamProduced:0));
-  pcSummaryValue('pcMonthSteamCostTonPaper',pcMoney(production>0?mt.boiler/production:0));
-  pcSummaryValue('pcMonthSteamBalance',(steamProduced-steamConsumed).toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthSteamYield',steamYield.toFixed(2)+'%');
-
-  pcSummaryValue('pcMonthRawMaterial',raw.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthPulpProduced',pulp.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthPulpYield2',pulpYield.toFixed(2)+'%');
-  pcSummaryValue('pcMonthSteamPulp',steamPulp.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthSteamTonPulp',(pulp>0?steamPulp/pulp:0).toFixed(3)+' Ton/Ton');
-  pcSummaryValue('pcMonthElecPulp',Math.round(elecPulp).toLocaleString()+' Units');
-  pcSummaryValue('pcMonthElecTonPulp',(pulp>0?elecPulp/pulp:0).toFixed(2)+' Units/Ton');
-  pcSummaryValue('pcMonthPulpMaterialCost',pcMoney(mt.pulp));
-
-  pcSummaryValue('pcMonthPrevProduction',prevProduction.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthProductionChange',pcMonthPercentChange(production,prevProduction).toFixed(2)+'%');
-  pcSummaryValue('pcMonthPrevElectricity',Math.round(prevElectricity).toLocaleString()+' Units');
-  pcSummaryValue('pcMonthElectricityChange',pcMonthPercentChange(elecConsumed,prevElectricity).toFixed(2)+'%');
-  pcSummaryValue('pcMonthPrevSteam',prevSteam.toFixed(3)+' Ton');
-  pcSummaryValue('pcMonthSteamChange',pcMonthPercentChange(steamProduced,prevSteam).toFixed(2)+'%');
-  pcSummaryValue('pcMonthPrevMaterialCost',pcMoney(prevMaterialCost));
-  pcSummaryValue('pcMonthMaterialCostChange',pcMonthPercentChange(totalMaterialCost,prevMaterialCost).toFixed(2)+'%');
-
-  pcSummaryValue('pcMonthCostBoiler',pcMoney(mt.boiler));
-  pcSummaryValue('pcMonthCostPulp',pcMoney(mt.pulp));
-  pcSummaryValue('pcMonthCostSulphite',pcMoney(mt.sulphite));
-  pcSummaryValue('pcMonthCostUnits',pcMoney(mt.units));
-
-  const unitMap={};
-  list.forEach(r=>(Array.isArray(r.units)?r.units:[]).forEach(u=>{
-    const key=String(u.id||u.code||u.name||'').trim()||u.name;
-    if(!unitMap[key])unitMap[key]={name:u.name||u.code||key,production:0,ashSum:0,ashCount:0};
-    unitMap[key].production+=pcNum(u.production);
-    if(pcNum(u.production)>0){unitMap[key].ashSum+=pcNum(u.ash);unitMap[key].ashCount++}
-  }));
-  const unitHost=pc$('#pcMonthUnitGrid');
-  if(unitHost){
-    const units=Object.values(unitMap);
-    unitHost.innerHTML=units.length?units.map(u=>`
-      <div class="pc-month-unit-card">
-        <strong>${u.name}</strong>
-        <div><span>Production</span><b>${u.production.toFixed(3)} Ton</b></div>
-        <div><span>Average Ash</span><b>${(u.ashCount?u.ashSum/u.ashCount:0).toFixed(2)}%</b></div>
-        <div><span>Production Share</span><b>${(production>0?u.production/production*100:0).toFixed(2)}%</b></div>
-        <div><span>Average / Day</span><b>${(list.length?u.production/list.length:0).toFixed(3)} Ton</b></div>
-      </div>`).join(''):'<div class="pc-month-empty">No production-unit records for this month.</div>'
+  const tableBody=pc$('#pcMonthDailyBody');
+  const table=tableBody?.closest('table');
+  if(tableBody&&table){
+    const h=table.querySelector('thead tr');
+    if(yearly){
+      if(h)h.innerHTML='<th>Month</th><th>Production</th><th>Ash Avg</th><th>Electricity</th><th>Units/Ton</th><th>Steam Produced</th><th>Steam/Ton</th><th>Pulp Produced</th><th>Pulp Yield</th><th>Material Cost</th>';
+      tableBody.innerHTML=monthNames.map((mn,i)=>{
+        const ml=pcMonthRows(i+1,year),p=ml.reduce((a,r)=>a+pcNum(r.totalProduction),0),e=ml.reduce((a,r)=>a+pcNum(r.totalConsumption),0),s=ml.reduce((a,r)=>a+pcNum(r.steamProduced),0),pp=ml.reduce((a,r)=>a+pcNum(r.pulpProduced),0),rm=ml.reduce((a,r)=>a+pcNum(r.rawMaterialConsumed),0),av=ml.map(r=>pcNum(r.ashAverage)),aa=av.length?av.reduce((a,b)=>a+b,0)/av.length:0,mm=pcMonthMaterialTotals(ml),mc=mm.boiler+mm.pulp+mm.sulphite+mm.units;
+        return `<tr><td>${mn}</td><td>${p.toFixed(3)} Ton</td><td>${aa.toFixed(2)}%</td><td>${e.toFixed(0)} Units</td><td>${(p?e/p:0).toFixed(2)}</td><td>${s.toFixed(3)} Ton</td><td>${(p?s/p:0).toFixed(3)}</td><td>${pp.toFixed(3)} Ton</td><td>${(rm?pp/rm*100:0).toFixed(2)}%</td><td>${pcMoney(mc)}</td></tr>`;
+      }).join('');
+    }else{
+      if(h)h.innerHTML='<th>Date</th><th>Production</th><th>Ash Avg</th><th>Electricity</th><th>Units/Ton</th><th>Steam Produced</th><th>Steam/Ton</th><th>Pulp Produced</th><th>Pulp Yield</th><th>Material Cost</th>';
+      tableBody.innerHTML=list.length?list.map(r=>{
+        const p=pcNum(r.totalProduction),e=pcNum(r.totalConsumption),s=pcNum(r.steamProduced),pp=pcNum(r.pulpProduced),rm=pcNum(r.rawMaterialConsumed),mm=pcMonthMaterialTotals([r]),mc=mm.boiler+mm.pulp+mm.sulphite+mm.units;
+        return `<tr><td>${r.date||''}</td><td>${p.toFixed(3)} Ton</td><td>${pcNum(r.ashAverage).toFixed(2)}%</td><td>${e.toFixed(0)} Units</td><td>${(p?e/p:0).toFixed(2)}</td><td>${s.toFixed(3)} Ton</td><td>${(p?s/p:0).toFixed(3)}</td><td>${pp.toFixed(3)} Ton</td><td>${(rm?pp/rm*100:0).toFixed(2)}%</td><td>${pcMoney(mc)}</td></tr>`;
+      }).join(''):'<tr><td colspan="10" style="text-align:center;padding:16px">No saved Daily Consumption Reports for this month.</td></tr>';
+    }
   }
 
-  const body=pc$('#pcMonthDailyBody');
-  if(body){
-    body.innerHTML=list.length?list.map(r=>{
-      const rp=pcNum(r.totalProduction), ec=pcNum(r.totalConsumption), sp=pcNum(r.steamProduction), sc=pcSummarySteamConsumed(r), pp=pcNum(r.pulpProduced), rm=pcNum(r.rawMaterialConsumed), mc=pcSummaryAllMaterialCost(r);
-      return `<tr>
-        <td><b>${r.date||''}</b></td>
-        <td>${rp.toFixed(3)} Ton</td>
-        <td>${pcNum(r.ashAverage).toFixed(2)}%</td>
-        <td>${Math.round(ec).toLocaleString()} Units</td>
-        <td>${(rp>0?ec/rp:0).toFixed(2)}</td>
-        <td>${sp.toFixed(3)} Ton</td>
-        <td>${(rp>0?sc/rp:0).toFixed(3)}</td>
-        <td>${pp.toFixed(3)} Ton</td>
-        <td>${(rm>0?pp/rm*100:0).toFixed(2)}%</td>
-        <td>${pcMoney(mc)}</td>
-      </tr>`
-    }).join(''):'<tr><td colspan="10" style="text-align:center;padding:16px">No saved Daily Consumption Reports for this month.</td></tr>'
-  }
-
-  pcSummaryValue('pcMonthNote',list.length?`${list.length} saved daily report(s) included in ${monthName} ${year}.`:`No saved Daily Consumption Reports for ${monthName} ${year}.`)
+  pcSummaryValue('pcMonthNote',list.length?`${list.length} saved daily report(s) included in ${label}.`:`No saved Daily Consumption Reports for ${label}.`);
 }
+
 function pcMonthOpen(){
   pcMonthBuild();
   window.ERPComparisonButtonFixV1520?.ensure?.();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   pc$('#panel-month-summary')?.classList.add('active');
-  if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Month Summary';
-  if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Production • Electricity • Steam • Pulp • Materials • Cost';
-  pcMonthRefresh();
+  if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Production Summary';
+  if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Monthly • Yearly • Production • Electricity • Steam • Pulp • Materials • Cost';
+  pcSetProductionSummaryMode(pcProductionSummaryMode);
   try{
     localStorage.setItem('erpStudioLastPanel','month-summary');
     localStorage.setItem(PC_LAST_PAGE_KEY,'month')
@@ -21344,7 +21330,13 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       table{width:100%;border-collapse:collapse}th{background:${primary};color:#fff;padding:6px;border:1px solid #aebbc7;font-size:8px}
       td{padding:5px 6px;border:1px solid #c9d2db}.n{text-align:right;font-variant-numeric:tabular-nums}
       tbody tr:nth-child(even){background:#f8fafb}.footer{display:flex;justify-content:space-between;margin-top:8px;border-top:1px solid #ccd6df;padding-top:5px;font-size:8px}
-      </style></head><body>
+      </style>
+<style id="pcProductionSummaryMergedV1521Style">
+#panel-month-summary .pc-summary-viewbar{display:flex;gap:6px;align-items:center;margin:0 0 10px}
+#panel-month-summary .pc-summary-viewbar .btn.active{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
+#panel-month-summary .pc-month-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+</head><body>
       <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
       <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
       <div class="filters">Selection: ${esc($('mbrSelection')?.textContent||'All Materials')} &nbsp; | &nbsp; Sort: ${esc($('mbrSort')?.selectedOptions?.[0]?.text||'')} (${esc($('mbrOrder')?.value||'')})</div>
