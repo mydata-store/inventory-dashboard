@@ -21900,46 +21900,33 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   function bind(){
     const sidebar=document.getElementById('studioSidebar');
     const app=document.getElementById('app');
-    if(!sidebar || sidebar.dataset.startClosedV1524==='1')return;
-    sidebar.dataset.startClosedV1524='1';
+    if(!sidebar || sidebar.dataset.startClosedV1526==='1')return;
+    sidebar.dataset.startClosedV1526='1';
 
-    // Initial ERP load: no submenu is left open from a previous page.
     closeAllSidebarGroups();
 
-    // A new visit/open of the sidebar always begins clean.
-    // Once the pointer is inside, clicking a group still opens it normally.
+    let wasCollapsed=!!app?.classList.contains('collapsed');
+
+    function checkExpansion(){
+      if(!app)return;
+      const collapsed=app.classList.contains('collapsed');
+      if(wasCollapsed && !collapsed)closeAllSidebarGroups();
+      wasCollapsed=collapsed;
+    }
+
+    document.addEventListener('click',()=>setTimeout(checkExpansion,0),true);
+
     sidebar.addEventListener('mouseenter',()=>{
-      if(sidebar.dataset.pointerInsideV1524==='1')return;
-      sidebar.dataset.pointerInsideV1524='1';
-      closeAllSidebarGroups();
-    });
-
-    // Leaving the sidebar ends the current visit and closes any open group.
-    sidebar.addEventListener('mouseleave',()=>{
-      sidebar.dataset.pointerInsideV1524='0';
-      closeAllSidebarGroups();
-    });
-
-    // Any direct page navigation also closes expanded groups.
-    document.addEventListener('click',e=>{
-      const pageButton=e.target.closest('[data-panel],[data-inventory-open],[data-production-consumption-open]');
-      if(!pageButton)return;
-      setTimeout(closeAllSidebarGroups,0);
-    },true);
-
-    // If sidebar expansion is triggered programmatically, keep its first
-    // expanded state clean as well without using an interval/observer.
-    document.addEventListener('click',()=>{
       setTimeout(()=>{
         if(!app)return;
-        if(!app.classList.contains('collapsed') && sidebar.dataset.wasExpandedV1524!=='1'){
-          sidebar.dataset.wasExpandedV1524='1';
-          closeAllSidebarGroups();
-        }else if(app.classList.contains('collapsed')){
-          sidebar.dataset.wasExpandedV1524='0';
-        }
+        const collapsed=app.classList.contains('collapsed');
+        if(wasCollapsed && !collapsed)closeAllSidebarGroups();
+        wasCollapsed=collapsed;
       },0);
-    },true);
+    });
+
+    window.ERPSidebarStartClosedV1524={closeAll:closeAllSidebarGroups};
+    window.ERPSidebarStartClosedV1526={closeAll:closeAllSidebarGroups};
   }
 
   if(document.readyState==='loading'){
@@ -21947,8 +21934,6 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   }else{
     bind();
   }
-
-  window.ERPSidebarStartClosedV1524={closeAll:closeAllSidebarGroups};
 })();
 </script>
 
@@ -22013,85 +21998,57 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 </script>
 
 
-<style id="erpUniversalSamePageControllerV1525Style">
-/* Universal launcher only. It does not alter page business layout or data logic. */
-.erp-universal-page-controller-v1525{
-  flex:0 0 auto;
-  white-space:nowrap;
-}
-.erp-universal-controller-actions-v1525{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-left:auto;
-}
-.erp-universal-controller-fallback-v1525{
-  display:flex;
-  justify-content:flex-end;
-  align-items:center;
-  margin:0 0 8px;
-}
+<style id="erpUniversalSamePageControllerV1526Style">
+.erp-universal-page-controller-v1526{flex:0 0 auto;white-space:nowrap}
+.erp-universal-controller-actions-v1526{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-left:auto}
+.erp-universal-controller-fallback-v1526{display:flex;justify-content:flex-end;align-items:center;margin:0 0 8px}
 </style>
 
 <script id="erpUniversalSamePageControllerV1525">
 (function(){
-  const BTN_CLASS='erp-universal-page-controller-v1525';
+  const BTN_CLASS='erp-universal-page-controller-v1526';
+  const LEGACY_SELECTOR=[
+    '.purchase-controller-btn',
+    '.apd-launch',
+    '[data-purchase-controller]',
+    '[data-page-controller]'
+  ].join(',');
 
-  function panelId(panel){
+  function pageId(panel){
     return String(panel?.id||'').replace(/^panel-/,'').trim();
   }
 
-  function hasController(panel){
-    if(!panel)return true;
-    return !!panel.querySelector(
-      '.erp-universal-page-controller-v1525,'+
-      '.purchase-controller-btn,'+
-      '.apd-launch,'+
-      '[data-purchase-controller],'+
-      '[data-page-controller]'
-    );
+  function activePanel(){
+    return document.querySelector('main.content section.panel.active');
   }
 
-  function controllerTextExists(panel){
-    return [...panel.querySelectorAll('button')].some(b=>
-      /page\s*(controller|designer)/i.test(String(b.textContent||'').trim())
-    );
+  function looksLikeController(btn){
+    if(!btn || btn.closest('#advancedPageDesignerModal'))return false;
+    if(btn.matches(LEGACY_SELECTOR))return true;
+    return /page\s*(controller|designer)/i.test(String(btn.textContent||'').trim());
   }
 
-  function makeButton(panel){
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.className='btn '+BTN_CLASS;
-    btn.textContent='⚙ Page Controller';
-    btn.title='Design this page without leaving it';
-    btn.dataset.pageId=panelId(panel);
+  function openStudioFor(panel){
+    panel=panel||activePanel();
+    if(!panel)return;
 
-    btn.addEventListener('click',function(e){
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Open the existing Page Control Studio against THIS panel.
-      // No route change and no business function is called.
-      if(window.ERPAdvancedPageDesigner?.openPage){
-        window.ERPAdvancedPageDesigner.openPage(panel);
-        setTimeout(()=>{
-          window.ERPPageControlExtras?.loadDesigner?.();
-          window.ERPColumnSummaryDesigner?.applySaved?.();
-        },0);
-      }else if(window.ERPAdvancedPageDesigner?.open){
-        window.ERPAdvancedPageDesigner.open();
-      }else if(window.toast){
-        toast('Page Controller is not ready yet');
-      }
-    },true);
-
-    return btn;
+    if(window.ERPAdvancedPageDesigner?.openPage){
+      window.ERPAdvancedPageDesigner.openPage(panel);
+      setTimeout(()=>{
+        window.ERPPageControlExtras?.loadDesigner?.();
+        window.ERPColumnSummaryDesigner?.applySaved?.();
+        window.ERPPerPageDesign?.apply?.();
+      },0);
+      return;
+    }
+    if(window.ERPAdvancedPageDesigner?.open){
+      window.ERPAdvancedPageDesigner.open();
+      return;
+    }
+    window.toast?.('Page Control Studio is not ready yet');
   }
 
-  function actionHost(panel){
-    // Prefer an existing action/button area so the page structure is not changed.
+  function buttonHost(panel){
     const selectors=[
       '.inv-page-head .actions',
       '.purchase-page-head .actions',
@@ -22106,90 +22063,101 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       '.toolbar-actions'
     ];
     for(const sel of selectors){
-      const el=panel.querySelector(sel);
-      if(el)return {host:el,fallback:false};
+      const host=panel.querySelector(sel);
+      if(host)return host;
     }
 
-    // If the header itself already contains buttons, create a small action group inside it.
-    const heads=[
-      '.inv-page-head',
-      '.purchase-page-head',
-      '.page-head',
-      '.module-head',
-      '.section-head'
-    ];
-    for(const sel of heads){
+    for(const sel of ['.inv-page-head','.purchase-page-head','.page-head','.module-head','.section-head']){
       const head=panel.querySelector(sel);
       if(head){
-        const existing=[...head.children].find(x=>
-          x.matches?.('.erp-universal-controller-actions-v1525')
-        );
-        if(existing)return {host:existing,fallback:false};
-
-        const actions=document.createElement('div');
-        actions.className='erp-universal-controller-actions-v1525';
-        head.appendChild(actions);
-        return {host:actions,fallback:false};
+        let actions=head.querySelector(':scope > .erp-universal-controller-actions-v1526');
+        if(!actions){
+          actions=document.createElement('div');
+          actions.className='erp-universal-controller-actions-v1526';
+          head.appendChild(actions);
+        }
+        return actions;
       }
     }
 
-    // Last-resort launcher row inside the panel. No existing element is modified.
-    let row=panel.querySelector(':scope > .erp-universal-controller-fallback-v1525');
+    let row=panel.querySelector(':scope > .erp-universal-controller-fallback-v1526');
     if(!row){
       row=document.createElement('div');
-      row.className='erp-universal-controller-fallback-v1525';
+      row.className='erp-universal-controller-fallback-v1526';
       panel.insertBefore(row,panel.firstChild);
     }
-    return {host:row,fallback:true};
+    return row;
   }
 
-  function ensurePanel(panel){
+  function hasAnyController(panel){
+    return [...panel.querySelectorAll('button')].some(looksLikeController);
+  }
+
+  function ensureController(panel){
     if(!panel || !panel.matches('section.panel'))return;
+    if(hasAnyController(panel))return;
 
-    // Existing dedicated controllers are kept exactly as they are.
-    if(hasController(panel) || controllerTextExists(panel))return;
-
-    const {host}=actionHost(panel);
+    const host=buttonHost(panel);
     if(!host)return;
-    host.appendChild(makeButton(panel));
+
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn '+BTN_CLASS;
+    btn.textContent='⚙ Page Controller';
+    btn.dataset.pageId=pageId(panel);
+    host.appendChild(btn);
   }
 
   function ensureAll(){
-    document.querySelectorAll('main.content section.panel').forEach(ensurePanel);
+    document.querySelectorAll('main.content section.panel').forEach(ensureController);
   }
 
-  function ensureActive(){
-    const active=document.querySelector('main.content section.panel.active');
-    if(active)ensurePanel(active);
+  function bindOne(btn){
+    if(!looksLikeController(btn) || btn.dataset.unifiedPageStudioV1526==='1')return;
+    btn.dataset.unifiedPageStudioV1526='1';
+
+    btn.addEventListener('click',function(e){
+      if(!looksLikeController(btn))return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const panel=btn.closest('section.panel')||activePanel();
+      openStudioFor(panel);
+    },true);
+  }
+
+  function bindExisting(){
+    document.querySelectorAll('button').forEach(bindOne);
+  }
+
+  function refresh(){
+    ensureAll();
+    bindExisting();
   }
 
   function bind(){
-    ensureAll();
+    refresh();
 
-    // Pages in this ERP are frequently built only when opened.
-    // Re-check immediately after normal navigation without changing routing.
-    document.addEventListener('click',function(e){
-      if(e.target.closest('#advancedPageDesignerModal'))return;
-      setTimeout(()=>{
-        ensureActive();
-        ensureAll();
-      },0);
-    },true);
+    document.addEventListener('click',()=>setTimeout(refresh,0),true);
+    window.addEventListener('hashchange',()=>setTimeout(refresh,0));
+    window.addEventListener('popstate',()=>setTimeout(refresh,0));
 
-    window.addEventListener('hashchange',()=>setTimeout(()=>{
-      ensureActive();
-      ensureAll();
-    },0));
+    const main=document.querySelector('main.content');
+    if(main){
+      const obs=new MutationObserver(records=>{
+        let changed=false;
+        for(const r of records){
+          if(r.type==='childList' && r.addedNodes.length){changed=true;break}
+        }
+        if(changed)setTimeout(refresh,0);
+      });
+      obs.observe(main,{subtree:true,childList:true});
+    }
 
-    window.addEventListener('popstate',()=>setTimeout(()=>{
-      ensureActive();
-      ensureAll();
-    },0));
-
-    // Expose a harmless refresh hook for dynamically-created future pages.
     window.ERPUniversalPageController={
-      refresh:ensureAll,
-      ensurePage:ensurePanel
+      refresh,
+      ensurePage:ensureController,
+      openPage:openStudioFor
     };
   }
 
