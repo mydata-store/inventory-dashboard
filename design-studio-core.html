@@ -4961,8 +4961,8 @@ html.erp-route-restoring-v1545 body{visibility:hidden!important}
         <div class="mbr-field">
           <label>Report View</label>
           <select id="mbrView" class="dde-control">
-            <option value="detail">Detailed Daily Balances</option>
             <option value="latest">Latest Balance Only</option>
+            <option value="detail">Detailed Daily Balances</option>
           </select>
         </div>
 
@@ -21048,12 +21048,43 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   const DATA_KEY='erpProductionConsumptionDailyV1';
   const $=id=>document.getElementById(id);
   const GROUPS={
-    boiler:{label:'Boiler House',key:'boilerMaterials'},
-    pulp:{label:'Pulp Mill',key:'pulpMaterials'},
-    sulphite:{label:'Sulphite Plant',key:'sulphiteMaterials'},
-    units:{label:'Production Units',key:'unitMaterials'}
+    boiler:{label:'Boiler House',key:'boilerMaterials',masterKey:'boiler'},
+    pulp:{label:'Pulp Mill',key:'pulpMaterials',masterKey:'pulp'},
+    sulphite:{label:'Sulphite Plant',key:'sulphiteMaterials',masterKey:'sulphite'},
+    units:{label:'Production Units',key:'unitMaterials',masterKey:'stockpulp'}
   };
+  const MATERIAL_MASTER_KEY='erpDailyMaterialMasterV1';
   let renderedRows=[];
+
+  function materialMaster(){
+    try{
+      const d=JSON.parse(localStorage.getItem(MATERIAL_MASTER_KEY)||'{}');
+      return d&&typeof d==='object'?d:{}
+    }catch(e){return {}}
+  }
+
+  function masterRows(){
+    const master=materialMaster();
+    const out=[];
+    Object.entries(GROUPS).forEach(([group,meta])=>{
+      const list=Array.isArray(master[meta.masterKey])?master[meta.masterKey]:[];
+      list
+        .filter(x=>String(x.status||'active').toLowerCase()!=='inactive')
+        .forEach(x=>{
+          const material=String(x.material||'').trim();
+          if(!material)return;
+          out.push({
+            group,
+            groupLabel:meta.label,
+            material,
+            unit:x.unit||'',
+            rate:num(x.currentRate??x.rate),
+            sequence:num(x.sequence)
+          });
+        });
+    });
+    return out;
+  }
 
   function num(v){
     const n=parseFloat(String(v??'').replace(/,/g,''));
@@ -21134,7 +21165,14 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   }
   function materialNamesForGroup(){
     const group=$('mbrGroup')?.value||'';
-    return [...new Set(flatten().filter(x=>!group||x.group===group).map(x=>x.material))]
+    const fromSaved=flatten()
+      .filter(x=>!group||x.group===group)
+      .map(x=>x.material);
+    const fromMaster=masterRows()
+      .filter(x=>!group||x.group===group)
+      .map(x=>x.material);
+
+    return [...new Set([...fromMaster,...fromSaved].filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b))
   }
   function renderMaterialChoices(){
@@ -21146,7 +21184,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       <label class="mbr-material-option">
         <input type="checkbox" value="${esc(name)}" ${selected.has(name)?'checked':''}>
         <span>${esc(name)}</span>
-      </label>`).join(''):'<span style="font-size:10px;color:var(--muted)">No materials found.</span>';
+      </label>`).join(''):'<span style="font-size:10px;color:var(--muted)">No active materials found in Material Master.</span>';
     host.querySelectorAll('input').forEach(ch=>ch.addEventListener('change',renderReport))
   }
   function populateYears(){
@@ -21163,6 +21201,41 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     document.querySelectorAll('.mbr-period-monthly').forEach(x=>x.style.display=p==='monthly'?'flex':'none');
     document.querySelectorAll('.mbr-period-custom').forEach(x=>x.style.display=p==='custom'?'flex':'none')
   }
+  function latestSavedByMaterial(){
+    const map=new Map();
+    flatten().forEach(x=>{
+      const key=x.group+'||'+x.material.toLowerCase();
+      const old=map.get(key);
+      if(!old || (x.dateObj||0)>(old.dateObj||0))map.set(key,x);
+    });
+    return map;
+  }
+
+  function masterSnapshotRows(){
+    const latest=latestSavedByMaterial();
+    return masterRows().map(m=>{
+      const key=m.group+'||'+m.material.toLowerCase();
+      const saved=latest.get(key);
+      if(saved)return saved;
+
+      return {
+        date:'—',
+        dateObj:null,
+        recordId:'',
+        group:m.group,
+        groupLabel:m.groupLabel,
+        material:m.material,
+        unit:m.unit,
+        opening:0,
+        received:0,
+        consumed:0,
+        balance:0,
+        movement:0,
+        masterOnly:true
+      };
+    });
+  }
+
   function filterRows(){
     let rows=flatten();
     const group=$('mbrGroup')?.value||'';
@@ -21186,13 +21259,13 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     }
 
     if(($('mbrView')?.value||'detail')==='latest'){
-      const latest=new Map();
-      rows.forEach(x=>{
-        const key=x.group+'||'+x.material.toLowerCase();
-        const old=latest.get(key);
-        if(!old || (x.dateObj||0)>(old.dateObj||0))latest.set(key,x)
-      });
-      rows=[...latest.values()]
+      // Latest Balance includes every active Material Master item.
+      // If an item has never been saved in Daily Consumption, it is shown
+      // with zero movement/balance instead of disappearing from the report.
+      rows=masterSnapshotRows();
+
+      if(group)rows=rows.filter(x=>x.group===group);
+      if(mats.size)rows=rows.filter(x=>mats.has(x.material));
     }
 
     const sort=$('mbrSort')?.value||'date';
@@ -21270,7 +21343,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     $('mbrGeneratedAt').textContent='Generated '+new Date().toLocaleString()
   }
   function reset(){
-    $('mbrView').value='detail';
+    $('mbrView').value='latest';
     $('mbrPeriod').value='all';
     $('mbrDate').value='';
     $('mbrMonth').value='';
