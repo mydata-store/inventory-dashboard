@@ -7785,6 +7785,9 @@ function purchaseBind(){
     purchaseApplyPcState(purchasePcPage,d);
     toast('Page defaults previewed — press Save Page Settings to keep them')
   });
+  // Local Purchase entry actions (V15.31): these buttons existed but were not bound.
+  $('#localEntrySave')?.addEventListener('click',localEntrySaveAll);
+  $('#localEntryClear')?.addEventListener('click',localEntryClear);
 if($('#zafarEntryBody'))zafarEntryBuild();$('#zafarEntrySave')?.addEventListener('click',zafarEntrySave);$('#zafarEntryClear')?.addEventListener('click',()=>{zafarEntryBuild();zafarEntryUpdateTotal();toast('Zafar Purchase table cleared')});
   if($('#boardEntryBody'))boardEntryBuild();$$('#boardRegisterTabs [data-board-register]').forEach(b=>b.addEventListener('click',()=>boardSwitchRegister(b.dataset.boardRegister)));$('#boardEntrySave')?.addEventListener('click',boardSaveGrid);$('#boardEntryClear')?.addEventListener('click',()=>{boardDrafts[boardRegisterType]=null;boardEntryBuild();toast(boardRegisterType+' table cleared')});
   $('#pphClear')?.addEventListener('click',()=>{$('#pphSearch').value='';$('#pphRegister').value='';$('#pphSection').value='';purchaseRenderHistory()});
@@ -19794,6 +19797,15 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
           <div class="apd-field"><label>Cell Padding</label><input id="apdColumnPadding" type="range" min="1" max="20" step="1" value="7"><output id="apdColumnPaddingVal">7px</output></div>
           <div class="apd-field"><label>Column Width</label><input id="apdColumnWidth" type="range" min="50" max="420" step="5" value="140"><output id="apdColumnWidthVal">140px</output></div>
           <div class="apd-field"><label>Text Wrap</label><select id="apdColumnWrap"><option value="normal">Wrap</option><option value="nowrap">No Wrap</option></select></div>
+          <div class="apd-field"><label>Number Format</label><select id="apdColumnNumberFormat">
+            <option value="auto">Auto / Keep Original</option>
+            <option value="0">0</option>
+            <option value="1">0.0</option>
+            <option value="2">0.00</option>
+            <option value="3">0.000</option>
+            <option value="4">0.0000</option>
+          </select></div>
+          <label class="apd-check"><input type="checkbox" id="apdColumnThousands"> Use thousand commas (1,000.00)</label>
           <div class="apd-field"><label>Text Color</label><input id="apdColumnColor" type="color" value="#10253f"></div>
           <div class="apd-field"><label>Background</label><input id="apdColumnBg" type="color" value="#ffffff"></div>
           <label class="apd-check"><input type="checkbox" id="apdColumnPlain"> Plain text (remove badge/background from inner item label)</label>
@@ -20893,7 +20905,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   let selectedSummaryKey='';
 
   function root(){
-    return document.querySelector('#panel-daily-data-entry');
+    return document.querySelector('main.content > section.panel.active,main.content section.panel.active,section.panel.active');
   }
   function pageId(){
     return (document.querySelector('main.content > section.panel.active,main.content section.panel.active,section.panel.active')?.id||'page').replace(/^panel-/,'');
@@ -20968,6 +20980,8 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       wrap:$('apdColumnWrap')?.value||'normal',
       color:$('apdColumnColor')?.value||'#10253f',
       bg:$('apdColumnBg')?.value||'#ffffff',
+      numberFormat:$('apdColumnNumberFormat')?.value||'auto',
+      thousands:!!$('apdColumnThousands')?.checked,
       plain:!!$('apdColumnPlain')?.checked,
       visible:$('apdColumnVisible')?.checked!==false
     }
@@ -20993,9 +21007,11 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
       apdColumnFontSize:s.fontSize??12,apdColumnWeight:s.weight??'600',
       apdColumnAlign:s.align??'left',apdColumnPadding:s.padding??7,
       apdColumnWidth:s.width??140,apdColumnWrap:s.wrap??'normal',
-      apdColumnColor:s.color??'#10253f',apdColumnBg:s.bg??'#ffffff'
+      apdColumnColor:s.color??'#10253f',apdColumnBg:s.bg??'#ffffff',
+      apdColumnNumberFormat:s.numberFormat??'auto'
     };
     Object.entries(map).forEach(([id,v])=>{if($(id))$(id).value=v});
+    if($('apdColumnThousands'))$('apdColumnThousands').checked=!!s.thousands;
     if($('apdColumnPlain'))$('apdColumnPlain').checked=!!s.plain;
     if($('apdColumnVisible'))$('apdColumnVisible').checked=s.visible!==false;
     syncOutputs()
@@ -21024,9 +21040,10 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     if(!table||index<0)return '';
     table.dataset.apdNativeTable='1';
     const id=table.id;
+    const panelSel='#'+CSS.escape(root()?.id||('panel-'+pageId()));
     const selector=id
-      ? '#panel-daily-data-entry #'+CSS.escape(id)
-      : '#panel-daily-data-entry table[data-apd-native-key="'+table.dataset.apdNativeKey+'"]';
+      ? panelSel+' #'+CSS.escape(id)
+      : panelSel+' table[data-apd-native-key="'+table.dataset.apdNativeKey+'"]';
     const n=index+1;
     const cell=selector+' tr > *:nth-child('+n+')';
 
@@ -21044,7 +21061,8 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     css+='background:'+s.bg+' !important;';
     css+='}';
 
-    css+=cell+' .dde-master-item,'+cell+' .dde-mat-unit,'+cell+' .dde-mat-source-note,'+
+    css+=cell+' input,'+cell+' select,'+cell+' textarea,'+
+         cell+' .dde-master-item,'+cell+' .dde-mat-unit,'+cell+' .dde-mat-source-note,'+
          cell+' b,'+cell+' strong,'+cell+' span,'+cell+' div{'+
          'font-size:inherit !important;font-weight:inherit !important;color:inherit !important;text-align:inherit !important;}';
 
@@ -21089,18 +21107,68 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     });
   }
 
+  function parseNumeric(v){
+    const raw=String(v??'').trim().replace(/,/g,'');
+    if(!raw)return null;
+    const n=Number(raw);
+    return Number.isFinite(n)?n:null
+  }
+  function formatNumeric(v,s){
+    if(!s || s.numberFormat==='auto')return String(v??'');
+    const n=parseNumeric(v);if(n===null)return String(v??'');
+    const decimals=Math.max(0,Math.min(4,Number(s.numberFormat)||0));
+    return n.toLocaleString('en-US',{
+      useGrouping:!!s.thousands,
+      minimumFractionDigits:decimals,
+      maximumFractionDigits:decimals
+    })
+  }
+  function applyNumberFormat(table,index,s){
+    if(!table||index<0||!s||s.numberFormat==='auto')return;
+    const rows=Array.from(table.querySelectorAll('tbody tr'));
+    rows.forEach(tr=>{
+      const cell=tr.children[index];if(!cell)return;
+      const input=cell.querySelector('input');
+      if(input){
+        // Do not disturb the value while the operator is typing.
+        if(document.activeElement!==input){
+          const formatted=formatNumeric(input.value,s);
+          if(formatted!==String(input.value||''))input.value=formatted
+        }
+        if(!input.dataset.apdNumberFormatBound){
+          input.dataset.apdNumberFormatBound='1';
+          input.addEventListener('focus',()=>{
+            // commas are removed while editing; decimals remain meaningful.
+            input.value=String(input.value||'').replace(/,/g,'')
+          });
+          input.addEventListener('blur',()=>{
+            const data=load(),key=tableKey(table)+'::'+index;
+            const latest=data.columns[key]||s;
+            if(latest.numberFormat!=='auto')input.value=formatNumeric(input.value,latest)
+          })
+        }
+      }else{
+        const leaf=cell.querySelector('[data-apd-number-value]')||cell;
+        if(leaf.children.length===0){
+          const n=parseNumeric(leaf.textContent);
+          if(n!==null)leaf.textContent=formatNumeric(leaf.textContent,s)
+        }
+      }
+    })
+  }
+
   function rebuild(preview=null){
     const data=load();
     let css='';
 
     Object.entries(data.columns).forEach(([key,s])=>{
       const m=key.match(/^(.*)::(\d+)$/);if(!m)return;
-      const table=findTable(m[1]);if(table)css+=cssForColumn(table,Number(m[2]),s)
+      const table=findTable(m[1]);if(table){css+=cssForColumn(table,Number(m[2]),s);applyNumberFormat(table,Number(m[2]),s)}
     });
 
     if(preview?.type==='column'){
       const table=findTable(preview.key)||selectedTable;
-      if(table)css+=cssForColumn(table,preview.index,preview.settings)
+      if(table){css+=cssForColumn(table,preview.index,preview.settings);applyNumberFormat(table,preview.index,preview.settings)}
     }
 
     $(DYN_STYLE).textContent=css;
@@ -21157,7 +21225,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   }
 
   ['apdColumnFontSize','apdColumnPadding','apdColumnWidth','apdColumnColor','apdColumnBg'].forEach(id=>$(id)?.addEventListener('input',previewColumn));
-  ['apdColumnWeight','apdColumnAlign','apdColumnWrap','apdColumnPlain','apdColumnVisible'].forEach(id=>$(id)?.addEventListener('change',previewColumn));
+  ['apdColumnWeight','apdColumnAlign','apdColumnWrap','apdColumnNumberFormat','apdColumnThousands','apdColumnPlain','apdColumnVisible'].forEach(id=>$(id)?.addEventListener('change',previewColumn));
 
   ['apdSummaryTitleSize','apdSummaryLabelSize','apdSummaryValueSize','apdSummaryRowHeight','apdSummaryPadding','apdSummaryBorder','apdSummaryRadius'].forEach(id=>$(id)?.addEventListener('input',previewSummary));
   ['apdSummaryVisible','apdSummaryLabelAlign','apdSummaryValueAlign','apdSummaryValueBold'].forEach(id=>$(id)?.addEventListener('change',previewSummary));
@@ -22381,6 +22449,21 @@ main.content section.panel .erp-universal-page-controller-v1526{
   window.addEventListener('hashchange',scheduled);
   window.addEventListener('popstate',scheduled);
   window.ERPPageDesignPersistenceV1528={reapply:scheduled};
+})();
+</script>
+
+
+<script id="erpPurchaseColumnDesignReapplyV1531">
+(function(){
+  function reapply(){
+    if(document.querySelector('#panel-local-purchase.active,#panel-zafar-purchase.active,#panel-board-purchase.active')){
+      setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),0);
+      setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),40);
+    }
+  }
+  document.addEventListener('click',reapply,true);
+  window.addEventListener('hashchange',reapply);
+  window.addEventListener('load',reapply,{once:true});
 })();
 </script>
 
