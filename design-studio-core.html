@@ -22003,6 +22003,39 @@ main.content section.panel .erp-universal-page-controller-v1526{
 @media(max-width:1200px){.erp-dash-kpis{grid-template-columns:repeat(3,1fr)}.erp-chart-grid{grid-template-columns:1fr 1fr}.erp-chart-card:last-child{grid-column:1/-1}}
 @media(max-width:800px){.erp-dash-head,.erp-analysis-head{align-items:flex-start;flex-direction:column}.erp-dash-kpis,.erp-chart-grid,.erp-dash-lower{grid-template-columns:1fr}.erp-chart-card:last-child{grid-column:auto}}
 </style>
+
+<style id="erpDashboardNoSidebarV1535Style">
+/* Dashboard only: remove sidebar and use full screen width */
+body.erp-dashboard-mode .studio-sidebar{
+  display:none !important;
+}
+body.erp-dashboard-mode .app{
+  grid-template-columns:1fr !important;
+}
+body.erp-dashboard-mode .page-shell{
+  margin-left:0 !important;
+  width:100% !important;
+  max-width:none !important;
+}
+body.erp-dashboard-mode .top{
+  left:0 !important;
+  width:100% !important;
+}
+body.erp-dashboard-mode main.content{
+  width:100% !important;
+  max-width:none !important;
+  padding-left:18px !important;
+  padding-right:18px !important;
+}
+body.erp-dashboard-mode #panel-dashboard{
+  width:100% !important;
+  max-width:none !important;
+}
+body.erp-dashboard-mode #panel-dashboard .erp-dash{
+  max-width:none !important;
+  width:100% !important;
+}
+</style>
 </head><body>
       <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
       <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
@@ -22961,21 +22994,58 @@ main.content section.panel .erp-universal-page-controller-v1526{
   }
   function render(){renderKpis();renderCharts()}
   function open(){
-    const p=$('#panel-dashboard');if(!p)return;document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));p.classList.add('active');
+    const p=$('#panel-dashboard');if(!p)return;
+    document.body.classList.add('erp-dashboard-mode');
+    document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));p.classList.add('active');
     document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));document.querySelector('[data-dashboard-open]')?.classList.add('active');
     ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
     if($('#workspaceTitle'))$('#workspaceTitle').textContent='Management Dashboard';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Factory ERP • Management overview and analysis';
     history.replaceState(null,'','#panel-dashboard');try{localStorage.setItem('erpStudioLastPanel','dashboard');localStorage.setItem('erpActiveStudioPanel','dashboard')}catch(e){}render()
   }
-  function jump(page){const nav=document.querySelector('[data-panel="'+page+'"]');if(nav){nav.click();return}const p=$('#panel-'+page);if(p){document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));p.classList.add('active');history.replaceState(null,'','#panel-'+page)}}
+  function leaveDashboard(){document.body.classList.remove('erp-dashboard-mode')}
+  function jump(page){
+    leaveDashboard();
+    const nav=document.querySelector('[data-panel="'+page+'"]');
+    if(nav){nav.click();return}
+    const p=$('#panel-'+page);
+    if(p){
+      document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      history.replaceState(null,'','#panel-'+page)
+    }
+  }
   document.addEventListener('click',e=>{
     const d=e.target.closest('[data-dashboard-open]');if(d){e.preventDefault();open();return}
     const j=e.target.closest('[data-dash-jump]');if(j){e.preventDefault();jump(j.dataset.dashJump);return}
-    if(e.target.closest('[data-pc-dashboard]')){e.preventDefault();window.ERPProductionConsumption?.open?.()}
+    if(e.target.closest('[data-pc-dashboard]')){e.preventDefault();document.body.classList.remove('erp-dashboard-mode');window.ERPProductionConsumption?.open?.()}
   });
   $('#dashRefresh')?.addEventListener('click',render);$('#dashPeriod')?.addEventListener('change',renderKpis);$('#dashAnalysis')?.addEventListener('change',renderCharts);$('#dashChartPeriod')?.addEventListener('change',renderCharts);$('#dashCompare')?.addEventListener('change',renderCharts);
   window.ERPManagementDashboard={open,render};
   if(location.hash==='#panel-dashboard')setTimeout(open,0)
+})();
+</script>
+
+
+<script id="erpDashboardSidebarGuardV1535">
+(function(){
+  function sync(){
+    const active=document.querySelector('section.panel.active');
+    document.body.classList.toggle('erp-dashboard-mode',active?.id==='panel-dashboard');
+  }
+  const main=document.querySelector('main.content');
+  if(main){
+    const obs=new MutationObserver(sync);
+    obs.observe(main,{subtree:true,attributes:true,attributeFilter:['class']});
+  }
+  window.addEventListener('hashchange',sync);
+  window.addEventListener('popstate',sync);
+  window.addEventListener('load',sync,{once:true});
+  document.addEventListener('click',e=>{
+    if(e.target.closest('[data-panel],[data-inventory-open],[data-formula-control-open],[data-gate-pass-open]')){
+      setTimeout(sync,0)
+    }
+  });
+  sync();
 })();
 </script>
 
