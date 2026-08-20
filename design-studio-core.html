@@ -23678,17 +23678,34 @@ window.ERPOfflineFirst={enabled:true,localPrimary:true,autoSync:true,worksOfflin
     if(uname) uname.textContent=u.name||p.name||'Muhammad Waqas';
     if(role) role.textContent=u.designation||u.role||p.role||'Administrator';
   }
-  function updateDashClock(){
-    const d=new Date(), sec=d.getSeconds(), min=d.getMinutes()+sec/60, hr=(d.getHours()%12)+min/60;
+  let dashLastSecond=-1, dashClockFrame=0, dashClockTextTimer=0;
+  function updateDashClockHands(){
+    const d=new Date();
+    const ms=d.getMilliseconds(), sec=d.getSeconds()+ms/1000, min=d.getMinutes()+sec/60, hr=(d.getHours()%12)+min/60;
     const h=document.getElementById('dashHourHand'),m=document.getElementById('dashMinuteHand'),s=document.getElementById('dashSecondHand');
     if(h)h.style.transform='translateX(-50%) rotate('+(hr*30)+'deg)';
     if(m)m.style.transform='translateX(-50%) rotate('+(min*6)+'deg)';
     if(s)s.style.transform='translateX(-50%) rotate('+(sec*6)+'deg)';
-    const t=document.getElementById('dashDigitalTime'),date=document.getElementById('dashDigitalDate');
-    if(t)t.textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    if(date)date.textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-').replace(/-([A-Za-z]+)-/,' $1, ');
+    dashClockFrame=requestAnimationFrame(updateDashClockHands);
   }
-  function initV1549(){setDashboardIdentity();updateDashClock();setInterval(updateDashClock,1000);setInterval(setDashboardIdentity,5000);}
+  function updateDashClockText(force){
+    const d=new Date(), currentSecond=d.getSeconds();
+    if(force||currentSecond!==dashLastSecond){
+      dashLastSecond=currentSecond;
+      const t=document.getElementById('dashDigitalTime'),date=document.getElementById('dashDigitalDate');
+      if(t)t.textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      if(date)date.textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-').replace(/-([A-Za-z]+)-/,' $1, ');
+    }
+  }
+  function initV1549(){
+    setDashboardIdentity();
+    updateDashClockText(true);
+    if(dashClockFrame)cancelAnimationFrame(dashClockFrame);
+    updateDashClockHands();
+    if(dashClockTextTimer)clearInterval(dashClockTextTimer);
+    dashClockTextTimer=setInterval(function(){updateDashClockText(false)},200);
+    setInterval(setDashboardIdentity,30000);
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initV1549);else initV1549();
 })();
 </script>
