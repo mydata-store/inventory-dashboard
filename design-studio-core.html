@@ -23350,9 +23350,9 @@ main.content section.panel .erp-universal-page-controller-v1526{
 @media(max-width:700px){#erpSyncDialog .grid{grid-template-columns:1fr}#erpSyncDialog .full{grid-column:auto}#erpSyncStatusBtn{right:12px;bottom:64px}}
 </style>
 <div id="erpSyncOverlay" aria-hidden="true"><div id="erpSyncDialog" role="dialog" aria-modal="true" aria-label="Online Sync Setup">
-  <div class="hd"><div><h3>Offline + Online Sync</h3><div style="font-size:11px;opacity:.85">Local save first • online copy when connected</div></div><button class="close" id="erpSyncClose" type="button">×</button></div>
+  <div class="hd"><div><h3>Offline-First ERP Sync</h3><div style="font-size:11px;opacity:.85">Works locally without internet • uploads automatically when connected</div></div><button class="close" id="erpSyncClose" type="button">×</button></div>
   <div class="body">
-    <div class="statusCard"><b id="erpSyncHeadline">Local storage active</b><div id="erpSyncDetail" class="small">Configure your online database once; after that synchronization runs automatically whenever a network connection is available.</div></div>
+    <div class="statusCard"><b id="erpSyncHeadline">Local storage active</b><div id="erpSyncDetail" class="small">The ERP works from local storage first. When the online database is configured, all pending local work uploads automatically whenever a connection is available.</div></div>
     <div class="grid">
       <div class="full"><label>Supabase Project URL</label><input id="erpSyncUrl" placeholder="https://YOUR-PROJECT.supabase.co"></div>
       <div class="full"><label>Supabase Anon / Publishable Key</label><input id="erpSyncKey" type="password" placeholder="Paste the public anon/publishable key"></div>
@@ -23360,7 +23360,7 @@ main.content section.panel .erp-universal-page-controller-v1526{
       <div><label>Sync Table</label><input id="erpSyncTable" value="erp_sync_store"></div>
     </div>
     <div class="actions"><button class="action primary" id="erpSyncSaveTest" type="button">Save & Test</button><button class="action" id="erpSyncNow" type="button">Sync Now</button><button class="action" id="erpSyncSqlBtn" type="button">Show SQL Setup</button></div>
-    <div class="msg" id="erpSyncMsg">Your ERP continues saving locally even if online sync is not configured.</div>
+    <div class="msg" id="erpSyncMsg">Offline-first mode is active. Your ERP continues working and saving locally even without internet.</div>
     <pre id="erpSyncSql">create table if not exists public.erp_sync_store (
   tenant_id text not null,
   storage_key text not null,
@@ -23380,7 +23380,7 @@ for all to anon using (true) with check (true);</pre>
 </div></div>
 <button id="erpSyncStatusBtn" type="button" title="Offline/Online Sync"><span class="dot"></span><span id="erpSyncStatusText">Local Only</span></button>
 <div id="erpUtilityBar" aria-label="ERP Utilities"></div>
-<script id="erpOnlineSyncV1545">
+<script id="erpOnlineSyncV1546">
 (function(){
 'use strict';
 const CFG='ERP_ONLINE_SYNC_CONFIG_V1', QUEUE='ERP_ONLINE_SYNC_QUEUE_V1', SHADOW='ERP_ONLINE_SYNC_SHADOW_V1', DEVICE='ERP_ONLINE_SYNC_DEVICE_V1', LAST='ERP_ONLINE_SYNC_LAST_V1';
@@ -23394,12 +23394,38 @@ function cfg(){return jget(CFG,{url:'',key:'',tenant:'default-company',table:'er
 function configured(c=cfg()){return /^https:\/\//i.test(c.url||'') && !!(c.key||'').trim() && !!(c.tenant||'').trim() && !!(c.table||'').trim()}
 function hash(s){s=String(s??'');let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(16)+':'+s.length}
 function excluded(k){return INTERNAL.has(k)||k.startsWith('ERP_ONLINE_SYNC_')}
+const nativeSetItem=Storage.prototype.setItem, nativeRemoveItem=Storage.prototype.removeItem;
+function captureWrite(k,val,deleted=false){
+  try{
+    k=String(k); if(excluded(k))return;
+    const q=jget(QUEUE,{})||{};
+    q[k]={value:deleted?null:String(val),deleted:!!deleted,updatedAt:new Date().toISOString()};
+    nativeSetItem.call(localStorage,QUEUE,JSON.stringify(q));
+    const sh=jget(SHADOW,{})||{};
+    if(deleted)delete sh[k]; else sh[k]=hash(String(val));
+    nativeSetItem.call(localStorage,SHADOW,JSON.stringify(sh));
+    updateStatus();
+    if(navigator.onLine&&configured()&&!busy)autoSyncSoon(500);
+  }catch(e){console.warn('Offline-first capture failed',e)}
+}
+function installOfflineFirstHooks(){
+  if(window.__ERP_OFFLINE_FIRST_HOOKED__)return;
+  window.__ERP_OFFLINE_FIRST_HOOKED__=true;
+  Storage.prototype.setItem=function(k,v){
+    nativeSetItem.call(this,k,v);
+    if(this===localStorage)captureWrite(k,v,false);
+  };
+  Storage.prototype.removeItem=function(k){
+    nativeRemoveItem.call(this,k);
+    if(this===localStorage)captureWrite(k,null,true);
+  };
+}
 function queue(){return jget(QUEUE,{})||{}}
 function setQueue(q){jset(QUEUE,q);updateStatus()}
 function mark(k,val){if(excluded(k))return;const q=queue();q[k]={value:val,deleted:val===null,updatedAt:new Date().toISOString()};setQueue(q)}
 function scan(){try{const sh=jget(SHADOW,{})||{};const now={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||excluded(k))continue;const v=localStorage.getItem(k),hv=hash(v);now[k]=hv;if(sh[k]!==hv)mark(k,v)}Object.keys(sh).forEach(k=>{if(!excluded(k)&&!(k in now))mark(k,null)});jset(SHADOW,now)}catch(e){} if(navigator.onLine&&configured()&&!busy&&Object.keys(queue()).length)autoSyncSoon(350)}
 function status(kind,text,detail){const b=$('erpSyncStatusBtn'),t=$('erpSyncStatusText');if(b){b.classList.remove('synced','syncing','error','offline');if(kind)b.classList.add(kind)}if(t)t.textContent=text||'';if($('erpSyncHeadline'))$('erpSyncHeadline').textContent=text||'';if(detail&&$('erpSyncDetail'))$('erpSyncDetail').textContent=detail}
-function updateStatus(){const qn=Object.keys(queue()).length,c=cfg(),last=localStorage.getItem(LAST)||'';if(!navigator.onLine){status('offline',qn?`Offline • ${qn} Pending`:'Offline • Local Safe','Data is saved locally. Pending changes will sync when internet returns.');return}if(!configured(c)){status('',qn?`Local Only • ${qn} Pending`:'Local Only','Local storage is active. Add Supabase settings once to enable online sync.');return}if(busy){status('syncing',`Syncing${qn?' • '+qn:''}`,'Uploading locally saved changes to the online database…');return}if(qn){status('',`${qn} Pending`,'Online database is configured; pending local changes are waiting to sync.');return}status('synced','Synced Online',last?`Local data is safe and online sync is current. Last sync: ${new Date(last).toLocaleString()}`:'Local data is safe and online sync is ready.')}
+function updateStatus(){const qn=Object.keys(queue()).length,c=cfg(),last=localStorage.getItem(LAST)||'';if(!navigator.onLine){status('offline',qn?`Offline • ${qn} Pending Changes`:'Offline • Local Safe','ERP is working from local storage. Pending changes will upload automatically when internet returns.');return}if(!configured(c)){status('',qn?`Local Primary • ${qn} Pending Changes`:'Local Primary','Offline-first storage is active. Add online settings once; the ERP does not depend on internet to work.');return}if(busy){status('syncing',`Syncing${qn?' • '+qn:''}`,'Uploading locally saved changes to the online database…');return}if(qn){status('',`${qn} Pending Changes`,'Online database is configured; locally saved changes will upload automatically.');return}status('synced','Synced Online',last?`Local data is safe and online sync is current. Last sync: ${new Date(last).toLocaleString()}`:'Local data is safe and online sync is ready.')}
 function endpoint(c,query=''){return c.url.replace(/\/$/,'')+'/rest/v1/'+encodeURIComponent(c.table)+query}
 function headers(c){return {'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}}
 function autoSyncSoon(delay=700){
@@ -23429,6 +23455,7 @@ function saveCfg(){const c={url:$('erpSyncUrl').value.trim(),key:$('erpSyncKey')
 async function saveTest(){saveCfg();showMsg('Testing online database connection…');try{await testConnection();showMsg('Connection successful. Starting first synchronization…');scanWithoutAuto();await syncNow(false)}catch(e){status('error','Online Setup Error',e.message);showMsg(e.message)}}
 function init(){
   deviceId();
+  installOfflineFirstHooks();
   ensureUtilityBar();
   scanWithoutAuto();
   updateStatus();
@@ -23450,7 +23477,8 @@ function init(){
   setTimeout(()=>{scan();if(navigator.onLine&&configured())autoSyncSoon(400)},900);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-window.ERPOnlineSync={syncNow,openSetup:openDialog,getStatus:()=>({online:navigator.onLine,configured:configured(),pending:Object.keys(queue()).length,lastSync:localStorage.getItem(LAST)||null})};
+window.ERPOnlineSync={syncNow,openSetup:openDialog,getStatus:()=>({mode:'offline-first',localPrimary:true,online:navigator.onLine,configured:configured(),pending:Object.keys(queue()).length,lastSync:localStorage.getItem(LAST)||null})};
+window.ERPOfflineFirst={enabled:true,localPrimary:true,autoSync:true,worksOffline:true};
 })();
 </script>
 
