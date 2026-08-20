@@ -23633,13 +23633,14 @@ function init(){
   window.addEventListener('online',()=>{updateStatus();scanWithoutAuto();autoSyncSoon(600)});
   window.addEventListener('offline',()=>{clearTimeout(retryTimer);updateStatus()});
   window.addEventListener('storage',()=>{scanWithoutAuto();updateStatus();autoSyncSoon(500)});
-  scanTimer=setInterval(scan,2500);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){scanWithoutAuto();updateStatus();if(navigator.onLine&&configured())autoSyncSoon(700)}});
+  scanTimer=setInterval(scan,30000);
   setInterval(()=>{
     if(navigator.onLine&&configured()&&!busy&&Object.keys(queue()).length&&Date.now()-lastAutoAttempt>12000){
       autoSyncSoon(100);
     }
-  },5000);
-  setTimeout(()=>{scan();if(navigator.onLine&&configured())autoSyncSoon(400)},900);
+  },15000);
+  setTimeout(()=>{scan();if(navigator.onLine&&configured())autoSyncSoon(400)},1200);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 window.ERPOnlineSync={syncNow,openSetup:openDialog,getStatus:()=>({mode:'offline-first',localPrimary:true,online:navigator.onLine,configured:configured(),pending:Object.keys(queue()).length,lastSync:localStorage.getItem(LAST)||null})};
@@ -23678,33 +23679,36 @@ window.ERPOfflineFirst={enabled:true,localPrimary:true,autoSync:true,worksOfflin
     if(uname) uname.textContent=u.name||p.name||'Muhammad Waqas';
     if(role) role.textContent=u.designation||u.role||p.role||'Administrator';
   }
-  let dashLastSecond=-1, dashClockFrame=0, dashClockTextTimer=0;
-  function updateDashClockHands(){
+  let dashClockTimer=0, dashIdentityTimer=0;
+  function dashboardVisible(){
+    const p=document.getElementById('panel-dashboard');
+    return !!(p && p.classList.contains('active') && !document.hidden);
+  }
+  function renderDashClock(){
+    if(!dashboardVisible()) return;
     const d=new Date();
-    const ms=d.getMilliseconds(), sec=d.getSeconds()+ms/1000, min=d.getMinutes()+sec/60, hr=(d.getHours()%12)+min/60;
+    const sec=d.getSeconds(), min=d.getMinutes()+sec/60, hr=(d.getHours()%12)+min/60;
     const h=document.getElementById('dashHourHand'),m=document.getElementById('dashMinuteHand'),s=document.getElementById('dashSecondHand');
     if(h)h.style.transform='translateX(-50%) rotate('+(hr*30)+'deg)';
     if(m)m.style.transform='translateX(-50%) rotate('+(min*6)+'deg)';
     if(s)s.style.transform='translateX(-50%) rotate('+(sec*6)+'deg)';
-    dashClockFrame=requestAnimationFrame(updateDashClockHands);
+    const t=document.getElementById('dashDigitalTime'),date=document.getElementById('dashDigitalDate');
+    if(t)t.textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    if(date)date.textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-').replace(/-([A-Za-z]+)-/,' $1, ');
   }
-  function updateDashClockText(force){
-    const d=new Date(), currentSecond=d.getSeconds();
-    if(force||currentSecond!==dashLastSecond){
-      dashLastSecond=currentSecond;
-      const t=document.getElementById('dashDigitalTime'),date=document.getElementById('dashDigitalDate');
-      if(t)t.textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      if(date)date.textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-').replace(/-([A-Za-z]+)-/,' $1, ');
-    }
+  function scheduleDashClock(){
+    clearTimeout(dashClockTimer);
+    renderDashClock();
+    const wait=1000-(Date.now()%1000)+20;
+    dashClockTimer=setTimeout(scheduleDashClock,wait);
   }
   function initV1549(){
     setDashboardIdentity();
-    updateDashClockText(true);
-    if(dashClockFrame)cancelAnimationFrame(dashClockFrame);
-    updateDashClockHands();
-    if(dashClockTextTimer)clearInterval(dashClockTextTimer);
-    dashClockTextTimer=setInterval(function(){updateDashClockText(false)},200);
-    setInterval(setDashboardIdentity,30000);
+    scheduleDashClock();
+    clearInterval(dashIdentityTimer);
+    dashIdentityTimer=setInterval(function(){if(dashboardVisible())setDashboardIdentity()},60000);
+    document.addEventListener('visibilitychange',function(){if(!document.hidden){setDashboardIdentity();scheduleDashClock();}});
+    window.addEventListener('hashchange',function(){setTimeout(scheduleDashClock,0)});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initV1549);else initV1549();
 })();
