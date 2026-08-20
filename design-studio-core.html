@@ -1949,6 +1949,7 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
     const last=localStorage.getItem('erpStudioLastPanel')||'';
     const pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
     const needsRestore =
+      hash==='panel-dashboard' ||
       hash==='panel-operating-expenses' ||
       last==='operating-expenses' ||
       pcPage==='expenses' ||
@@ -2197,7 +2198,7 @@ html.erp-dashboard-early main.content{
     <div class="erp-dash-menu">
       <button data-dash-jump="purchase-entry">▣ Purchase</button>
       <button data-dash-jump="issue-entry">◆ Issue</button>
-      <button data-inventory-open="1">▦ Inventory</button>
+      <button data-dashboard-inventory="1">▦ Inventory</button>
       <button data-pc-dashboard="1">▤ Production</button>
       <button data-dash-jump="gate-pass-dashboard">◇ Gate Pass</button>
       <button data-dash-jump="management-summary">∑ Reports</button>
@@ -22591,42 +22592,38 @@ main.content section.panel .erp-universal-page-controller-v1526{
 
 <script id="erpExactRefreshRestoreV1524">
 (function(){
-  function hashTarget(){
+  function targetFromUrl(){
     const h=String(location.hash||'').replace(/^#/,'').trim();
-    return h&&document.getElementById(h)?.matches?.('section.panel')?h:''
+    return h && document.getElementById(h)?.matches?.('section.panel') ? h : '';
   }
 
-  function activateStatic(target){
-    const page=target.replace(/^panel-/,'');
+  function forcePanel(target){
     const panel=document.getElementById(target);
     if(!panel)return false;
-
+    const page=target.replace(/^panel-/,'');
     document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active',p===panel));
     document.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===page));
-
     try{
       localStorage.setItem('erpActiveStudioPanel',page);
       localStorage.setItem('erpStudioLastPanel',page);
-      if(typeof ACTIVE_STUDIO_PANEL_KEY!=='undefined')localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,page)
+      if(typeof ACTIVE_STUDIO_PANEL_KEY!=='undefined')localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,page);
     }catch(e){}
-
-    // Render only the module needed by the selected page.
+    if(page==='dashboard'){
+      document.body.classList.add('erp-dashboard-mode');
+      window.ERPManagementDashboard?.render?.();
+    }else{
+      document.body.classList.remove('erp-dashboard-mode');
+    }
     try{
-      if(page==='dashboard'){
-        window.ERPManagementDashboard?.render?.()
-      }else if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(page)){
-        purchaseRenderAll?.()
-      }else if(['issue-entry','issue-history'].includes(page)){
-        issueRenderHistory?.()
-      }else if(page==='masters'){
-        masterRenderAll?.()
-      }
+      if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(page)) purchaseRenderAll?.();
+      else if(['issue-entry','issue-history'].includes(page)) issueRenderHistory?.();
+      else if(page==='masters') masterRenderAll?.();
     }catch(e){}
-
-    return document.querySelector('section.panel.active')?.id===target
+    return true;
   }
 
   const dynamic={
+    'panel-dashboard':()=>window.ERPManagementDashboard?.open?.(),
     'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
     'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
     'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
@@ -22640,38 +22637,28 @@ main.content section.panel .erp-universal-page-controller-v1526{
   };
 
   function restore(){
-    const target=hashTarget();
+    const target=targetFromUrl();
     if(!target)return;
-
     const run=()=>{
       try{
-        if(dynamic[target])dynamic[target]();
-        // Whether dynamic or static, the URL target wins.
-        activateStatic(target);
+        dynamic[target]?.();
+        forcePanel(target);
         window.ERPAdvancedPageDesigner?.applySaved?.();
         window.ERPPageControlExtras?.applySaved?.();
         window.ERPColumnSummaryDesigner?.applySaved?.();
-        window.ERPSidebarStartClosedV1524?.closeAll?.();
+        if(target!=='panel-dashboard')window.ERPSidebarStartClosedV1524?.closeAll?.();
       }catch(e){}
     };
-
-    // Run after each startup layer has finished. No other page is allowed
-    // to replace the exact page named in the browser URL.
     run();
-    setTimeout(run,25);
-    setTimeout(run,100);
-    setTimeout(run,300);
-    setTimeout(run,700);
+    [25,100,250,500,900,1400].forEach(ms=>setTimeout(run,ms));
   }
 
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',restore,{once:true});
-  }else restore();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',restore,{once:true});
+  else restore();
   window.addEventListener('load',restore,{once:true});
   window.addEventListener('hashchange',restore);
   window.addEventListener('popstate',restore);
-
-  window.ERPExactPageRestoreV1533={restore};
+  window.ERPExactPageRestoreV1538={restore};
 })();
 </script>
 
@@ -23107,6 +23094,22 @@ main.content section.panel .erp-universal-page-controller-v1526{
   document.addEventListener('click',e=>{
     const d=e.target.closest('[data-dashboard-open]');if(d){e.preventDefault();open();return}
     const j=e.target.closest('[data-dash-jump]');if(j){e.preventDefault();jump(j.dataset.dashJump);return}
+    if(e.target.closest('[data-dashboard-inventory]')){
+      e.preventDefault();
+      document.body.classList.remove('erp-dashboard-mode');
+      document.documentElement.classList.remove('erp-dashboard-early');
+      if(window.ERPInventory?.open){window.ERPInventory.open();return}
+      if(window.InventoryModule?.open){window.InventoryModule.open();return}
+      const normalInventory=document.querySelector('.studio-sidebar [data-inventory-open="1"], #studioSidebar [data-inventory-open="1"]');
+      if(normalInventory){normalInventory.click();return}
+      const panel=['panel-inventory','panel-stock-ledger','panel-inventory-dashboard'].map(id=>document.getElementById(id)).find(Boolean);
+      if(panel){
+        document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));
+        panel.classList.add('active');
+        history.replaceState(null,'','#'+panel.id);
+      }
+      return;
+    }
     if(e.target.closest('[data-pc-dashboard]')){e.preventDefault();document.body.classList.remove('erp-dashboard-mode');window.ERPProductionConsumption?.open?.()}
   });
   $('#dashRefresh')?.addEventListener('click',render);$('#dashPeriod')?.addEventListener('change',renderKpis);$('#dashAnalysis')?.addEventListener('change',renderCharts);$('#dashChartPeriod')?.addEventListener('change',renderCharts);$('#dashCompare')?.addEventListener('change',renderCharts);
@@ -23162,6 +23165,29 @@ main.content section.panel .erp-universal-page-controller-v1526{
 
   sync();
   window.ERPDashboardSidebarMode={sync};
+})();
+</script>
+
+
+<script id="erpDashboardUrlLockV1538">
+(function(){
+  function lock(){
+    if(location.hash!=='#panel-dashboard')return;
+    const p=document.getElementById('panel-dashboard');
+    if(!p)return;
+    document.body.classList.add('erp-dashboard-mode');
+    document.querySelectorAll('section.panel').forEach(x=>x.classList.toggle('active',x===p));
+    window.ERPManagementDashboard?.render?.();
+    try{
+      localStorage.setItem('erpStudioLastPanel','dashboard');
+      localStorage.setItem('erpActiveStudioPanel','dashboard');
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',lock,{once:true});
+  else lock();
+  [0,50,150,350,700,1200,1800].forEach(ms=>setTimeout(lock,ms));
+  window.addEventListener('load',lock,{once:true});
+  window.addEventListener('hashchange',lock);
 })();
 </script>
 
