@@ -2119,6 +2119,15 @@ html.erp-dashboard-early main.content{
   max-width:none !important;
 }
 </style>
+
+<script id="erpExplicitRouteAuthorityV1539">
+(function(){
+  try{
+    window.__ERP_EXPLICIT_ROUTE__=String(location.hash||'');
+    window.__ERP_DASHBOARD_EXPLICIT__=(window.__ERP_EXPLICIT_ROUTE__==='#panel-dashboard');
+  }catch(e){}
+})();
+</script>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -18818,12 +18827,23 @@ window.ERPOperatingExpenses={
 
   function shouldRestoreOperatingExpenses(){
     const hash=String(location.hash||'');
+
+    // V15.39: an explicit page in the browser URL always wins.
+    // In particular, Dashboard refresh must NEVER be replaced by the
+    // previously saved Operating Expenses page.
+    if(hash && hash!=='#panel-operating-expenses'){
+      return false;
+    }
+
     let last='',pcPage='';
     try{
       last=localStorage.getItem('erpStudioLastPanel')||'';
       pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
     }catch(e){}
-    return hash==='#panel-operating-expenses' || last==='operating-expenses' || pcPage==='expenses';
+
+    // Only fall back to saved state when there is NO explicit hash.
+    return hash==='#panel-operating-expenses' ||
+      (!hash && (last==='operating-expenses' || pcPage==='expenses'));
   }
 
   function restore(){
