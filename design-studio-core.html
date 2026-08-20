@@ -23324,4 +23324,90 @@ main.content section.panel .erp-universal-page-controller-v1526{
  (function(){const h=$('erp-mwc-drag');let drag=false,dx=0,dy=0;h.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=box.getBoundingClientRect();drag=true;dx=e.clientX-r.left;dy=e.clientY-r.top;h.setPointerCapture?.(e.pointerId)});h.addEventListener('pointermove',e=>{if(!drag)return;const x=Math.max(0,Math.min(innerWidth-box.offsetWidth,e.clientX-dx)),y=Math.max(0,Math.min(innerHeight-box.offsetHeight,e.clientY-dy));box.style.left=x+'px';box.style.top=y+'px';box.style.right='auto';box.style.bottom='auto'});h.addEventListener('pointerup',()=>drag=false);h.addEventListener('pointercancel',()=>drag=false)})();
  renderDims();
 })();
-</script>\n</body></html>
+</script>\n
+<style id="erpOnlineSyncV1544Style">
+#erpSyncStatusBtn{position:fixed;right:22px;bottom:68px;z-index:2147483000;border:0;border-radius:14px;padding:9px 13px;font:700 12px/1.1 Arial,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer;background:#243b5a;color:#fff;display:flex;align-items:center;gap:7px}
+#erpSyncStatusBtn .dot{width:8px;height:8px;border-radius:50%;background:#f0ad4e;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+#erpSyncStatusBtn.synced .dot{background:#27ae60}#erpSyncStatusBtn.syncing .dot{background:#3498db}#erpSyncStatusBtn.error .dot{background:#e74c3c}#erpSyncStatusBtn.offline .dot{background:#95a5a6}
+#erpSyncOverlay{position:fixed;inset:0;z-index:2147483500;background:rgba(15,28,45,.42);display:none;align-items:center;justify-content:center;padding:20px}
+#erpSyncOverlay.open{display:flex}
+#erpSyncDialog{width:min(680px,96vw);max-height:92vh;overflow:auto;background:#fff;color:#14365f;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);font:13px/1.4 Arial,sans-serif}
+#erpSyncDialog .hd{padding:16px 18px;background:#356bb3;color:#fff;border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+#erpSyncDialog .hd h3{margin:0;font-size:18px}#erpSyncDialog .close{border:0;background:#dce8f7;color:#19395f;width:31px;height:31px;border-radius:9px;font-size:19px;cursor:pointer}
+#erpSyncDialog .body{padding:18px}#erpSyncDialog .statusCard{border:1px solid #c9d9ee;background:#f7fbff;border-radius:12px;padding:12px 14px;margin-bottom:14px}
+#erpSyncDialog .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}#erpSyncDialog label{display:block;font-weight:700;font-size:11px;margin:0 0 5px;color:#365579}
+#erpSyncDialog input{width:100%;box-sizing:border-box;border:1px solid #b8cde8;border-radius:8px;padding:9px 10px;font:13px Arial;background:#fff;color:#123}
+#erpSyncDialog .full{grid-column:1/-1}#erpSyncDialog .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+#erpSyncDialog button.action{border:1px solid #b8cde8;background:#fff;color:#17395f;border-radius:9px;padding:9px 13px;font-weight:700;cursor:pointer}#erpSyncDialog button.primary{background:#356bb3;color:#fff;border-color:#356bb3}
+#erpSyncDialog .small{font-size:11px;color:#6a7f99;margin-top:9px}#erpSyncDialog .msg{margin-top:10px;padding:9px 11px;border-radius:8px;background:#f4f7fb;color:#36516e;white-space:pre-wrap}
+#erpSyncSql{display:none;margin-top:12px;background:#0f2137;color:#e8f1fb;border-radius:10px;padding:12px;font:11px/1.45 Consolas,monospace;white-space:pre-wrap;overflow:auto}
+@media(max-width:700px){#erpSyncDialog .grid{grid-template-columns:1fr}#erpSyncDialog .full{grid-column:auto}#erpSyncStatusBtn{right:12px;bottom:64px}}
+</style>
+<div id="erpSyncOverlay" aria-hidden="true"><div id="erpSyncDialog" role="dialog" aria-modal="true" aria-label="Online Sync Setup">
+  <div class="hd"><div><h3>Offline + Online Sync</h3><div style="font-size:11px;opacity:.85">Local save first • online copy when connected</div></div><button class="close" id="erpSyncClose" type="button">×</button></div>
+  <div class="body">
+    <div class="statusCard"><b id="erpSyncHeadline">Local storage active</b><div id="erpSyncDetail" class="small">Configure your online database once to enable automatic synchronization.</div></div>
+    <div class="grid">
+      <div class="full"><label>Supabase Project URL</label><input id="erpSyncUrl" placeholder="https://YOUR-PROJECT.supabase.co"></div>
+      <div class="full"><label>Supabase Anon / Publishable Key</label><input id="erpSyncKey" type="password" placeholder="Paste the public anon/publishable key"></div>
+      <div><label>Company / Tenant ID</label><input id="erpSyncTenant" placeholder="my-company" value="default-company"></div>
+      <div><label>Sync Table</label><input id="erpSyncTable" value="erp_sync_store"></div>
+    </div>
+    <div class="actions"><button class="action primary" id="erpSyncSaveTest" type="button">Save & Test</button><button class="action" id="erpSyncNow" type="button">Sync Now</button><button class="action" id="erpSyncSqlBtn" type="button">Show SQL Setup</button></div>
+    <div class="msg" id="erpSyncMsg">Your ERP continues saving locally even if online sync is not configured.</div>
+    <pre id="erpSyncSql">create table if not exists public.erp_sync_store (
+  tenant_id text not null,
+  storage_key text not null,
+  storage_value text,
+  updated_at timestamptz not null default now(),
+  device_id text,
+  primary key (tenant_id, storage_key)
+);
+
+alter table public.erp_sync_store enable row level security;
+
+-- Simple testing policy. For production, replace with authenticated-user policies.
+create policy "erp_sync_anon_all" on public.erp_sync_store
+for all to anon using (true) with check (true);</pre>
+    <div class="small"><b>Security:</b> use only a Supabase public anon/publishable key here. Never put a service-role secret in the browser.</div>
+  </div>
+</div></div>
+<button id="erpSyncStatusBtn" type="button" title="Offline/Online Sync"><span class="dot"></span><span id="erpSyncStatusText">Local Only</span></button>
+<script id="erpOnlineSyncV1544">
+(function(){
+'use strict';
+const CFG='ERP_ONLINE_SYNC_CONFIG_V1', QUEUE='ERP_ONLINE_SYNC_QUEUE_V1', SHADOW='ERP_ONLINE_SYNC_SHADOW_V1', DEVICE='ERP_ONLINE_SYNC_DEVICE_V1', LAST='ERP_ONLINE_SYNC_LAST_V1';
+const INTERNAL=new Set([CFG,QUEUE,SHADOW,DEVICE,LAST]);
+const $=id=>document.getElementById(id);
+let busy=false, scanTimer=null;
+function jget(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
+function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+function deviceId(){let d=localStorage.getItem(DEVICE);if(!d){d='dev-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);localStorage.setItem(DEVICE,d)}return d}
+function cfg(){return jget(CFG,{url:'',key:'',tenant:'default-company',table:'erp_sync_store'})}
+function configured(c=cfg()){return /^https:\/\//i.test(c.url||'') && !!(c.key||'').trim() && !!(c.tenant||'').trim() && !!(c.table||'').trim()}
+function hash(s){s=String(s??'');let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(16)+':'+s.length}
+function excluded(k){return INTERNAL.has(k)||k.startsWith('ERP_ONLINE_SYNC_')}
+function queue(){return jget(QUEUE,{})||{}}
+function setQueue(q){jset(QUEUE,q);updateStatus()}
+function mark(k,val){if(excluded(k))return;const q=queue();q[k]={value:val,deleted:val===null,updatedAt:new Date().toISOString()};setQueue(q)}
+function scan(){try{const sh=jget(SHADOW,{})||{};const now={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||excluded(k))continue;const v=localStorage.getItem(k),hv=hash(v);now[k]=hv;if(sh[k]!==hv)mark(k,v)}Object.keys(sh).forEach(k=>{if(!excluded(k)&&!(k in now))mark(k,null)});jset(SHADOW,now)}catch(e){} if(navigator.onLine&&configured()&&!busy&&Object.keys(queue()).length)syncNow(false)}
+function status(kind,text,detail){const b=$('erpSyncStatusBtn'),t=$('erpSyncStatusText');if(b){b.classList.remove('synced','syncing','error','offline');if(kind)b.classList.add(kind)}if(t)t.textContent=text||'';if($('erpSyncHeadline'))$('erpSyncHeadline').textContent=text||'';if(detail&&$('erpSyncDetail'))$('erpSyncDetail').textContent=detail}
+function updateStatus(){const qn=Object.keys(queue()).length,c=cfg(),last=localStorage.getItem(LAST)||'';if(!navigator.onLine){status('offline',qn?`Offline • ${qn} Pending`:'Offline • Local Safe','Data is saved locally. Pending changes will sync when internet returns.');return}if(!configured(c)){status('',qn?`Local Only • ${qn} Pending`:'Local Only','Local storage is active. Add Supabase settings once to enable online sync.');return}if(busy){status('syncing',`Syncing${qn?' • '+qn:''}`,'Uploading locally saved changes to the online database…');return}if(qn){status('',`${qn} Pending`,'Online database is configured; pending local changes are waiting to sync.');return}status('synced','Synced Online',last?`Local data is safe and online sync is current. Last sync: ${new Date(last).toLocaleString()}`:'Local data is safe and online sync is ready.')}
+function endpoint(c,query=''){return c.url.replace(/\/$/,'')+'/rest/v1/'+encodeURIComponent(c.table)+query}
+function headers(c){return {'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}}
+async function testConnection(){const c=cfg();if(!configured(c))throw new Error('Please enter Project URL, public key, Company ID and table name.');const r=await fetch(endpoint(c,'?select=storage_key&limit=1'),{headers:headers(c)});if(!r.ok){let tx='';try{tx=await r.text()}catch(e){}throw new Error('Online test failed ('+r.status+'). '+tx.slice(0,220))}return true}
+async function pushBatch(c,entries){const rows=entries.map(([k,x])=>({tenant_id:c.tenant,storage_key:k,storage_value:x.deleted?null:x.value,updated_at:x.updatedAt||new Date().toISOString(),device_id:deviceId()}));const r=await fetch(endpoint(c,'?on_conflict=tenant_id,storage_key'),{method:'POST',headers:headers(c),body:JSON.stringify(rows)});if(!r.ok){let tx='';try{tx=await r.text()}catch(e){}throw new Error('Sync failed ('+r.status+'). '+tx.slice(0,260))}}
+async function syncNow(manual=true){if(busy)return;const c=cfg();if(!navigator.onLine){updateStatus();if(manual)showMsg('Internet is offline. Your data is safe locally and will sync automatically when connection returns.');return}if(!configured(c)){updateStatus();if(manual)openDialog();return}scanWithoutAuto();let q=queue(),entries=Object.entries(q);if(!entries.length){try{await testConnection();localStorage.setItem(LAST,new Date().toISOString());updateStatus();if(manual)showMsg('Connected. Nothing pending — local and online data are already synchronized.')}catch(e){status('error','Online Setup Error',e.message);if(manual)showMsg(e.message)}return}busy=true;updateStatus();try{for(let i=0;i<entries.length;i+=80){const batch=entries.slice(i,i+80);await pushBatch(c,batch);const qq=queue();batch.forEach(([k,x])=>{if(qq[k]&&qq[k].updatedAt===x.updatedAt)delete qq[k]});jset(QUEUE,qq)}localStorage.setItem(LAST,new Date().toISOString());showMsg('Sync complete. Your current local ERP data has been copied online.');}catch(e){status('error','Sync Error',e.message);showMsg(e.message)}finally{busy=false;updateStatus()}}
+function scanWithoutAuto(){try{const sh=jget(SHADOW,{})||{},now={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||excluded(k))continue;const v=localStorage.getItem(k),hv=hash(v);now[k]=hv;if(sh[k]!==hv){const q=queue();q[k]={value:v,deleted:false,updatedAt:new Date().toISOString()};jset(QUEUE,q)}}Object.keys(sh).forEach(k=>{if(!excluded(k)&&!(k in now)){const q=queue();q[k]={value:null,deleted:true,updatedAt:new Date().toISOString()};jset(QUEUE,q)}});jset(SHADOW,now)}catch(e){}}
+function showMsg(m){if($('erpSyncMsg'))$('erpSyncMsg').textContent=m}
+function openDialog(){const c=cfg();$('erpSyncUrl').value=c.url||'';$('erpSyncKey').value=c.key||'';$('erpSyncTenant').value=c.tenant||'default-company';$('erpSyncTable').value=c.table||'erp_sync_store';$('erpSyncOverlay').classList.add('open');$('erpSyncOverlay').setAttribute('aria-hidden','false');updateStatus()}
+function closeDialog(){$('erpSyncOverlay').classList.remove('open');$('erpSyncOverlay').setAttribute('aria-hidden','true')}
+function saveCfg(){const c={url:$('erpSyncUrl').value.trim(),key:$('erpSyncKey').value.trim(),tenant:$('erpSyncTenant').value.trim()||'default-company',table:$('erpSyncTable').value.trim()||'erp_sync_store'};jset(CFG,c);return c}
+async function saveTest(){saveCfg();showMsg('Testing online database connection…');try{await testConnection();showMsg('Connection successful. Starting first synchronization…');scanWithoutAuto();await syncNow(false)}catch(e){status('error','Online Setup Error',e.message);showMsg(e.message)}}
+function init(){deviceId();scanWithoutAuto();updateStatus();$('erpSyncStatusBtn')?.addEventListener('click',openDialog);$('erpSyncClose')?.addEventListener('click',closeDialog);$('erpSyncOverlay')?.addEventListener('click',e=>{if(e.target===$('erpSyncOverlay'))closeDialog()});$('erpSyncSaveTest')?.addEventListener('click',saveTest);$('erpSyncNow')?.addEventListener('click',()=>syncNow(true));$('erpSyncSqlBtn')?.addEventListener('click',()=>{const x=$('erpSyncSql');x.style.display=x.style.display==='block'?'none':'block'});window.addEventListener('online',()=>{updateStatus();setTimeout(()=>syncNow(false),800)});window.addEventListener('offline',updateStatus);window.addEventListener('storage',()=>{scanWithoutAuto();updateStatus()});scanTimer=setInterval(scan,2500);setTimeout(()=>{scan();if(navigator.onLine&&configured())syncNow(false)},1200)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+window.ERPOnlineSync={syncNow,openSetup:openDialog,getStatus:()=>({online:navigator.onLine,configured:configured(),pending:Object.keys(queue()).length,lastSync:localStorage.getItem(LAST)||null})};
+})();
+</script>
+
+</body></html>
