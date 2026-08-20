@@ -22612,6 +22612,8 @@ main.content section.panel .erp-universal-page-controller-v1526{
 
 <script id="erpExactRefreshRestoreV1524">
 (function(){
+  let dashboardRestored=false;
+
   function targetFromUrl(){
     const h=String(location.hash||'').replace(/^#/,'').trim();
     return h && document.getElementById(h)?.matches?.('section.panel') ? h : '';
@@ -22628,22 +22630,11 @@ main.content section.panel .erp-universal-page-controller-v1526{
       localStorage.setItem('erpStudioLastPanel',page);
       if(typeof ACTIVE_STUDIO_PANEL_KEY!=='undefined')localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,page);
     }catch(e){}
-    if(page==='dashboard'){
-      document.body.classList.add('erp-dashboard-mode');
-      window.ERPManagementDashboard?.render?.();
-    }else{
-      document.body.classList.remove('erp-dashboard-mode');
-    }
-    try{
-      if(['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'].includes(page)) purchaseRenderAll?.();
-      else if(['issue-entry','issue-history'].includes(page)) issueRenderHistory?.();
-      else if(page==='masters') masterRenderAll?.();
-    }catch(e){}
+    document.body.classList.toggle('erp-dashboard-mode',page==='dashboard');
     return true;
   }
 
   const dynamic={
-    'panel-dashboard':()=>window.ERPManagementDashboard?.open?.(),
     'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
     'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
     'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
@@ -22656,9 +22647,43 @@ main.content section.panel .erp-universal-page-controller-v1526{
     'panel-comparison-variance-report':()=>window.ERPComparisonVarianceReport?.open?.()
   };
 
-  function restore(){
+  function restoreDashboardOnce(){
+    if(dashboardRestored || location.hash!=='#panel-dashboard')return;
+    const panel=document.getElementById('panel-dashboard');
+    if(!panel)return;
+
+    // Activate the already-existing dashboard immediately.
+    forcePanel('panel-dashboard');
+
+    const finish=()=>{
+      if(dashboardRestored || location.hash!=='#panel-dashboard')return;
+      if(!window.ERPManagementDashboard?.open)return false;
+      dashboardRestored=true;
+      window.ERPManagementDashboard.open();
+      window.ERPAdvancedPageDesigner?.applySaved?.();
+      window.ERPPageControlExtras?.applySaved?.();
+      window.ERPColumnSummaryDesigner?.applySaved?.();
+      document.documentElement.classList.remove('erp-route-restoring-v1545');
+      return true;
+    };
+
+    if(finish())return;
+
+    // Only wait for the dashboard module to become available; once found,
+    // open it exactly one time. No repeated re-render after success.
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      if(finish() || tries>=40){
+        clearInterval(timer);
+        document.documentElement.classList.remove('erp-route-restoring-v1545');
+      }
+    },10);
+  }
+
+  function restoreOtherPage(){
     const target=targetFromUrl();
-    if(!target)return;
+    if(!target || target==='panel-dashboard')return;
     const run=()=>{
       try{
         dynamic[target]?.();
@@ -22666,19 +22691,32 @@ main.content section.panel .erp-universal-page-controller-v1526{
         window.ERPAdvancedPageDesigner?.applySaved?.();
         window.ERPPageControlExtras?.applySaved?.();
         window.ERPColumnSummaryDesigner?.applySaved?.();
-        if(target!=='panel-dashboard')window.ERPSidebarStartClosedV1524?.closeAll?.();
+        window.ERPSidebarStartClosedV1524?.closeAll?.();
+        document.documentElement.classList.remove('erp-route-restoring-v1545');
       }catch(e){}
     };
     run();
-    [25,100,250,500,900,1400].forEach(ms=>setTimeout(run,ms));
+  }
+
+  function restore(){
+    const target=targetFromUrl();
+    if(target==='panel-dashboard')restoreDashboardOnce();
+    else restoreOtherPage();
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',restore,{once:true});
   else restore();
-  window.addEventListener('load',restore,{once:true});
-  window.addEventListener('hashchange',restore);
-  window.addEventListener('popstate',restore);
-  window.ERPExactPageRestoreV1538={restore};
+
+  window.addEventListener('hashchange',()=>{
+    dashboardRestored=false;
+    restore();
+  });
+  window.addEventListener('popstate',()=>{
+    dashboardRestored=false;
+    restore();
+  });
+
+  window.ERPExactPageRestoreV1540={restore};
 })();
 </script>
 
@@ -23134,7 +23172,6 @@ main.content section.panel .erp-universal-page-controller-v1526{
   });
   $('#dashRefresh')?.addEventListener('click',render);$('#dashPeriod')?.addEventListener('change',renderKpis);$('#dashAnalysis')?.addEventListener('change',renderCharts);$('#dashChartPeriod')?.addEventListener('change',renderCharts);$('#dashCompare')?.addEventListener('change',renderCharts);
   window.ERPManagementDashboard={open,render};
-  if(location.hash==='#panel-dashboard')setTimeout(open,0)
 })();
 </script>
 
@@ -23165,12 +23202,9 @@ main.content section.panel .erp-universal-page-controller-v1526{
     },{once:true});
   }
 
-  // Run repeatedly during startup because this ERP has several restore layers.
-  [0,25,100,250,600,1000].forEach(ms=>setTimeout(sync,ms));
-
   window.addEventListener('hashchange',()=>setTimeout(sync,0));
   window.addEventListener('popstate',()=>setTimeout(sync,0));
-  window.addEventListener('load',()=>{sync();setTimeout(sync,100);setTimeout(sync,500)},{once:true});
+  window.addEventListener('load',sync,{once:true});
 
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-dashboard-open]')){
@@ -23187,28 +23221,4 @@ main.content section.panel .erp-universal-page-controller-v1526{
   window.ERPDashboardSidebarMode={sync};
 })();
 </script>
-
-
-<script id="erpDashboardUrlLockV1538">
-(function(){
-  function lock(){
-    if(location.hash!=='#panel-dashboard')return;
-    const p=document.getElementById('panel-dashboard');
-    if(!p)return;
-    document.body.classList.add('erp-dashboard-mode');
-    document.querySelectorAll('section.panel').forEach(x=>x.classList.toggle('active',x===p));
-    window.ERPManagementDashboard?.render?.();
-    try{
-      localStorage.setItem('erpStudioLastPanel','dashboard');
-      localStorage.setItem('erpActiveStudioPanel','dashboard');
-    }catch(e){}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',lock,{once:true});
-  else lock();
-  [0,50,150,350,700,1200,1800].forEach(ms=>setTimeout(lock,ms));
-  window.addEventListener('load',lock,{once:true});
-  window.addEventListener('hashchange',lock);
-})();
-</script>
-
 </body></html>
