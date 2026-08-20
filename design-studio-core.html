@@ -18026,6 +18026,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }catch(e){}
 
     const routes={
+      'dashboard':()=>window.ERPManagementDashboard?.open?.(),
       'production-consumption':()=>window.ERPProductionConsumption?.open?.(),
       'daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
       'daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
@@ -18038,14 +18039,25 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       'final-cost-report':()=>window.ERPFinalCostReport?.open?.()
     };
 
-    // 1. Exact URL hash has first priority.
-    if(hash && routes[hash]){
-      routes[hash]();
+    // V15.41 — EXPLICIT URL ALWAYS WINS.
+    // If a hash is present, never fall through to a previously saved page.
+    // The final exact-route restorer handles the actual activation.
+    if(hash){
+      if(hash==='dashboard'){
+        // Dashboard has its own single-pass restorer; do not open it again here.
+        reveal();
+        return true;
+      }
+      if(routes[hash]){
+        routes[hash]();
+        reveal();
+        return true;
+      }
       reveal();
       return true;
     }
 
-    // 2. Exact saved studio page.
+    // Only when there is NO explicit URL hash may saved state be used.
     if(studioLast && routes[studioLast]){
       routes[studioLast]();
       reveal();
@@ -18063,7 +18075,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       'expenses':()=>window.ERPOperatingExpenses?.open?.()
     };
 
-    // 3. Production & Consumption saved page.
     const key=pcPage||saved;
     if(key && logical[key]){
       logical[key]();
@@ -18073,8 +18084,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     reveal();
     return false;
   }
-
   function boot(){
+    const hash=getHashPanel();
+    if(hash==='dashboard'){
+      // Dashboard is restored once by ERPExactPageRestoreV1540.
+      reveal();
+      return;
+    }
     setTimeout(restoreExactPage,70);
     setTimeout(restoreExactPage,240);
     setTimeout(restoreExactPage,650);
