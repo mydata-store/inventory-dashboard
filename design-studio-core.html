@@ -4596,6 +4596,21 @@ html.erp-dashboard-early main.content{
     <div class="field"><label>Details Alignment</label><select data-key="company.dashboard.detailsAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
   </div>
 
+  <h4 class="dashboard-company-section-v1558">Component Mouse Layout</h4>
+  <div class="dashboard-company-note-v1559">
+    <b>Free Component Layout:</b> switch the preview to Free Mouse Layout, then hold the left mouse button on Logo, Company Name, Address, Phone or NTN and drag it to the desired position. This step changes the preview only.
+  </div>
+  <div class="dashboard-company-grid-v1558">
+    <div class="field"><label>Component Layout Mode</label><select id="dashboardCompanyComponentModeV1559"><option value="auto">Automatic Layout</option><option value="free">Free Mouse Layout</option></select></div>
+    <div class="field"><label>Enable Mouse Drag</label><div class="switch"><input id="dashboardCompanyComponentDragV1559" type="checkbox"><span>Left-click + hold + move</span></div></div>
+    <div class="field"><label>Snap to Grid</label><div class="switch"><input id="dashboardCompanyComponentSnapV1559" type="checkbox"><span>Keep positions neat</span></div></div>
+    <div class="field"><label>Grid Size</label><select id="dashboardCompanyComponentGridV1559"><option value="1">1 px</option><option value="5">5 px</option><option value="10">10 px</option><option value="20">20 px</option></select></div>
+    <div class="field"><label>Lock All Components</label><div class="switch"><input id="dashboardCompanyComponentLockV1559" type="checkbox"><span>Prevent accidental movement</span></div></div>
+    <div class="field"><label>Selected Component</label><div class="dashboard-company-selected-v1559" id="dashboardCompanySelectedV1559">None</div></div>
+    <div class="field"><label>Selected X / Y</label><div class="dashboard-company-selected-v1559" id="dashboardCompanyXYV1559">—</div></div>
+    <div class="field"><label>Mouse Layout</label><button type="button" class="btn" id="dashboardCompanyResetComponentsV1559" style="width:100%">Reset Component Positions</button></div>
+  </div>
+
   <div class="dashboard-company-actions-v1558">
     <button type="button" class="btn" id="dashboardCompanyResetV1558">Reset Dashboard Company</button>
     <button type="button" class="btn primary" id="dashboardCompanyOpenV1558">Open Dashboard to Test Position</button>
@@ -4609,6 +4624,14 @@ html.erp-dashboard-early main.content{
         <div class="dashboard-company-preview-copy-v1558">
           <strong id="dashboardCompanyPreviewNameV1558">Company Name</strong>
           <div id="dashboardCompanyPreviewDetailsV1558">Address • Tel • NTN</div>
+        </div>
+
+        <div class="dashboard-company-free-canvas-v1559" id="dashboardCompanyFreeCanvasV1559" aria-label="Free component layout canvas">
+          <div class="dashboard-company-component-v1559 logo" data-company-component-v1559="logo" id="dashboardCompanyFreeLogoV1559"><span>ERP</span></div>
+          <div class="dashboard-company-component-v1559 name" data-company-component-v1559="name" id="dashboardCompanyFreeNameV1559">Company Name</div>
+          <div class="dashboard-company-component-v1559 detail" data-company-component-v1559="address" id="dashboardCompanyFreeAddressV1559">Address</div>
+          <div class="dashboard-company-component-v1559 detail" data-company-component-v1559="phone" id="dashboardCompanyFreePhoneV1559">Telephone</div>
+          <div class="dashboard-company-component-v1559 detail" data-company-component-v1559="ntn" id="dashboardCompanyFreeNtnV1559">NTN</div>
         </div>
       </div>
     </div>
@@ -24424,6 +24447,368 @@ window.ERPOfflineFirst={enabled:true,localPrimary:true,autoSync:true,worksOfflin
   else init();
 
   window.ERPDashboardCompanyControlsV1558={apply,reset,settings};
+})();
+</script>
+
+
+<style id="dashboardCompanyComponentDragV1559Style">
+.dashboard-company-note-v1559{
+  padding:10px 12px;
+  border-left:4px solid var(--primary);
+  border-radius:9px;
+  background:color-mix(in srgb,var(--primary) 7%,var(--surface));
+  color:var(--text);
+  font-size:10px;
+  margin-bottom:12px
+}
+.dashboard-company-selected-v1559{
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  padding:0 10px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:color-mix(in srgb,var(--bg) 58%,var(--surface));
+  color:var(--text);
+  font-size:11px;
+  font-weight:800
+}
+#dashboardCompanyPreviewV1558{position:relative!important;overflow:hidden!important}
+#dashboardCompanyPreviewV1558.component-free-active-v1559{
+  display:block!important;
+  min-height:180px!important;
+  height:180px!important;
+  padding:0!important
+}
+#dashboardCompanyPreviewV1558.component-free-active-v1559>
+.dashboard-company-preview-logo-v1558,
+#dashboardCompanyPreviewV1558.component-free-active-v1559>
+.dashboard-company-preview-copy-v1558{display:none!important}
+.dashboard-company-free-canvas-v1559{
+  position:absolute;
+  inset:0;
+  display:none;
+  overflow:hidden;
+  border-radius:inherit;
+  background:
+    linear-gradient(color-mix(in srgb,var(--border) 25%,transparent) 1px,transparent 1px),
+    linear-gradient(90deg,color-mix(in srgb,var(--border) 25%,transparent) 1px,transparent 1px);
+  background-size:10px 10px;
+  touch-action:none
+}
+#dashboardCompanyPreviewV1558.component-free-active-v1559 .dashboard-company-free-canvas-v1559{display:block}
+.dashboard-company-component-v1559{
+  position:absolute;
+  margin:0;
+  z-index:3;
+  user-select:none;
+  touch-action:none;
+  box-sizing:border-box
+}
+.dashboard-company-component-v1559.drag-enabled-v1559{
+  cursor:grab
+}
+.dashboard-company-component-v1559.drag-enabled-v1559:active{cursor:grabbing}
+.dashboard-company-component-v1559.selected-v1559{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent)
+}
+.dashboard-company-component-v1559.locked-v1559{cursor:not-allowed!important}
+.dashboard-company-component-v1559.logo{
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  font-weight:900
+}
+.dashboard-company-component-v1559.logo img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.dashboard-company-component-v1559.name{
+  white-space:nowrap;
+  line-height:1.1;
+  font-weight:800
+}
+.dashboard-company-component-v1559.detail{
+  white-space:nowrap;
+  line-height:1.3
+}
+.dashboard-company-component-v1559::after{
+  content:attr(data-label-v1559);
+  display:none;
+  position:absolute;
+  left:0;
+  top:-18px;
+  padding:2px 5px;
+  border-radius:4px;
+  background:var(--primary);
+  color:#fff;
+  font-size:7px;
+  font-weight:900;
+  white-space:nowrap
+}
+.dashboard-company-component-v1559.selected-v1559::after{display:block}
+</style>
+
+<script id="dashboardCompanyComponentDragV1559Script">
+(function(){
+  'use strict';
+
+  const POS_DEFAULTS={
+    componentLayoutMode:'auto',
+    componentMouseDrag:true,
+    componentSnap:true,
+    componentGrid:5,
+    componentLockAll:false,
+    componentLogoX:18, componentLogoY:20,
+    componentNameX:105, componentNameY:26,
+    componentAddressX:105, componentAddressY:62,
+    componentPhoneX:105, componentPhoneY:84,
+    componentNtnX:105, componentNtnY:106
+  };
+
+  const LABELS={logo:'Logo',name:'Company Name',address:'Address',phone:'Phone',ntn:'NTN'};
+  let selected='';
+  let drag=null;
+
+  function dashboard(){
+    try{
+      if(window.ERPDashboardCompanyControlsV1558?.settings){
+        const d=window.ERPDashboardCompanyControlsV1558.settings();
+        Object.keys(POS_DEFAULTS).forEach(k=>{if(d[k]===undefined)d[k]=POS_DEFAULTS[k]});
+        return d;
+      }
+    }catch(e){}
+    return Object.assign({},POS_DEFAULTS);
+  }
+
+  function co(){
+    try{
+      if(typeof state!=='undefined'&&state.company)return state.company;
+    }catch(e){}
+    try{
+      const s=JSON.parse(localStorage.getItem('ERP_DESIGN_CORE_V1')||localStorage.getItem('erpDesignStudioV11')||'{}')||{};
+      return s.company||{};
+    }catch(e){return{}}
+  }
+
+  function shapeRadius(shape){
+    if(shape==='circle')return '50%';
+    if(shape==='square'||shape==='original')return '0';
+    if(shape==='soft')return '22px';
+    return '12px';
+  }
+
+  function getPosKeys(type){
+    const C=type.charAt(0).toUpperCase()+type.slice(1);
+    return ['component'+C+'X','component'+C+'Y'];
+  }
+
+  function snap(v,d){
+    const g=d.componentSnap?Math.max(1,Number(d.componentGrid)||1):1;
+    return Math.round(v/g)*g;
+  }
+
+  function setSelected(type){
+    selected=type||'';
+    document.querySelectorAll('[data-company-component-v1559]').forEach(el=>{
+      el.classList.toggle('selected-v1559',el.dataset.companyComponentV1559===selected);
+    });
+    const name=document.getElementById('dashboardCompanySelectedV1559');
+    const xy=document.getElementById('dashboardCompanyXYV1559');
+    if(name)name.textContent=selected?(LABELS[selected]||selected):'None';
+    if(xy){
+      if(!selected)xy.textContent='—';
+      else{
+        const d=dashboard(),keys=getPosKeys(selected);
+        xy.textContent='X '+Math.round(Number(d[keys[0]])||0)+'  /  Y '+Math.round(Number(d[keys[1]])||0);
+      }
+    }
+  }
+
+  function setLogo(el,c,d){
+    if(!el)return;
+    el.innerHTML='';
+    el.style.display=d.showLogo?'grid':'none';
+    el.style.width=d.logoWidth+'px';
+    el.style.height=d.logoHeight+'px';
+    el.style.borderRadius=shapeRadius(d.logoShape);
+    el.style.background=d.followTheme?'linear-gradient(145deg,var(--primary),var(--accent))':d.logoBackground;
+    el.style.border=d.logoBorderWidth+'px solid '+(d.followTheme?'var(--accent)':d.logoBorderColor);
+    if(c.logo){
+      const im=document.createElement('img');im.src=c.logo;im.alt='Company logo';el.appendChild(im);
+    }else{
+      const sp=document.createElement('span');sp.textContent=c.shortName||'ERP';el.appendChild(sp);
+    }
+  }
+
+  function render(){
+    const d=dashboard(),c=co();
+    const box=document.getElementById('dashboardCompanyPreviewV1558');
+    const canvas=document.getElementById('dashboardCompanyFreeCanvasV1559');
+    if(!box||!canvas)return;
+
+    const free=d.componentLayoutMode==='free';
+    box.classList.toggle('component-free-active-v1559',free);
+    canvas.style.backgroundSize=(Math.max(1,Number(d.componentGrid)||10))+'px '+(Math.max(1,Number(d.componentGrid)||10))+'px';
+
+    const map={
+      logo:document.getElementById('dashboardCompanyFreeLogoV1559'),
+      name:document.getElementById('dashboardCompanyFreeNameV1559'),
+      address:document.getElementById('dashboardCompanyFreeAddressV1559'),
+      phone:document.getElementById('dashboardCompanyFreePhoneV1559'),
+      ntn:document.getElementById('dashboardCompanyFreeNtnV1559')
+    };
+
+    setLogo(map.logo,c,d);
+
+    if(map.name){
+      map.name.textContent=c.companyName||c.programName||'Company Name';
+      map.name.style.display=d.showName?'block':'none';
+      map.name.style.fontFamily=d.nameFont;
+      map.name.style.fontSize=d.nameSize+'px';
+      map.name.style.fontWeight=d.nameWeight;
+      map.name.style.color=d.followTheme?'var(--primary)':d.nameColor;
+      map.name.style.textAlign=d.nameAlign;
+    }
+
+    const phone=[c.telephone,c.mobile].filter(Boolean).join(' / ');
+    if(map.address){
+      map.address.textContent=c.address||'Address';
+      map.address.style.display=d.showAddress?'block':'none';
+    }
+    if(map.phone){
+      map.phone.textContent=phone?('Tel: '+phone):'Telephone';
+      map.phone.style.display=d.showPhone?'block':'none';
+    }
+    if(map.ntn){
+      map.ntn.textContent=c.ntn?('NTN: '+c.ntn):'NTN';
+      map.ntn.style.display=d.showNtn?'block':'none';
+    }
+
+    ['address','phone','ntn'].forEach(type=>{
+      const el=map[type];
+      if(!el)return;
+      el.style.fontFamily=d.detailsFont;
+      el.style.fontSize=d.detailsSize+'px';
+      el.style.color=d.followTheme?'var(--muted)':d.detailsColor;
+      el.style.textAlign=d.detailsAlign;
+    });
+
+    Object.entries(map).forEach(([type,el])=>{
+      if(!el)return;
+      const keys=getPosKeys(type);
+      el.style.left=(Number(d[keys[0]])||0)+'px';
+      el.style.top=(Number(d[keys[1]])||0)+'px';
+      el.dataset.labelV1559=LABELS[type]||type;
+      el.classList.toggle('drag-enabled-v1559',free&&d.componentMouseDrag&&!d.componentLockAll);
+      el.classList.toggle('locked-v1559',!!d.componentLockAll);
+    });
+
+    const mode=document.getElementById('dashboardCompanyComponentModeV1559');
+    const dragEl=document.getElementById('dashboardCompanyComponentDragV1559');
+    const snapEl=document.getElementById('dashboardCompanyComponentSnapV1559');
+    const gridEl=document.getElementById('dashboardCompanyComponentGridV1559');
+    const lockEl=document.getElementById('dashboardCompanyComponentLockV1559');
+    if(mode)mode.value=d.componentLayoutMode;
+    if(dragEl)dragEl.checked=!!d.componentMouseDrag;
+    if(snapEl)snapEl.checked=!!d.componentSnap;
+    if(gridEl)gridEl.value=String(d.componentGrid);
+    if(lockEl)lockEl.checked=!!d.componentLockAll;
+
+    setSelected(selected);
+  }
+
+  function changeSetting(key,value){
+    const d=dashboard();
+    d[key]=value;
+    render();
+  }
+
+  function resetPositions(){
+    const d=dashboard();
+    Object.keys(POS_DEFAULTS).forEach(k=>{
+      if(k.indexOf('component')===0)d[k]=POS_DEFAULTS[k];
+    });
+    selected='';
+    render();
+    try{if(typeof toast==='function')toast('Component positions reset')}catch(e){}
+  }
+
+  function clamp(n,min,max){return Math.max(min,Math.min(max,n))}
+
+  function onPointerDown(e){
+    const el=e.target.closest('[data-company-component-v1559]');
+    if(!el)return;
+    const d=dashboard();
+    const type=el.dataset.companyComponentV1559;
+    setSelected(type);
+    if(d.componentLayoutMode!=='free'||!d.componentMouseDrag||d.componentLockAll)return;
+    const canvas=document.getElementById('dashboardCompanyFreeCanvasV1559');
+    if(!canvas)return;
+    const er=el.getBoundingClientRect();
+    drag={id:e.pointerId,type,el,canvas,dx:e.clientX-er.left,dy:e.clientY-er.top};
+    el.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  }
+
+  function onPointerMove(e){
+    if(!drag||drag.id!==e.pointerId)return;
+    const d=dashboard();
+    if(d.componentLockAll)return;
+    const cr=drag.canvas.getBoundingClientRect();
+    const er=drag.el.getBoundingClientRect();
+    let x=e.clientX-cr.left-drag.dx;
+    let y=e.clientY-cr.top-drag.dy;
+    x=clamp(snap(x,d),0,Math.max(0,cr.width-er.width));
+    y=clamp(snap(y,d),0,Math.max(0,cr.height-er.height));
+    const keys=getPosKeys(drag.type);
+    d[keys[0]]=Math.round(x);
+    d[keys[1]]=Math.round(y);
+    drag.el.style.left=d[keys[0]]+'px';
+    drag.el.style.top=d[keys[1]]+'px';
+    setSelected(drag.type);
+    e.preventDefault();
+  }
+
+  function onPointerUp(e){
+    if(!drag||drag.id!==e.pointerId)return;
+    drag=null;
+  }
+
+  function init(){
+    dashboard();
+
+    const mode=document.getElementById('dashboardCompanyComponentModeV1559');
+    const dragEl=document.getElementById('dashboardCompanyComponentDragV1559');
+    const snapEl=document.getElementById('dashboardCompanyComponentSnapV1559');
+    const gridEl=document.getElementById('dashboardCompanyComponentGridV1559');
+    const lockEl=document.getElementById('dashboardCompanyComponentLockV1559');
+
+    mode?.addEventListener('change',()=>changeSetting('componentLayoutMode',mode.value));
+    dragEl?.addEventListener('change',()=>changeSetting('componentMouseDrag',dragEl.checked));
+    snapEl?.addEventListener('change',()=>changeSetting('componentSnap',snapEl.checked));
+    gridEl?.addEventListener('change',()=>changeSetting('componentGrid',Number(gridEl.value)||1));
+    lockEl?.addEventListener('change',()=>changeSetting('componentLockAll',lockEl.checked));
+    document.getElementById('dashboardCompanyResetComponentsV1559')?.addEventListener('click',resetPositions);
+
+    document.addEventListener('pointerdown',onPointerDown,true);
+    document.addEventListener('pointermove',onPointerMove,true);
+    document.addEventListener('pointerup',onPointerUp,true);
+    document.addEventListener('pointercancel',onPointerUp,true);
+
+    document.addEventListener('input',e=>{
+      if(e.target?.matches?.('[data-key^="company.dashboard."],[data-key^="company."]'))setTimeout(render,0);
+    },true);
+    document.addEventListener('change',e=>{
+      if(e.target?.matches?.('[data-key^="company.dashboard."],[data-key^="company."]'))setTimeout(render,0);
+    },true);
+
+    render();
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+
+  window.ERPDashboardCompanyComponentDragV1559={render,resetPositions};
 })();
 </script>
 
