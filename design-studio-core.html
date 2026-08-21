@@ -25573,7 +25573,7 @@ function render(){syncControls();[['bdWidthVal',draft.width+'%'],['bdHeightVal',
 function extras(hero){let c=hero.querySelector('.banner-company-extra-v1566');if(!c){c=document.createElement('div');c.className='banner-company-extra-v1566';hero.appendChild(c)}let p=hero.querySelector('.banner-profile-extra-v1566');if(!p){p=document.createElement('div');p.className='banner-profile-extra-v1566';hero.appendChild(p)}const co=company(),pr=profile();c.innerHTML=(draft.showLogo&&co.logo?'<img src="'+co.logo+'">':'')+(draft.showCompany?'<span>'+co.name+'</span>':'');c.style.display=(draft.showCompany||draft.showLogo)?'flex':'none';p.innerHTML=(draft.showProfile&&pr.pic?'<img src="'+pr.pic+'">':'')+(draft.showProfile?'<span>'+pr.name+'</span>':'');p.style.display=draft.showProfile?'flex':'none'}
 function applyLive(){draft=load();const h=document.querySelector('#panel-dashboard .dash-hero');if(!h)return;h.classList.add('banner-designer-active-v1566');h.style.setProperty('--bd-width',draft.width+'%');h.style.setProperty('--bd-height',draft.height+'px');h.style.setProperty('--bd-radius',draft.radius+'px');h.style.setProperty('--bd-padding-x',draft.paddingX+'px');h.style.setProperty('--bd-padding-y',draft.paddingY+'px');h.style.setProperty('--bd-gap',draft.gap+'px');h.style.setProperty('--bd-border-width',draft.borderWidth+'px');h.style.setProperty('--bd-border-color',draft.followTheme?'var(--border)':draft.borderColor);h.style.setProperty('--bd-shadow',shadow(draft.shadow));h.style.setProperty('--bd-overlay',draft.overlay/100);h.style.setProperty('--bd-title-size',draft.titleSize+'px');h.style.setProperty('--bd-sub-size',draft.subSize+'px');const title=h.querySelector('.dash-hero-copy h2');if(title)title.textContent=draft.title||DEF.title;const icon=h.querySelector('.dash-hero-icon');if(icon)icon.style.display=draft.showIcon?'grid':'none';const acts=h.querySelector('.dash-hero-art');if(acts)acts.style.display=draft.showActions?'flex':'none';extras(h)}
 function clearLive(){const h=document.querySelector('#panel-dashboard .dash-hero');if(!h)return;h.classList.remove('banner-designer-active-v1566');['--bd-width','--bd-height','--bd-radius','--bd-padding-x','--bd-padding-y','--bd-gap','--bd-border-width','--bd-border-color','--bd-shadow','--bd-overlay','--bd-title-size','--bd-sub-size'].forEach(x=>h.style.removeProperty(x));h.querySelector('.banner-company-extra-v1566')?.remove();h.querySelector('.banner-profile-extra-v1566')?.remove();const icon=h.querySelector('.dash-hero-icon');if(icon)icon.style.removeProperty('display');const acts=h.querySelector('.dash-hero-art');if(acts)acts.style.removeProperty('display')}
-function boot(){let tries=0;const t=setInterval(()=>{tries++;if(makeDesigner()||tries>40){clearInterval(t);if(localStorage.getItem(KEY))applyLive()}},100)}
+function boot(){const run=()=>{if(makeDesigner()){if(localStorage.getItem(KEY))applyLive();return true}return false};if(run())return;setTimeout(()=>{run()},250)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();window.addEventListener('hashchange',()=>setTimeout(()=>{if(localStorage.getItem(KEY))applyLive()},80));window.ERPDashboardBannerDesignerV1566={apply:applyLive,render};})();
 </script>
 
@@ -26286,20 +26286,14 @@ body.dashboard-clean-top-v1568 #panel-dashboard .dash-hero.banner-exact-gallery-
   function boot(){
     arrange();
     wrapRuntime();
-    setTimeout(()=>{wrapRuntime();arrange()},300);
-    setTimeout(()=>{wrapRuntime();arrange()},900);
+    setTimeout(()=>{wrapRuntime();arrange()},250);
 
     window.addEventListener('hashchange',()=>setTimeout(arrange,0));
-    document.addEventListener('click',()=>setTimeout(arrange,0),true);
-
-    const panel=document.getElementById('panel-dashboard');
-    if(panel){
-      new MutationObserver(()=>setTimeout(arrange,0)).observe(panel,{
-        attributes:true,
-        subtree:true,
-        attributeFilter:['class']
-      });
-    }
+    document.addEventListener('click',e=>{
+      if(e.target?.id==='bannerApply'||e.target?.id==='bannerReset'){
+        setTimeout(arrange,80);
+      }
+    });
   }
 
   if(document.readyState==='loading'){
@@ -26313,235 +26307,9 @@ body.dashboard-clean-top-v1568 #panel-dashboard .dash-hero.banner-exact-gallery-
 </script>
 
 
-<style id="exactGalleryBannerV1569Style">
-/* V15.69 — Applied Dashboard banner uses the exact approved gallery artwork. */
-#panel-dashboard .dash-hero.banner-exact-gallery-v1569{
-  display:block!important;
-  grid-template-columns:none!important;
-  grid-template-rows:none!important;
-  gap:0!important;
-  align-items:stretch!important;
-  width:100%!important;
-  max-width:none!important;
-  padding:0!important;
-  margin:0 0 12px!important;
-  min-height:0!important;
-  height:auto!important;
-  background:transparent!important;
-  border:0!important;
-  box-shadow:none!important;
-  overflow:hidden!important;
-}
-#panel-dashboard .dash-hero.banner-exact-gallery-v1569 >
-.dash-hero-icon,
-#panel-dashboard .dash-hero.banner-exact-gallery-v1569 >
-.dash-hero-copy,
-#panel-dashboard .dash-hero.banner-exact-gallery-v1569 >
-.dash-hero-art,
-#panel-dashboard .dash-hero.banner-exact-gallery-v1569 >
-.banner-runtime-v1567,
-#panel-dashboard .dash-hero.banner-exact-gallery-v1569 >
-.banner-company-extra-v1566,
-#panel-dashboard .dash-hero.banner-exact-gallery-v1569 >
-.banner-profile-extra-v1566{
-  display:none!important;
-}
-#panel-dashboard .banner-exact-wrap-v1569{
-  display:block!important;
-  grid-column:1/-1!important;
-  position:relative;
-  width:100%!important;
-  max-width:none!important;
-  margin:0!important;
-  padding:0!important;
-  background:var(--surface);
-  border-radius:0 0 18px 18px;
-  overflow:hidden;
-  line-height:0;
-}
-#panel-dashboard .banner-exact-wrap-v1569 img{
-  display:block;
-  width:100%;
-  height:auto;
-  max-width:none;
-  object-fit:contain;
-  object-position:center;
-  background:#fff;
-}
-#panel-dashboard .banner-exact-hit-v1569{
-  position:absolute;
-  z-index:5;
-  background:transparent;
-  border:0;
-  padding:0;
-  margin:0;
-  cursor:pointer;
-}
-#panel-dashboard .banner-exact-hit-v1569:hover{
-  outline:2px solid color-mix(in srgb,var(--primary) 42%,transparent);
-  outline-offset:-2px;
-  background:color-mix(in srgb,var(--primary) 6%,transparent);
-}
 
-/* Generic bottom action hotspots.  Their placement is intentionally subtle;
-   exact artwork remains unchanged while the common ERP actions stay clickable. */
-#panel-dashboard .banner-exact-actions-v1569{
-  position:absolute;
-  left:17%;
-  right:17%;
-  bottom:7%;
-  height:27%;
-  z-index:5;
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:1.2%;
-  pointer-events:none;
-}
-#panel-dashboard .banner-exact-actions-v1569 button{
-  pointer-events:auto;
-  border:0;
-  background:transparent;
-  color:transparent;
-  cursor:pointer;
-  border-radius:12px;
-}
-#panel-dashboard .banner-exact-actions-v1569 button:hover{
-  outline:2px solid color-mix(in srgb,var(--primary) 30%,transparent);
-  background:color-mix(in srgb,var(--primary) 5%,transparent);
-}
 
-@media(max-width:900px){
-  #panel-dashboard .banner-exact-actions-v1569{
-    left:8%;
-    right:8%;
-    bottom:5%;
-    height:29%;
-  }
-}
-</style>
 
-<script id="exactGalleryBannerV1569Script">
-(function(){
-'use strict';
-
-const STYLE_KEY='erpDashboardBannerStyleV1563';
-
-function selected(){
-  return Number(localStorage.getItem(STYLE_KEY)||0);
-}
-
-function hero(){
-  return document.querySelector('#panel-dashboard .dash-hero');
-}
-
-function clearExact(){
-  const h=hero();
-  if(!h)return;
-  h.querySelector('.banner-exact-wrap-v1569')?.remove();
-  h.classList.remove('banner-exact-gallery-v1569');
-  document.getElementById('panel-dashboard')?.classList.remove('custom-banner-top-v1568');
-}
-
-function actionButtons(){
-  const names=[
-    ['purchase','Purchase'],
-    ['issue','Issue'],
-    ['inventory','Inventory'],
-    ['production','Production'],
-    ['gate-pass','Gate Pass'],
-    ['reports','Reports'],
-    ['masters','Masters']
-  ];
-  return `<div class="banner-exact-actions-v1569">`+
-    names.map(([panel,label])=>`<button type="button" data-banner-exact-panel="${panel}" aria-label="${label}">${label}</button>`).join('')+
-    `</div>`;
-}
-
-function renderExact(){
-  const h=hero();
-  if(!h)return;
-  const n=selected();
-  if(!n){ clearExact(); return; }
-
-  /* V15.75: every Dashboard banner is native live HTML.
-     Gallery images are previews only and are never inserted into the live Dashboard. */
-  h.querySelector('.banner-exact-wrap-v1569')?.remove();
-  h.classList.remove('banner-exact-gallery-v1569');
-  document.getElementById('panel-dashboard')?.classList.add('custom-banner-top-v1568');
-  const runtime=h.querySelector('.banner-runtime-v1567');
-  if(runtime)runtime.style.display='';
-  h.classList.add('banner-runtime-active-v1567');
-}
-
-function bindActions(){
-  document.addEventListener('click',function(e){
-    const b=e.target.closest('[data-banner-exact-panel]');
-    if(!b)return;
-    const p=b.getAttribute('data-banner-exact-panel');
-
-    const direct=document.querySelector(`[data-panel="${p}"]`);
-    if(direct){direct.click();return}
-
-    const candidates=[...document.querySelectorAll('[data-panel]')];
-    const alt=candidates.find(x=>{
-      const v=x.getAttribute('data-panel')||'';
-      return v===p || v.replace(/^panel-/,'')===p;
-    });
-    if(alt){alt.click();return}
-
-    const panel=document.getElementById('panel-'+p);
-    if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});
-  },true);
-}
-
-function wrapExistingRuntime(){
-  const rt=window.ERPDashboardBannerRuntimeV1567;
-  if(!rt||rt.__exactGalleryWrappedV1569)return;
-
-  const oldRender=rt.render;
-  const oldClear=rt.clear;
-
-  rt.render=function(){
-    const v=oldRender.apply(this,arguments);
-    setTimeout(renderExact,0);
-    return v;
-  };
-  rt.clear=function(){
-    const v=oldClear.apply(this,arguments);
-    clearExact();
-    return v;
-  };
-
-  rt.__exactGalleryWrappedV1569=true;
-}
-
-function boot(){
-  bindActions();
-  wrapExistingRuntime();
-  setTimeout(()=>{wrapExistingRuntime();renderExact()},100);
-  setTimeout(()=>{wrapExistingRuntime();renderExact()},500);
-  setTimeout(()=>{wrapExistingRuntime();renderExact()},1200);
-
-  document.addEventListener('click',e=>{
-    if(e.target?.id==='bannerApply')setTimeout(renderExact,60);
-    if(e.target?.id==='bannerReset')setTimeout(clearExact,60);
-  },true);
-
-  window.addEventListener('hashchange',()=>setTimeout(renderExact,80));
-}
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',boot,{once:true});
-}else{
-  boot();
-}
-
-window.ERPDashboardExactGalleryBannerV1569={
-  render:renderExact,
-  clear:clearExact
-};
-})();
-</script>
 
 
 <style id="erpControlCenterNativeV1574Style">
@@ -27136,5 +26904,52 @@ window.ERPDashboardExactGalleryBannerV1569={
 #panel-dashboard .br-style-1 .br1-actions .br-action:hover{transform:translateY(-1px)!important;background:rgba(255,255,255,.18)!important}
 @media(max-width:1100px){#panel-dashboard .br-style-1 .br1-top{grid-template-columns:1fr auto!important}#panel-dashboard .br-style-1 .br1-user{display:none!important}#panel-dashboard .br-style-1 .br1-hero{grid-template-columns:48px 1fr!important}#panel-dashboard .br-style-1 .br1-mini{grid-column:1/-1!important}}
 </style>
+
+
+<script id="erpIdleResumeStabilityV1578">
+(function(){
+'use strict';
+
+function activePanel(){
+  return document.querySelector('main.content section.panel.active');
+}
+
+function dashboardActive(){
+  const p=document.getElementById('panel-dashboard');
+  return !!(p && p.classList.contains('active'));
+}
+
+function revealIfStale(){
+  /* These classes are intentionally used only during short boot/route
+     restoration. They must never survive a suspended/background tab. */
+  document.documentElement.classList.remove('erp-safe-boot');
+
+  if(activePanel()){
+    document.documentElement.classList.remove('erp-route-restoring-v1545');
+  }
+
+  if(dashboardActive()){
+    document.body.classList.add('erp-dashboard-mode');
+    try{ window.ERPDashboardCleanTopV1568?.arrange?.(); }catch(e){}
+    try{ window.ERPDashboardBannerRuntimeV1567?.render?.(); }catch(e){}
+  }
+}
+
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden){
+    /* One light resume pass only — no reload, polling or repeated observer. */
+    setTimeout(revealIfStale,0);
+  }
+});
+
+window.addEventListener('pageshow',function(e){
+  if(e.persisted){
+    setTimeout(revealIfStale,0);
+  }
+});
+
+window.ERPIdleResumeStabilityV1578={recover:revealIfStale};
+})();
+</script>
 
 </body></html>
