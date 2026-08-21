@@ -25815,13 +25815,13 @@ function metricsHTML(d){
 function actionsHTML(s){
  if(!s.showActions)return '';
  return `<div class="br-actions">
- <button class="br-action" data-target="panel-purchase">🛒 Purchase</button>
- <button class="br-action" data-target="panel-issue">↔ Issue</button>
- <button class="br-action" data-target="panel-inventory">▣ Inventory</button>
- <button class="br-action" data-target="panel-production">▥ Production</button>
- <button class="br-action" data-target="panel-gate-pass">◇ Gate Pass</button>
- <button class="br-action" data-target="panel-reports">▥ Reports</button>
- <button class="br-action" data-target="panel-masters">⚙ Masters</button>
+ <button class="br-action" type="button" data-dash-jump="purchase-entry">🛒 <span>Purchase</span></button>
+ <button class="br-action" type="button" data-dash-jump="issue-entry">↔ <span>Issue</span></button>
+ <button class="br-action" type="button" data-dashboard-inventory="1">▣ <span>Inventory</span></button>
+ <button class="br-action" type="button" data-pc-dashboard="1">▥ <span>Production</span></button>
+ <button class="br-action" type="button" data-dash-jump="gate-pass-dashboard">◇ <span>Gate Pass</span></button>
+ <button class="br-action" type="button" data-dash-jump="material-balance-report">▥ <span>Reports</span></button>
+ <button class="br-action" type="button" data-dash-jump="masters">⚙ <span>Masters</span></button>
  </div>`;
 }
 function copyHTML(s,icon=true){
@@ -26353,43 +26353,17 @@ function actionButtons(){
 function renderExact(){
   const h=hero();
   if(!h)return;
-
   const n=selected();
-  if(!n){
-    clearExact();
-    return;
-  }
+  if(!n){ clearExact(); return; }
 
-  /* V15.71: ERP Control Center (#5) is rendered as native live HTML.
-     Do not stretch its gallery thumbnail on the Dashboard. */
-  if(n===5){
-    h.querySelector('.banner-exact-wrap-v1569')?.remove();
-    h.classList.remove('banner-exact-gallery-v1569');
-    document.getElementById('panel-dashboard')?.classList.add('custom-banner-top-v1568');
-    const runtime=h.querySelector('.banner-runtime-v1567');
-    if(runtime)runtime.style.display='';
-    h.classList.add('banner-runtime-active-v1567');
-    return;
-  }
-
-  const thumbs=window.ERPBannerThumbsV1569;
-  if(!Array.isArray(thumbs)||!thumbs[n-1])return;
-
-  let wrap=h.querySelector('.banner-exact-wrap-v1569');
-  if(!wrap){
-    wrap=document.createElement('div');
-    wrap.className='banner-exact-wrap-v1569';
-    h.appendChild(wrap);
-  }
-
-  wrap.innerHTML=`<img src="${thumbs[n-1]}" alt="Dashboard banner design ${n}">${actionButtons()}`;
-
-  h.classList.add('banner-exact-gallery-v1569');
-  h.classList.remove('banner-runtime-active-v1567');
+  /* V15.75: every Dashboard banner is native live HTML.
+     Gallery images are previews only and are never inserted into the live Dashboard. */
+  h.querySelector('.banner-exact-wrap-v1569')?.remove();
+  h.classList.remove('banner-exact-gallery-v1569');
   document.getElementById('panel-dashboard')?.classList.add('custom-banner-top-v1568');
-
   const runtime=h.querySelector('.banner-runtime-v1567');
-  if(runtime)runtime.style.display='none';
+  if(runtime)runtime.style.display='';
+  h.classList.add('banner-runtime-active-v1567');
 }
 
 function bindActions(){
@@ -26762,6 +26736,107 @@ window.ERPDashboardExactGalleryBannerV1569={
   #panel-dashboard .br-style-5 .br5-actions{
     grid-template-columns:repeat(2,minmax(140px,1fr))!important;
   }
+}
+</style>
+
+
+<style id="allNativeBannerAuditV1575Style">
+/* V15.75 — final audit: all banner designs are live UI, not gallery images. */
+#panel-dashboard .dash-hero.banner-runtime-active-v1567{
+  display:block!important;grid-template-columns:none!important;gap:0!important;
+  width:100%!important;min-height:0!important;padding:0!important;background:transparent!important;
+  overflow:visible!important;
+}
+#panel-dashboard .banner-runtime-v1567{
+  width:100%!important;max-width:none!important;min-height:max(var(--br-height,142px),180px);
+  border:1px solid color-mix(in srgb,var(--primary) 24%,var(--border));
+  box-shadow:0 10px 26px rgba(18,58,90,.12);
+}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-layout{min-height:150px}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-company{
+  padding:7px 9px;border-radius:11px;background:rgba(255,255,255,.14);backdrop-filter:blur(6px)
+}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-company img{width:42px;height:42px}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-profile img{width:52px;height:52px}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-title{font-size:clamp(21px,var(--br-title-size,25px),32px)}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-actions{gap:9px}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-action{
+  min-width:92px;height:40px;padding:0 12px;font-size:9px;font-weight:900;
+  border-width:1px;box-shadow:0 5px 12px rgba(20,55,85,.10);transition:.16s ease
+}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-action:hover{
+  transform:translateY(-3px);box-shadow:0 9px 18px rgba(20,55,85,.18)
+}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-metric{
+  min-height:48px;padding:9px 11px;box-shadow:0 5px 12px rgba(20,55,85,.08)
+}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-metric b{font-size:15px}
+
+/* Executive hero */
+#panel-dashboard .br-style-1{min-height:205px;background:linear-gradient(120deg,var(--side-bg),var(--primary) 68%,color-mix(in srgb,var(--primary) 65%,var(--accent)))!important}
+#panel-dashboard .br-style-1 .br-actions{grid-template-columns:repeat(4,minmax(92px,1fr))!important}
+
+/* Split welcome */
+#panel-dashboard .br-style-2{min-height:210px!important;border-radius:0 0 18px 18px!important}
+#panel-dashboard .br-style-2 .br-split-left,#panel-dashboard .br-style-2 .br-split-right{padding:25px 28px!important}
+#panel-dashboard .br-style-2 .br-actions{display:grid;grid-template-columns:repeat(2,minmax(95px,1fr))}
+
+/* Command strip */
+#panel-dashboard .br-style-3{min-height:195px;background:linear-gradient(110deg,#061a36,var(--side-bg),var(--primary))!important}
+#panel-dashboard .br-style-3 .br-metrics{grid-template-columns:repeat(5,minmax(82px,1fr))!important}
+#panel-dashboard .br-style-3 .br-actions{display:grid;grid-template-columns:repeat(7,minmax(80px,1fr))}
+
+/* Corporate glass */
+#panel-dashboard .br-style-4{min-height:215px;background:linear-gradient(125deg,color-mix(in srgb,var(--primary) 88%,#254f64),color-mix(in srgb,var(--accent) 48%,#82b9b3))!important}
+#panel-dashboard .br-style-4 .br-action{background:rgba(255,255,255,.22)!important;border-color:rgba(255,255,255,.34)!important}
+
+/* Minimal premium */
+#panel-dashboard .br-style-6{min-height:190px!important;border-left:8px solid var(--primary)!important;background:linear-gradient(120deg,var(--surface),color-mix(in srgb,var(--primary) 4%,var(--surface)))!important}
+#panel-dashboard .br-style-6 .br-action{background:#fff!important}
+
+/* Aero wave */
+#panel-dashboard .br-style-7{min-height:215px!important;background:linear-gradient(120deg,#151b64,var(--primary) 52%,color-mix(in srgb,var(--accent) 35%,#7133ba))!important}
+#panel-dashboard .br-style-7 .br-actions{display:grid;grid-template-columns:repeat(7,minmax(84px,1fr))}
+
+/* Skyline */
+#panel-dashboard .br-style-8{min-height:215px!important;background:linear-gradient(#e7f6ff,#fff)!important}
+#panel-dashboard .br-style-8 .br-action{background:rgba(255,255,255,.94)!important}
+
+/* Gradient horizon */
+#panel-dashboard .br-style-9{min-height:225px!important}
+#panel-dashboard .br-style-9 .br-metrics{grid-template-columns:repeat(5,minmax(80px,1fr))!important}
+#panel-dashboard .br-style-9 .br-actions{display:grid;grid-template-columns:repeat(7,minmax(80px,1fr))}
+
+/* Neumorphism */
+#panel-dashboard .br-style-10{min-height:215px!important;background:color-mix(in srgb,var(--bg) 58%,#e9eff5)!important}
+#panel-dashboard .br-style-10 .br-action,#panel-dashboard .br-style-10 .br-metric{background:color-mix(in srgb,var(--surface) 70%,transparent)!important}
+
+/* Dark command center */
+#panel-dashboard .br-style-11{min-height:225px!important;background:linear-gradient(120deg,#020b14,#071a2b,#06253b)!important}
+#panel-dashboard .br-style-11 .br-actions{display:grid;grid-template-columns:repeat(7,minmax(80px,1fr))}
+#panel-dashboard .br-style-11 .br-action{color:#dffcff!important;background:rgba(19,216,255,.07)!important}
+
+/* Ribbon */
+#panel-dashboard .br-style-12{min-height:245px!important;background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--primary) 5%,#fff))!important}
+#panel-dashboard .br-style-12 .br-ribbon{padding:14px 42px!important;box-shadow:0 9px 20px color-mix(in srgb,var(--primary) 20%,transparent)}
+#panel-dashboard .br-style-12 .br-actions{display:grid;grid-template-columns:repeat(7,minmax(84px,1fr));gap:9px}
+
+/* Garden */
+#panel-dashboard .br-style-13{min-height:215px!important;background:linear-gradient(120deg,#fbfff8,color-mix(in srgb,#8fd66e 22%,#effbe9))!important}
+#panel-dashboard .br-style-13 .br-action{background:rgba(255,255,255,.90)!important}
+
+/* Hexagon Hub */
+#panel-dashboard .br-style-14{min-height:250px!important;background:linear-gradient(135deg,#fff,color-mix(in srgb,var(--primary) 9%,#eaf8ff))!important}
+#panel-dashboard .br-style-14 .br-actions{grid-template-columns:repeat(4,minmax(105px,1fr))!important;gap:12px!important}
+#panel-dashboard .br-style-14 .br-action{height:62px!important;clip-path:polygon(16% 0,84% 0,100% 50%,84% 100%,16% 100%,0 50%)!important;background:#fff!important;box-shadow:none!important;filter:drop-shadow(0 6px 7px rgba(20,55,85,.15))}
+#panel-dashboard .br-style-14 .br-metrics{grid-template-columns:repeat(5,minmax(85px,1fr))!important}
+
+/* Never display gallery-thumbnail renderer on live Dashboard. */
+#panel-dashboard .banner-exact-wrap-v1569,#panel-dashboard .banner-exact-actions-v1569,#panel-dashboard .banner-exact-hit-v1569{display:none!important}
+
+@media(max-width:1100px){
+ #panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-actions{grid-template-columns:repeat(3,minmax(95px,1fr))!important}
+ #panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-metrics{grid-template-columns:repeat(3,minmax(90px,1fr))!important}
 }
 </style>
 
