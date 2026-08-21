@@ -25550,7 +25550,7 @@ window.addEventListener('hashchange',()=>setTimeout(apply,50));
 <script id="erpSelectedBannerDesignerV1566Script">
 (function(){'use strict';
 const KEY='erpDashboardBannerDesignerV1566';
-const DEF={width:100,height:142,followTheme:true,overlay:0,radius:17,borderWidth:0,borderColor:'#9bc9c3',shadow:'medium',paddingX:30,paddingY:25,gap:18,title:'Better Management, Better Results!',titleSize:25,subSize:12,showIcon:true,showCompany:false,showLogo:true,showProfile:false,showActions:true};
+const DEF={width:100,height:142,followTheme:true,overlay:0,radius:17,borderWidth:0,borderColor:'#9bc9c3',shadow:'medium',paddingX:30,paddingY:25,gap:18,title:'Better Management, Better Results!',titleSize:25,subSize:12,showIcon:true,showCompany:true,showLogo:true,showProfile:true,showActions:true};
 let draft=load();
 function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return Object.assign({},DEF)}}
 function save(){localStorage.setItem(KEY,JSON.stringify(draft))}
@@ -25769,7 +25769,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 'use strict';
 const STYLE_KEY='erpDashboardBannerStyleV1563';
 const DESIGNER_KEY='erpDashboardBannerDesignerV1566';
-const DEF={width:100,height:142,followTheme:true,overlay:0,radius:17,borderWidth:0,borderColor:'#9bc9c3',shadow:'medium',paddingX:30,paddingY:25,gap:18,title:'Better Management, Better Results!',titleSize:25,subSize:12,showIcon:true,showCompany:false,showLogo:true,showProfile:false,showActions:true};
+const DEF={width:100,height:142,followTheme:true,overlay:0,radius:17,borderWidth:0,borderColor:'#9bc9c3',shadow:'medium',paddingX:30,paddingY:25,gap:18,title:'Better Management, Better Results!',titleSize:25,subSize:12,showIcon:true,showCompany:true,showLogo:true,showProfile:true,showActions:true};
 
 function settings(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(DESIGNER_KEY)||'{}'))}catch(e){return Object.assign({},DEF)}}
 function styleNo(){return Number(localStorage.getItem(STYLE_KEY)||0)}
@@ -25829,14 +25829,59 @@ function copyHTML(s,icon=true){
 }
 function build(n,d,s){
  const co=companyHTML(d,s),pr=profileHTML(d,s),mt=metricsHTML(d),ac=actionsHTML(s);
- if(n===1)return `<div class="br-layout"><div class="br-left">${copyHTML(s)} </div>${ac}</div>`;
- if(n===2)return `<div class="br-layout"><div class="br-split-left">${co}${pr}<div style="margin-top:10px">${copyHTML(s,false)}</div></div><div class="br-split-right"><h2 class="br-title">${esc(s.title)}</h2><p class="br-sub">Information, actions and daily management in one place.</p>${ac}</div></div>`;
- if(n===3)return `<div class="br-layout">${pr}<div>${mt}</div><div class="br-time">${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>${ac}</div>`;
- if(n===4)return `<div class="br-layout"><div>${co}<div style="margin-top:11px">${copyHTML(s,false)}</div></div>${pr}${ac}</div>`;
+ const now=new Date();
+ const tm=now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+ const dt=now.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
+ const prof=`<div class="br-native-profile">${d.pimg?`<img src="${esc(d.pimg)}" alt="">`:''}<div><small>Welcome back,</small><b>${esc(d.pname)}</b><span>${esc(d.prole)}</span></div></div>`;
+ const comp=`<div class="br-native-company">${d.companyLogo?`<img src="${esc(d.companyLogo)}" alt="">`:''}<div><b>${esc(d.companyName)}</b>${d.companyAddr?`<small>${esc(d.companyAddr)}</small>`:''}</div></div>`;
+ const time=`<div class="br-native-time"><b>${tm}</b><small>${dt}</small></div>`;
+ const sum4=`<div class="br-summary4">
+   <div><b>${esc(d.materials)}</b><small>Materials</small></div>
+   <div><b>${esc(d.purchases)}</b><small>Purchases</small></div>
+   <div><b>${esc(d.production)}</b><small>Production</small></div>
+   <div><b>${esc(d.rgp)}</b><small>Pending RGP</small></div>
+ </div>`;
+
+ if(n===1)return `<div class="br-layout br1-layout">
+   <div class="br1-top">
+     <div class="br1-brand">${comp}</div>
+     <div class="br1-user">${prof}</div>
+     <div class="br1-clock">${time}</div>
+   </div>
+   <div class="br1-hero">
+     <div class="br1-accent">★</div>
+     <div class="br1-message">
+       <span class="br1-kicker">STORE INVENTORY ERP</span>
+       <h2>${esc(s.title)}</h2>
+       <p>${esc(s.subtitle)}</p>
+     </div>
+     <div class="br1-mini">${sum4}</div>
+   </div>
+   <div class="br1-actions">${ac}</div>
+ </div>`;
+
+ if(n===2)return `<div class="br-layout br2-layout">
+   <div class="br-split-left">${comp}<div class="br2-welcome"><span>Welcome back,</span><h2>${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div>${mt}</div>
+   <div class="br-split-right"><h2 class="br-title">${esc(s.title)}</h2><p class="br-sub">Information, actions and daily management in one place.</p>${prof}${time}${ac}</div>
+ </div>`;
+
+ if(n===3)return `<div class="br-layout br3-layout">
+   <div class="br3-profile">${prof}</div>
+   <div class="br3-summary"><div class="br3-label">Today’s Summary</div>${sum4}</div>
+   <div class="br3-clock">${time}</div>
+   ${ac}
+ </div>`;
+
+ if(n===4)return `<div class="br-layout br4-layout">
+   <div class="br4-copy">${comp}<div class="br4-welcome"><span>Welcome back,</span><h2>${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div><div class="br4-status">● You are online &nbsp; • &nbsp; ${dt} &nbsp; • &nbsp; ${tm}</div></div>
+   <div class="br4-profile">${prof}</div>
+   ${ac}
+ </div>`;
+
  if(n===5)return `<div class="br-layout br5-layout">
  <div class="br5-company">${d.companyLogo?`<img src="${esc(d.companyLogo)}" alt="">`:''}<div><b>${esc(d.companyName)}</b>${d.companyAddr?`<small>${esc(d.companyAddr)}</small>`:''}</div></div>
  <div class="br5-center"><h2 class="br-title">ERP Control Center</h2><div class="br5-welcome">Welcome back, <b>${esc(d.pname)}</b></div><div class="br5-role">${esc(d.prole)}</div><p class="br-sub">All your operations. One place. Total control.</p></div>
- <div class="br5-right"><div class="br5-date">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short',year:'numeric'})}</div><div class="br5-time">◷ ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>
+ <div class="br5-right"><div class="br5-date">${dt}</div><div class="br5-time">◷ ${tm}</div></div>
  <div class="br5-actions">
    <button class="br5-action" type="button" data-dash-jump="purchase-entry"><span class="br5-icon blue">🛒</span><b>Purchase</b><small>Manage purchases</small></button>
    <button class="br5-action" type="button" data-dash-jump="issue-entry"><span class="br5-icon green">↔</span><b>Issue</b><small>Material issue</small></button>
@@ -25846,15 +25891,61 @@ function build(n,d,s){
    <button class="br5-action" type="button" data-dash-jump="material-balance-report"><span class="br5-icon red">📊</span><b>Reports</b><small>Business reports</small></button>
  </div>
  </div>`;
- if(n===6)return `<div class="br-layout"><div>${co}<div style="margin-top:10px">${copyHTML(s,false)}</div>${pr}</div>${ac}</div>`;
- if(n===7)return `<div class="br-layout"><div>${co}<div style="margin-top:9px">${copyHTML(s,false)}</div>${pr}</div>${ac}</div>`;
- if(n===8)return `<div class="br-layout"><div>${co}<div style="margin-top:9px">${copyHTML(s,false)}</div>${pr}</div>${ac}</div>`;
- if(n===9)return `<div class="br-layout"><div>${co}<div style="margin-top:9px">${copyHTML(s,false)}</div>${pr}</div>${mt}${ac}</div>`;
- if(n===10)return `<div class="br-layout"><div>${co}<div style="margin-top:9px">${copyHTML(s,false)}</div>${pr}</div>${ac}${mt}</div>`;
- if(n===11)return `<div class="br-layout"><div>${co}<div style="margin-top:9px">${copyHTML(s,false)}</div></div>${mt}${pr}${ac}</div>`;
- if(n===12)return `<div class="br-layout">${co}<div class="br-ribbon"><div class="br-sub">Welcome back,</div><h2 class="br-title">${esc(d.pname)}</h2><p class="br-sub">${esc(d.prole)}</p></div>${pr}${mt}${ac}</div>`;
- if(n===13)return `<div class="br-layout"><div>${co}<div style="margin-top:9px"><div class="br-sub" style="font-style:italic">Welcome back,</div><h2 class="br-title">${esc(d.pname)}</h2><p class="br-sub">${esc(d.prole)} · Organized today. Successful tomorrow.</p></div></div>${pr}${ac}</div>`;
- return `<div class="br-layout"><div>${co}<div style="margin-top:9px">${copyHTML(s,false)}</div>${pr}</div>${ac}${mt}</div>`;
+
+ if(n===6)return `<div class="br-layout br6-layout">
+   <div class="br6-main">${comp}<div class="br6-welcome"><span>Welcome back,</span><h2>${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div><blockquote>“Organized today. Successful tomorrow.”</blockquote><div class="br6-status">● Online &nbsp; • &nbsp; ${dt} &nbsp; • &nbsp; ${tm}</div></div>
+   <div class="br6-side">${prof}${ac}</div>
+ </div>`;
+
+ if(n===7)return `<div class="br-layout br7-layout">
+   <div>${comp}<div class="br7-welcome"><span>Welcome back,</span><h2>${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div><div class="br7-status">● Online &nbsp; | &nbsp; ${dt} &nbsp; | &nbsp; ${tm}</div></div>
+   <div class="br7-profile">${prof}</div>
+   ${ac}
+ </div>`;
+
+ if(n===8)return `<div class="br-layout br8-layout">
+   <div class="br8-copy">${comp}<div class="br8-welcome"><span>Welcome back,</span><h2>${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div><div class="br8-status">● Online &nbsp; • &nbsp; ${dt} &nbsp; • &nbsp; ${tm}</div></div>
+   <div class="br8-side">${prof}</div>
+   ${ac}
+ </div>`;
+
+ if(n===9)return `<div class="br-layout br9-layout">
+   <div class="br9-top">${comp}${prof}${time}</div>
+   <div class="br9-main"><h2>${esc(s.title)}</h2><p>Welcome back, ${esc(d.pname)} · ${esc(d.prole)}</p></div>
+   ${mt}${ac}
+ </div>`;
+
+ if(n===10)return `<div class="br-layout br10-layout">
+   <div class="br10-head">${comp}${prof}${time}</div>
+   <div class="br10-copy"><h2>${esc(s.title)}</h2><p class="br-sub">A calm workspace with the important controls within easy reach.</p></div>
+   ${ac}${mt}
+ </div>`;
+
+ if(n===11)return `<div class="br-layout br11-layout">
+   <div class="br11-left">${comp}<div class="br11-welcome"><span>COMMAND CENTER</span><h2>Welcome, ${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div></div>
+   <div class="br11-center">${mt}</div>
+   <div class="br11-right">${time}${prof}</div>
+   ${ac}
+ </div>`;
+
+ if(n===12)return `<div class="br-layout br12-layout">
+   ${comp}
+   <div class="br-ribbon"><div class="br-sub">Welcome back,</div><h2 class="br-title">${esc(d.pname)}</h2><p class="br-sub">${esc(d.prole)}</p></div>
+   <div class="br12-right">${prof}${time}</div>
+   ${mt}${ac}
+ </div>`;
+
+ if(n===13)return `<div class="br-layout br13-layout">
+   <div class="br13-copy">${comp}<div class="br13-welcome"><span>Welcome back,</span><h2>${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div><div class="br13-status">● You are online &nbsp; | &nbsp; ${dt} &nbsp; | &nbsp; ${tm}</div></div>
+   <div class="br13-profile">${prof}</div>
+   ${ac}
+ </div>`;
+
+ return `<div class="br-layout br14-layout">
+   <div class="br14-left">${comp}<div class="br14-welcome"><span>Welcome back,</span><h2>${esc(d.pname)}</h2><small>${esc(d.prole)}</small></div><div class="br14-status">● Online &nbsp; | &nbsp; ${dt} &nbsp; | &nbsp; ${tm}</div></div>
+   <div class="br14-hub">${ac}</div>
+   ${mt}
+ </div>`;
 }
 function render(){
  const h=document.querySelector('#panel-dashboard .dash-hero'); if(!h)return;
@@ -25903,6 +25994,22 @@ function boot(){
  window.addEventListener('hashchange',()=>setTimeout(render,100));
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+try{
+  const MIG='erpBannerStructureVisibilityV1576';
+  if(!localStorage.getItem(MIG)){
+    const K='erpDashboardBannerDesignerV1566';
+    let x={};
+    try{x=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){}
+    x.showCompany=true;
+    x.showLogo=true;
+    x.showProfile=true;
+    x.showActions=true;
+    localStorage.setItem(K,JSON.stringify(x));
+    localStorage.setItem(MIG,'1');
+  }
+}catch(e){}
+
 window.ERPDashboardBannerRuntimeV1567={render,clear};
 })();
 </script>
@@ -26838,6 +26945,196 @@ window.ERPDashboardExactGalleryBannerV1569={
  #panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-actions{grid-template-columns:repeat(3,minmax(95px,1fr))!important}
  #panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-metrics{grid-template-columns:repeat(3,minmax(90px,1fr))!important}
 }
+</style>
+
+
+<style id="erpBannerStructuresCompleteV1576Style">
+/* V15.76 — complete native structures for all gallery banner designs */
+
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5){
+  min-height:178px!important;
+  padding:20px 26px!important;
+}
+#panel-dashboard .banner-runtime-v1567:not(.br-style-5) .br-layout{
+  position:relative;
+  z-index:2;
+  width:100%;
+}
+#panel-dashboard .br-native-company,
+#panel-dashboard .br-native-profile,
+#panel-dashboard .br-native-time{display:flex;align-items:center;gap:9px}
+#panel-dashboard .br-native-company img{width:42px;height:42px;border-radius:50%;object-fit:contain;background:#fff;border:1px solid rgba(255,255,255,.55)}
+#panel-dashboard .br-native-company b{display:block;font-size:14px;line-height:1.05}
+#panel-dashboard .br-native-company small{display:block;font-size:7px;margin-top:3px;opacity:.75}
+#panel-dashboard .br-native-profile img{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.72)}
+#panel-dashboard .br-native-profile small,#panel-dashboard .br-native-profile span{display:block;font-size:7px;opacity:.78}
+#panel-dashboard .br-native-profile b{display:block;font-size:13px;line-height:1.15}
+#panel-dashboard .br-native-time{flex-direction:column;align-items:flex-end;gap:2px}
+#panel-dashboard .br-native-time b{font-size:13px}
+#panel-dashboard .br-native-time small{font-size:7px;opacity:.78}
+#panel-dashboard .br-summary4{display:grid;grid-template-columns:repeat(4,minmax(68px,1fr));gap:7px}
+#panel-dashboard .br-summary4>div{padding:8px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08)}
+#panel-dashboard .br-summary4 b{display:block;font-size:12px}
+#panel-dashboard .br-summary4 small{font-size:6.5px;opacity:.75}
+
+/* 1 Executive Hero */
+#panel-dashboard .br-style-1{min-height:205px!important}
+#panel-dashboard .br-style-1 .br1-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"main side" "actions actions";gap:18px 24px;align-items:center}
+#panel-dashboard .br-style-1 .br1-main{grid-area:main;display:grid;gap:12px}
+#panel-dashboard .br-style-1 .br1-copy{display:flex;align-items:center}
+#panel-dashboard .br-style-1 .br1-side{grid-area:side;display:grid;gap:10px;justify-items:end}
+#panel-dashboard .br-style-1 .br-actions{grid-area:actions;display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 2 Split */
+#panel-dashboard .br-style-2{min-height:220px!important}
+#panel-dashboard .br-style-2 .br2-layout{display:grid;grid-template-columns:46% 54%;min-height:180px}
+#panel-dashboard .br-style-2 .br2-welcome{margin:12px 0}
+#panel-dashboard .br-style-2 .br2-welcome span,#panel-dashboard .br-style-2 .br2-welcome small{font-size:8px;color:var(--muted)}
+#panel-dashboard .br-style-2 .br2-welcome h2{margin:2px 0;font-size:24px}
+#panel-dashboard .br-style-2 .br-split-right{gap:8px}
+#panel-dashboard .br-style-2 .br-split-right .br-native-profile,
+#panel-dashboard .br-style-2 .br-split-right .br-native-time{color:#fff}
+
+/* 3 Management Command Strip — exact missing sections fixed */
+#panel-dashboard .br-style-3{min-height:178px!important}
+#panel-dashboard .br-style-3 .br3-layout{display:grid!important;grid-template-columns:300px minmax(430px,1fr) 170px!important;grid-template-areas:"profile summary clock" "actions actions actions"!important;gap:14px 22px!important;align-items:center!important}
+#panel-dashboard .br-style-3 .br3-profile{grid-area:profile}
+#panel-dashboard .br-style-3 .br3-summary{grid-area:summary}
+#panel-dashboard .br-style-3 .br3-label{font-size:9px;font-weight:900;margin-bottom:7px;color:#fff}
+#panel-dashboard .br-style-3 .br3-clock{grid-area:clock;justify-self:end}
+#panel-dashboard .br-style-3 .br3-clock .br-native-time{color:#fff}
+#panel-dashboard .br-style-3 .br3-profile .br-native-profile{color:#fff}
+#panel-dashboard .br-style-3 .br-actions{grid-area:actions!important;display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+#panel-dashboard .br-style-3 .br-action{height:36px!important}
+#panel-dashboard .br-style-3 .br-summary4>div{background:rgba(0,28,68,.28);border-color:rgba(255,255,255,.15)}
+
+/* 4 Corporate Glass */
+#panel-dashboard .br-style-4{min-height:220px!important}
+#panel-dashboard .br-style-4 .br4-layout{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"copy profile" "actions actions"!important;gap:16px!important}
+#panel-dashboard .br-style-4 .br4-copy{grid-area:copy}
+#panel-dashboard .br-style-4 .br4-profile{grid-area:profile;align-self:center}
+#panel-dashboard .br-style-4 .br4-welcome{margin:13px 0 8px}
+#panel-dashboard .br-style-4 .br4-welcome h2{margin:2px 0;font-size:26px}
+#panel-dashboard .br-style-4 .br4-welcome span,#panel-dashboard .br-style-4 .br4-welcome small,#panel-dashboard .br-style-4 .br4-status{font-size:8px}
+#panel-dashboard .br-style-4 .br-actions{grid-area:actions!important;display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 6 Minimal Premium */
+#panel-dashboard .br-style-6{min-height:195px!important}
+#panel-dashboard .br-style-6 .br6-layout{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:24px!important;align-items:center!important}
+#panel-dashboard .br-style-6 .br6-welcome{margin:10px 0}
+#panel-dashboard .br-style-6 .br6-welcome h2{margin:1px 0;font-size:25px}
+#panel-dashboard .br-style-6 .br6-welcome span,#panel-dashboard .br-style-6 .br6-welcome small,#panel-dashboard .br-style-6 .br6-status{font-size:8px;color:var(--muted)}
+#panel-dashboard .br-style-6 blockquote{margin:8px 0;font-size:10px;color:var(--primary)}
+#panel-dashboard .br-style-6 .br6-side{display:grid;gap:14px;justify-items:end}
+#panel-dashboard .br-style-6 .br-actions{display:grid!important;grid-template-columns:repeat(3,90px)!important}
+
+/* 7 Aero Wave */
+#panel-dashboard .br-style-7{min-height:210px!important}
+#panel-dashboard .br-style-7 .br7-layout{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"copy profile" "actions actions"!important;gap:16px!important}
+#panel-dashboard .br-style-7 .br7-profile{grid-area:profile}
+#panel-dashboard .br-style-7 .br7-welcome{margin:12px 0 7px}
+#panel-dashboard .br-style-7 .br7-welcome h2{margin:1px 0;font-size:26px}
+#panel-dashboard .br-style-7 .br7-welcome span,#panel-dashboard .br-style-7 .br7-welcome small,#panel-dashboard .br-style-7 .br7-status{font-size:8px}
+#panel-dashboard .br-style-7 .br-actions{grid-area:actions!important;display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 8 Skyline */
+#panel-dashboard .br-style-8{min-height:210px!important}
+#panel-dashboard .br-style-8 .br8-layout{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"copy side" "actions actions"!important;gap:15px!important}
+#panel-dashboard .br-style-8 .br8-copy{grid-area:copy}
+#panel-dashboard .br-style-8 .br8-side{grid-area:side}
+#panel-dashboard .br-style-8 .br8-welcome{margin:11px 0 7px}
+#panel-dashboard .br-style-8 .br8-welcome h2{margin:1px 0;font-size:25px}
+#panel-dashboard .br-style-8 .br8-welcome span,#panel-dashboard .br-style-8 .br8-welcome small,#panel-dashboard .br-style-8 .br8-status{font-size:8px}
+#panel-dashboard .br-style-8 .br-actions{grid-area:actions!important;display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 9 Gradient Horizon */
+#panel-dashboard .br-style-9{min-height:225px!important}
+#panel-dashboard .br-style-9 .br9-layout{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+#panel-dashboard .br-style-9 .br9-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#panel-dashboard .br-style-9 .br9-main{text-align:center}
+#panel-dashboard .br-style-9 .br9-main h2{margin:0;font-size:26px}
+#panel-dashboard .br-style-9 .br9-main p{margin:4px 0;font-size:9px}
+#panel-dashboard .br-style-9 .br-actions{display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 10 Neumorphism */
+#panel-dashboard .br-style-10{min-height:225px!important}
+#panel-dashboard .br-style-10 .br10-layout{display:grid!important;gap:13px!important}
+#panel-dashboard .br-style-10 .br10-head{display:flex;align-items:center;justify-content:space-between;gap:15px}
+#panel-dashboard .br-style-10 .br10-copy{text-align:center}
+#panel-dashboard .br-style-10 .br10-copy h2{margin:0;font-size:25px}
+#panel-dashboard .br-style-10 .br-actions{display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 11 Dark Command Center */
+#panel-dashboard .br-style-11{min-height:225px!important}
+#panel-dashboard .br-style-11 .br11-layout{display:grid!important;grid-template-columns:minmax(260px,.9fr) minmax(420px,1.4fr) 220px!important;grid-template-areas:"left center right" "actions actions actions"!important;gap:15px!important}
+#panel-dashboard .br-style-11 .br11-left{grid-area:left}
+#panel-dashboard .br-style-11 .br11-center{grid-area:center}
+#panel-dashboard .br-style-11 .br11-right{grid-area:right;display:grid;gap:10px;justify-items:end}
+#panel-dashboard .br-style-11 .br11-welcome{margin-top:12px}
+#panel-dashboard .br-style-11 .br11-welcome span{font-size:7px;color:#7ef5f0}
+#panel-dashboard .br-style-11 .br11-welcome h2{margin:3px 0;font-size:22px;color:#fff}
+#panel-dashboard .br-style-11 .br11-welcome small{font-size:8px}
+#panel-dashboard .br-style-11 .br-actions{grid-area:actions!important;display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 12 Ribbon */
+#panel-dashboard .br-style-12{min-height:240px!important}
+#panel-dashboard .br-style-12 .br12-layout{display:grid!important;grid-template-columns:minmax(230px,1fr) minmax(330px,1.2fr) minmax(230px,1fr)!important;grid-template-areas:"company ribbon right" "metrics metrics metrics" "actions actions actions"!important;gap:10px 16px!important;align-items:center!important}
+#panel-dashboard .br-style-12 .br12-right{grid-area:right;display:flex;align-items:center;justify-content:flex-end;gap:15px}
+#panel-dashboard .br-style-12 .br-actions{display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 13 Garden */
+#panel-dashboard .br-style-13{min-height:210px!important}
+#panel-dashboard .br-style-13 .br13-layout{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"copy profile" "actions actions"!important;gap:15px!important}
+#panel-dashboard .br-style-13 .br13-copy{grid-area:copy}
+#panel-dashboard .br-style-13 .br13-profile{grid-area:profile}
+#panel-dashboard .br-style-13 .br13-welcome{margin:10px 0 7px}
+#panel-dashboard .br-style-13 .br13-welcome h2{margin:2px 0;font-size:26px;font-style:italic}
+#panel-dashboard .br-style-13 .br13-welcome span,#panel-dashboard .br-style-13 .br13-welcome small,#panel-dashboard .br-style-13 .br13-status{font-size:8px}
+#panel-dashboard .br-style-13 .br-actions{grid-area:actions!important;display:grid!important;grid-template-columns:repeat(7,1fr)!important}
+
+/* 14 Hexagon Hub */
+#panel-dashboard .br-style-14{min-height:250px!important}
+#panel-dashboard .br-style-14 .br14-layout{display:grid!important;grid-template-columns:minmax(330px,.8fr) minmax(520px,1.2fr)!important;grid-template-areas:"left hub" "metrics metrics"!important;gap:16px!important;align-items:center!important}
+#panel-dashboard .br-style-14 .br14-left{grid-area:left}
+#panel-dashboard .br-style-14 .br14-hub{grid-area:hub}
+#panel-dashboard .br-style-14 .br14-welcome{margin:11px 0 7px}
+#panel-dashboard .br-style-14 .br14-welcome h2{margin:1px 0;font-size:25px}
+#panel-dashboard .br-style-14 .br14-welcome span,#panel-dashboard .br-style-14 .br14-welcome small,#panel-dashboard .br-style-14 .br14-status{font-size:8px}
+#panel-dashboard .br-style-14 .br14-hub .br-actions{display:grid!important;grid-template-columns:repeat(3,110px)!important;justify-content:end!important;gap:9px!important}
+#panel-dashboard .br-style-14 .br14-hub .br-action{height:58px!important}
+#panel-dashboard .br-style-14 .br-metrics{grid-area:metrics!important}
+
+@media(max-width:1100px){
+ #panel-dashboard .br-style-3 .br3-layout,
+ #panel-dashboard .br-style-11 .br11-layout{grid-template-columns:1fr!important;grid-template-areas:"profile" "summary" "clock" "actions"!important}
+ #panel-dashboard .br-style-11 .br11-layout{grid-template-areas:"left" "center" "right" "actions"!important}
+ #panel-dashboard .br-style-12 .br12-layout{grid-template-columns:1fr!important;grid-template-areas:"company" "ribbon" "right" "metrics" "actions"!important}
+ #panel-dashboard .br-style-14 .br14-layout{grid-template-columns:1fr!important;grid-template-areas:"left" "hub" "metrics"!important}
+}
+</style>
+
+
+<style id="erpBanner01ExecutiveHeroV1577">
+#panel-dashboard .br-style-1{min-height:238px!important;padding:0!important;overflow:hidden!important;background:radial-gradient(circle at 86% 18%,rgba(255,255,255,.16) 0 54px,transparent 55px),linear-gradient(118deg,var(--primary,#075985) 0%,#0b4267 52%,#0d749f 100%)!important;border:1px solid rgba(4,74,110,.22)!important;box-shadow:0 10px 26px rgba(2,54,82,.15)!important}
+#panel-dashboard .br-style-1 .br1-layout{display:grid!important;grid-template-rows:auto 1fr auto!important;min-height:238px!important;width:100%!important;color:#fff!important}
+#panel-dashboard .br-style-1 .br1-top{display:grid!important;grid-template-columns:minmax(260px,1fr) auto auto!important;align-items:center!important;gap:24px!important;padding:16px 24px 10px!important;border-bottom:1px solid rgba(255,255,255,.13)!important}
+#panel-dashboard .br-style-1 .br1-top .br-native-company,#panel-dashboard .br-style-1 .br1-top .br-native-profile,#panel-dashboard .br-style-1 .br1-top .br-native-time{color:#fff!important}
+#panel-dashboard .br-style-1 .br1-top .br-native-company b{font-size:16px!important}
+#panel-dashboard .br-style-1 .br1-top small,#panel-dashboard .br-style-1 .br1-top span{color:rgba(255,255,255,.76)!important}
+#panel-dashboard .br-style-1 .br1-hero{display:grid!important;grid-template-columns:54px minmax(330px,.9fr) minmax(420px,1.25fr)!important;align-items:center!important;gap:18px!important;padding:15px 24px 13px!important}
+#panel-dashboard .br-style-1 .br1-accent{width:50px!important;height:50px!important;border-radius:14px!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.18)!important;font-size:24px!important}
+#panel-dashboard .br-style-1 .br1-kicker{display:block!important;font-size:7px!important;font-weight:900!important;letter-spacing:1.5px!important;color:#8ee7ff!important;margin-bottom:4px!important}
+#panel-dashboard .br-style-1 .br1-message h2{margin:0 0 4px!important;color:#fff!important;font-size:25px!important;line-height:1.05!important;font-weight:900!important}
+#panel-dashboard .br-style-1 .br1-message p{margin:0!important;max-width:620px!important;color:rgba(255,255,255,.82)!important;font-size:8px!important;line-height:1.5!important}
+#panel-dashboard .br-style-1 .br1-mini .br-summary4{grid-template-columns:repeat(4,1fr)!important;gap:8px!important}
+#panel-dashboard .br-style-1 .br1-mini .br-summary4>div{min-height:48px!important;padding:8px 10px!important;background:rgba(3,31,55,.28)!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:10px!important}
+#panel-dashboard .br-style-1 .br1-mini .br-summary4 b{color:#fff!important;font-size:14px!important}
+#panel-dashboard .br-style-1 .br1-mini .br-summary4 small{color:rgba(255,255,255,.72)!important}
+#panel-dashboard .br-style-1 .br1-actions{padding:0 24px 16px!important}
+#panel-dashboard .br-style-1 .br1-actions .br-actions{display:grid!important;grid-template-columns:repeat(7,1fr)!important;gap:8px!important}
+#panel-dashboard .br-style-1 .br1-actions .br-action{height:35px!important;background:rgba(255,255,255,.09)!important;border:1px solid rgba(255,255,255,.25)!important;color:#fff!important;border-radius:8px!important;box-shadow:none!important}
+#panel-dashboard .br-style-1 .br1-actions .br-action:hover{transform:translateY(-1px)!important;background:rgba(255,255,255,.18)!important}
+@media(max-width:1100px){#panel-dashboard .br-style-1 .br1-top{grid-template-columns:1fr auto!important}#panel-dashboard .br-style-1 .br1-user{display:none!important}#panel-dashboard .br-style-1 .br1-hero{grid-template-columns:48px 1fr!important}#panel-dashboard .br-style-1 .br1-mini{grid-column:1/-1!important}}
 </style>
 
 </body></html>
