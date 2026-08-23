@@ -5334,7 +5334,7 @@ html.erp-dashboard-early main.content{
 </div>
 </section>
 
-<section class="panel purchase-page" id="panel-daily-data-entry">
+<section class="panel" id="panel-daily-data-entry">
   <div class="card">
     <div class="inv-page-head">
       <div>
@@ -26949,137 +26949,6 @@ window.addEventListener('pageshow',function(e){
 });
 
 window.ERPIdleResumeStabilityV1578={recover:revealIfStale};
-})();
-</script>
-
-
-<style id="dailyConsumptionActualRootFixV1583Style">
-/* V15.83 — Daily Consumption actual root fix.
-   The generic Page Control engine may style everything else on this page,
-   but it must not shrink the operational canvas itself. */
-
-#panel-daily-data-entry{
-  width:100% !important;
-  max-width:100% !important;
-  margin-left:0 !important;
-  margin-right:0 !important;
-  transform:none !important;
-  zoom:1 !important;
-}
-
-/* This is the real conflict: Page Control applies zoom to the inner card. */
-#panel-daily-data-entry > .card{
-  width:100% !important;
-  max-width:none !important;
-  min-width:0 !important;
-  margin-left:0 !important;
-  margin-right:0 !important;
-  zoom:1 !important;
-  transform:none !important;
-}
-
-/* Keep wide operational tables inside their own scroll area.
-   Do not allow them to widen/shrink the whole ERP page. */
-#panel-daily-data-entry .dde-table-wrap{
-  max-width:100% !important;
-  overflow-x:auto !important;
-  overflow-y:hidden !important;
-}
-
-/* The production section should use the available workspace normally. */
-#panel-daily-data-entry .dde-production-layout{
-  width:100% !important;
-  max-width:100% !important;
-  min-width:0 !important;
-}
-
-#panel-daily-data-entry .dde-production-left,
-#panel-daily-data-entry .dde-production-right{
-  min-width:0 !important;
-}
-
-@media(max-width:1250px){
-  #panel-daily-data-entry .dde-production-layout{
-    grid-template-columns:1fr !important;
-  }
-}
-</style>
-
-<script id="dailyConsumptionActualRootFixV1583Script">
-(function(){
-'use strict';
-
-const HASH='#panel-daily-data-entry';
-
-function isDaily(){
-  const p=document.getElementById('panel-daily-data-entry');
-  return location.hash===HASH || !!p?.classList.contains('active');
-}
-
-function correctWorkspaceState(){
-  if(!isDaily())return;
-
-  /* These classes belong to Dashboard only.
-     If either leaks into this page, the normal workspace/header is wrong. */
-  document.body.classList.remove('erp-dashboard-mode');
-  document.body.classList.remove('dashboard-clean-top-v1568');
-  document.documentElement.classList.remove('erp-dashboard-early');
-
-  const p=document.getElementById('panel-daily-data-entry');
-  if(!p)return;
-
-  /* Remove stale inline layout written by earlier Page Control previews.
-     The CSS above permanently protects only the outer canvas/zoom. */
-  p.style.removeProperty('width');
-  p.style.removeProperty('margin-left');
-  p.style.removeProperty('margin-right');
-  p.style.removeProperty('transform');
-  p.style.removeProperty('zoom');
-
-  const card=p.querySelector(':scope > .card');
-  if(card){
-    card.style.removeProperty('zoom');
-    card.style.removeProperty('transform');
-    card.style.removeProperty('width');
-    card.style.removeProperty('max-width');
-    card.style.removeProperty('margin-left');
-    card.style.removeProperty('margin-right');
-  }
-
-  /* If the browser retained horizontal scroll from a wide table, return
-     the workspace to its normal origin. */
-  if(window.scrollX)window.scrollTo(0,window.scrollY);
-
-  const main=document.querySelector('main.content');
-  if(main?.scrollLeft)main.scrollLeft=0;
-}
-
-function boot(){
-  correctWorkspaceState();
-
-  window.addEventListener('hashchange',()=>setTimeout(correctWorkspaceState,0));
-  window.addEventListener('popstate',()=>setTimeout(correctWorkspaceState,0));
-  window.addEventListener('pageshow',()=>setTimeout(correctWorkspaceState,0));
-
-  document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden)setTimeout(correctWorkspaceState,0);
-  });
-
-  /* The existing page open routine may run after a navigation click. */
-  document.addEventListener('click',e=>{
-    if(e.target.closest('[data-panel="daily-data-entry"],#ddeBackBtn,#pcOpenDailyEntry')){
-      setTimeout(correctWorkspaceState,30);
-    }
-  });
-}
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',boot,{once:true});
-}else{
-  boot();
-}
-
-window.ERPDailyConsumptionActualRootFixV1583={apply:correctWorkspaceState};
 })();
 </script>
 
