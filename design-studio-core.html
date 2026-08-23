@@ -20795,21 +20795,13 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 
   function mergeForOpen(p,id){
     const base=readCurrentAsDefaults(p),raw=localStorage.getItem(storeKey(id));
-    let out=base;
-    if(raw){try{out={...base,...JSON.parse(raw)}}catch(e){out=base}}
-    if(id==='daily-data-entry')out={...out,pageWidth:100,pageZoom:100};
-    return out
+    if(!raw)return base;
+    try{return {...base,...JSON.parse(raw)}}catch(e){return base}
   }
 
   function apply(p,s){
     if(!p)return;
     ensureOriginals(p);
-    /* Daily Consumption is a full-width operational page.
-       Keep only its canvas width/zoom fixed; all other Page Designer
-       controls continue to work normally. */
-    if(p.id==='panel-daily-data-entry'){
-      s={...s,pageWidth:100,pageZoom:100};
-    }
     p.dataset.apdPage='1';
     p.style.setProperty('--apd-page-width',s.pageWidth+'%');
     p.style.width=s.pageWidth+'%';
@@ -20902,9 +20894,7 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 
   function saveCurrent(){
     if(!page)return;
-    const targetPage=page,targetId=pageId;
-    let s=values();
-    if(targetId==='daily-data-entry')s={...s,pageWidth:100,pageZoom:100};
+    const targetPage=page,targetId=pageId,s=values();
     save(targetId,s);
     apply(targetPage,s);
     window.ERPPerPageDesign?.preview?.(s);
@@ -21406,10 +21396,6 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 
   function buildCss(id,s){
     if(!id||!s)return '';
-    /* Do not let the generic Page Designer shrink Daily Consumption. */
-    if(id==='daily-data-entry'){
-      s={...s,pageWidth:100,pageZoom:100};
-    }
     const root='#panel-'+esc(id);
     const px=(v,d)=>Number.isFinite(Number(v))?Number(v):d;
     const yn=v=>v===false?'none':'';
@@ -26963,6 +26949,139 @@ window.addEventListener('pageshow',function(e){
 });
 
 window.ERPIdleResumeStabilityV1578={recover:revealIfStale};
+})();
+</script>
+
+
+<style id="dailyPageDiagnosticV1586Style">
+#erpDailyDiagV1586{
+  position:fixed!important;
+  top:8px!important;
+  right:8px!important;
+  z-index:2147483647!important;
+  width:430px!important;
+  max-height:88vh!important;
+  overflow:auto!important;
+  padding:10px 12px!important;
+  border:2px solid #d97706!important;
+  border-radius:10px!important;
+  background:rgba(255,255,255,.97)!important;
+  color:#111827!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.25)!important;
+  font:12px/1.38 Consolas,monospace!important;
+  white-space:pre-wrap!important;
+  pointer-events:auto!important;
+}
+#erpDailyDiagV1586 b{font-family:Arial,sans-serif;font-size:13px}
+#erpDailyDiagV1586 button{
+  margin-top:8px!important;padding:5px 8px!important;border:1px solid #999!important;
+  border-radius:6px!important;background:#fff!important;color:#111!important;cursor:pointer!important;
+}
+</style>
+
+<script id="dailyPageDiagnosticV1586Script">
+(function(){
+'use strict';
+
+function q(s){return document.querySelector(s)}
+function rect(el){
+  if(!el)return null;
+  const r=el.getBoundingClientRect();
+  return {
+    x:Math.round(r.x), y:Math.round(r.y),
+    w:Math.round(r.width), h:Math.round(r.height),
+    right:Math.round(r.right), bottom:Math.round(r.bottom)
+  };
+}
+function css(el,props){
+  if(!el)return null;
+  const c=getComputedStyle(el),o={};
+  props.forEach(p=>o[p]=c.getPropertyValue(p));
+  return o;
+}
+function collect(){
+  const app=q('#app');
+  const side=q('#studioSidebar');
+  const shell=q('.page-shell');
+  const top=q('.page-shell > header.top');
+  const content=q('main.content');
+  const p=q('#panel-daily-data-entry');
+  const card=p?.querySelector(':scope > .card');
+  const active=[...document.querySelectorAll('section.panel.active')].map(x=>x.id);
+
+  return {
+    urlHash:location.hash,
+    scroll:{x:Math.round(window.scrollX),y:Math.round(window.scrollY)},
+    viewport:{w:innerWidth,h:innerHeight},
+    htmlClass:document.documentElement.className,
+    bodyClass:document.body.className,
+    appClass:app?.className||'',
+    activePanels:active,
+    app:{
+      rect:rect(app),
+      css:css(app,['display','grid-template-columns','position','width','margin-left','padding-left'])
+    },
+    sidebar:{
+      rect:rect(side),
+      css:css(side,['display','position','width','min-width','max-width','left','top'])
+    },
+    pageShell:{
+      rect:rect(shell),
+      css:css(shell,['display','position','width','max-width','margin-left','left','overflow-x'])
+    },
+    header:{
+      rect:rect(top),
+      css:css(top,['display','position','height','margin-top','margin-bottom'])
+    },
+    content:{
+      rect:rect(content),
+      scrollLeft:content?.scrollLeft||0,
+      css:css(content,['display','position','width','max-width','margin-left','left','padding-left','padding-right','padding-top','overflow-x'])
+    },
+    dailyPanel:{
+      className:p?.className||'MISSING',
+      rect:rect(p),
+      inline:p?.getAttribute('style')||'',
+      css:css(p,['display','position','width','max-width','margin-left','margin-right','margin-top','padding-top','transform','zoom'])
+    },
+    dailyCard:{
+      rect:rect(card),
+      inline:card?.getAttribute('style')||'',
+      css:css(card,['display','position','width','max-width','margin-left','margin-right','margin-top','padding-top','transform','zoom'])
+    }
+  };
+}
+function format(o){
+  return JSON.stringify(o,null,2);
+}
+function ensure(){
+  let box=q('#erpDailyDiagV1586');
+  if(!box){
+    box=document.createElement('div');
+    box.id='erpDailyDiagV1586';
+    box.innerHTML='<b>Daily Page Live Diagnostic — V15.86</b><div id="erpDailyDiagText"></div><button id="erpDailyDiagRefresh">Refresh values</button>';
+    document.body.appendChild(box);
+    q('#erpDailyDiagRefresh').onclick=render;
+  }
+  return box;
+}
+function render(){
+  ensure();
+  const t=q('#erpDailyDiagText');
+  if(t)t.textContent='\n'+format(collect());
+}
+function boot(){
+  render();
+  setTimeout(render,250);
+  setTimeout(render,1000);
+  window.addEventListener('hashchange',()=>setTimeout(render,80));
+  window.addEventListener('resize',()=>setTimeout(render,80));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(render,80)});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+else boot();
+
+window.ERPDailyPageDiagnosticV1586={collect,render};
 })();
 </script>
 
