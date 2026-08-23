@@ -20802,9 +20802,6 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
   function apply(p,s){
     if(!p)return;
     ensureOriginals(p);
-    if(p.id==='panel-daily-data-entry'){
-      s={...s,pageWidth:100,pageZoom:100};
-    }
     p.dataset.apdPage='1';
     p.style.setProperty('--apd-page-width',s.pageWidth+'%');
     p.style.width=s.pageWidth+'%';
@@ -21399,9 +21396,6 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 
   function buildCss(id,s){
     if(!id||!s)return '';
-    if(id==='daily-data-entry'){
-      s={...s,pageWidth:100,pageZoom:100};
-    }
     const root='#panel-'+esc(id);
     const px=(v,d)=>Number.isFinite(Number(v))?Number(v):d;
     const yn=v=>v===false?'none':'';
@@ -26959,131 +26953,82 @@ window.ERPIdleResumeStabilityV1578={recover:revealIfStale};
 </script>
 
 
-<style id="dailyConsumptionRootLayoutV1580">
-#panel-daily-data-entry{
-  width:100%!important;
-  max-width:100%!important;
-  min-width:0!important;
-  margin-left:0!important;
-  margin-right:0!important;
-  padding-left:0!important;
-  padding-right:0!important;
-}
-#panel-daily-data-entry > .card{
-  width:100%!important;
-  max-width:100%!important;
-  min-width:0!important;
-  zoom:1!important;
-}
-#panel-daily-data-entry .inv-page-head{
-  width:100%!important;
-  max-width:100%!important;
-  min-width:0!important;
-  display:flex!important;
-  justify-content:space-between!important;
-  align-items:flex-start!important;
-  gap:10px!important;
-  flex-wrap:wrap!important;
-}
-#panel-daily-data-entry .inv-page-head > div:first-child{
-  min-width:260px!important;
-  flex:1 1 360px!important;
-}
-#panel-daily-data-entry .inv-page-head > div:last-child{
-  min-width:0!important;
-  max-width:100%!important;
-  display:flex!important;
-  flex-wrap:wrap!important;
-  gap:8px!important;
-  justify-content:flex-end!important;
-}
-#panel-daily-data-entry .dde-section,
-#panel-daily-data-entry .dde-production-layout,
-#panel-daily-data-entry .dde-production-left,
-#panel-daily-data-entry .dde-production-right,
-#panel-daily-data-entry .dde-subcard,
-#panel-daily-data-entry .dde-electricity-main-layout-v1515{
-  min-width:0!important;
-  max-width:100%!important;
-  box-sizing:border-box!important;
-}
-#panel-daily-data-entry .dde-production-layout{
-  width:100%!important;
-  grid-template-columns:minmax(0,1.15fr) minmax(390px,.85fr)!important;
+<style id="dailyConsumptionSafeRouteV1581Style">
+/* V15.81 — Daily Consumption only.
+   Do not alter Page Designer width/zoom. Only guarantee visibility
+   and keep wide tables inside their own scroll area. */
+#panel-daily-data-entry.active{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
 }
 #panel-daily-data-entry .dde-table-wrap{
-  display:block!important;
-  width:100%!important;
   max-width:100%!important;
-  min-width:0!important;
   overflow-x:auto!important;
   overflow-y:hidden!important;
-  scrollbar-gutter:stable;
-}
-#panel-daily-data-entry .dde-production-left .dde-table{
-  width:100%!important;
-  min-width:0!important;
-  table-layout:fixed!important;
-}
-#panel-daily-data-entry .dde-production-summary,
-#panel-daily-data-entry .dde-summary-matrix{
-  width:100%!important;
-  max-width:100%!important;
-  min-width:0!important;
-}
-#panel-daily-data-entry .dde-summary-matrix{
-  grid-template-columns:minmax(125px,1fr) minmax(88px,.72fr) minmax(145px,1.05fr) minmax(92px,.72fr)!important;
-}
-#panel-daily-data-entry .dde-sm-label,
-#panel-daily-data-entry .dde-sm-value{
-  min-width:0!important;
-  overflow-wrap:anywhere!important;
-}
-#panel-daily-data-entry.active{
-  overflow-x:hidden!important;
-}
-@media(max-width:1250px){
-  #panel-daily-data-entry .dde-production-layout{
-    grid-template-columns:1fr!important;
-  }
 }
 </style>
 
-<script id="dailyConsumptionRootLayoutV1580Script">
+<script id="dailyConsumptionSafeRouteV1581Script">
 (function(){
 'use strict';
-const DESIGN_KEY='erp:advanced-page-design:v1:daily-data-entry';
-const MIGRATION_KEY='erp:daily-data-entry-native-canvas-v1580';
 
-function migrate(){
-  try{
-    if(localStorage.getItem(MIGRATION_KEY))return;
-    const raw=localStorage.getItem(DESIGN_KEY);
-    if(raw){
-      const s=JSON.parse(raw)||{};
-      s.pageWidth=100;
-      s.pageZoom=100;
-      localStorage.setItem(DESIGN_KEY,JSON.stringify(s));
-    }
-    localStorage.setItem(MIGRATION_KEY,'1');
-  }catch(e){}
+const HASH='#panel-daily-data-entry';
+
+function panel(){
+  return document.getElementById('panel-daily-data-entry');
 }
 
-function resetHorizontalDrift(){
-  const p=document.getElementById('panel-daily-data-entry');
-  if(!p?.classList.contains('active') && location.hash!=='#panel-daily-data-entry')return;
-  if(window.scrollX)window.scrollTo(0,window.scrollY);
-  const content=document.querySelector('main.content');
-  if(content?.scrollLeft)content.scrollLeft=0;
-  try{window.ERPAdvancedPageDesigner?.applySaved?.()}catch(e){}
-  try{window.ERPPerPageDesign?.apply?.()}catch(e){}
+function reveal(){
+  const p=panel();
+  if(!p)return false;
+
+  /* If the URL says Daily Data Entry but another route helper failed to
+     complete, use the page's own proven open() method first. */
+  if(location.hash===HASH && !p.classList.contains('active')){
+    try{
+      if(typeof window.ERPDailyDataEntry?.open==='function'){
+        window.ERPDailyDataEntry.open();
+      }else{
+        document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+        p.classList.add('active');
+      }
+    }catch(e){
+      document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+    }
+  }
+
+  if(location.hash===HASH || p.classList.contains('active')){
+    /* The early route guard must not keep the body hidden after this page exists. */
+    document.documentElement.classList.remove('erp-route-restoring-v1545');
+    document.documentElement.classList.remove('erp-safe-boot');
+
+    /* The original screenshot showed the whole document retained at a
+       horizontal offset. Reset document/shell horizontal position only. */
+    if(window.scrollX!==0)window.scrollTo(0,window.scrollY);
+
+    const main=document.querySelector('main.content');
+    if(main && main.scrollLeft!==0)main.scrollLeft=0;
+
+    const shell=document.querySelector('.page-shell');
+    if(shell && shell.scrollLeft!==0)shell.scrollLeft=0;
+
+    return true;
+  }
+  return false;
 }
 
 function boot(){
-  migrate();
-  setTimeout(resetHorizontalDrift,0);
-  window.addEventListener('hashchange',()=>setTimeout(resetHorizontalDrift,0));
-  window.addEventListener('pageshow',()=>setTimeout(resetHorizontalDrift,0));
+  reveal();
+
+  window.addEventListener('hashchange',()=>setTimeout(reveal,0));
+  window.addEventListener('popstate',()=>setTimeout(reveal,0));
+  window.addEventListener('pageshow',()=>setTimeout(reveal,0));
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden && location.hash===HASH)setTimeout(reveal,0);
+  });
 }
 
 if(document.readyState==='loading'){
@@ -27092,7 +27037,7 @@ if(document.readyState==='loading'){
   boot();
 }
 
-window.ERPDailyConsumptionRootLayoutV1580={fix:resetHorizontalDrift};
+window.ERPDailyConsumptionSafeRouteV1581={reveal};
 })();
 </script>
 
