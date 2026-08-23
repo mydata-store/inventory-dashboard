@@ -1946,6 +1946,10 @@ html:not(.erp-safe-boot) body{visibility:visible}:root{--bg:#eef8f3;--surface:#f
 (function(){
   try{
     const hash=String(location.hash||'').replace(/^#/,'');
+    if(hash==='panel-dashboard'){
+      window.__ERP_ROUTE_FIRST_DASHBOARD__=true;
+      document.documentElement.classList.add('erp-route-first-dashboard-v1571');
+    }
     const last=localStorage.getItem('erpStudioLastPanel')||'';
     const pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
     const needsRestore =
@@ -2283,6 +2287,37 @@ html.erp-dashboard-early main.content{
 /* V15.70 — actual Dashboard KPI spacing */
 body.erp-dashboard-mode #panel-dashboard .erp-dash-kpis{
   margin-top:18px !important;
+}
+</style>
+
+
+<style id="erpRouteFirstDashboardV1571Style">
+html.erp-route-first-dashboard-v1571 header.top,
+html.erp-route-first-dashboard-v1571 main.content > .notice{
+  display:none!important;
+}
+html.erp-route-first-dashboard-v1571 section.panel{
+  display:none!important;
+}
+html.erp-route-first-dashboard-v1571 #panel-dashboard{
+  display:block!important;
+}
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dash-welcome-shell,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dashboard-welcome-shell,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dash-identity,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dashboard-identity,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dash-company-profile,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dashboard-company-profile,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dash-hero,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .dashboard-hero,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .welcome-hero,
+html.erp-route-first-dashboard-v1571 #panel-dashboard .hero-banner{
+  display:none!important;
+}
+html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
+  display:block!important;
+  min-height:214px!important;
+  margin-bottom:18px!important;
 }
 </style>
 
@@ -9179,11 +9214,25 @@ function erpSafeCall(name,fn){
   try{return fn()}catch(e){console.error('ERP startup step failed:',name,e);return null}
 }
 function erpStableStartup(){
+  const routeFirstDashboard=window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard';
   erpSafeCall('applyThemeLinks',()=>applyThemeLinks());
   erpSafeCall('sync',()=>sync());
   erpSafeCall('bind',()=>bind());
   erpSafeCall('render',()=>render());
   const restoredPanel=erpSafeCall('restoreLastStudioPanel',()=>restoreLastStudioPanel())||'theme';
+
+  if(routeFirstDashboard){
+    document.body.classList.add('erp-dashboard-mode');
+    erpRevealAfterSafeBoot();
+
+    const idle=window.requestIdleCallback || function(fn){return setTimeout(fn,1200)};
+    idle(()=>{
+      erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
+      erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
+    });
+    return;
+  }
+
   erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
   erpSafeCall('uaInit',()=>uaInit());
   erpSafeCall('maBind',()=>maBind());
@@ -23415,9 +23464,10 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
 
     const finish=()=>{
       if(dashboardRestored || location.hash!=='#panel-dashboard')return;
-      if(!window.ERPManagementDashboard?.open)return false;
+      if(!window.ERPManagementDashboard?.render)return false;
       dashboardRestored=true;
-      window.ERPManagementDashboard.open();
+      document.body.classList.add('erp-dashboard-mode');
+      window.ERPManagementDashboard.render();
       window.ERPAdvancedPageDesigner?.applySaved?.();
       window.ERPPageControlExtras?.applySaved?.();
       window.ERPColumnSummaryDesigner?.applySaved?.();
@@ -25434,11 +25484,10 @@ window.ERPNoBlankRouteResumeV1559={clear:clearStaleRouteHide};
 </script>
 
 
-<script id="erpDashboardBannerHardCleanV1567Script">
+<script id="erpDashboardRouteFirstV1571Script">
 (function(){
 'use strict';
 let timer=null;
-let bannerStudioObserver=null;
 let detachedHeader=null;
 let detachedNotice=null;
 let headerParent=null;
@@ -25503,8 +25552,11 @@ function cloneExactBanner(){
   clone.removeAttribute('id');
   clone.classList.add('dashboard-banner-exact-v1566');
 
-  // Avoid duplicate element IDs from the preview clone.
-  clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+  // Avoid duplicate IDs, but remember source IDs for lightweight live syncing.
+  clone.querySelectorAll('[id]').forEach(el=>{
+    el.setAttribute('data-dashboard-source-id',el.id);
+    el.removeAttribute('id');
+  });
 
   // Convert Banner Studio navigation buttons into dashboard routes.
   clone.querySelectorAll('[data-bst-route]').forEach(btn=>{
@@ -25521,6 +25573,37 @@ function cloneExactBanner(){
   host.innerHTML='';
   host.appendChild(clone);
   return true;
+}
+
+
+function setStableTextNode(el,value){
+  if(!el)return;
+  const v=String(value??'');
+  if(el.firstChild && el.firstChild.nodeType===3 && el.childNodes.length===1){
+    if(el.firstChild.nodeValue!==v)el.firstChild.nodeValue=v;
+  }else if(el.textContent!==v){
+    el.textContent=v;
+  }
+}
+function syncBannerLiveBits(){
+  const host=document.getElementById('dashboardBannerHostV1565');
+  const studio=getStudioPreview();
+  if(!host||!studio)return;
+
+  ['bstPreviewTime','bstPreviewAmPm','bstPreviewZone','bstPreviewWeekday','bstPreviewDate','bstPreviewRegionName'].forEach(id=>{
+    const src=document.getElementById(id);
+    const dst=host.querySelector(`[data-dashboard-source-id="${id}"]`);
+    if(src&&dst)setStableTextNode(dst,src.textContent);
+  });
+
+  const srcAnalog=document.getElementById('bstAnalogClock');
+  const dstAnalog=host.querySelector('[data-dashboard-source-id="bstAnalogClock"]');
+  if(srcAnalog&&dstAnalog){
+    ['h','m','s'].forEach(cls=>{
+      const a=srcAnalog.querySelector('.'+cls), b=dstAnalog.querySelector('.'+cls);
+      if(a&&b&&b.style.transform!==a.style.transform)b.style.transform=a.style.transform;
+    });
+  }
 }
 
 function findLegacyTopBlocks(){
@@ -25608,40 +25691,26 @@ function sync(){
     return;
   }
 
-  // Use the exact studio preview if available.
   cloneExactBanner();
   findLegacyTopBlocks();
+  syncBannerLiveBits();
 
   clearInterval(timer);
-  // Refresh the clone occasionally so clock/date/profile reflect Banner Studio preview.
-  // Kept low-frequency to avoid the previous hanging issue.
   timer=setInterval(function(){
     if(document.hidden || !dashboardActive())return;
-    cloneExactBanner();
-    findLegacyTopBlocks();
-  },5000);
-}
+    syncBannerLiveBits();
+  },1000);
 
-function watchStudio(){
-  const studio=getStudioPreview();
-  if(!studio || bannerStudioObserver)return;
-  bannerStudioObserver=new MutationObserver(function(){
-    if(!dashboardActive())return;
-    // Defer and coalesce preview changes.
-    clearTimeout(watchStudio._t);
-    watchStudio._t=setTimeout(function(){
-      cloneExactBanner();
-      findLegacyTopBlocks();
-    },120);
-  });
-  bannerStudioObserver.observe(studio,{attributes:true,subtree:true,childList:true,characterData:true});
+  document.documentElement.classList.remove('erp-route-first-dashboard-v1571');
 }
 
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden && dashboardActive()){
     setDashboardMode(true);
     detachDashboardTop();
-    cloneExactBanner();
+    const host=document.getElementById('dashboardBannerHostV1565');
+    if(host && !host.firstElementChild)cloneExactBanner();
+    syncBannerLiveBits();
     findLegacyTopBlocks();
   }
 });
@@ -25655,15 +25724,13 @@ document.addEventListener('click',function(e){
 
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',function(){
-    watchStudio();
     sync();
   },{once:true});
 }else{
-  watchStudio();
   sync();
 }
 
-window.ERPDashboardBannerV1567={sync,render:cloneExactBanner};
+window.ERPDashboardBannerV1571={sync,render:cloneExactBanner};
 })();
 </script>
 
