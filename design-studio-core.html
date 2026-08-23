@@ -5334,7 +5334,7 @@ html.erp-dashboard-early main.content{
 </div>
 </section>
 
-<section class="panel" id="panel-daily-data-entry">
+<section class="panel purchase-page" id="panel-daily-data-entry">
   <div class="card">
     <div class="inv-page-head">
       <div>
@@ -20795,13 +20795,21 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 
   function mergeForOpen(p,id){
     const base=readCurrentAsDefaults(p),raw=localStorage.getItem(storeKey(id));
-    if(!raw)return base;
-    try{return {...base,...JSON.parse(raw)}}catch(e){return base}
+    let out=base;
+    if(raw){try{out={...base,...JSON.parse(raw)}}catch(e){out=base}}
+    if(id==='daily-data-entry')out={...out,pageWidth:100,pageZoom:100};
+    return out
   }
 
   function apply(p,s){
     if(!p)return;
     ensureOriginals(p);
+    /* Daily Consumption is a full-width operational page.
+       Keep only its canvas width/zoom fixed; all other Page Designer
+       controls continue to work normally. */
+    if(p.id==='panel-daily-data-entry'){
+      s={...s,pageWidth:100,pageZoom:100};
+    }
     p.dataset.apdPage='1';
     p.style.setProperty('--apd-page-width',s.pageWidth+'%');
     p.style.width=s.pageWidth+'%';
@@ -20894,7 +20902,9 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
 
   function saveCurrent(){
     if(!page)return;
-    const targetPage=page,targetId=pageId,s=values();
+    const targetPage=page,targetId=pageId;
+    let s=values();
+    if(targetId==='daily-data-entry')s={...s,pageWidth:100,pageZoom:100};
     save(targetId,s);
     apply(targetPage,s);
     window.ERPPerPageDesign?.preview?.(s);
@@ -21396,6 +21406,10 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
 
   function buildCss(id,s){
     if(!id||!s)return '';
+    /* Do not let the generic Page Designer shrink Daily Consumption. */
+    if(id==='daily-data-entry'){
+      s={...s,pageWidth:100,pageZoom:100};
+    }
     const root='#panel-'+esc(id);
     const px=(v,d)=>Number.isFinite(Number(v))?Number(v):d;
     const yn=v=>v===false?'none':'';
