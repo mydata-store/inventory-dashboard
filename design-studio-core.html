@@ -4,7 +4,6 @@
 <script>
 (function(){
   const root=document.documentElement;
-  root.classList.add('erp-safe-boot');
   try{
     const KEY='ERP_DESIGN_CORE_V1', LEGACY='erpDesignStudioV11';
     const raw=localStorage.getItem(KEY)||localStorage.getItem(LEGACY);
@@ -35,8 +34,9 @@
     }
     if(c&&c.background)root.style.setProperty('--clock-bg',c.background);
   }catch(e){}
-  // Fail-safe: never leave the page hidden forever if later code crashes.
-  window.__erpSafeBootTimer=setTimeout(function(){document.documentElement.classList.remove('erp-safe-boot');},1800);
+  // V15.57: global body hiding removed.
+  // Theme/sidebar variables are still preloaded here, but the ERP remains visible.
+  window.__erpSafeBootTimer=null;
 })();
 </script>
 <style>
@@ -8844,7 +8844,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const clone=o=>JSON.parse(JSON.stringify(o));
 function erpRevealAfterSafeBoot(){
   try{
-    clearTimeout(window.__erpSafeBootTimer);
+    if(window.__erpSafeBootTimer)clearTimeout(window.__erpSafeBootTimer);
     // Two animation frames ensure all CSS variables/layout classes are committed
     // before the first visible ERP frame.
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -24282,6 +24282,21 @@ function bind(){
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 window.ERPBannerStudioV1556={get:()=>clone(state),save,render,renderCompany};
+})();
+</script>
+
+
+<script id="erpNoWhiteIdleResumeV1557">
+(function(){
+'use strict';
+function ensureVisible(){
+  document.documentElement.classList.remove('erp-safe-boot');
+}
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden)ensureVisible();
+});
+window.addEventListener('pageshow',ensureVisible);
+window.ERPNoWhiteIdleResumeV1557={ensureVisible};
 })();
 </script>
 
