@@ -13654,16 +13654,12 @@ window.ERPFormulaControl={open,openMaterials,refresh:renderAll,formulas};
     document.body.classList.toggle('erp-hide-theme-actions',!isDesignThemePage());
   }
 
-  // Run after navigation/UI state changes.
-  const observer=new MutationObserver(()=>setTimeout(syncThemeActions,0));
-  observer.observe(document.documentElement,{
-    subtree:true,
-    childList:true,
-    attributes:true,
-    attributeFilter:['class']
-  });
-
-  document.addEventListener('click',()=>setTimeout(syncThemeActions,40),true);
+  // Navigation is sufficient; avoid observing every DOM/class mutation.
+  document.addEventListener('click',e=>{
+    if(e.target.closest('[data-panel],[data-dashboard-open],[data-pc-dashboard]')){
+      setTimeout(syncThemeActions,30);
+    }
+  },true);
   window.addEventListener('hashchange',syncThemeActions);
   window.addEventListener('popstate',syncThemeActions);
 
@@ -20649,30 +20645,26 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
     // profiles persistent after refresh without changing business logic.
     const main=document.querySelector('main.content');
     let applyTimer=null;
-    const scheduleApply=(delay=0)=>{
+    const scheduleApply=(delay=20)=>{
       clearTimeout(applyTimer);
-      applyTimer=setTimeout(()=>{
-        applySavedToActive();
-        // Some modules finish rendering one tick later.
-        setTimeout(applySavedToActive,35);
-      },delay)
+      applyTimer=setTimeout(applySavedToActive,delay)
     };
     if(main){
       const obs=new MutationObserver(ms=>{
         const active=activePanel();
+        if(!active)return;
         const needsApply=ms.some(m=>
           (m.type==='attributes'&&m.attributeName==='class'&&m.target.matches?.('section.panel')) ||
-          (m.type==='childList'&&active&&(m.target===active||active.contains(m.target)))
+          (m.type==='childList'&&(m.target===active||active.contains(m.target)))
         );
-        if(needsApply)scheduleApply(0)
+        if(needsApply)scheduleApply(25)
       });
       obs.observe(main,{subtree:true,attributes:true,attributeFilter:['class'],childList:true})
     }
-    window.addEventListener('hashchange',()=>scheduleApply(0));
-    window.addEventListener('popstate',()=>scheduleApply(0));
-    document.addEventListener('click',()=>scheduleApply(0),true);
-    window.addEventListener('load',()=>scheduleApply(0),{once:true});
-    scheduleApply(60)
+    window.addEventListener('hashchange',()=>scheduleApply(20));
+    window.addEventListener('popstate',()=>scheduleApply(20));
+    window.addEventListener('load',()=>scheduleApply(30),{once:true});
+    scheduleApply(80)
   }
 
   window.ERPAdvancedPageDesigner={open:()=>open(activePanel()),openPage:open,applySaved:applySavedToActive};
@@ -23043,18 +23035,20 @@ main.content section.panel .erp-universal-page-controller-v1526{
   function bind(){
     refresh();
 
-    document.addEventListener('click',()=>setTimeout(refresh,0),true);
-    window.addEventListener('hashchange',()=>setTimeout(refresh,0));
-    window.addEventListener('popstate',()=>setTimeout(refresh,0));
+    let refreshTimer=null;
+    const scheduleRefresh=(delay=30)=>{
+      clearTimeout(refreshTimer);
+      refreshTimer=setTimeout(refresh,delay)
+    };
+    window.addEventListener('hashchange',()=>scheduleRefresh(20));
+    window.addEventListener('popstate',()=>scheduleRefresh(20));
 
     const main=document.querySelector('main.content');
     if(main){
       const obs=new MutationObserver(records=>{
-        let changed=false;
-        for(const r of records){
-          if(r.type==='childList' && r.addedNodes.length){changed=true;break}
+        if(records.some(r=>r.type==='childList' && r.addedNodes.length)){
+          scheduleRefresh(50);
         }
-        if(changed)setTimeout(refresh,0);
       });
       obs.observe(main,{subtree:true,childList:true});
     }
@@ -23083,10 +23077,11 @@ main.content section.panel .erp-universal-page-controller-v1526{
     window.ERPAdvancedPageDesigner?.applySaved?.();
     window.ERPPerPageDesign?.apply?.();
   }
+  let lateTimer=null;
   function scheduled(){
-    setTimeout(reapply,0);
-    setTimeout(reapply,60);
-    setTimeout(reapply,180);
+    reapply();
+    clearTimeout(lateTimer);
+    lateTimer=setTimeout(reapply,100);
   }
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',scheduled,{once:true});
@@ -23365,12 +23360,6 @@ main.content section.panel .erp-universal-page-controller-v1526{
     document.body.classList.toggle('erp-dashboard-mode',!!isDash);
     if(isDash) document.documentElement.classList.remove('erp-dashboard-early');
     else document.documentElement.classList.remove('erp-dashboard-early');
-  }
-
-  const main=document.querySelector('main.content');
-  if(main){
-    const obs=new MutationObserver(sync);
-    obs.observe(main,{subtree:true,attributes:true,attributeFilter:['class']});
   }
 
   if(document.readyState==='loading'){
