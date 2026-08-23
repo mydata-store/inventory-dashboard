@@ -9224,12 +9224,6 @@ function erpStableStartup(){
   if(routeFirstDashboard){
     document.body.classList.add('erp-dashboard-mode');
     erpRevealAfterSafeBoot();
-
-    const idle=window.requestIdleCallback || function(fn){return setTimeout(fn,1200)};
-    idle(()=>{
-      erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
-      erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
-    });
     return;
   }
 
@@ -16848,7 +16842,10 @@ function openMaterialHistory(material,group=''){
   host?.scrollIntoView({behavior:'smooth',block:'start'})
 }
 
+let ddeInitializedV1572=false;
 function init(){
+  if(ddeInitializedV1572)return;
+  ddeInitializedV1572=true;
   let ddeIsCurrent=false;
   try{ddeIsCurrent=localStorage.getItem('erpStudioLastPanel')==='daily-data-entry'}catch(e){}
   if(ddeIsCurrent)openPage();
@@ -16931,10 +16928,16 @@ function init(){
   if('requestIdleCallback' in window)requestIdleCallback(ddeDeferred,{timeout:700});
   else setTimeout(ddeDeferred,60);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-else init();
+function ddeShouldBootImmediatelyV1572(){
+  return !(window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard');
+}
+if(ddeShouldBootImmediatelyV1572()){
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+}
 
 window.addEventListener('erp-material-master-updated',()=>{
+  if(!ddeInitializedV1572)return;
   const current=materialData('ddeUnitsBody',true);
   ensureDdeMasterLists();
   renderProductionUnitsMaterialSection(current);
@@ -16947,7 +16950,10 @@ function refreshMasterControlledDailySections(){
   renderProductionUnitsMaterialSection(current);
   recalc()
 }
-window.ERPDailyDataEntry={open:()=>{openPage();refreshMasterControlledDailySections()},refresh:()=>{refreshMasterControlledDailySections();feedDashboard()}};
+window.ERPDailyDataEntry={
+  open:()=>{init();openPage();refreshMasterControlledDailySections()},
+  refresh:()=>{init();refreshMasterControlledDailySections();feedDashboard()}
+};
 window.ERPConsumptionHistory={
   open:openHistoryPage,
   openMaterial:openMaterialHistory,
@@ -23472,6 +23478,8 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
       window.ERPPageControlExtras?.applySaved?.();
       window.ERPColumnSummaryDesigner?.applySaved?.();
       document.documentElement.classList.remove('erp-route-restoring-v1545');
+      document.documentElement.classList.remove('erp-route-first-dashboard-v1571');
+      window.__ERP_ROUTE_FIRST_DASHBOARD__=false;
       return true;
     };
 
@@ -24264,7 +24272,9 @@ function init(){
       autoSyncSoon(100);
     }
   },15000);
-  setTimeout(()=>{scan();if(navigator.onLine&&configured())autoSyncSoon(400)},1200);
+  if(!(window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard')){
+    setTimeout(()=>{scan();if(navigator.onLine&&configured())autoSyncSoon(400)},1200);
+  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 window.ERPOnlineSync={syncNow,openSetup:openDialog,getStatus:()=>({mode:'offline-first',localPrimary:true,online:navigator.onLine,configured:configured(),pending:Object.keys(queue()).length,lastSync:localStorage.getItem(LAST)||null})};
@@ -24327,12 +24337,16 @@ window.ERPOfflineFirst={enabled:true,localPrimary:true,autoSync:true,worksOfflin
     dashClockTimer=setTimeout(scheduleDashClock,wait);
   }
   function initV1549(){
+    if(window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard')return;
     setDashboardIdentity();
     scheduleDashClock();
     clearInterval(dashIdentityTimer);
     dashIdentityTimer=setInterval(function(){if(dashboardVisible())setDashboardIdentity()},60000);
     document.addEventListener('visibilitychange',function(){if(!document.hidden){setDashboardIdentity();scheduleDashClock();}});
-    window.addEventListener('hashchange',function(){setTimeout(scheduleDashClock,0)});
+    window.addEventListener('hashchange',function(){
+      if(location.hash==='#panel-dashboard')return;
+      setTimeout(scheduleDashClock,0)
+    });
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initV1549);else initV1549();
 })();
@@ -25484,7 +25498,7 @@ window.ERPNoBlankRouteResumeV1559={clear:clearStaleRouteHide};
 </script>
 
 
-<script id="erpDashboardRouteFirstV1571Script">
+<script id="erpDashboardInstantSettleV1572Script">
 (function(){
 'use strict';
 let timer=null;
@@ -25701,7 +25715,7 @@ function sync(){
     syncBannerLiveBits();
   },1000);
 
-  document.documentElement.classList.remove('erp-route-first-dashboard-v1571');
+  // V15.72: exact page restorer releases route-first mode after final Dashboard apply.
 }
 
 document.addEventListener('visibilitychange',function(){
@@ -25730,7 +25744,7 @@ if(document.readyState==='loading'){
   sync();
 }
 
-window.ERPDashboardBannerV1571={sync,render:cloneExactBanner};
+window.ERPDashboardBannerV1572={sync,render:cloneExactBanner};
 })();
 </script>
 
