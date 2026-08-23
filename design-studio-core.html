@@ -2344,6 +2344,7 @@ html.erp-dashboard-early main.content{
 
 <section class="panel" id="panel-dashboard">
   <div class="erp-dash">
+    <div id="dashboardBannerHostV1565" class="dashboard-banner-host-v1565" aria-label="Dashboard Banner"></div>
     <div class="dash-welcome-shell" id="dashWelcomeShell">
       <div class="dash-company-brand">
         <div class="dash-company-logo" id="dashCompanyLogo">ERP</div>
@@ -22730,6 +22731,67 @@ main.content section.panel .erp-universal-page-controller-v1526{
 
 
 
+
+<style id="erpDashboardBannerApplyV1565Style">
+/* Dashboard V15.65 — Banner Studio becomes the real top of Dashboard */
+
+/* Remove only the Dashboard workspace header + global notice strip. */
+body.erp-dashboard-mode .page-shell > header.top{
+  display:none!important;
+}
+body.erp-dashboard-mode main.content > .notice{
+  display:none!important;
+}
+
+/* The Banner Studio banner replaces the old identity/time strip and blue hero. */
+body.erp-dashboard-mode #panel-dashboard .dash-welcome-shell,
+body.erp-dashboard-mode #panel-dashboard .dash-hero{
+  display:none!important;
+}
+
+/* Start the real dashboard directly with the selected banner. */
+body.erp-dashboard-mode main.content{
+  padding-top:14px!important;
+}
+#dashboardBannerHostV1565{
+  width:100%;
+  margin:0 0 12px;
+}
+#dashboardBannerHostV1565:empty{
+  display:none;
+}
+#dashboardBannerHostV1565 .dashboard-banner-v1565{
+  width:100%;
+  min-height:245px;
+  box-sizing:border-box;
+}
+#dashboardBannerHostV1565 .dash-bst-company-free-v1565{
+  position:absolute!important;
+  z-index:8!important;
+}
+#dashboardBannerHostV1565 .dash-bst-company-glass-v1565{
+  background:color-mix(in srgb,var(--surface) 18%,transparent);
+  backdrop-filter:blur(7px);
+  border:1px solid color-mix(in srgb,var(--border) 55%,transparent);
+}
+#dashboardBannerHostV1565 .dash-bst-company-surface-v1565{
+  background:var(--surface);
+  border:1px solid var(--border);
+  box-shadow:0 6px 16px rgba(0,0,0,.08);
+}
+#dashboardBannerHostV1565 .dash-bst-company-solid-v1565{
+  border:1px solid color-mix(in srgb,var(--border) 55%,transparent);
+}
+#dashboardBannerHostV1565 .bst-banner-nav-v1562{
+  text-decoration:none!important;
+}
+
+/* Keep the next dashboard content close to the banner. */
+body.erp-dashboard-mode #panel-dashboard .erp-dash-kpis{
+  margin-top:0!important;
+}
+</style>
+
 </head><body>
       <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
       <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
@@ -25256,6 +25318,352 @@ document.addEventListener('visibilitychange',function(){
 });
 window.addEventListener('pageshow',clearStaleRouteHide);
 window.ERPNoBlankRouteResumeV1559={clear:clearStaleRouteHide};
+})();
+</script>
+
+
+<script id="erpDashboardBannerApplyV1565Script">
+(function(){
+'use strict';
+
+const KEY='erpBannerStudioV1555';
+let timer=null;
+
+function clone(x){return JSON.parse(JSON.stringify(x))}
+const defaults={
+  theme:'executive',
+  company:{
+    name:'Flying Paper Mill',address:'Company Address',phone:'',ntn:'',
+    show:true,showLogo:true,showAddress:true,showPhone:true,showNtn:false,
+    detailsLayout:'single',align:'left',
+    font:'Inter,Segoe UI,Arial,sans-serif',nameSize:20,nameWeight:'800',
+    nameColor:'#ffffff',nameTheme:true,
+    detailsFont:'Inter,Segoe UI,Arial,sans-serif',detailsSize:9,
+    detailsColor:'#dbeafe',detailsTheme:true,
+    logo:'',logoShape:'circle',logoSize:62,logoPlacement:'left',
+    logoBorderWidth:3,logoBorderColor:'#ffffff',logoBorderTheme:true,
+    blockWidth:330,blockHeight:96,padding:8,radius:12,
+    background:'transparent',bgColor:'#ffffff',
+    positionMode:'layout',drag:true,snap:true,grid:5,x:24,y:22,lock:false
+  },
+  user:{
+    name:'Muhammad Waqas',role:'Store Officer',welcome:'Welcome back,',
+    align:'right',picture:'',shape:'circle',size:56,show:true,
+    showPicture:true,showName:true,showRole:true,showWelcome:true,showCenterRole:true
+  },
+  time:{
+    format:'12',align:'right',size:54,show:true,
+    showAnalog:true,showDigital:true,showSeconds:true,showAmPm:true,showAnalogSeconds:true,
+    analogDesign:'classic',digitalDesign:'plain',
+    showDate:true,showWeekday:true,showDayNumber:true,showMonth:true,showYear:true,
+    weekdayFormat:'short',monthFormat:'short',dateSeparator:', ',
+    timeRegionStyle:'none',dateRegionStyle:'none',regionsLayout:'stacked',
+    timeZone:'local',showRegionName:false,showZoneAbbr:false
+  }
+};
+
+function mergeDeep(base,extra){
+  const out=clone(base);
+  if(!extra||typeof extra!=='object')return out;
+  Object.keys(extra).forEach(k=>{
+    if(extra[k]&&typeof extra[k]==='object'&&!Array.isArray(extra[k])&&out[k]&&typeof out[k]==='object'&&!Array.isArray(out[k])){
+      out[k]=mergeDeep(out[k],extra[k]);
+    }else out[k]=extra[k];
+  });
+  return out;
+}
+function load(){
+  try{return mergeDeep(defaults,JSON.parse(localStorage.getItem(KEY)||'{}'))}
+  catch(e){return clone(defaults)}
+}
+function esc(v){
+  return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function shape(v){return v==='circle'?'50%':v==='rounded'?'18px':v==='soft'?'28%':'0'}
+function initials(name){return String(name||'User').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'U'}
+function cssVar(n,f){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||f}
+function themeText(){return cssVar('--text','#0f172a')}
+function themeMuted(){return cssVar('--muted','#64748b')}
+function themeAccent(){return cssVar('--accent','#22c7d8')}
+function lightTheme(theme){return ['minimal','split','glass','control','garden','skyline','ribbon','cards','magazine','deck','signature'].includes(theme)}
+
+function companyMeta(c){
+  const a=[];
+  if(c.showAddress&&c.address)a.push(c.address);
+  if(c.showPhone&&c.phone)a.push('Phone: '+c.phone);
+  if(c.showNtn&&c.ntn)a.push('NTN: '+c.ntn);
+  return a;
+}
+
+function companyStyle(c,theme){
+  const rules=[
+    `width:${Number(c.blockWidth)||330}px`,
+    `min-height:${Number(c.blockHeight)||96}px`,
+    `padding:${Number(c.padding)||0}px`,
+    `border-radius:${Number(c.radius)||0}px`,
+    `text-align:${c.align||'left'}`,
+    `justify-content:${c.align==='center'?'center':c.align==='right'?'flex-end':'flex-start'}`
+  ];
+  if(c.positionMode==='free'){
+    rules.push(`left:${Number(c.x)||0}px`,`top:${Number(c.y)||0}px`);
+  }
+  if(c.background==='solid')rules.push(`background:${c.bgColor||'#fff'}`);
+  else if(c.background==='transparent')rules.push('background:transparent');
+  return rules.join(';');
+}
+
+function logoStyle(c){
+  return [
+    `width:${Number(c.logoSize)||62}px`,
+    `height:${Number(c.logoSize)||62}px`,
+    `flex-basis:${Number(c.logoSize)||62}px`,
+    `border-radius:${shape(c.logoShape)}`,
+    `border-width:${Number(c.logoBorderWidth)||0}px`,
+    `border-style:${Number(c.logoBorderWidth)?'solid':'none'}`,
+    `border-color:${c.logoBorderTheme?themeAccent():(c.logoBorderColor||'#fff')}`
+  ].join(';');
+}
+function companyDirection(c){
+  return (c.logoPlacement==='top'||c.logoPlacement==='bottom')
+    ?(c.logoPlacement==='bottom'?'column-reverse':'column')
+    :(c.logoPlacement==='right'?'row-reverse':'row');
+}
+
+function build(){
+  const host=document.getElementById('dashboardBannerHostV1565');
+  if(!host)return;
+  const s=load(),c=s.company,u=s.user,t=s.time,theme=s.theme||'executive';
+
+  const meta=companyMeta(c);
+  const metaText=c.detailsLayout==='stacked'?meta.join('\n'):meta.join(' • ');
+  const companyClasses=[
+    'bst-preview-company-v1555',
+    c.positionMode==='free'?'dash-bst-company-free-v1565':'',
+    c.background==='glass'?'dash-bst-company-glass-v1565':'',
+    c.background==='surface'?'dash-bst-company-surface-v1565':'',
+    c.background==='solid'?'dash-bst-company-solid-v1565':''
+  ].filter(Boolean).join(' ');
+
+  const nameColor=c.nameTheme?(lightTheme(theme)?themeText():'#fff'):(c.nameColor||'#fff');
+  const detailColor=c.detailsTheme?(lightTheme(theme)?themeMuted():'rgba(255,255,255,.78)'):(c.detailsColor||'#dbeafe');
+
+  const logo=c.showLogo
+    ?`<div class="bst-preview-logo-v1555" style="${logoStyle(c)}">${c.logo?`<img src="${esc(c.logo)}" alt="">`:'ERP'}</div>`
+    :'';
+
+  const company=c.show?`
+    <div class="${companyClasses}" style="${companyStyle(c,theme)};flex-direction:${companyDirection(c)}">
+      ${logo}
+      <div>
+        <b style="font-family:${esc(c.font)};font-size:${Number(c.nameSize)||20}px;font-weight:${esc(c.nameWeight)};color:${nameColor}">${esc(c.name||'Company Name')}</b>
+        ${meta.length?`<small style="font-family:${esc(c.detailsFont)};font-size:${Number(c.detailsSize)||9}px;color:${detailColor};white-space:${c.detailsLayout==='stacked'?'pre-line':'normal'}">${esc(metaText)}</small>`:''}
+      </div>
+    </div>`:'<div class="bst-preview-company-v1555" style="display:none"></div>';
+
+  const userPic=u.showPicture?`
+    <div class="bst-preview-userpic-v1555" style="width:${Number(u.size)||56}px;height:${Number(u.size)||56}px;border-radius:${shape(u.shape)}">
+      ${u.picture?`<img src="${esc(u.picture)}" alt="">`:esc(initials(u.name))}
+    </div>`:'';
+
+  const user=u.show?`
+    <div class="bst-preview-user-v1555" style="justify-content:${u.align==='center'?'center':u.align==='left'?'flex-start':'flex-end'};text-align:${u.align||'right'}">
+      ${userPic}
+      <div class="bst-preview-usertext-v1558">
+        ${u.showName?`<b>${esc(u.name||'User')}</b>`:''}
+        ${u.showRole?`<small>${esc(u.role||'')}</small>`:''}
+      </div>
+    </div>`:'';
+
+  const welcome=`
+    <div class="bst-preview-welcome-v1563">
+      <span class="bst-preview-kicker-v1555">MANAGEMENT DASHBOARD</span>
+      ${u.showWelcome?`<h2>${esc(u.welcome||'Welcome back,')} ${esc(u.name||'User')}</h2>`:''}
+      ${u.showCenterRole?`<p>${esc(u.role||'User')} • Inventory &amp; Operations Management</p>`:''}
+    </div>`;
+
+  const buttons=`
+    <div class="bst-preview-actions-v1555">
+      <button type="button" class="bst-banner-nav-v1562" data-dashboard-banner-route="masters"><span>▦</span><b>Masters</b></button>
+      <button type="button" class="bst-banner-nav-v1562" data-dashboard-banner-route="purchase"><span>▣</span><b>Purchase</b></button>
+      <button type="button" class="bst-banner-nav-v1562" data-dashboard-banner-route="issue"><span>◆</span><b>Issue</b></button>
+      <button type="button" class="bst-banner-nav-v1562" data-dashboard-banner-route="inventory"><span>▤</span><b>Inventory</b></button>
+      <button type="button" class="bst-banner-nav-v1562 bst-banner-nav-wide-v1562" data-dashboard-banner-route="production"><span>▧</span><b>Production &amp; Consumption</b></button>
+      <button type="button" class="bst-banner-nav-v1562" data-dashboard-banner-route="gate-pass"><span>◇</span><b>Gate Pass</b></button>
+      <button type="button" class="bst-banner-nav-v1562" data-dashboard-banner-route="design-studio"><span>◆</span><b>Design Studio</b></button>
+    </div>`;
+
+  const analog=t.showAnalog?`
+    <div class="bst-analog-v1555 analog-${esc(t.analogDesign||'classic')}-v1558" id="dashBstAnalogV1565" style="width:${Number(t.size)||54}px;height:${Number(t.size)||54}px">
+      <i class="h"></i><i class="m"></i><i class="s" style="${t.showAnalogSeconds?'':'display:none'}"></i><b></b>
+      <span class="tick t12"></span><span class="tick t3"></span><span class="tick t6"></span><span class="tick t9"></span>
+    </div>`:'';
+
+  const timeRegion=t.showDigital?`
+    <div class="bst-time-region-v1558 digital-${esc(t.digitalDesign||'plain')}-v1558 ${t.timeRegionStyle!=='none'?'region-'+esc(t.timeRegionStyle)+'-v1558':''}" id="dashBstTimeRegionV1565">
+      <strong id="dashBstTimeV1565">--:--</strong><em id="dashBstAmPmV1565"></em><span id="dashBstZoneV1565"></span>
+    </div>`:'';
+
+  const dateRegion=t.showDate?`
+    <div class="bst-date-region-v1558 ${t.dateRegionStyle!=='none'?'region-'+esc(t.dateRegionStyle)+'-v1558':''}" id="dashBstDateRegionV1565">
+      <span id="dashBstWeekdayV1565"></span><small id="dashBstDateV1565">--</small><em id="dashBstRegionV1565"></em>
+    </div>`:'';
+
+  const layoutClass=t.regionsLayout==='horizontal'?'layout-horizontal-v1558':
+    t.regionsLayout==='date-first'?'layout-date-first-v1558':
+    t.regionsLayout==='time-first'?'layout-time-first-v1558':'';
+
+  const clock=t.show?`
+    <div class="bst-preview-clock-v1555 ${layoutClass}" id="dashBstClockV1565" style="justify-content:${t.align==='center'?'center':t.align==='left'?'flex-start':'flex-end'}">
+      ${analog}
+      <div class="bst-time-date-regions-v1558" style="align-items:${t.align==='center'?'center':t.align==='left'?'flex-start':'flex-end'}">
+        ${timeRegion}${dateRegion}
+      </div>
+    </div>`:'';
+
+  host.innerHTML=`
+    <div class="banner-live-preview-v1555 dashboard-banner-v1565 theme-${esc(theme)}">
+      ${company}
+      <div class="bst-preview-center-v1555">${welcome}${buttons}</div>
+      <div class="bst-preview-right-v1555">${user}${clock}</div>
+    </div>`;
+
+  updateClock();
+}
+
+function zoneDate(tz){
+  if(!tz||tz==='local')return new Date();
+  try{
+    const parts=new Intl.DateTimeFormat('en-CA',{
+      timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',
+      hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+    }).formatToParts(new Date()).reduce((a,p)=>(a[p.type]=p.value,a),{});
+    return new Date(`${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`);
+  }catch(e){return new Date()}
+}
+function zoneAbbr(tz){
+  try{
+    const opts={timeZoneName:'short'};
+    if(tz&&tz!=='local')opts.timeZone=tz;
+    return new Intl.DateTimeFormat('en-US',opts).formatToParts(new Date()).find(p=>p.type==='timeZoneName')?.value||'';
+  }catch(e){return ''}
+}
+function zoneLabel(tz){
+  return ({'Asia/Karachi':'Pakistan','Asia/Dubai':'Dubai','Europe/London':'London','America/New_York':'New York','UTC':'UTC','local':'Local'})[tz||'local']||tz;
+}
+function setText(id,v){const e=document.getElementById(id);if(e&&e.textContent!==String(v??''))e.textContent=String(v??'')}
+
+function updateClock(){
+  if(!document.body.classList.contains('erp-dashboard-mode'))return;
+  const s=load(),t=s.time,d=zoneDate(t.timeZone),is24=t.format==='24';
+  let h=d.getHours(),ampm='';
+  if(!is24){ampm=h>=12?'PM':'AM';h=h%12||12}
+  const hh=String(h).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0'),ss=String(d.getSeconds()).padStart(2,'0');
+  setText('dashBstTimeV1565',hh+':'+mm+(t.showSeconds?':'+ss:''));
+  setText('dashBstAmPmV1565',(!is24&&t.showAmPm)?ampm:'');
+  setText('dashBstZoneV1565',t.showZoneAbbr?zoneAbbr(t.timeZone):'');
+
+  const weekday=new Intl.DateTimeFormat('en-US',{weekday:t.weekdayFormat||'short'}).format(d);
+  const month=t.monthFormat==='numeric'
+    ?String(d.getMonth()+1).padStart(2,'0')
+    :new Intl.DateTimeFormat('en-US',{month:t.monthFormat||'short'}).format(d);
+  const parts=[];
+  if(t.showDayNumber)parts.push(String(d.getDate()).padStart(2,'0'));
+  if(t.showMonth)parts.push(month);
+  if(t.showYear)parts.push(String(d.getFullYear()));
+  setText('dashBstWeekdayV1565',t.showWeekday?weekday:'');
+  setText('dashBstDateV1565',parts.join(t.dateSeparator||' '));
+  setText('dashBstRegionV1565',t.showRegionName?zoneLabel(t.timeZone):'');
+
+  const a=document.getElementById('dashBstAnalogV1565');
+  if(a){
+    const hourDeg=(d.getHours()%12)*30+d.getMinutes()*.5;
+    const minDeg=d.getMinutes()*6+d.getSeconds()*.1;
+    const secDeg=d.getSeconds()*6;
+    const H=a.querySelector('.h'),M=a.querySelector('.m'),S=a.querySelector('.s');
+    if(H)H.style.transform=`translateX(-50%) rotate(${hourDeg}deg)`;
+    if(M)M.style.transform=`translateX(-50%) rotate(${minDeg}deg)`;
+    if(S)S.style.transform=`translateX(-50%) rotate(${secDeg}deg)`;
+  }
+}
+
+function leaveDashboard(){
+  document.body.classList.remove('erp-dashboard-mode');
+}
+function openPanel(panel){
+  leaveDashboard();
+  const nav=document.querySelector(`[data-panel="${panel}"]`);
+  if(nav){nav.click();return true}
+  const p=document.getElementById('panel-'+panel);
+  if(p){
+    document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    history.replaceState(null,'','#panel-'+panel);
+    return true;
+  }
+  return false;
+}
+function route(name){
+  if(name==='masters')return openPanel('masters');
+  if(name==='purchase')return openPanel('purchase-entry');
+  if(name==='issue')return openPanel('issue-entry');
+  if(name==='gate-pass')return openPanel('gate-pass-dashboard');
+  if(name==='design-studio')return openPanel('theme');
+
+  if(name==='inventory'){
+    leaveDashboard();
+    const b=document.querySelector('[data-inventory-open="1"],[data-inventory-open]');
+    if(b){b.click();return}
+    if(window.ERPInventory?.open){window.ERPInventory.open();return}
+    return openPanel('inventory-dashboard');
+  }
+  if(name==='production'){
+    leaveDashboard();
+    if(window.ERPProductionConsumption?.open){window.ERPProductionConsumption.open();return}
+    const b=document.querySelector('[data-production-consumption-open]');
+    if(b){b.click();return}
+    return openPanel('production-consumption');
+  }
+}
+
+document.addEventListener('click',function(e){
+  const b=e.target.closest('[data-dashboard-banner-route]');
+  if(!b)return;
+  e.preventDefault();
+  e.stopPropagation();
+  route(b.dataset.dashboardBannerRoute);
+},true);
+
+function sync(){
+  const active=document.getElementById('panel-dashboard')?.classList.contains('active');
+  if(active||location.hash==='#panel-dashboard'){
+    build();
+    clearInterval(timer);
+    timer=setInterval(function(){
+      if(document.hidden)return;
+      updateClock();
+    },1000);
+  }else{
+    clearInterval(timer);
+    timer=null;
+  }
+}
+
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&document.body.classList.contains('erp-dashboard-mode')){
+    build();
+    updateClock();
+  }
+});
+window.addEventListener('pageshow',sync);
+window.addEventListener('hashchange',function(){setTimeout(sync,20)});
+document.addEventListener('click',function(e){
+  if(e.target.closest('[data-dashboard-open]'))setTimeout(sync,30);
+},true);
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});
+else sync();
+
+window.ERPDashboardBannerV1565={render:build,sync:sync};
 })();
 </script>
 
