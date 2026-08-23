@@ -36,7 +36,7 @@
     if(c&&c.background)root.style.setProperty('--clock-bg',c.background);
   }catch(e){}
   // Fail-safe: never leave the page hidden forever if later code crashes.
-  window.__erpSafeBootTimer=setTimeout(function(){document.documentElement.classList.remove('erp-safe-boot');},8000);
+  window.__erpSafeBootTimer=setTimeout(function(){document.documentElement.classList.remove('erp-safe-boot');},1800);
 })();
 </script>
 <style>
@@ -8823,9 +8823,17 @@ function erpStableStartup(){
       if(ccmpTenantId)erpSafeCall('company control render',()=>ccmpRender());
       else erpSafeCall('company control fallback',()=>{$$('.panel').forEach(p=>p.classList.remove('active'));$('#panel-companies')?.classList.add('active');mcRender()});
     }
-    try{await scRestoreFolderHandle()}catch(e){}
-    erpSafeCall('software center rerender',()=>scRender());
+    /* Startup stability V15.54:
+       The ERP UI must not wait for File System Access / remembered-folder
+       permission checks. Reveal first, then restore that optional folder
+       connection quietly in the background. */
     erpRevealAfterSafeBoot();
+    setTimeout(()=>{
+      Promise.resolve()
+        .then(()=>scRestoreFolderHandle())
+        .then(()=>erpSafeCall('software center rerender',()=>scRender()))
+        .catch(()=>{});
+    },120);
   },0);
 }
 erpStableStartup();
@@ -18247,14 +18255,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   function boot(){
     const hash=getHashPanel();
-    if(hash==='dashboard'){
-      // Dashboard is restored once by ERPExactPageRestoreV1540.
+
+    /* An explicit URL/hash is handled by the single exact-route restorer
+       later in the file. Do not open the same page repeatedly here. */
+    if(hash){
       reveal();
       return;
     }
-    setTimeout(restoreExactPage,70);
-    setTimeout(restoreExactPage,240);
-    setTimeout(restoreExactPage,650);
+
+    /* No explicit page: restore saved last page once only. */
+    setTimeout(restoreExactPage,80);
   }
 
   if(document.readyState==='loading'){
