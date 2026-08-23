@@ -22858,6 +22858,14 @@ body.erp-dashboard-mode #panel-dashboard .kpi-grid{
 }
 </style>
 
+
+<style id="erpDashboardEarlyTopHideV1567">
+html.erp-dashboard-early .page-shell > header.top,
+html.erp-dashboard-early main.content > .notice{
+  display:none!important;
+}
+</style>
+
 </head><body>
       <div class="head"><div class="company">${esc(company)}</div><div class="center"><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>
       <div class="meta">Print Date: ${new Date().toLocaleDateString()}<br>Rows: ${renderedRows.length}</div></div>
@@ -25388,11 +25396,46 @@ window.ERPNoBlankRouteResumeV1559={clear:clearStaleRouteHide};
 </script>
 
 
-<script id="erpDashboardBannerCleanV1566Script">
+<script id="erpDashboardBannerHardCleanV1567Script">
 (function(){
 'use strict';
 let timer=null;
 let bannerStudioObserver=null;
+let detachedHeader=null;
+let detachedNotice=null;
+let headerParent=null;
+let headerNext=null;
+let noticeParent=null;
+let noticeNext=null;
+
+
+function detachDashboardTop(){
+  const header=document.querySelector('.page-shell > header.top') || document.querySelector('header.top');
+  const notice=document.querySelector('main.content > .notice');
+
+  if(header && header.isConnected){
+    detachedHeader=header;
+    headerParent=header.parentNode;
+    headerNext=header.nextSibling;
+    headerParent.removeChild(header);
+  }
+  if(notice && notice.isConnected){
+    detachedNotice=notice;
+    noticeParent=notice.parentNode;
+    noticeNext=notice.nextSibling;
+    noticeParent.removeChild(notice);
+  }
+}
+function restoreDashboardTop(){
+  if(detachedHeader && !detachedHeader.isConnected && headerParent){
+    if(headerNext && headerNext.parentNode===headerParent)headerParent.insertBefore(detachedHeader,headerNext);
+    else headerParent.appendChild(detachedHeader);
+  }
+  if(detachedNotice && !detachedNotice.isConnected && noticeParent){
+    if(noticeNext && noticeNext.parentNode===noticeParent)noticeParent.insertBefore(detachedNotice,noticeNext);
+    else noticeParent.insertBefore(detachedNotice,noticeParent.firstChild);
+  }
+}
 
 function dashboardActive(){
   return document.getElementById('panel-dashboard')?.classList.contains('active') || location.hash==='#panel-dashboard';
@@ -25400,6 +25443,8 @@ function dashboardActive(){
 
 function setDashboardMode(on){
   document.body.classList.toggle('erp-dashboard-mode', !!on);
+  if(on)detachDashboardTop();
+  else restoreDashboardTop();
 }
 
 function getStudioPreview(){
@@ -25519,6 +25564,7 @@ document.addEventListener('click',function(e){
 function sync(){
   const active=dashboardActive();
   setDashboardMode(active);
+  if(active)detachDashboardTop();
   if(!active){
     clearInterval(timer);timer=null;
     return;
@@ -25556,6 +25602,7 @@ function watchStudio(){
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden && dashboardActive()){
     setDashboardMode(true);
+    detachDashboardTop();
     cloneExactBanner();
     findLegacyTopBlocks();
   }
@@ -25578,7 +25625,7 @@ if(document.readyState==='loading'){
   sync();
 }
 
-window.ERPDashboardBannerV1566={sync,render:cloneExactBanner};
+window.ERPDashboardBannerV1567={sync,render:cloneExactBanner};
 })();
 </script>
 
