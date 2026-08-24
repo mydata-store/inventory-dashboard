@@ -8403,6 +8403,32 @@ function purchaseRefreshSectionFilters(){
   if([...sel.options].some(o=>o.value===current))sel.value=current
 }
 
+
+let purchaseRouteTokenV1577=0;
+
+function purchaseOpenHomeV1577(){
+  purchaseRouteTokenV1577++;
+
+  // Make Purchase Management the single source of truth immediately.
+  history.replaceState(null,'','#panel-purchase-entry');
+
+  document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
+  const home=document.getElementById('panel-purchase-entry');
+  if(home)home.classList.add('active');
+
+  // Keep Purchase folders collapsed when returning home.
+  document.querySelectorAll('.purchase-folder-v1576').forEach(f=>f.classList.remove('open'));
+
+  // Refresh live Purchase KPIs without opening a child page.
+  try{ purchaseRenderEntry(); }catch(e){ console.warn('Purchase Home KPI refresh failed',e); }
+
+  // Update workspace heading if the shared shell exposes it.
+  const title=document.querySelector('header.top h1, .workspace-header h1, #workspaceTitle');
+  if(title)title.textContent='Purchase Management';
+
+  return false;
+}
+
 function purchaseToggleFolderV1576(name){
   document.querySelectorAll('.purchase-folder-v1576').forEach(folder=>{
     const same=folder.getAttribute('data-purchase-folder')===name;
@@ -8411,7 +8437,9 @@ function purchaseToggleFolderV1576(name){
 }
 function purchaseOpenIndentTabV1576(target){
   if(!target)return;
+  const token=purchaseRouteTokenV1577;
   setTimeout(()=>{
+    if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const map={
       entry:'[data-pi-tab="entry"],#piTabEntry,[data-pi-view="entry"]',
       list:'[data-pi-tab="list"],#piTabList,[data-pi-view="list"]',
@@ -8423,7 +8451,9 @@ function purchaseOpenIndentTabV1576(target){
 }
 function purchaseApplyBoardRegisterV1576(register){
   if(!register)return;
+  const token=purchaseRouteTokenV1577;
   setTimeout(()=>{
+    if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const normalized=register==='board3'?'board3':register;
     const candidates=[
       `[data-board-register="${normalized}"]`,
@@ -8436,7 +8466,9 @@ function purchaseApplyBoardRegisterV1576(register){
 }
 function purchaseApplyLocalSectionV1576(section){
   if(!section)return;
+  const token=purchaseRouteTokenV1577;
   setTimeout(()=>{
+    if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const candidates=[
       `[data-local-section="${section}"]`,
       `[data-local-type="${section}"]`,
@@ -8447,7 +8479,9 @@ function purchaseApplyLocalSectionV1576(section){
   },60);
 }
 function purchaseApplyHistoryViewV1576(view,source){
+  const token=purchaseRouteTokenV1577;
   setTimeout(()=>{
+    if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     if(source){
       const src=document.querySelector(`[data-history-source-filter="${source}"],[data-purchase-source="${source}"]`);
       if(src)src.click();
@@ -8460,12 +8494,25 @@ function purchaseApplyHistoryViewV1576(view,source){
 }
 function purchaseApplySupplierViewV1576(view){
   if(!view)return;
+  const token=purchaseRouteTokenV1577;
   setTimeout(()=>{
+    if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const el=document.querySelector(`[data-supplier-analysis-view="${view}"],[data-supplier-view-target="${view}"]`);
     if(el)el.click();
   },60);
 }
 
+
+document.addEventListener('click',function(e){
+  const homeBtn=e.target.closest('[data-go-purchase="purchase-entry"]');
+  if(!homeBtn)return;
+
+  // Dedicated Purchase Home return: do not allow generic child routing/restorers to run.
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  purchaseOpenHomeV1577();
+},true);
 
 document.addEventListener('click',function(e){
   const folderBtn=e.target.closest('[data-purchase-folder-toggle]');
@@ -8482,6 +8529,7 @@ document.addEventListener('click',function(e){
   if(panel){
     e.preventDefault();
 
+    purchaseRouteTokenV1577++;
     const existing=document.querySelector(`[data-go-purchase="${panel}"]:not(.purchase-subpage-v1576)`);
     if(existing){
       existing.click();
