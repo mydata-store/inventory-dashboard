@@ -9126,7 +9126,7 @@ let previous=clone(state),clockTimer=null;
 function get(path){return path.split('.').reduce((o,k)=>o?.[k],state)} function set(path,val){const p=path.split('.');let o=state;while(p.length>1){const k=p.shift();o=o[k]||(o[k]={})}o[p[0]]=val}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),1800)}
 function formatDate(d,f){const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']; const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yyyy=d.getFullYear(),yy=String(yyyy).slice(-2); if(f==='dd/MM/yyyy')return `${dd}/${mm}/${yyyy}`; if(f==='MMM dd, yyyy')return `${mons[d.getMonth()]} ${dd}, ${yyyy}`; if(f==='dddd, dd MMM')return `${days[d.getDay()]}, ${dd} ${mons[d.getMonth()]}`; return `${dd}-${mons[d.getMonth()]}-${yy}`}
-function updateClock(){clearInterval(clockTimer);const run=()=>{const n=new Date(),c=state.clock,opt={hour:'2-digit',minute:'2-digit',hour12:c.format==='12'};if(c.seconds)opt.second='2-digit';const tm=n.toLocaleTimeString([],opt),dt=formatDate(n,c.dateFormat);$('#clockTime').textContent=tm;$('#clockDate').textContent=dt;if($('#collapsedPreviewTime'))$('#collapsedPreviewTime').textContent=tm;if($('#collapsedPreviewDate'))$('#collapsedPreviewDate').textContent=dt};run();clockTimer=setInterval(run,1000)}
+function updateClock(){clearInterval(clockTimer);const run=()=>{if(document.hidden)return;const n=new Date(),c=state.clock,opt={hour:'2-digit',minute:'2-digit',hour12:c.format==='12'};if(c.seconds)opt.second='2-digit';const tm=n.toLocaleTimeString([],opt),dt=formatDate(n,c.dateFormat);$('#clockTime').textContent=tm;$('#clockDate').textContent=dt;if($('#collapsedPreviewTime'))$('#collapsedPreviewTime').textContent=tm;if($('#collapsedPreviewDate'))$('#collapsedPreviewDate').textContent=dt};run();clockTimer=setInterval(run,1000)}
 function themeChrome(t){return{clockColor:t.sidebarActiveText||t.sidebarText,clockBackground:t.sidebarActive,profileCardBackground:t.sidebarActive,profileCardBorder:t.accent,profileNameColor:t.sidebarActiveText||t.sidebarText,profileRoleColor:t.sidebarText,profilePictureBorder:t.accent,collapsedClockBackground:t.sidebarActive,collapsedClockColor:t.sidebarActiveText||t.sidebarText,collapsedProfileBackground:t.sidebarActive,collapsedProfileBorder:t.accent,collapsedPictureBorder:t.accent}}
 function applyThemeLinks(){const x=themeChrome(state.theme);if(state.clock.followTheme){state.clock.color=x.clockColor;state.clock.background=x.clockBackground;state.clock.collapsedBackground=x.collapsedClockBackground;state.clock.collapsedColor=x.collapsedClockColor}if(state.profile.followTheme){state.profile.cardBackground=x.profileCardBackground;state.profile.cardBorder=x.profileCardBorder;state.profile.nameColor=x.profileNameColor;state.profile.roleColor=x.profileRoleColor;state.profile.pictureBorder=x.profilePictureBorder}if(state.profile.collapsedBorderFollowTheme!==false)state.profile.collapsedPictureBorder=x.collapsedPictureBorder;const co=state.company;if(co){if(co.followTheme){const map={sidebarText:state.theme.sidebarText,activeText:state.theme.sidebarActiveText,primary:state.theme.primary,accent:state.theme.accent,bodyText:state.theme.text};co.companyColor=map[co.themeColorSource]||state.theme.sidebarText;co.programColor=state.theme.sidebarText}if(co.logoFollowTheme){co.logoBackground=state.theme.accent;co.logoBorder=state.theme.accent}}}
 function renderThemes(){const box=$('#themes');if(!box)return;box.innerHTML='';Object.entries(themes).forEach(([name,t])=>{const d=document.createElement('div');d.className='theme'+(state.theme.name===name?' active':'');d.innerHTML=`<div class="swatches"><i style="background:${t.primary}"></i><i style="background:${t.accent}"></i><i style="background:${t.sidebar}"></i><i style="background:${t.background}"></i></div><b>${name}</b>`;d.onclick=()=>{previous=clone(state);state.theme={...state.theme,...t,name};applyThemeLinks();localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));sync();render();toast(name+' applied')};box.appendChild(d)})}
@@ -24210,9 +24210,35 @@ for all to anon using (true) with check (true);</pre>
 </div></div>
 <button id="erpSyncStatusBtn" type="button" title="Offline/Online Sync"><span class="dot"></span><span id="erpSyncStatusText">Local Only</span></button>
 <div id="erpUtilityBar" aria-label="ERP Utilities"></div>
-<script id="erpOnlineSyncV1546">
+<script id="erpOnlineSyncRuntimeV1574">
 (function(){
 'use strict';
+
+window.__ERP_RUNTIME_ERRORS__=window.__ERP_RUNTIME_ERRORS__||[];
+if(!window.__ERP_RUNTIME_ERROR_GUARD_V1574__){
+  window.__ERP_RUNTIME_ERROR_GUARD_V1574__=true;
+  const keep=x=>{
+    try{
+      const a=window.__ERP_RUNTIME_ERRORS__;
+      a.push(x);
+      if(a.length>20)a.splice(0,a.length-20);
+    }catch(e){}
+  };
+  window.addEventListener('error',e=>keep({
+    type:'error',
+    message:String(e.message||'Runtime error'),
+    source:String(e.filename||''),
+    line:Number(e.lineno||0),
+    column:Number(e.colno||0),
+    time:Date.now()
+  }));
+  window.addEventListener('unhandledrejection',e=>keep({
+    type:'promise',
+    message:String(e.reason?.stack||e.reason||'Unhandled promise rejection'),
+    time:Date.now()
+  }));
+}
+
 const CFG='ERP_ONLINE_SYNC_CONFIG_V1', QUEUE='ERP_ONLINE_SYNC_QUEUE_V1', SHADOW='ERP_ONLINE_SYNC_SHADOW_V1', DEVICE='ERP_ONLINE_SYNC_DEVICE_V1', LAST='ERP_ONLINE_SYNC_LAST_V1';
 const INTERNAL=new Set([CFG,QUEUE,SHADOW,DEVICE,LAST]);
 const $=id=>document.getElementById(id);
@@ -24276,7 +24302,31 @@ function ensureUtilityBar(){
 }
 async function testConnection(){const c=cfg();if(!configured(c))throw new Error('Please enter Project URL, public key, Company ID and table name.');const r=await fetch(endpoint(c,'?select=storage_key&limit=1'),{headers:headers(c)});if(!r.ok){let tx='';try{tx=await r.text()}catch(e){}throw new Error('Online test failed ('+r.status+'). '+tx.slice(0,220))}return true}
 async function pushBatch(c,entries){const rows=entries.map(([k,x])=>({tenant_id:c.tenant,storage_key:k,storage_value:x.deleted?null:x.value,updated_at:x.updatedAt||new Date().toISOString(),device_id:deviceId()}));const r=await fetch(endpoint(c,'?on_conflict=tenant_id,storage_key'),{method:'POST',headers:headers(c),body:JSON.stringify(rows)});if(!r.ok){let tx='';try{tx=await r.text()}catch(e){}throw new Error('Sync failed ('+r.status+'). '+tx.slice(0,260))}}
-async function syncNow(manual=true){if(busy)return;const c=cfg();if(!navigator.onLine){updateStatus();if(manual)showMsg('Internet is offline. Your data is safe locally and will sync automatically when connection returns.');return}if(!configured(c)){updateStatus();if(manual)openDialog();return}scanWithoutAuto();let q=queue(),entries=Object.entries(q);if(!entries.length){try{await testConnection();localStorage.setItem(LAST,new Date().toISOString());updateStatus();if(manual)showMsg('Connected. Nothing pending — local and online data are already synchronized.')}catch(e){status('error','Online Setup Error',e.message);if(manual)showMsg(e.message)}return}busy=true;updateStatus();try{for(let i=0;i<entries.length;i+=80){const batch=entries.slice(i,i+80);await pushBatch(c,batch);const qq=queue();batch.forEach(([k,x])=>{if(qq[k]&&qq[k].updatedAt===x.updatedAt)delete qq[k]});jset(QUEUE,qq)}localStorage.setItem(LAST,new Date().toISOString());showMsg('Sync complete. All pending local changes are now saved online.');}catch(e){status('error','Sync Error',e.message);showMsg(e.message);if(navigator.onLine&&configured())autoSyncSoon(15000)}finally{busy=false;updateStatus()}}
+async function syncNow(manual=true){if(busy)return;const c=cfg();if(!navigator.onLine){updateStatus();if(manual)showMsg('Internet is offline. Your data is safe locally and will sync automatically when connection returns.');return}if(!configured(c)){updateStatus();if(manual)openDialog();return}if(manual)scanWithoutAuto();let q=queue(),entries=Object.entries(q);if(!entries.length){try{await testConnection();localStorage.setItem(LAST,new Date().toISOString());updateStatus();if(manual)showMsg('Connected. Nothing pending — local and online data are already synchronized.')}catch(e){status('error','Online Setup Error',e.message);if(manual)showMsg(e.message)}return}busy=true;updateStatus();try{for(let i=0;i<entries.length;i+=80){const batch=entries.slice(i,i+80);await pushBatch(c,batch);const qq=queue();batch.forEach(([k,x])=>{if(qq[k]&&qq[k].updatedAt===x.updatedAt)delete qq[k]});jset(QUEUE,qq)}localStorage.setItem(LAST,new Date().toISOString());showMsg('Sync complete. All pending local changes are now saved online.');}catch(e){status('error','Sync Error',e.message);showMsg(e.message);if(navigator.onLine&&configured())autoSyncSoon(15000)}finally{busy=false;updateStatus()}}
+
+function captureExternalStorageEvent(e){
+  try{
+    if(!e || e.storageArea!==localStorage)return;
+    const k=e.key;
+    if(!k || excluded(k))return;
+
+    const q=queue();
+    q[k]={
+      value:e.newValue===null?null:String(e.newValue),
+      deleted:e.newValue===null,
+      updatedAt:new Date().toISOString()
+    };
+    setQueue(q);
+
+    const sh=jget(SHADOW,{})||{};
+    if(e.newValue===null)delete sh[k];
+    else sh[k]=hash(String(e.newValue));
+    jset(SHADOW,sh);
+  }catch(err){
+    console.warn('Cross-tab storage capture failed',err);
+  }
+}
+
 function scanWithoutAuto(){try{const sh=jget(SHADOW,{})||{},now={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||excluded(k))continue;const v=localStorage.getItem(k),hv=hash(v);now[k]=hv;if(sh[k]!==hv){const q=queue();q[k]={value:v,deleted:false,updatedAt:new Date().toISOString()};jset(QUEUE,q)}}Object.keys(sh).forEach(k=>{if(!excluded(k)&&!(k in now)){const q=queue();q[k]={value:null,deleted:true,updatedAt:new Date().toISOString()};jset(QUEUE,q)}});jset(SHADOW,now)}catch(e){}}
 function showMsg(m){if($('erpSyncMsg'))$('erpSyncMsg').textContent=m}
 function openDialog(){const c=cfg();$('erpSyncUrl').value=c.url||'';$('erpSyncKey').value=c.key||'';$('erpSyncTenant').value=c.tenant||'default-company';$('erpSyncTable').value=c.table||'erp_sync_store';$('erpSyncOverlay').classList.add('open');$('erpSyncOverlay').setAttribute('aria-hidden','false');updateStatus()}
@@ -24287,27 +24337,52 @@ function init(){
   deviceId();
   installOfflineFirstHooks();
   ensureUtilityBar();
-  scanWithoutAuto();
+
+  // V15.74: never scan/hash the whole ERP storage during normal startup.
+  // Storage.prototype hooks already capture every local change incrementally.
   updateStatus();
+
   $('erpSyncStatusBtn')?.addEventListener('click',openDialog);
   $('erpSyncClose')?.addEventListener('click',closeDialog);
   $('erpSyncOverlay')?.addEventListener('click',e=>{if(e.target===$('erpSyncOverlay'))closeDialog()});
   $('erpSyncSaveTest')?.addEventListener('click',saveTest);
   $('erpSyncNow')?.addEventListener('click',()=>syncNow(true));
   $('erpSyncSqlBtn')?.addEventListener('click',()=>{const x=$('erpSyncSql');x.style.display=x.style.display==='block'?'none':'block'});
-  window.addEventListener('online',()=>{updateStatus();scanWithoutAuto();autoSyncSoon(600)});
-  window.addEventListener('offline',()=>{clearTimeout(retryTimer);updateStatus()});
-  window.addEventListener('storage',()=>{scanWithoutAuto();updateStatus();autoSyncSoon(500)});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){scanWithoutAuto();updateStatus();if(navigator.onLine&&configured())autoSyncSoon(700)}});
-  scanTimer=setInterval(scan,30000);
+
+  window.addEventListener('online',()=>{
+    updateStatus();
+    if(configured()&&Object.keys(queue()).length)autoSyncSoon(600);
+  });
+
+  window.addEventListener('offline',()=>{
+    clearTimeout(retryTimer);
+    updateStatus();
+  });
+
+  // Cross-tab updates: process only the changed storage key.
+  window.addEventListener('storage',e=>{
+    captureExternalStorageEvent(e);
+    updateStatus();
+    if(navigator.onLine&&configured()&&Object.keys(queue()).length)autoSyncSoon(500);
+  });
+
+  // Returning to this tab must be instant: status refresh only, NO full storage scan.
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)return;
+    updateStatus();
+    if(navigator.onLine&&configured()&&Object.keys(queue()).length)autoSyncSoon(700);
+  });
+
+  // No 30-second full-localStorage scan.
+  scanTimer=null;
+
+  // Lightweight retry watcher. It never scans storage and sleeps while tab is hidden.
   setInterval(()=>{
-    if(navigator.onLine&&configured()&&!busy&&Object.keys(queue()).length&&Date.now()-lastAutoAttempt>12000){
-      autoSyncSoon(100);
+    if(document.hidden)return;
+    if(navigator.onLine&&configured()&&!busy&&Object.keys(queue()).length&&Date.now()-lastAutoAttempt>30000){
+      autoSyncSoon(150);
     }
-  },15000);
-  if(!(window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard')){
-    setTimeout(()=>{scan();if(navigator.onLine&&configured())autoSyncSoon(400)},1200);
-  }
+  },30000);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 window.ERPOnlineSync={syncNow,openSetup:openDialog,getStatus:()=>({mode:'offline-first',localPrimary:true,online:navigator.onLine,configured:configured(),pending:Object.keys(queue()).length,lastSync:localStorage.getItem(LAST)||null})};
