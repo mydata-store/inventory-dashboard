@@ -3120,12 +3120,6 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <button class="local-page-card-v1581" type="button" data-local-open-page="history">
         <span>◷</span><div><b>Local Purchase History</b><small>Review, search and manage Local Purchase records.</small></div><i>›</i>
       </button>
-      <button class="local-page-card-v1581" type="button" data-local-open-page="mess">
-        <span>●</span><div><b>Mess Purchase</b><small>Open Local Purchase Entry ready for the Mess section.</small></div><i>›</i>
-      </button>
-      <button class="local-page-card-v1581" type="button" data-local-open-page="cattle">
-        <span>◆</span><div><b>Cattle Farm Purchase</b><small>Open Local Purchase Entry ready for Cattle Farm.</small></div><i>›</i>
-      </button>
       <button class="local-page-card-v1581" type="button" data-local-open-page="reports">
         <span>▧</span><div><b>Reports / Print</b><small>Local Purchase reports and print controls.</small></div><i>›</i>
       </button>
@@ -3141,8 +3135,6 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
     <div class="local-working-tabs-v1581">
       <button type="button" data-local-work-tab="entry">Local Purchase Entry</button>
       <button type="button" data-local-work-tab="history">Local Purchase History</button>
-      <button type="button" data-local-work-tab="mess">Mess Purchase</button>
-      <button type="button" data-local-work-tab="cattle">Cattle Farm Purchase</button>
       <button type="button" data-local-work-tab="reports">Reports / Print</button>
       <button type="button" data-local-work-tab="excel">Excel Register</button>
     </div>
@@ -3204,8 +3196,6 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
     <div class="local-working-tabs-v1581">
       <button type="button" data-local-work-tab="entry">Local Purchase Entry</button>
       <button type="button" data-local-work-tab="history" class="active">Local Purchase History</button>
-      <button type="button" data-local-work-tab="mess">Mess Purchase</button>
-      <button type="button" data-local-work-tab="cattle">Cattle Farm Purchase</button>
       <button type="button" data-local-work-tab="reports">Reports / Print</button>
       <button type="button" data-local-work-tab="excel">Excel Register</button>
     </div>
@@ -7839,7 +7829,7 @@ function purchaseClearInputs(ids){ids.forEach(id=>{const e=$('#'+id);if(!e)retur
 
 const LOCAL_ENTRY_ROWS=15;
 function localEntryAutoCell(type,cls=''){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
-function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td>${localEntryAutoCell('purchaseSections','lp-section')}</td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase');localEntryUpdateSectionTotals()}
+function localEntryBuild(){const body=$('#localEntryBody');if(!body)return;body.innerHTML=Array.from({length:LOCAL_ENTRY_ROWS},(_,i)=>`<tr data-local-row="${i}"><td class="lp-sr">${i+1}</td><td><input class="lp-date"></td><td><input class="lp-igp"></td><td><input class="lp-control"></td><td>${localEntryAutoCell('items','lp-item')}</td><td><input class="lp-size"></td><td><input class="lp-qty" inputmode="decimal"></td><td>${localEntryAutoCell('units','lp-unit')}</td><td><input class="lp-rate" inputmode="decimal"></td><td><input class="lp-amount" readonly></td><td>${localEntryAutoCell('suppliers','lp-supplier')}</td><td>${localEntryAutoCell('employees','lp-purchaseby')}</td><td>${localEntryAutoCell('purchaseSections','lp-section')}</td><td><input class="lp-vehicle"></td><td><input class="lp-remarks"></td></tr>`).join('');localEntryBind();localDesignerBindHeaders();purchaseApplyPc('local-purchase');localEntryUpdateSectionTotals();setTimeout(()=>{try{window.ERPLocalPurchaseModuleV1582?.clearGhostSections?.()}catch(e){}},0)}
 
 function localActivePurchaseSections(){
   const rows=purchaseMaster('purchaseSections').filter(r=>r.status!=='inactive');
@@ -26974,16 +26964,27 @@ function activateLocalPanelV1581(panel){
   window.scrollTo({top:0,behavior:'auto'});
 }
 function paintTabs(tab){document.querySelectorAll('[data-local-work-tab]').forEach(b=>b.classList.toggle('active',b.dataset.localWorkTab===tab))}
-function selectSection(section){
-  setTimeout(()=>{
-    const trs=[...document.querySelectorAll('#localEntryBody tr')];
-    const tr=trs.find(r=>[...r.querySelectorAll('input')].every(i=>!String(i.value||'').trim()))||trs[0];
-    if(!tr)return;
-    const el=tr.querySelector('.lp-section');
-    if(el){el.value=section==='mess'?'Mess':'Cattle Farm';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
-    tr.querySelector('.lp-date,.lp-item,input')?.focus();
-  },80);
+
+function localClearGhostSectionsV1582(){
+  document.querySelectorAll('#localEntryBody tr').forEach(tr=>{
+    const section=tr.querySelector('.lp-section');
+    if(!section)return;
+
+    // A row is considered blank when every field except Purchase Section is empty.
+    const editors=[...tr.querySelectorAll('input,select')].filter(el=>!el.classList.contains('lp-section'));
+    const otherwiseBlank=editors.every(el=>!String(el.value??'').trim());
+
+    if(otherwiseBlank && String(section.value||'').trim()){
+      section.value='';
+      section.dataset.masterId='';
+      section.dispatchEvent(new Event('input',{bubbles:true}));
+      section.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  });
+
+  try{ if(typeof localEntryUpdateSectionTotals==='function') localEntryUpdateSectionTotals(); }catch(e){}
 }
+
 function openHistory(){
   activateLocalPanelV1581('purchase-history');
   document.getElementById('localHistoryContextNav')?.classList.add('show');
@@ -26997,7 +26998,7 @@ function openWork(tab){
   document.getElementById('localHistoryContextNav')?.classList.remove('show');
   activateLocalPanelV1581('local-purchase');
   paintTabs(tab);
-  if(tab==='mess'||tab==='cattle')selectSection(tab);
+  setTimeout(localClearGhostSectionsV1582,60);
 }
 function backToPurchase(){
   document.getElementById('localHistoryContextNav')?.classList.remove('show');
@@ -27010,8 +27011,11 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('[data-local-work-tab]');if(t){e.preventDefault();openWork(t.dataset.localWorkTab)}
 },true);
 if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();
-window.addEventListener('hashchange',()=>{if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();if(location.hash!=='#panel-purchase-history')document.getElementById('localHistoryContextNav')?.classList.remove('show')});
+if(location.hash==='#panel-local-purchase')setTimeout(localClearGhostSectionsV1582,120);
+window.addEventListener('hashchange',()=>{if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();
+if(location.hash==='#panel-local-purchase')setTimeout(localClearGhostSectionsV1582,120);if(location.hash!=='#panel-purchase-history')document.getElementById('localHistoryContextNav')?.classList.remove('show')});
 window.ERPLocalPurchaseModuleV1581={open:function(){activateLocalPanelV1581('local-purchase-home');renderLocalHomeV1581()}};
+window.ERPLocalPurchaseModuleV1582={clearGhostSections:localClearGhostSectionsV1582};
 })();
 </script>
 
