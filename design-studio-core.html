@@ -2601,7 +2601,6 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 .local-kpi-v1581 small{display:block;font-size:8px;font-weight:900;text-transform:uppercase}
 .local-kpi-v1581 strong{display:block;font-size:19px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .local-kpi-v1581 em{display:block;font-style:normal;color:var(--muted);font-size:8px;margin-top:4px}
-.local-pages-title-v1581{margin-top:18px}
 .local-page-cards-v1581{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
 .local-page-card-v1581{display:grid;grid-template-columns:44px minmax(0,1fr) 18px;align-items:center;gap:12px;min-height:88px;padding:13px;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:inherit;text-align:left;cursor:pointer}
 .local-page-card-v1581:hover{border-color:color-mix(in srgb,var(--primary) 45%,var(--border));background:color-mix(in srgb,var(--primary) 4%,var(--surface))}
@@ -26952,182 +26951,67 @@ window.ERPPurchaseIndentModuleV1580={open:function(){activate('purchase-indent-h
 <script id="erpLocalPurchaseFullModuleV1581Script">
 (function(){
 'use strict';
-
-let localPurchaseContextV1581=false;
-
-function localRowsV1581(){
-  try{
-    if(typeof window.purchaseRows==='function'){
-      const x=window.purchaseRows('local');
-      if(Array.isArray(x))return x;
-    }
-  }catch(e){}
-  return [];
-}
-function n1581(v){
-  const n=parseFloat(String(v??'').replace(/,/g,''));
-  return Number.isFinite(n)?n:0;
-}
-function norm1581(v){return String(v??'').trim().toLowerCase()}
-function sectionKindV1581(v){
-  const s=norm1581(v);
-  if(s.includes('cattle'))return'cattle';
-  if(s.includes('mess'))return'mess';
-  if(s.includes('inventory')||s.includes('store'))return'inventory';
-  return'other';
-}
-function rowValueV1581(r){
-  return n1581(r.grandTotal||r.totalAmount||r.amount||r.total||0);
-}
+function localRowsV1581(){try{if(typeof window.purchaseRows==='function'){const x=window.purchaseRows('local');if(Array.isArray(x))return x}}catch(e){}return[]}
+function n1581(v){const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0}
+function kind1581(v){const s=String(v??'').trim().toLowerCase();if(s.includes('cattle'))return'cattle';if(s.includes('mess'))return'mess';if(s.includes('inventory')||s.includes('store'))return'inventory';return'other'}
 function renderLocalHomeV1581(){
-  const a=localRowsV1581(),now=new Date();
-  let value=0,month=0,inventory=0,mess=0,cattle=0;
+  const a=localRowsV1581(),now=new Date();let value=0,month=0,inventory=0,mess=0,cattle=0;
   a.forEach(r=>{
-    value+=rowValueV1581(r);
-    const kind=sectionKindV1581(r.section||r.purchaseSection||r.purchaseType);
-    if(kind==='inventory')inventory++;
-    else if(kind==='mess')mess++;
-    else if(kind==='cattle')cattle++;
+    value+=n1581(r.grandTotal||r.totalAmount||r.amount||r.total);
+    const k=kind1581(r.section||r.purchaseSection||r.purchaseType);
+    if(k==='inventory')inventory++;else if(k==='mess')mess++;else if(k==='cattle')cattle++;
     const d=new Date(r.date||r.purchaseDate||r.createdAt||'');
     if(!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
   });
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-  set('localHomeTotal',a.length);
-  set('localHomeValue','PKR '+value.toLocaleString(undefined,{maximumFractionDigits:2}));
-  set('localHomeMonth',month);
-  set('localHomeInventory',inventory);
-  set('localHomeMess',mess);
-  set('localHomeCattle',cattle);
+  set('localHomeTotal',a.length);set('localHomeValue','PKR '+value.toLocaleString(undefined,{maximumFractionDigits:2}));
+  set('localHomeMonth',month);set('localHomeInventory',inventory);set('localHomeMess',mess);set('localHomeCattle',cattle);
 }
-
 function activateLocalPanelV1581(panel){
   try{history.replaceState(null,'','#panel-'+panel)}catch(e){}
   document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));
   document.getElementById('panel-'+panel)?.classList.add('active');
   window.scrollTo({top:0,behavior:'auto'});
 }
-
-function paintLocalTabsV1581(tab){
-  document.querySelectorAll('[data-local-work-tab]').forEach(b=>{
-    b.classList.toggle('active',b.getAttribute('data-local-work-tab')===tab);
-  });
-}
-
-function selectLocalSectionV1581(section){
-  if(!section)return;
+function paintTabs(tab){document.querySelectorAll('[data-local-work-tab]').forEach(b=>b.classList.toggle('active',b.dataset.localWorkTab===tab))}
+function selectSection(section){
   setTimeout(()=>{
-    const rows=[...document.querySelectorAll('#localEntryBody tr')];
-    const tr=rows.find(r=>{
-      const inputs=[...r.querySelectorAll('input')];
-      return inputs.every(i=>!String(i.value||'').trim());
-    })||rows[0];
+    const trs=[...document.querySelectorAll('#localEntryBody tr')];
+    const tr=trs.find(r=>[...r.querySelectorAll('input')].every(i=>!String(i.value||'').trim()))||trs[0];
     if(!tr)return;
     const el=tr.querySelector('.lp-section');
-    if(el){
-      el.value=section==='mess'?'Mess':'Cattle Farm';
-      el.dispatchEvent(new Event('input',{bubbles:true}));
-      el.dispatchEvent(new Event('change',{bubbles:true}));
-    }
-    const first=tr.querySelector('.lp-date,.lp-item,input');
-    first?.focus();
+    if(el){el.value=section==='mess'?'Mess':'Cattle Farm';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
+    tr.querySelector('.lp-date,.lp-item,input')?.focus();
   },80);
 }
-
-function openLocalHistoryV1581(){
-  localPurchaseContextV1581=true;
+function openHistory(){
   activateLocalPanelV1581('purchase-history');
   document.getElementById('localHistoryContextNav')?.classList.add('show');
-  paintLocalTabsV1581('history');
-  setTimeout(()=>{
-    const localTab=document.querySelector('#pphQuickTabs [data-pph-type="local"]');
-    if(localTab)localTab.click();
-    else{
-      const reg=document.getElementById('pphRegister');
-      if(reg){reg.value='local';reg.dispatchEvent(new Event('change',{bubbles:true}))}
-      document.getElementById('pphSearchBtn')?.click();
-    }
-  },60);
+  paintTabs('history');
+  setTimeout(()=>document.querySelector('#pphQuickTabs [data-pph-type="local"]')?.click(),60);
 }
-
-function openLocalWorkV1581(tab){
-  if(tab==='history'){openLocalHistoryV1581();return}
-
-  if(tab==='reports'){
-    localPurchaseContextV1581=true;
-    openLocalHistoryV1581();
-    setTimeout(()=>document.getElementById('pphPrintResults')?.focus(),80);
-    if(typeof window.toast==='function')window.toast('Local Purchase reports use the existing filtered Purchase History print system.');
-    return;
-  }
-
-  if(tab==='excel'){
-    if(typeof window.toast==='function')window.toast('Local Purchase Excel Register will be connected to the Software Center directory when we complete Excel mirroring.');
-    return;
-  }
-
-  localPurchaseContextV1581=false;
+function openWork(tab){
+  if(tab==='history'){openHistory();return}
+  if(tab==='reports'){openHistory();setTimeout(()=>document.getElementById('pphPrintResults')?.focus(),80);return}
+  if(tab==='excel'){if(typeof window.toast==='function')window.toast('Local Purchase Excel Register will be connected when we complete Excel mirroring.');return}
   document.getElementById('localHistoryContextNav')?.classList.remove('show');
   activateLocalPanelV1581('local-purchase');
-  paintLocalTabsV1581(tab);
-  if(tab==='mess'||tab==='cattle')selectLocalSectionV1581(tab);
+  paintTabs(tab);
+  if(tab==='mess'||tab==='cattle')selectSection(tab);
 }
-
-function backToPurchaseV1581(){
-  localPurchaseContextV1581=false;
+function backToPurchase(){
   document.getElementById('localHistoryContextNav')?.classList.remove('show');
-  if(typeof window.purchaseOpenHomeV1577==='function')window.purchaseOpenHomeV1577();
-  else activateLocalPanelV1581('purchase-entry');
+  if(typeof window.purchaseOpenHomeV1577==='function')window.purchaseOpenHomeV1577();else activateLocalPanelV1581('purchase-entry');
 }
-
 document.addEventListener('click',e=>{
-  if(e.target.closest('[data-local-module-home]')){
-    e.preventDefault();e.stopPropagation();
-    localPurchaseContextV1581=false;
-    document.getElementById('localHistoryContextNav')?.classList.remove('show');
-    activateLocalPanelV1581('local-purchase-home');
-    renderLocalHomeV1581();
-    return;
-  }
-
-  if(e.target.closest('[data-local-back-purchase]')){
-    e.preventDefault();e.stopPropagation();
-    backToPurchaseV1581();
-    return;
-  }
-
-  const p=e.target.closest('[data-local-open-page]');
-  if(p){
-    e.preventDefault();
-    openLocalWorkV1581(p.getAttribute('data-local-open-page'));
-    return;
-  }
-
-  const t=e.target.closest('[data-local-work-tab]');
-  if(t){
-    e.preventDefault();
-    openLocalWorkV1581(t.getAttribute('data-local-work-tab'));
-  }
+  if(e.target.closest('[data-local-module-home]')){e.preventDefault();e.stopPropagation();document.getElementById('localHistoryContextNav')?.classList.remove('show');activateLocalPanelV1581('local-purchase-home');renderLocalHomeV1581();return}
+  if(e.target.closest('[data-local-back-purchase]')){e.preventDefault();e.stopPropagation();backToPurchase();return}
+  const p=e.target.closest('[data-local-open-page]');if(p){e.preventDefault();openWork(p.dataset.localOpenPage);return}
+  const t=e.target.closest('[data-local-work-tab]');if(t){e.preventDefault();openWork(t.dataset.localWorkTab)}
 },true);
-
-function initLocalV1581(){
-  if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();
-  if(location.hash!=='#panel-purchase-history')document.getElementById('localHistoryContextNav')?.classList.remove('show');
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initLocalV1581,{once:true});
-else initLocalV1581();
-
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();
-  if(location.hash!=='#panel-purchase-history'){
-    localPurchaseContextV1581=false;
-    document.getElementById('localHistoryContextNav')?.classList.remove('show');
-  }
-});
-
-window.ERPLocalPurchaseModuleV1581={
-  open:function(){activateLocalPanelV1581('local-purchase-home');renderLocalHomeV1581()},
-  refresh:renderLocalHomeV1581
-};
+if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();
+window.addEventListener('hashchange',()=>{if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();if(location.hash!=='#panel-purchase-history')document.getElementById('localHistoryContextNav')?.classList.remove('show')});
+window.ERPLocalPurchaseModuleV1581={open:function(){activateLocalPanelV1581('local-purchase-home');renderLocalHomeV1581()}};
 })();
 </script>
 
