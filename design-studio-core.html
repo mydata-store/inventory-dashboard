@@ -2972,38 +2972,6 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 @media(max-width:900px){.movement-table-head-v1595{align-items:flex-start;flex-direction:column}.movement-table-tools-v1595{width:100%;flex-wrap:wrap}.movement-table-tools-v1595 input{flex:1;min-width:220px}}
 @media(max-width:620px){.movement-grid-v1595{grid-template-columns:1fr}.movement-table-tools-v1595 input{width:100%;min-width:0}}
 </style>
-
-<style id="erpContainerSafeAutoLinkV1596Style">
-#panel-container-entry-simple .container-entry-grid-v1596safe{
-  display:grid;
-  grid-template-columns:1.25fr 1.45fr 1fr 1.45fr .7fr .65fr;
-  gap:12px;
-  align-items:end;
-}
-#panel-container-entry-simple .container-entry-grid-v1596safe .field-v1594{min-width:0}
-#panel-container-entry-simple .container-entry-grid-v1596safe label{
-  display:block;margin-bottom:5px;font-size:8px;font-weight:900;text-transform:uppercase
-}
-#panel-container-entry-simple .container-entry-grid-v1596safe input{
-  width:100%;height:40px;box-sizing:border-box;padding:0 10px;border:1px solid var(--border);
-  border-radius:8px;background:var(--surface);color:inherit;font:inherit
-}
-#panel-container-entry-simple .remarks-v1596safe{grid-column:1 / -1}
-#panel-container-entry-simple .container-auto-note-v1596safe{
-  margin:10px 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;
-  background:color-mix(in srgb,var(--primary) 6%,var(--surface));font-size:10px
-}
-@media(max-width:1350px){
- #panel-container-entry-simple .container-entry-grid-v1596safe{grid-template-columns:repeat(3,minmax(0,1fr))}
-}
-@media(max-width:850px){
- #panel-container-entry-simple .container-entry-grid-v1596safe{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media(max-width:600px){
- #panel-container-entry-simple .container-entry-grid-v1596safe{grid-template-columns:1fr}
-}
-</style>
-
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -4166,25 +4134,16 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 
     <div class="container-entry-form-card-v1594">
       <h3>Add / Edit Container</h3>
-      <div class="container-auto-note-v1596safe"><b>Automatic Link:</b> Purchase uses Party + Purchased Material as container IN. OGP uses Party + OGP Return Item as container OUT.</div>
-      <div class="container-entry-grid-v1596safe">
-        <div class="field-v1594">
+      <div class="container-entry-grid-v1594">
+        <div class="field-v1594 wide-v1594">
           <label>Party / Supplier</label>
           <input id="simpleContainerParty" list="containerPartyOptionsV1594" placeholder="Search or type party name">
           <datalist id="containerPartyOptionsV1594"></datalist>
         </div>
-        <div class="field-v1594">
-          <label>Purchased Material</label>
-          <input id="simpleContainerProduct" placeholder="Item exactly as used in Purchase">
-        </div>
-        <div class="field-v1594">
-          <label>Container Type</label>
+        <div class="field-v1594 wide-v1594">
+          <label>Container / Item</label>
           <input id="simpleContainerType" list="containerTypeOptionsV1594" placeholder="Cylinder / Drum / Crate / Container">
           <datalist id="containerTypeOptionsV1594"></datalist>
-        </div>
-        <div class="field-v1594">
-          <label>OGP Return Item</label>
-          <input id="simpleContainerOgpItem" placeholder="Item exactly as used in OGP">
         </div>
         <div class="field-v1594">
           <label>Opening Qty</label>
@@ -4194,7 +4153,11 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
           <label>Unit</label>
           <input id="simpleContainerUnit" value="Nos" placeholder="Nos">
         </div>
-        <div class="field-v1594 remarks-v1596safe">
+        <div class="field-v1594">
+          <label>Date</label>
+          <input id="simpleContainerDate" placeholder="25-8-26">
+        </div>
+        <div class="field-v1594 remarks-v1594">
           <label>Remarks</label>
           <input id="simpleContainerRemarks" placeholder="Optional remarks">
         </div>
@@ -4223,9 +4186,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
           <thead>
             <tr>
               <th>Party / Supplier</th>
-              <th>Purchased Material</th>
-              <th>Container Type</th>
-              <th>OGP Return Item</th>
+              <th>Container / Item</th>
               <th>Opening Qty</th>
               <th>Unit</th>
               <th>Status</th>
@@ -28780,23 +28741,15 @@ function setups(){
   const rows=[];
   document.querySelectorAll('#containerSavedSetupBody tr').forEach(tr=>{
     const td=[...tr.children].map(x=>x.textContent.trim());
-    if(td.length>=5)rows.push({
-      party:td[0]||'',
-      product:td[1]||'',
-      ogpItem:td[2]||'',
-      container:td[3]||td[1]||'',
-      opening:num(td[4]),
-      unit:td[5]||'Nos',
-      status:td[8]||'active'
-    });
+    if(td.length>=5)rows.push({party:td[0],container:td[3]||td[1],opening:num(td[4]),unit:'Nos',status:td[8]||'active'});
   });
   return rows;
 }
 function movementTotals(party,container){let received=0,returned=0;moves().forEach(m=>{if(m.party===party&&m.container===container){if(m.type==='IN')received+=num(m.qty);else returned+=num(m.qty)}});return{received,returned}}
 function ledgerRows(){return setups().map(r=>{const mv=movementTotals(r.party,r.container);const withUs=Math.max(0,r.opening+mv.received-mv.returned);const withParty=Math.max(0,mv.returned-mv.received);return {...r,...mv,withUs,withParty,status:withParty>0?'With Party':'With Us'}})}
-function renderEntry(){const a=setups(),b=$('simpleContainerEntryListBody');if(!b)return;b.innerHTML=a.length?a.map((r,i)=>`<tr><td>${r.party}</td><td>${r.product||'—'}</td><td>${r.container||'—'}</td><td>${r.ogpItem||'—'}</td><td>${r.opening}</td><td>${r.unit}</td><td>${r.status}</td><td><button class="btn" data-simple-edit="${i}">Edit</button></td></tr>`).join(''):'<tr><td colspan="8" class="purchase-empty">No container entries found.</td></tr>';b.querySelectorAll('[data-simple-edit]').forEach(x=>x.onclick=()=>{const r=a[+x.dataset.simpleEdit];$('simpleContainerParty').value=r.party;$('simpleContainerProduct').value=r.product||'';$('simpleContainerType').value=r.container;$('simpleContainerOgpItem').value=r.ogpItem||'';$('simpleContainerOpeningQty').value=r.opening;$('simpleContainerUnit').value=r.unit})}
-function clearEntry(){['simpleContainerParty','simpleContainerProduct','simpleContainerType','simpleContainerOgpItem','simpleContainerOpeningQty','simpleContainerDate','simpleContainerRemarks'].forEach(id=>{if($(id))$(id).value=''});if($('simpleContainerUnit'))$('simpleContainerUnit').value='Nos'}
-function saveEntry(){const party=$('simpleContainerParty')?.value.trim(),product=$('simpleContainerProduct')?.value.trim(),type=$('simpleContainerType')?.value.trim(),ogpItem=$('simpleContainerOgpItem')?.value.trim();if(!party||!product||!type||!ogpItem){window.toast?.('Party, Purchased Material, Container Type and OGP Return Item are required');return}if($('containerSetupParty'))$('containerSetupParty').value=party;if($('containerSetupProduct'))$('containerSetupProduct').value=product;if($('containerSetupType'))$('containerSetupType').value=type;if($('containerSetupOpeningQty'))$('containerSetupOpeningQty').value=$('simpleContainerOpeningQty').value;if($('containerSetupUnit'))$('containerSetupUnit').value=$('simpleContainerUnit').value||'Nos';if($('containerSetupOgpItem'))$('containerSetupOgpItem').value=ogpItem;if($('containerSetupPurchaseSource'))$('containerSetupPurchaseSource').value='ALL';if($('containerSetupStatus'))$('containerSetupStatus').value='active';if($('containerSetupRemarks'))$('containerSetupRemarks').value=$('simpleContainerRemarks').value;$('containerSetupSaveBtn')?.click();setTimeout(()=>{renderEntry();renderLedger();populateMovement()},100)}
+function renderEntry(){const a=setups(),b=$('simpleContainerEntryListBody');if(!b)return;b.innerHTML=a.length?a.map((r,i)=>`<tr><td>${r.party}</td><td>${r.container}</td><td>${r.opening}</td><td>${r.unit}</td><td>${r.status}</td><td><button class="btn" data-simple-edit="${i}">Edit</button></td></tr>`).join(''):'<tr><td colspan="6" class="purchase-empty">No container entries found.</td></tr>';b.querySelectorAll('[data-simple-edit]').forEach(x=>x.onclick=()=>{const r=a[+x.dataset.simpleEdit];$('simpleContainerParty').value=r.party;$('simpleContainerType').value=r.container;$('simpleContainerOpeningQty').value=r.opening;$('simpleContainerUnit').value=r.unit})}
+function clearEntry(){['simpleContainerParty','simpleContainerType','simpleContainerOpeningQty','simpleContainerUnit','simpleContainerDate','simpleContainerRemarks'].forEach(id=>{if($(id))$(id).value=''})}
+function saveEntry(){const party=$('simpleContainerParty')?.value.trim(),type=$('simpleContainerType')?.value.trim();if(!party||!type){window.toast?.('Party and Container are required');return}if($('containerSetupParty'))$('containerSetupParty').value=party;if($('containerSetupProduct'))$('containerSetupProduct').value=type;if($('containerSetupType'))$('containerSetupType').value=type;if($('containerSetupOpeningQty'))$('containerSetupOpeningQty').value=$('simpleContainerOpeningQty').value;if($('containerSetupUnit'))$('containerSetupUnit').value=$('simpleContainerUnit').value||'Nos';if($('containerSetupOgpItem'))$('containerSetupOgpItem').value=type;if($('containerSetupRemarks'))$('containerSetupRemarks').value=$('simpleContainerRemarks').value;$('containerSetupSaveBtn')?.click();setTimeout(()=>{renderEntry();renderLedger();populateMovement()},100)}
 function renderLedger(){const rows=ledgerRows(),q=String($('simpleContainerSearch')?.value||'').toLowerCase(),f=rows.filter(r=>!q||(r.party+' '+r.container).toLowerCase().includes(q)),b=$('simpleContainerLedgerBody');if(b)b.innerHTML=f.length?f.map(r=>`<tr><td><b>${r.party}</b></td><td>${r.container}</td><td>${r.opening}</td><td>${r.received}</td><td>${r.returned}</td><td><b>${r.withUs}</b></td><td>${r.withParty}</td><td>${r.status}</td><td><button class="btn primary" data-simple-party="${encodeURIComponent(r.party)}">Detail</button></td></tr>`).join(''):'<tr><td colspan="9" class="purchase-empty">No container records found.</td></tr>';const parties=new Set(rows.map(r=>r.party));const sum=k=>rows.reduce((n,r)=>n+num(r[k]),0);[['simpleContainerParties',parties.size],['simpleContainerOpening',sum('opening')],['simpleContainerReceived',sum('received')],['simpleContainerReturned',sum('returned')],['simpleContainerWithUs',sum('withUs')],['simpleContainerWithParty',sum('withParty')]].forEach(([id,v])=>{if($(id))$(id).textContent=v});b?.querySelectorAll('[data-simple-party]').forEach(x=>x.onclick=()=>{const p=decodeURIComponent(x.dataset.simpleParty);if(typeof window.containerOpenPartyDetail==='function')window.containerOpenPartyDetail(p);else activate('container-party-detail')})}
 function populateMovement(){const rows=ledgerRows(),p=$('simpleMovementParty'),parties=[...new Set(rows.map(r=>r.party))];if(p)p.innerHTML='<option value="">Select Party</option>'+parties.map(x=>`<option>${x}</option>`).join('');updateContainers()}
 function updateContainers(){const party=$('simpleMovementParty')?.value||'',c=$('simpleMovementContainer'),rows=ledgerRows().filter(r=>r.party===party);if(c)c.innerHTML='<option value="">Select Container</option>'+rows.map(r=>`<option>${r.container}</option>`).join('')}
