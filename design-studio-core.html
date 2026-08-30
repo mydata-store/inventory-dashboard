@@ -15050,6 +15050,10 @@ function invBuild(){
         <div id="mcAvailableView" class="mc-view-v1616">
           <div class="mc-toolbar-v1616">
             <div><label>Unit / Department</label><select id="mcUnitFilter"><option value="">All Units</option></select></div>
+            <div><label>Size View</label><select id="mcSizeView">
+              <option value="original">Original Sizes</option>
+              <option value="all">All Sizes</option>
+            </select></div>
             <div class="grow"><label>Search Stock</label><input id="mcStockSearch" placeholder="Description, size or location..."></div>
             <button class="btn" type="button" id="mcRefreshBtn">Refresh</button>
           </div>
@@ -15070,7 +15074,7 @@ function invBuild(){
         </div>
 
         <div id="mcAssignView" class="mc-view-v1616" style="display:none">
-          <div class="mc-info-v1616"><b>Assign Stock</b> classifies the material only. Purchase and Issue remain the source of quantity.</div>
+          <div class="mc-info-v1616"><b>Assign Stock</b> classifies the material only. Mark the normal machine specification as <b>Original / Default Size</b>. Purchase and Issue remain the source of quantity.</div>
           <div class="mc-assign-grid-v1616">
             <div class="mc-item-master-field-v1617">
               <label>Item Master</label>
@@ -15090,6 +15094,10 @@ function invBuild(){
             <div><label>Machine / Position</label><input id="mcAssignMachine" placeholder="Machine 1 / Main Press"></div>
             <div><label>Location</label><input id="mcAssignLocation" placeholder="Rack / Store location"></div>
             <div><label>Match Keywords</label><input id="mcAssignKeywords" placeholder="Optional secondary matching"></div>
+            <div><label>Size Type</label><select id="mcAssignSizeType">
+              <option value="original">Original / Default Size</option>
+              <option value="alternate">Other / Alternate Size</option>
+            </select></div>
             <div><label>Status</label><select id="mcAssignStatus"><option>Active</option><option>Inactive</option></select></div>
           </div>
           <div class="mc-actions-v1616">
@@ -15098,7 +15106,7 @@ function invBuild(){
           </div>
           <div class="inv-table-wrap">
             <table class="inv-table" style="min-width:1050px">
-              <thead><tr><th>Group</th><th>Description</th><th>Size</th><th>Unit</th><th>Machine / Position</th><th>Location</th><th>Status</th><th>Action</th></tr></thead>
+              <thead><tr><th>Group</th><th>Description</th><th>Size</th><th>Size Type</th><th>Unit</th><th>Machine / Position</th><th>Location</th><th>Status</th><th>Action</th></tr></thead>
               <tbody id="mcAssignBody"></tbody>
             </table>
           </div>
@@ -30219,9 +30227,10 @@ function undefinedRows(){
 
 function renderAvailable(){
   fillUnits();
-  const unit=$('mcUnitFilter')?.value||'',q=norm($('mcStockSearch')?.value);
+  const unit=$('mcUnitFilter')?.value||'',sizeView=$('mcSizeView')?.value||'original',q=norm($('mcStockSearch')?.value);
   let rows=load().filter(a=>norm(a.status||'Active')!=='inactive').map(a=>({...a,available:stockForAssignment(a),lastUsed:lastUsed(a)}));
   if(unit)rows=rows.filter(r=>r.unit===unit);
+  if(sizeView==='original')rows=rows.filter(r=>(r.sizeType||'original')==='original');
   if(q)rows=rows.filter(r=>norm([r.group,r.description,r.size,r.location,r.unit,r.machine].join(' ')).includes(q));
   rows.sort((a,b)=>groupIndex(a.group)-groupIndex(b.group)||String(a.description).localeCompare(String(b.description))||String(a.size).localeCompare(String(b.size)));
 
@@ -30241,14 +30250,14 @@ function renderAvailable(){
 }
 function renderAssignments(){
   fillUnits();const rows=load().sort((a,b)=>groupIndex(a.group)-groupIndex(b.group)||String(a.description).localeCompare(String(b.description)));
-  $('mcAssignBody').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.group)}</td><td>${esc(r.description)}</td><td>${esc(r.size)}</td><td>${esc(r.unit)}</td><td>${esc(r.machine||'')}</td><td>${esc(r.location||'')}</td><td>${esc(r.status||'Active')}</td><td><button class="btn" data-mce="${esc(r.id)}">Edit</button> <button class="btn danger" data-mcd="${esc(r.id)}">Delete</button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:25px">No assignments saved yet.</td></tr>';
+  $('mcAssignBody').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.group)}</td><td>${esc(r.description)}</td><td>${esc(r.size)}</td><td>${(r.sizeType||'original')==='original'?'<b>Original / Default</b>':'Alternate'}</td><td>${esc(r.unit)}</td><td>${esc(r.machine||'')}</td><td>${esc(r.location||'')}</td><td>${esc(r.status||'Active')}</td><td><button class="btn" data-mce="${esc(r.id)}">Edit</button> <button class="btn danger" data-mcd="${esc(r.id)}">Delete</button></td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;padding:25px">No assignments saved yet.</td></tr>';
   $('mcAssignBody').querySelectorAll('[data-mce]').forEach(b=>b.onclick=()=>editAssignment(b.dataset.mce));
   $('mcAssignBody').querySelectorAll('[data-mcd]').forEach(b=>b.onclick=()=>deleteAssignment(b.dataset.mcd))
 }
 function renderUndefined(){
   const rows=undefinedRows();$('mcUndefinedBadge').textContent='Undefined: '+rows.length;$('mcUndefinedCount').textContent=rows.length;
   $('mcUndefinedBody').innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.description)}</td><td>${esc(r.size)}</td><td>${num(r.qty)}</td><td>${esc(r.firstSeen||'—')}</td><td>${esc(r.lastTransaction||'—')}</td><td>${esc(suggestUnit(r)||'—')}</td><td><button class="btn" data-mcu="${i}">Assign</button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:25px">No undefined Machine Clothing material.</td></tr>';
-  $('mcUndefinedBody').querySelectorAll('[data-mcu]').forEach(b=>b.onclick=()=>{const r=rows[+b.dataset.mcu];if(!r)return;$('mcViewSelect').value='assign';switchView();$('mcAssignGroup').value=r.group||'Other';const item=mcItems().find(x=>norm(x.name)===norm(r.description)&&norm(x.size)===norm(r.size));if(item)mcSelectItem(item);else{$('mcAssignItemSearch').value=[r.description,r.size].filter(Boolean).join(' — ');$('mcAssignItemHint').textContent='This purchase item is not linked to a matching Item Master record.'}const su=suggestUnit(r);if(su)$('mcAssignUnit').value=su})
+  $('mcUndefinedBody').querySelectorAll('[data-mcu]').forEach(b=>b.onclick=()=>{const r=rows[+b.dataset.mcu];if(!r)return;$('mcViewSelect').value='assign';switchView();$('mcAssignGroup').value=r.group||'Other';$('mcAssignSizeType').value='original';const item=mcItems().find(x=>norm(x.name)===norm(r.description)&&norm(x.size)===norm(r.size));if(item)mcSelectItem(item);else{$('mcAssignItemSearch').value=[r.description,r.size].filter(Boolean).join(' — ');$('mcAssignItemHint').textContent='This purchase item is not linked to a matching Item Master record.'}const su=suggestUnit(r);if(su)$('mcAssignUnit').value=su})
 }
 function suggestUnit(r){
   const same=load().filter(a=>norm(a.group)===norm(r.group));
@@ -30258,7 +30267,7 @@ function clearAssign(){
   ['mcAssignItemSearch','mcAssignDescription','mcAssignSize','mcAssignUom','mcAssignMachine','mcAssignLocation','mcAssignKeywords'].forEach(id=>{if($(id))$(id).value=''});
   if($('mcAssignItemSearch'))delete $('mcAssignItemSearch').dataset.itemId;
   if($('mcAssignItemHint'))$('mcAssignItemHint').textContent='Select a saved Item Master record.';
-  $('mcAssignGroup').value='Forming Fabric';$('mcAssignUnit').value='';$('mcAssignStatus').value='Active';
+  $('mcAssignGroup').value='Forming Fabric';$('mcAssignUnit').value='';$('mcAssignSizeType').value='original';$('mcAssignStatus').value='Active';
   delete $('mcAssignSaveBtn').dataset.editId;$('mcAssignSaveBtn').textContent='Save Assignment'
 }
 function saveAssignment(){
@@ -30276,10 +30285,20 @@ function saveAssignment(){
     machine:$('mcAssignMachine').value.trim(),
     location:$('mcAssignLocation').value.trim(),
     keywords:$('mcAssignKeywords').value.trim(),
+    sizeType:$('mcAssignSizeType').value||'original',
     status:$('mcAssignStatus').value
   };
   if(!rec.unit)return toast('Unit / Department is required');
-  let rows=load(),i=rows.findIndex(x=>x.id===rec.id);if(i>=0)rows[i]=rec;else rows.push(rec);
+  let rows=load();
+  if(rec.sizeType==='original'){
+    rows=rows.map(x=>{
+      if(x.id!==rec.id && norm(x.unit)===norm(rec.unit) && norm(x.group)===norm(rec.group) && norm(x.description)===norm(rec.description)){
+        return {...x,sizeType:'alternate'};
+      }
+      return x
+    });
+  }
+  let i=rows.findIndex(x=>x.id===rec.id);if(i>=0)rows[i]=rec;else rows.push(rec);
   if(!save(rows))return toast('Assignment could not be saved');
   clearAssign();renderAll();toast('Machine Clothing assignment saved')
 }
@@ -30296,7 +30315,7 @@ function editAssignment(id){
     $('mcAssignUom').value=r.uom||'';
     $('mcAssignItemHint').textContent='Legacy assignment — reselect from Item Master if required.'
   }
-  $('mcAssignGroup').value=r.group||'Other';fillUnits();$('mcAssignUnit').value=r.unit||'';$('mcAssignMachine').value=r.machine||'';$('mcAssignLocation').value=r.location||'';$('mcAssignKeywords').value=r.keywords||'';$('mcAssignStatus').value=r.status||'Active';$('mcAssignSaveBtn').dataset.editId=id;$('mcAssignSaveBtn').textContent='Update Assignment'
+  $('mcAssignGroup').value=r.group||'Other';fillUnits();$('mcAssignUnit').value=r.unit||'';$('mcAssignMachine').value=r.machine||'';$('mcAssignLocation').value=r.location||'';$('mcAssignKeywords').value=r.keywords||'';$('mcAssignSizeType').value=r.sizeType||'original';$('mcAssignStatus').value=r.status||'Active';$('mcAssignSaveBtn').dataset.editId=id;$('mcAssignSaveBtn').textContent='Update Assignment'
 }
 function deleteAssignment(id){const r=load().find(x=>x.id===id);if(!r||!confirm(`Delete assignment "${r.description} ${r.size}"?`))return;save(load().filter(x=>x.id!==id));renderAll()}
 function switchView(){
@@ -30309,7 +30328,7 @@ function switchView(){
 function renderAll(){if(!$('mcViewSelect'))return;renderAvailable();renderAssignments();renderUndefined();switchView()}
 function bind(){
   if(!$('mcViewSelect')||$('mcViewSelect').dataset.bound)return;$('mcViewSelect').dataset.bound='1';
-  $('mcViewSelect').onchange=switchView;$('mcUnitFilter').onchange=renderAvailable;$('mcStockSearch').oninput=renderAvailable;$('mcRefreshBtn').onclick=renderAll;$('mcAssignSaveBtn').onclick=saveAssignment;$('mcAssignClearBtn').onclick=clearAssign;
+  $('mcViewSelect').onchange=switchView;$('mcUnitFilter').onchange=renderAvailable;$('mcSizeView').onchange=renderAvailable;$('mcStockSearch').oninput=renderAvailable;$('mcRefreshBtn').onclick=renderAll;$('mcAssignSaveBtn').onclick=saveAssignment;$('mcAssignClearBtn').onclick=clearAssign;
   mcBindItemMasterSearch()
 }
 function ensure(){
