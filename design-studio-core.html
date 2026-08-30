@@ -11459,12 +11459,49 @@ function gateStatus(r){
   return 'Completed'
 }
 function gateTypeBadge(type){return `<span class="gate-type-badge ${type.toLowerCase()}">${type}</span>`}
+function gateDashboardDateV1609(v){
+  const x=String(v||'').trim();
+  if(!x)return'';
+  const formatted=typeof rgpFormatDate==='function'?rgpFormatDate(x):x;
+  return /^\d{2}-[A-Za-z]{3}-\d{2}$/.test(formatted)?formatted:''
+}
+function gateDashboardValidRecordV1609(type,r){
+  if(!r || r.deletedAt)return false;
+  const no=gateNo(type,r);
+  if(type==='RGP' && !/^RGP-\d{5}$/i.test(String(no||'')))return false;
+  if(type==='OGP' && !/^OGP-\d{5}$/i.test(String(no||'')))return false;
+  if(type==='CGP' && !/^CGP-\d{5}$/i.test(String(no||'')))return false;
+  if(!gateDashboardDateV1609(r.date))return false;
+  return true
+}
+function gateDashboardRowsV1609(type){
+  let rows=[];
+  if(type==='RGP')rows=typeof rgpLoad==='function'?rgpLoad():[];
+  else if(type==='OGP')rows=typeof ogpRecords==='function'?ogpRecords():gateSafeLoad(OGP_KEY);
+  else if(type==='CGP')rows=typeof cgpLoad==='function'?cgpLoad():gateSafeLoad(CGP_KEY);
+
+  const seen=new Set();
+  return (Array.isArray(rows)?rows:[]).filter(r=>{
+    if(!gateDashboardValidRecordV1609(type,r))return false;
+    const key=String(r.id||gateNo(type,r)).trim().toLowerCase();
+    if(!key || seen.has(key))return false;
+    seen.add(key);
+    return true
+  })
+}
 function gateAllRecent(){
   return[
-    ...rgpLoad().map(r=>({...r,_gateType:'RGP'})),
-    ...gateSafeLoad(OGP_KEY).map(r=>({...r,_gateType:'OGP'})),
-    ...gateSafeLoad(CGP_KEY).map(r=>({...r,_gateType:'CGP'}))
-  ].sort((a,b)=>String(b.createdAt||b.savedAt||b.date||'').localeCompare(String(a.createdAt||a.savedAt||a.date||'')))
+    ...gateDashboardRowsV1609('RGP').map(r=>({...r,_gateType:'RGP'})),
+    ...gateDashboardRowsV1609('OGP').map(r=>({...r,_gateType:'OGP'})),
+    ...gateDashboardRowsV1609('CGP').map(r=>({...r,_gateType:'CGP'}))
+  ].sort((a,b)=>{
+    const ad=gateDashboardDateV1609(a.date),bd=gateDashboardDateV1609(b.date);
+    const ao=typeof rgpDateObj==='function'?rgpDateObj(ad):null;
+    const bo=typeof rgpDateObj==='function'?rgpDateObj(bd):null;
+    const at=ao?.getTime?.()||0,bt=bo?.getTime?.()||0;
+    if(bt!==at)return bt-at;
+    return String(b.createdAt||b.savedAt||'').localeCompare(String(a.createdAt||a.savedAt||''))
+  })
 }
 function gateFirstItem(r){
   if(Array.isArray(r.items)&&r.items.length)return r.items[0].item||r.items[0].material||'';
@@ -11480,8 +11517,21 @@ function gateNo(type,r){
 }
 function gateDashboardRender(){
   if(!$('#panel-gate-pass-dashboard'))return;
-  const rgps=rgpLoad(),ogps=gateSafeLoad(OGP_KEY),cgps=gateSafeLoad(CGP_KEY);
-  const pending=rgps.filter(r=>gateStatus(r)==='Pending').length;
+
+  /* V16.09 — dashboard summarizes only valid live records from each
+     operational Gate Pass register. */
+  const rgps=gateDashboardRowsV1609('RGP');
+  const ogps=gateDashboardRowsV1609('OGP');
+  const cgps=gateDashboardRowsV1609('CGP');
+
+  // A Partial RGP still has quantity pending, so it belongs in Pending Returns.
+  const pendingRgpIds=new Set();
+  rgps.forEach(r=>{
+    const s=String(gateStatus(r)||'').toLowerCase();
+    if(s==='pending'||s==='partial')pendingRgpIds.add(String(r.id||r.rgpNo))
+  });
+  const pending=pendingRgpIds.size;
+
   $('#gateRgpCount')&&($('#gateRgpCount').textContent=rgps.length);
   $('#gateOgpCount')&&($('#gateOgpCount').textContent=ogps.length);
   $('#gateCgpCount')&&($('#gateCgpCount').textContent=cgps.length);
@@ -11490,13 +11540,13 @@ function gateDashboardRender(){
 
   const rows=gateAllRecent().slice(0,8),body=$('#gateRecentBody');
   if(body)body.innerHTML=rows.length?rows.map(r=>`<tr>
-    <td>${escHtml(r.date||'')}</td>
+    <td>${escHtml(gateDashboardDateV1609(r.date)||'—')}</td>
     <td><b>${escHtml(gateNo(r._gateType,r))}</b></td>
     <td>${gateTypeBadge(r._gateType)}</td>
     <td>${escHtml(gateFirstItem(r))}</td>
     <td>${escHtml(gateParty(r._gateType,r))}</td>
     <td><span class="gate-status-badge">${escHtml(gateStatus(r))}</span></td>
-  </tr>`).join(''):`<tr><td colspan="6" class="purchase-empty">No Gate Pass records saved yet.</td></tr>`;
+  </tr>`).join(''):`<tr><td colspan="6" class="purchase-empty">No valid Gate Pass records saved yet.</td></tr>`;
 
   $('#gateActivityRgp')&&($('#gateActivityRgp').textContent=pending?`${pending} returnable gate pass${pending===1?'':'es'} still have pending quantity.`:'No RGP return is pending.');
   $('#gateActivityOgp')&&($('#gateActivityOgp').textContent=ogps.length?'Latest outward material movement is available in the OGP register.':'No OGP records yet.');
