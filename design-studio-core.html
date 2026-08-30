@@ -15314,7 +15314,109 @@ function issueUpdateTotal(){
   let el=$('#issueTotalQty');if(el)el.textContent=t.toLocaleString()
 }
 function issueClear(){issueInputs().forEach(a=>a.forEach(x=>x.value=''));issueUpdateTotal()}
-function issueSave(){let recs=issueLoad(),added=0;issueInputs().forEach(a=>{if(!a.some(x=>x.value.trim()))return;if(a[9]?.value)issueAutoSaveEmployeeName(a[9].value);recs.unshift({id:'ISS-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),date:issueDate(a[0].value),ir:issueIr(a[1].value),item:a[2].value.trim(),size:a[3].value.trim(),qty:Number(a[4].value||0),remainingBalance:a[5].value.trim(),unit:a[6].value.trim(),stock:a[7].value.trim(),department:a[8].value.trim(),issuedTo:a[9].value.trim(),usedFor:a[10].value.trim(),remarks:a[11].value.trim(),savedAt:new Date().toISOString()});added++});if(!added)return toast('Enter at least one issue row');issueStore(recs);issueClear();issueRenderHistory();toast(added+' issue record'+(added>1?'s':'')+' saved')}
+
+function issueAutoMaterialUseLocation(rec){
+  try{
+    const usedFor=String(rec?.usedFor||'').trim();
+    const item=String(rec?.item||'').trim();
+    if(!usedFor||!item)return false;
+
+    const KEY='erpInventoryMaterialUseLocationsV1';
+    let rows=[];
+    try{rows=JSON.parse(localStorage.getItem(KEY)||'[]')||[]}catch(e){rows=[]}
+    if(!Array.isArray(rows))rows=[];
+
+    const norm=v=>String(v||'').trim().toLowerCase();
+    const same=rows.find(x=>
+      !x.deletedAt &&
+      norm(x.item)===norm(item) &&
+      norm(x.size)===norm(rec.size||'') &&
+      norm(x.machine)===norm(usedFor) &&
+      norm(x.department)===norm(rec.department||'')
+    );
+
+    if(same){
+      // Keep any manual position/area/remarks already added by the user.
+      same.lastIssueIr=rec.ir||same.lastIssueIr||'';
+      same.lastIssueDate=rec.date||same.lastIssueDate||'';
+      same.lastIssueAt=new Date().toISOString();
+      same.issueCount=(Number(same.issueCount)||0)+1;
+      localStorage.setItem(KEY,JSON.stringify(rows));
+      return false;
+    }
+
+    let itemId='',itemCode='';
+    try{
+      const masters=window.ERPMasters?.list?.('items')||masterBucket('items')||[];
+      const m=masters.find(x=>norm(x.name)===norm(item)&&norm(x.size)===norm(rec.size||''))
+           || masters.find(x=>norm(x.name)===norm(item));
+      if(m){itemId=m.id||'';itemCode=m.code||''}
+    }catch(e){}
+
+    rows.unshift({
+      id:'USE-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+      itemId,itemCode,
+      item:item,
+      size:String(rec.size||'').trim(),
+      unit:String(rec.unit||'').trim(),
+      machine:usedFor,
+      position:'',
+      department:String(rec.department||'').trim(),
+      area:'',
+      remarks:'',
+      source:'Issue Entry',
+      sourceIr:rec.ir||'',
+      sourceDate:rec.date||'',
+      issueCount:1,
+      createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    });
+    localStorage.setItem(KEY,JSON.stringify(rows));
+    try{window.ERPCore?.markPending?.(1)}catch(e){}
+    return true
+  }catch(e){
+    console.warn('Issue → Material Use Location mapping warning',e);
+    return false
+  }
+}
+
+function issueSave(){
+  let recs=issueLoad(),added=0,autoMapped=0;
+  issueInputs().forEach(a=>{
+    if(!a.some(x=>x.value.trim()))return;
+    if(a[9]?.value)issueAutoSaveEmployeeName(a[9].value);
+
+    const rec={
+      id:'ISS-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+      date:issueDate(a[0].value),
+      ir:issueIr(a[1].value),
+      item:a[2].value.trim(),
+      size:a[3].value.trim(),
+      qty:Number(a[4].value||0),
+      remainingBalance:a[5].value.trim(),
+      unit:a[6].value.trim(),
+      stock:a[7].value.trim(),
+      department:a[8].value.trim(),
+      issuedTo:a[9].value.trim(),
+      usedFor:a[10].value.trim(),
+      remarks:a[11].value.trim(),
+      savedAt:new Date().toISOString()
+    };
+
+    recs.unshift(rec);
+    if(issueAutoMaterialUseLocation(rec))autoMapped++;
+    added++
+  });
+
+  if(!added)return toast('Enter at least one issue row');
+  issueStore(recs);
+  issueClear();
+  issueRenderHistory();
+  toast(
+    added+' issue record'+(added>1?'s':'')+' saved'+
+    (autoMapped?(' • '+autoMapped+' new use location'+(autoMapped>1?'s':'')+' added automatically'):'')
+  )
+}
 function issueRenderHistory(){let box=$('#issueHistoryRows');if(!box)return;let q=($('#issueHistSearch')?.value||'').toLowerCase();let a=issueLoad().filter(r=>!q||Object.values(r).join(' ').toLowerCase().includes(q));box.innerHTML=a.length?a.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.ir)}</td><td>${escHtml(r.item)}</td><td>${escHtml(r.size)}</td><td>${escHtml(r.qty)}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.department)}</td><td>${escHtml(r.issuedTo)}</td><td>${escHtml(r.usedFor)}</td><td>${escHtml(r.remarks)}</td><td><button class="issue-mini" data-ie="${r.id}">Edit</button> <button class="issue-mini danger" data-idel="${r.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--muted)">No issue records found.</td></tr>';box.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{if(confirm('Delete this issue record?')){issueStore(issueLoad().filter(x=>x.id!==b.dataset.idel));issueRenderHistory();toast('Issue record deleted')}});box.querySelectorAll('[data-ie]').forEach(b=>b.onclick=()=>{let a=issueLoad(),r=a.find(x=>x.id===b.dataset.ie);if(!r)return;let vals=[r.date,r.ir,r.item,r.size,r.qty,r.remainingBalance??(purchaseNum(r.stock)-purchaseNum(r.qty)),r.unit,r.stock,r.department,r.issuedTo,r.usedFor,r.remarks],inp=issueInputs()[0];vals.forEach((v,i)=>inp[i].value=v??'');issueStore(a.filter(x=>x.id!==r.id));document.querySelector('[data-panel="issue-entry"]')?.click();issueUpdateTotal();toast('Record loaded for correction')})}
 function issuePrint(){
   const rows=[...document.querySelectorAll('#issueHistoryRows tr')].map(tr=>
@@ -15762,7 +15864,8 @@ function invBuild(){
         </div>
 
         <div class="inv-note">
-          <b>Example:</b> Bearing 22318 → Dryer 7 → Drive Side. The same bearing can be mapped to more than one machine or position.
+          <b>Automatic + Manual:</b> when an Issue is saved with <b>Used For</b>, that Item + Size + Department + Used For is added here automatically. You can still add, edit or correct mappings manually below.<br>
+          <b>Example:</b> Bearing 22318 → Dryer 7. Later you can edit it and add Position / Part such as Drive Side.
         </div>
 
         <div class="inv-use-search-v1634a">
@@ -16082,7 +16185,7 @@ function invUseRender(){
     <td><b>${x.item||''}</b></td>
     <td>${x.size||''}</td>
     <td>${x.unit||''}</td>
-    <td><b>${x.machine||''}</b></td>
+    <td><b>${x.machine||''}</b>${x.source==='Issue Entry'?'<div style="font-size:7px;color:var(--muted);margin-top:2px">Auto from Issue</div>':''}</td>
     <td>${x.position||''}</td>
     <td>${x.department||''}</td>
     <td>${x.area||''}</td>
@@ -27084,6 +27187,9 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
 
   function ensureController(panel){
     if(!panel || !panel.matches('section.panel'))return;
+    // Print Design Studio already contains its own Page Designer.
+    // Do not inject the universal Page Controller here.
+    if(panel.id==='panel-print')return;
     if(hasAnyController(panel))return;
 
     const host=buttonHost(panel);
@@ -27120,6 +27226,9 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
   }
 
   function refresh(){
+    // Remove any old universal controller buttons accidentally injected
+    // into Print Design Studio by earlier versions.
+    document.querySelectorAll('#panel-print .erp-universal-page-controller-v1526').forEach(b=>b.remove());
     ensureAll();
     bindExisting();
   }
