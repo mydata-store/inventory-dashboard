@@ -3542,6 +3542,52 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 .pd-v1631-bottom .btn{min-width:130px}
 @media(max-width:1200px){.pd-v1631-main{grid-template-columns:320px minmax(0,1fr)}.pd-v1631-topgrid{grid-template-columns:1fr 1fr}.pd-v1631-topcell:nth-child(2){border-right:0}.pd-v1631-topcell:nth-child(-n+2){border-bottom:1px solid var(--border)}}
 </style>
+
+<style id="pdV1632CleanOnlyStyle">
+/* V16.32: show only the new clean Print Studio UI */
+#panel-print > .pd-shell,
+#panel-print > .print-tabs,
+#panel-print > .pd-contract-note,
+#panel-print > .pd-v1624-jobbar,
+#panel-print > .pd-v1627-current-report,
+#panel-print > .pd-v1630-save-card,
+#panel-print > .pd-actions,
+#panel-print #print-view-designer,
+#panel-print #print-view-themes,
+#panel-print #print-view-gallery,
+#panel-print #print-view-assignments{
+  display:none!important;
+}
+
+/* New clean interface is the only visible Print Studio workspace */
+#panel-print .pd-v1631-shell{
+  display:block!important;
+  width:100%;
+}
+
+/* Prevent old gallery cards / buttons from leaking below the new shell */
+#panel-print .print-gallery-grid:not(#pd31GalleryGrid .print-gallery-grid){
+  display:none!important;
+}
+#panel-print .pd-v1631-bottom{
+  position:sticky;
+  bottom:0;
+  z-index:12;
+  padding:10px 0 4px;
+  background:linear-gradient(to bottom,transparent 0,var(--surface) 18%,var(--surface) 100%);
+}
+
+/* Keep the clean designer visually compact */
+#panel-print .pd-v1631-main{
+  margin-top:0;
+}
+#panel-print .pd-v1631-sidebar{
+  max-height:700px;
+}
+#panel-print .pd-v1631-canvas{
+  min-height:620px;
+}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -26638,7 +26684,10 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
 
   function looksLikeController(btn){
     if(!btn || btn.closest('#advancedPageDesignerModal'))return false;
-    if(btn.closest('#panel-print') && btn.matches('[data-print-view]'))return false;
+    // Print Design Studio owns all controls inside #panel-print.
+    // Never route its Page Designer / Gallery / print controls into the
+    // general Page Control Studio.
+    if(btn.closest('#panel-print'))return false;
     if(btn.matches(LEGACY_SELECTOR))return true;
     return /page\s*(controller|designer)/i.test(String(btn.textContent||'').trim());
   }
@@ -32007,6 +32056,113 @@ function bind(){
  document.addEventListener('erp:print-job-ready',()=>setTimeout(initFromJob,80));setTimeout(initFromJob,250)
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,250),{once:true});else setTimeout(bind,250);
+})();
+</script>
+
+
+<script id="pdV1632CleanNavigationGuard">
+(function(){
+'use strict';
+function closePageControlStudio(){
+  const ids=['advancedPageDesignerModal','pageControllerModal','pageControlStudio'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.classList.remove('open','active','show');el.style.display='none'}
+  });
+  document.querySelectorAll('.page-controller-modal,.pc-studio-modal').forEach(el=>{
+    el.classList.remove('open','active','show');
+    if(el.closest('#panel-print')===null)el.style.display='none';
+  });
+}
+function activateDesigner(){
+  closePageControlStudio();
+  const d=document.getElementById('pd31DesignerView');
+  const g=document.getElementById('pd31GalleryView');
+  const db=document.getElementById('pd31DesignerTab');
+  const gb=document.getElementById('pd31GalleryTab');
+  if(d)d.hidden=false;
+  if(g)g.hidden=true;
+  db?.classList.add('primary');
+  gb?.classList.remove('primary');
+}
+function activateGallery(){
+  closePageControlStudio();
+  const d=document.getElementById('pd31DesignerView');
+  const g=document.getElementById('pd31GalleryView');
+  const db=document.getElementById('pd31DesignerTab');
+  const gb=document.getElementById('pd31GalleryTab');
+  if(d)d.hidden=true;
+  if(g)g.hidden=false;
+  db?.classList.remove('primary');
+  gb?.classList.add('primary');
+  try{
+    const ev=new Event('click',{bubbles:false});
+    document.getElementById('pd31GalleryTab')?.dispatchEvent(ev);
+  }catch(e){}
+}
+function bind(){
+  const designer=document.getElementById('pd31DesignerTab');
+  const gallery=document.getElementById('pd31GalleryTab');
+
+  designer?.addEventListener('click',e=>{
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    activateDesigner();
+  },true);
+
+  gallery?.addEventListener('click',e=>{
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    closePageControlStudio();
+    const d=document.getElementById('pd31DesignerView');
+    const g=document.getElementById('pd31GalleryView');
+    if(d)d.hidden=true;if(g)g.hidden=false;
+    designer?.classList.remove('primary');gallery.classList.add('primary');
+  },true);
+
+  // If any old handler still attempts to open Page Control Studio while Print Studio
+  // is active, immediately close it.
+  document.addEventListener('click',()=>{
+    if(document.getElementById('panel-print')?.classList.contains('active')){
+      setTimeout(closePageControlStudio,0);
+    }
+  },true);
+
+  activateDesigner();
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,250),{once:true});
+}else{
+  setTimeout(bind,250);
+}
+})();
+</script>
+
+
+<script id="pdV1632CleanGalleryRenderer">
+(function(){
+'use strict';
+function safeGallery(){
+  let g=[];
+  try{g=typeof printGallery==='function'?printGallery():[]}catch(e){}
+  const box=document.getElementById('pd31GalleryGrid');
+  if(!box)return;
+  if(!g.length){
+    box.innerHTML='<div class="empty-card">No saved print designs yet.</div>';
+    return;
+  }
+  box.innerHTML='<div class="print-gallery-grid">'+g.map(d=>{
+    const title=String(d.name||'Print Design');
+    const sub=String(d.reportTitle||d.contractId||'Saved Print Design');
+    return '<div class="print-gallery-card" data-clean-design-id="'+String(d.id||'')+'"><h3>'+title+'</h3><p>'+sub+'</p></div>';
+  }).join('')+'</div>';
+}
+function bind(){
+  document.getElementById('pd31GalleryTab')?.addEventListener('click',()=>setTimeout(safeGallery,20));
+  document.getElementById('pd31SaveReport')?.addEventListener('click',()=>setTimeout(safeGallery,80));
+  document.getElementById('pd31SaveAs')?.addEventListener('click',()=>setTimeout(safeGallery,80));
+  setTimeout(safeGallery,400);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,300),{once:true});
+else setTimeout(bind,300);
 })();
 </script>
 
