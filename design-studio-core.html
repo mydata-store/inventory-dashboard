@@ -113,6 +113,144 @@ window.ERPStorageHealthV1603={
 };
 })();
 </script>
+<script id="erpStorageHealthRepairV1605">
+(function(){
+'use strict';
+if(window.__erpStorageHealthRepairV1605)return;
+window.__erpStorageHealthRepairV1605=true;
+
+const SAFE_DISPOSABLE_EXACT=new Set([
+  'erpCoreAutoSnapshotsV1',
+  'erpCoreBackupHistoryV1',
+  'erpCoreLastSnapshotHashV1',
+  'ERP_ONLINE_SYNC_SHADOW_V1',
+  'ERP_ONLINE_SYNC_QUEUE_V1',
+  'ERP_ONLINE_SYNC_LAST_V1'
+]);
+
+const SAFE_DISPOSABLE_PREFIXES=[
+  'erpRuntime',
+  'erpTemp',
+  'erpCache',
+  'erpPreview',
+  'erpDraftCache',
+  'erpPrintPreview',
+  'erpSearchCache',
+  'erpSessionCache'
+];
+
+function bytesOf(s){
+  try{return new Blob([String(s??'')]).size}catch(e){return String(s??'').length*2}
+}
+function storageRows(){
+  const rows=[];
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(key==null)continue;
+      const val=localStorage.getItem(key)||'';
+      rows.push({key,bytes:bytesOf(key)+bytesOf(val)});
+    }
+  }catch(e){}
+  return rows.sort((a,b)=>b.bytes-a.bytes);
+}
+function totalBytes(){
+  return storageRows().reduce((n,r)=>n+r.bytes,0);
+}
+function human(n){
+  if(n>=1024*1024)return (n/1024/1024).toFixed(2)+' MB';
+  if(n>=1024)return (n/1024).toFixed(1)+' KB';
+  return n+' B';
+}
+function isDisposableKey(key){
+  if(SAFE_DISPOSABLE_EXACT.has(key))return true;
+  return SAFE_DISPOSABLE_PREFIXES.some(p=>key.startsWith(p));
+}
+function removeSafeKey(key){
+  if(!isDisposableKey(key))return false;
+  try{localStorage.removeItem(key);return true}catch(e){return false}
+}
+function compactJsonArrayKey(key,keep){
+  try{
+    const raw=localStorage.getItem(key);
+    if(!raw)return 0;
+    let arr=JSON.parse(raw);
+    if(!Array.isArray(arr))return 0;
+    if(arr.length<=keep)return 0;
+    arr=arr.slice(-keep);
+    localStorage.setItem(key,JSON.stringify(arr));
+    return 1;
+  }catch(e){
+    return 0;
+  }
+}
+function cleanup(){
+  const before=totalBytes();
+  const removed=[];
+
+  // First compact, then remove only safe duplicate/cache data if needed.
+  compactJsonArrayKey('erpCoreAutoSnapshotsV1',1);
+  compactJsonArrayKey('erpCoreBackupHistoryV1',20);
+
+  const rows=storageRows();
+  rows.forEach(r=>{
+    if(r.key==='erpCoreAutoSnapshotsV1' || r.key==='erpCoreBackupHistoryV1')return;
+    if(isDisposableKey(r.key)){
+      if(removeSafeKey(r.key))removed.push(r.key);
+    }
+  });
+
+  // Sync shadow is a derived checksum map and can always be rebuilt.
+  try{
+    if(localStorage.getItem('ERP_ONLINE_SYNC_SHADOW_V1')!=null){
+      localStorage.removeItem('ERP_ONLINE_SYNC_SHADOW_V1');
+      removed.push('ERP_ONLINE_SYNC_SHADOW_V1');
+    }
+  }catch(e){}
+
+  const after=totalBytes();
+  return {before,after,freed:Math.max(0,before-after),removed,largest:storageRows().slice(0,12)};
+}
+
+function saveWithRepair(key,value){
+  try{
+    localStorage.setItem(key,value);
+    return {ok:true,repaired:false};
+  }catch(first){
+    const result=cleanup();
+    try{
+      localStorage.setItem(key,value);
+      return {ok:true,repaired:true,repair:result};
+    }catch(second){
+      return {
+        ok:false,
+        error:second,
+        repair:result,
+        total:totalBytes(),
+        largest:storageRows().slice(0,12)
+      };
+    }
+  }
+}
+
+window.ERPStorageHealthV1605={
+  rows:storageRows,
+  totalBytes,
+  human,
+  cleanup,
+  saveWithRepair,
+  report:function(){
+    const rows=storageRows();
+    return {
+      totalBytes:rows.reduce((n,r)=>n+r.bytes,0),
+      total:human(rows.reduce((n,r)=>n+r.bytes,0)),
+      largest:rows.slice(0,20).map(r=>({key:r.key,size:human(r.bytes),bytes:r.bytes}))
+    };
+  }
+};
+})();
+</script>
+
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ERP Design Studio Core V15.48</title>
 <script>
@@ -8207,13 +8345,25 @@ let masterCurrent='items',masterEditingId='';
 function masterTenantId(){try{return window.ERPTenant?.currentId?.()||'local'}catch(e){return'local'}}
 function masterLoadAll(){try{const d=JSON.parse(localStorage.getItem(MASTER_DATA_KEY)||'{}');return d&&typeof d==='object'?d:{}}catch(e){return{}}}
 function masterSaveAll(d){
+  const payload=JSON.stringify(d);
   try{
-    localStorage.setItem(MASTER_DATA_KEY,JSON.stringify(d));
+    const h=window.ERPStorageHealthV1605;
+    if(h?.saveWithRepair){
+      const r=h.saveWithRepair(MASTER_DATA_KEY,payload);
+      if(!r.ok){
+        console.error('Masters save failed after storage repair',r.error,r);
+        toast('Save failed: storage still full ('+h.human(r.total||0)+')');
+        return false
+      }
+      if(r.repaired)toast('Storage repaired automatically • Save completed');
+    }else{
+      localStorage.setItem(MASTER_DATA_KEY,payload)
+    }
     try{window.ERPCore?.markPending?.(1)}catch(e){}
     return true
   }catch(e){
     console.error('Masters save failed',e);
-    toast('Save failed: browser storage is full or unavailable');
+    toast('Save failed: browser storage is unavailable');
     return false
   }
 }
@@ -8916,13 +9066,25 @@ function purchaseRows(register){
 }
 function purchaseWrite(register,rows){
   const d=purchaseAll(),t=purchaseTid();d[t]=d[t]||{};d[t][register]=rows;
+  const payload=JSON.stringify(d);
   try{
-    localStorage.setItem(PURCHASE_DATA_KEY,JSON.stringify(d));
+    const h=window.ERPStorageHealthV1605;
+    if(h?.saveWithRepair){
+      const r=h.saveWithRepair(PURCHASE_DATA_KEY,payload);
+      if(!r.ok){
+        console.error('Purchase save failed after storage repair',r.error,r);
+        toast('Save failed: storage still full ('+h.human(r.total||0)+')');
+        return false
+      }
+      if(r.repaired)toast('Storage repaired automatically • Save completed');
+    }else{
+      localStorage.setItem(PURCHASE_DATA_KEY,payload)
+    }
     window.ERPCore?.markPending?.(1);
     return true
   }catch(e){
     console.error('Purchase save failed',e);
-    toast('Save failed: browser storage is full or unavailable');
+    toast('Save failed: browser storage is unavailable');
     return false
   }
 }
@@ -29403,6 +29565,65 @@ if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',initUtilityDockV1604,{once:true});
 }else{
   initUtilityDockV1604();
+}
+})();
+</script>
+
+
+<script id="erpStorageHealthToolV1605">
+(function(){
+'use strict';
+
+function initStorageToolV1605(){
+  const bar=document.getElementById('erpUtilityBar');
+  if(!bar || document.getElementById('erpStorageHealthBtnV1605'))return;
+
+  const btn=document.createElement('button');
+  btn.id='erpStorageHealthBtnV1605';
+  btn.type='button';
+  btn.textContent='◫ Storage Health';
+  btn.style.cssText='border:0;background:transparent;color:#111;padding:10px 14px;min-height:42px;width:100%;text-align:left;font:700 12px Arial,sans-serif;cursor:pointer;display:none';
+  btn.addEventListener('click',()=>{
+    const h=window.ERPStorageHealthV1605;
+    if(!h)return;
+    const r=h.report();
+    const top=r.largest.slice(0,6).map(x=>x.key+' — '+x.size).join('\\n');
+    alert('ERP Storage Health\\n\\nCurrent usage: '+r.total+'\\n\\nLargest storage keys:\\n'+top+'\\n\\nUse Repair Storage only if saving fails.');
+  });
+
+  const repair=document.createElement('button');
+  repair.id='erpStorageRepairBtnV1605';
+  repair.type='button';
+  repair.textContent='⌁ Repair Storage';
+  repair.style.cssText=btn.style.cssText;
+  repair.addEventListener('click',()=>{
+    const h=window.ERPStorageHealthV1605;
+    if(!h)return;
+    const r=h.cleanup();
+    alert('Storage repair completed.\\nFreed: '+h.human(r.freed)+'\\nCurrent usage: '+h.human(r.after)+'\\n\\nLive ERP records were not deleted.');
+  });
+
+  const toggle=document.getElementById('erpUtilityToggleV1604');
+  if(toggle){
+    bar.insertBefore(btn,toggle);
+    bar.insertBefore(repair,toggle);
+  }else{
+    bar.appendChild(btn);
+    bar.appendChild(repair);
+  }
+
+  const mo=new MutationObserver(()=>{
+    const open=bar.classList.contains('open-v1604');
+    btn.style.display=open?'block':'none';
+    repair.style.display=open?'block':'none';
+  });
+  mo.observe(bar,{attributes:true,attributeFilter:['class']});
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',initStorageToolV1605,{once:true});
+}else{
+  initStorageToolV1605();
 }
 })();
 </script>
