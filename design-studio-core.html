@@ -3598,6 +3598,18 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 .pd31-logo-controls input,.pd31-logo-controls select{height:30px;border:1px solid var(--border);border-radius:7px;padding:0 7px;background:var(--surface);color:var(--text);font-size:8px}
 @media(max-width:780px){.pd31-logo-box{grid-template-columns:1fr}.pd31-logo-preview{margin:auto}.pd31-logo-controls{grid-template-columns:1fr}}
 </style>
+
+<style id="inventoryUseLocationV1634Style">
+.inv-use-head-v1634{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}.inv-use-head-v1634 h3{margin:0;font-size:15px}.inv-use-head-v1634 p{margin:4px 0 0;font-size:9px;color:var(--muted)}
+.inv-use-head-actions-v1634{display:flex;gap:6px}
+.inv-use-kpis-v1634{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}.inv-use-kpis-v1634>div{border:1px solid var(--border);border-radius:10px;padding:9px;background:var(--surface)}.inv-use-kpis-v1634 small{display:block;font-size:7px;font-weight:950;color:var(--muted);text-transform:uppercase}.inv-use-kpis-v1634 strong{display:block;font-size:17px;margin-top:3px}
+.inv-use-search-v1634{display:grid;grid-template-columns:minmax(260px,2fr) 1fr 1fr auto;gap:7px;align-items:end;margin:10px 0}.inv-use-search-v1634>div{display:grid;gap:4px}.inv-use-search-v1634 label,.inv-use-grid-v1634 label{font-size:7px;font-weight:950;color:var(--muted);text-transform:uppercase}.inv-use-search-v1634 input,.inv-use-search-v1634 select,.inv-use-grid-v1634 input,.inv-use-grid-v1634 select{height:34px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 8px;font-size:9px;width:100%}
+.inv-use-entry-v1634{border:1px solid var(--border);border-radius:11px;padding:10px;margin-bottom:10px;background:color-mix(in srgb,var(--surface) 98%,var(--primary))}
+.inv-use-entry-title-v1634{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.inv-use-entry-title-v1634 b{font-size:10px}.inv-use-entry-title-v1634 small{display:block;font-size:7px;color:var(--muted);margin-top:2px}.inv-use-entry-title-v1634 span{font-size:7px;font-weight:900;border:1px solid var(--border);border-radius:999px;padding:4px 7px;background:var(--surface)}
+.inv-use-grid-v1634{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.inv-use-grid-v1634>div{display:grid;gap:4px}.inv-use-grid-v1634 .wide{grid-column:span 2}.inv-use-actions-v1634{display:flex;gap:6px;margin-top:9px}
+.inv-use-mini-v1634{padding:5px 7px!important;font-size:7px!important;min-height:26px!important}.inv-use-mini-v1634.danger{color:#a32121;border-color:#e6bcbc}
+@media(max-width:1100px){.inv-use-grid-v1634{grid-template-columns:repeat(2,minmax(0,1fr))}.inv-use-search-v1634{grid-template-columns:1fr 1fr}.inv-use-kpis-v1634{grid-template-columns:repeat(2,1fr)}} 
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -6535,6 +6547,8 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
           <option value="person">Person / Issued To</option>
           <option value="supplier">Supplier</option>
           <option value="status">Status</option>
+          <option value="machine">Machine / Equipment</option>
+          <option value="location">Area / Location</option>
         </select></div>
       </div>
 
@@ -15352,6 +15366,7 @@ document.addEventListener('DOMContentLoaded' ,()=>{issueEnhanceItemDropdowns();i
 (()=>{
 const INV_OPEN_KEY='erpInventoryOpeningV2';
 const INV_ADJ_KEY='erpInventoryAdjustmentsV2';
+const INV_USE_KEY='erpInventoryMaterialUseLocationsV1';
 
 const inv$=s=>document.querySelector(s);
 const invNum=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0};
@@ -15547,6 +15562,7 @@ function invBuild(){
       <button class="inv-tab" data-invtab="ledger">Stock Ledger</button>
       <button class="inv-tab" data-invtab="opening">Opening / Adjustment</button>
       <button class="inv-tab" data-invtab="machine-clothing">Machine Clothing</button>
+      <button class="inv-tab" data-invtab="use-location">Material Use Location</button>
     </div>
 
     <div class="inv-kpis">
@@ -15729,6 +15745,69 @@ function invBuild(){
         </div>
       </div>
     </div>
+
+    <div class="inv-sub" data-invsub="use-location">
+      <div class="inv-box inv-use-shell-v1634">
+        <div class="inv-use-head-v1634">
+          <div>
+            <h3>Material Use Location</h3>
+            <p>Find where a material is used, or find which material belongs to a machine, dryer, roll or position.</p>
+          </div>
+          <div class="inv-use-head-actions-v1634">
+            <button class="btn" type="button" id="invUseReportBtn">Report Center</button>
+            <button class="btn" type="button" id="invUsePrintBtn">Print</button>
+          </div>
+        </div>
+
+        <div class="inv-note inv-use-note-v1634">
+          <b>Example:</b> search <b>Dryer 7</b> to see its bearings/materials, or search <b>Bearing 22318</b> to see every machine/position where it is used. One material can have multiple use locations.
+        </div>
+
+        <div class="inv-use-kpis-v1634">
+          <div><small>Mapped Materials</small><strong id="invUseKMaterials">0</strong></div>
+          <div><small>Equipment / Machines</small><strong id="invUseKMachines">0</strong></div>
+          <div><small>Total Mappings</small><strong id="invUseKMappings">0</strong></div>
+          <div><small>Departments</small><strong id="invUseKDepartments">0</strong></div>
+        </div>
+
+        <div class="inv-use-search-v1634">
+          <div class="grow"><label>Search Anything</label><input id="invUseSearch" placeholder="Bearing 22318, Dryer 7, Main Press Roll, Drive Side..."></div>
+          <div><label>Department / Unit</label><select id="invUseDepartmentFilter"><option value="">All Departments</option></select></div>
+          <div><label>Equipment</label><select id="invUseMachineFilter"><option value="">All Equipment</option></select></div>
+          <button class="btn" type="button" id="invUseClearFilter">Clear</button>
+        </div>
+
+        <div class="inv-use-entry-v1634">
+          <div class="inv-use-entry-title-v1634">
+            <div><b>Add / Edit Use Location</b><small>Material identity comes from Item Master.</small></div>
+            <span id="invUseEditBadge">New Mapping</span>
+          </div>
+          <div class="inv-use-grid-v1634">
+            <div class="wide"><label>Item Master</label><select id="invUseItem"><option value="">Select material</option></select></div>
+            <div><label>Size</label><input id="invUseSize" readonly></div>
+            <div><label>Unit</label><input id="invUseUnit" readonly></div>
+            <div><label>Machine / Equipment</label><input id="invUseMachine" placeholder="Dryer 7 / Main Press Roll"></div>
+            <div><label>Position / Part</label><input id="invUsePosition" placeholder="Drive Side / Tender Side / Bearing Housing"></div>
+            <div><label>Department / Unit</label><select id="invUseDepartment"><option value="">Select department</option></select></div>
+            <div><label>Area / Section</label><input id="invUseArea" placeholder="Machine Hall I / Dryer Section"></div>
+            <div class="wide"><label>Remarks</label><input id="invUseRemarks" placeholder="Optional identification, drawing no., alternate position..."></div>
+          </div>
+          <div class="inv-use-actions-v1634">
+            <button class="btn primary" type="button" id="invUseSave">Save Mapping</button>
+            <button class="btn" type="button" id="invUseCancel">Clear</button>
+          </div>
+        </div>
+
+        <div class="inv-table-wrap">
+          <table class="inv-table inv-use-table-v1634" style="min-width:1180px">
+            <thead><tr>
+              <th>Sr #</th><th>Material</th><th>Size</th><th>Unit</th><th>Machine / Equipment</th><th>Position / Part</th><th>Department</th><th>Area / Section</th><th>Remarks</th><th>Action</th>
+            </tr></thead>
+            <tbody id="invUseBody"><tr><td colspan="10" style="text-align:center;padding:25px">No material use locations mapped yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>`;
   host.appendChild(sec);
   invBind()
@@ -15738,6 +15817,8 @@ function invShow(tab){
   document.querySelectorAll('.inv-tab').forEach(b=>b.classList.toggle('active',b.dataset.invtab===tab));
   document.querySelectorAll('.inv-sub').forEach(x=>x.classList.toggle('active',x.dataset.invsub===tab));
   if(tab==='ledger')invLedger()
+
+  if(tab==='use-location'){invUseFillSelectors();invUseRender()}
 }
 
 function invMonthlyRows(month,group){
@@ -15875,6 +15956,126 @@ function invLedger(){
   }).join(''):'<tr><td colspan="9" style="text-align:center;padding:25px">No movements yet.</td></tr>'
 }
 
+
+let invUseEditingId='';
+
+function invUseRows(){
+  return invLoad(INV_USE_KEY).filter(x=>!x.deletedAt)
+}
+function invUseDepartments(){
+  const out=[],seen=new Set(),add=v=>{v=String(v||'').trim();if(v&&!seen.has(v.toLowerCase())){seen.add(v.toLowerCase());out.push(v)}};
+  try{(window.ERPMasters?.list?.('departments')||masterBucket('departments')||[]).filter(x=>String(x.status||'active').toLowerCase()!=='inactive').forEach(x=>add(x.name||x.department))}catch(e){}
+  invUseRows().forEach(x=>add(x.department));
+  return out.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}))
+}
+function invUseItemLabel(x){
+  return [x.name||'',x.size||''].filter(Boolean).join(' — ')
+}
+function invUseFillSelectors(){
+  const item=inv$('#invUseItem'),dep=inv$('#invUseDepartment'),depF=inv$('#invUseDepartmentFilter'),machF=inv$('#invUseMachineFilter');
+  if(item){
+    const old=item.value;
+    item.innerHTML='<option value="">Select material</option>'+invItems().map(x=>{
+      const k=invKey(x.name,x.size),label=invUseItemLabel(x);
+      return `<option value="${String(k).replace(/"/g,'&quot;')}">${label}</option>`
+    }).join('');
+    if([...item.options].some(o=>o.value===old))item.value=old
+  }
+  const deps=invUseDepartments();
+  [[dep,'Select department'],[depF,'All Departments']].forEach(([el,first])=>{
+    if(!el)return;const old=el.value;
+    el.innerHTML=`<option value="">${first}</option>`+deps.map(x=>`<option>${x}</option>`).join('');
+    if(deps.includes(old))el.value=old
+  });
+  if(machF){
+    const old=machF.value;
+    const arr=[...new Set(invUseRows().map(x=>String(x.machine||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+    machF.innerHTML='<option value="">All Equipment</option>'+arr.map(x=>`<option>${x}</option>`).join('');
+    if(arr.includes(old))machF.value=old
+  }
+}
+function invUseClear(){
+  invUseEditingId='';
+  ['invUseMachine','invUsePosition','invUseArea','invUseRemarks','invUseSize','invUseUnit'].forEach(id=>{const e=inv$('#'+id);if(e)e.value=''});
+  ['invUseItem','invUseDepartment'].forEach(id=>{const e=inv$('#'+id);if(e)e.value=''});
+  if(inv$('#invUseEditBadge'))inv$('#invUseEditBadge').textContent='New Mapping';
+  if(inv$('#invUseSave'))inv$('#invUseSave').textContent='Save Mapping'
+}
+function invUseSelectItem(){
+  const key=inv$('#invUseItem')?.value||'';
+  const m=invItems().find(x=>invKey(x.name,x.size)===key);
+  if(inv$('#invUseSize'))inv$('#invUseSize').value=m?.size||'';
+  if(inv$('#invUseUnit'))inv$('#invUseUnit').value=m?.unit||''
+}
+function invUseSaveRow(){
+  const key=inv$('#invUseItem')?.value||'',m=invItems().find(x=>invKey(x.name,x.size)===key);
+  const machine=String(inv$('#invUseMachine')?.value||'').trim(),position=String(inv$('#invUsePosition')?.value||'').trim();
+  const department=String(inv$('#invUseDepartment')?.value||'').trim(),area=String(inv$('#invUseArea')?.value||'').trim(),remarks=String(inv$('#invUseRemarks')?.value||'').trim();
+  if(!m)return toast('Select a material from Item Master');
+  if(!machine)return toast('Enter machine / equipment');
+  const rows=invUseRows();
+  const rec={
+    id:invUseEditingId||('USE-'+Date.now()+'-'+Math.random().toString(36).slice(2,6)),
+    itemId:m.id||'',itemCode:m.code||'',item:m.name||'',size:m.size||'',unit:m.unit||'',
+    machine,position,department,area,remarks,
+    updatedAt:new Date().toISOString()
+  };
+  const i=rows.findIndex(x=>x.id===rec.id);
+  if(i>=0)rows[i]=rec;else rows.unshift(rec);
+  invSave(INV_USE_KEY,rows);
+  invUseClear();invUseFillSelectors();invUseRender();
+  toast(i>=0?'Use location updated':'Use location saved')
+}
+function invUseRender(){
+  const rows=invUseRows(),q=invNorm(inv$('#invUseSearch')?.value),dep=inv$('#invUseDepartmentFilter')?.value||'',mach=inv$('#invUseMachineFilter')?.value||'';
+  const filtered=rows.filter(x=>{
+    if(dep&&x.department!==dep)return false;
+    if(mach&&x.machine!==mach)return false;
+    if(q&&!invNorm([x.item,x.size,x.unit,x.itemCode,x.machine,x.position,x.department,x.area,x.remarks].join(' ')).includes(q))return false;
+    return true
+  });
+  const mats=new Set(rows.map(x=>invKey(x.item,x.size))),machines=new Set(rows.map(x=>invNorm(x.machine)).filter(Boolean)),deps=new Set(rows.map(x=>invNorm(x.department)).filter(Boolean));
+  if(inv$('#invUseKMaterials'))inv$('#invUseKMaterials').textContent=mats.size;
+  if(inv$('#invUseKMachines'))inv$('#invUseKMachines').textContent=machines.size;
+  if(inv$('#invUseKMappings'))inv$('#invUseKMappings').textContent=rows.length;
+  if(inv$('#invUseKDepartments'))inv$('#invUseKDepartments').textContent=deps.size;
+  const b=inv$('#invUseBody');if(!b)return;
+  b.innerHTML=filtered.length?filtered.map((x,i)=>`<tr>
+    <td>${i+1}</td><td><b>${x.item||''}</b></td><td>${x.size||''}</td><td>${x.unit||''}</td>
+    <td><b>${x.machine||''}</b></td><td>${x.position||''}</td><td>${x.department||''}</td><td>${x.area||''}</td><td>${x.remarks||''}</td>
+    <td><button class="btn inv-use-mini-v1634" type="button" data-inv-use-edit="${x.id}">Edit</button> <button class="btn inv-use-mini-v1634 danger" type="button" data-inv-use-del="${x.id}">Delete</button></td>
+  </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;padding:25px">No matching material use locations.</td></tr>';
+  b.querySelectorAll('[data-inv-use-edit]').forEach(btn=>btn.onclick=()=>{
+    const x=rows.find(r=>r.id===btn.dataset.invUseEdit);if(!x)return;
+    invUseEditingId=x.id;
+    const item=invItems().find(m=>(x.itemId&&String(m.id||'')===String(x.itemId))||invKey(m.name,m.size)===invKey(x.item,x.size));
+    if(inv$('#invUseItem'))inv$('#invUseItem').value=item?invKey(item.name,item.size):'';
+    invUseSelectItem();
+    [['invUseMachine',x.machine],['invUsePosition',x.position],['invUseDepartment',x.department],['invUseArea',x.area],['invUseRemarks',x.remarks]].forEach(([id,v])=>{if(inv$('#'+id))inv$('#'+id).value=v||''});
+    if(inv$('#invUseEditBadge'))inv$('#invUseEditBadge').textContent='Editing Mapping';
+    if(inv$('#invUseSave'))inv$('#invUseSave').textContent='Update Mapping';
+    inv$('#invUseMachine')?.focus()
+  });
+  b.querySelectorAll('[data-inv-use-del]').forEach(btn=>btn.onclick=()=>{
+    if(!confirm('Delete this material use location?'))return;
+    invSave(INV_USE_KEY,rows.filter(x=>x.id!==btn.dataset.invUseDel));
+    invUseFillSelectors();invUseRender();toast('Use location deleted')
+  })
+}
+function invUseOpenReport(printAfter=false){
+  try{window.ERPReportCenter?.open?.()}catch(e){}
+  setTimeout(()=>{
+    const m=document.getElementById('rcModule');if(!m)return toast('Report Center is not available');
+    m.value='inventory';m.dispatchEvent(new Event('change',{bubbles:true}));
+    setTimeout(()=>{
+      const r=document.getElementById('rcReportType');if(r){r.value='use-location';r.dispatchEvent(new Event('change',{bubbles:true})}
+      setTimeout(()=>{
+        document.getElementById('rcGenerate')?.click();
+        if(printAfter)setTimeout(()=>document.getElementById('rcPrint')?.click(),120)
+      },80)
+    },80)
+  },80)
+}
 function invBind(){
   document.querySelectorAll('.inv-tab').forEach(b=>b.onclick=()=>invShow(b.dataset.invtab));
   inv$('#invRefresh').onclick=invRender;
@@ -15887,6 +16088,18 @@ function invBind(){
   inv$('#invMonthClear').onclick=()=>{inv$('#invMonth').value=invCurrentMonth();inv$('#invMonthlyGroup').value='';invRender()};
   inv$('#invLedgerItem').onchange=invLedger;
   inv$('#invLedgerPrint').onclick=()=>window.print();
+
+  inv$('#invUseItem').onchange=invUseSelectItem;
+  inv$('#invUseSave').onclick=invUseSaveRow;
+  inv$('#invUseCancel').onclick=invUseClear;
+  inv$('#invUseSearch').oninput=invUseRender;
+  inv$('#invUseDepartmentFilter').onchange=invUseRender;
+  inv$('#invUseMachineFilter').onchange=invUseRender;
+  inv$('#invUseClearFilter').onclick=()=>{inv$('#invUseSearch').value='';inv$('#invUseDepartmentFilter').value='';inv$('#invUseMachineFilter').value='';invUseRender()};
+  inv$('#invUseReportBtn').onclick=()=>invUseOpenReport(false);
+  inv$('#invUsePrintBtn').onclick=()=>invUseOpenReport(true);
+  invUseFillSelectors();
+  invUseRender();
 
   inv$('#invAdjSave').onclick=()=>{
     const key=inv$('#invAdjItem').value,qty=invNum(inv$('#invAdjQty').value),type=inv$('#invAdjType').value,remarks=inv$('#invAdjReason').value.trim();
@@ -15979,7 +16192,7 @@ function invStartup(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',invStartup);
 else invStartup();
 
-window.ERPInventory={open:invOpen,refresh:invRender,rows:invRows};
+window.ERPInventory={open:invOpen,refresh:invRender,rows:invRows,useLocations:invUseRows,openUseReport:invUseOpenReport};
 })();
 </script>
 
@@ -30971,7 +31184,7 @@ const REPORTS={
   ['month','Month-wise Purchase'],['supplier','Supplier-wise Purchase'],['item','Item-wise Purchase'],['type','Purchase Register / Type-wise']
  ],
  inventory:[
-  ['current','Current Stock'],['item','Item-wise Stock'],['category','Category-wise Stock'],['low','Low / Zero Stock']
+  ['current','Current Stock'],['item','Item-wise Stock'],['category','Category-wise Stock'],['low','Low / Zero Stock'],['use-location','Material Use Location']
  ],
  gatepass:[
   ['all','All Gate Passes'],['rgp','RGP Report'],['pending-rgp','Pending RGP'],['ogp','OGP Report'],['cgp','CGP Report']
@@ -30990,6 +31203,9 @@ const COLUMN_SETS={
  ],
  inventory:[
   ['code','Item Code'],['item','Item'],['size','Size'],['unit','Unit'],['category','Category'],['purchase','Purchased'],['issued','Issued'],['store','Available Stock'],['lastRate','Last Rate'],['lastDate','Last Purchase']
+ ],
+ inventoryUse:[
+  ['item','Material'],['size','Size'],['unit','Unit'],['machine','Machine / Equipment'],['position','Position / Part'],['department','Department / Unit'],['area','Area / Section'],['remarks','Remarks']
  ],
  gatepass:[
   ['type','Type'],['no','Gate Pass No.'],['date','Date'],['item','Item'],['size','Size'],['qty','Quantity'],['unit','Unit'],['department','Department'],['party','Party / Workshop'],['status','Status'],['pending','Pending Qty'],['amount','Value']
@@ -31051,6 +31267,12 @@ function inventoryRowsRC(){
   issued:num(r.issue||r.issued),store:num(r.store),lastRate:num(r.lastRate),lastDate:r.lastDate||''
  }))}catch(e){console.error(e);return[]}
 }
+function inventoryUseRowsRC(){
+ try{return (window.ERPInventory?.useLocations?.()||JSON.parse(localStorage.getItem('erpInventoryMaterialUseLocationsV1')||'[]')||[]).filter(x=>!x.deletedAt).map(x=>({
+  item:x.item||'',size:x.size||'',unit:x.unit||'',machine:x.machine||'',position:x.position||'',
+  department:x.department||'',area:x.area||'',remarks:x.remarks||''
+ }))}catch(e){console.error(e);return[]}
+}
 function gateRowsRC(){
  const out=[];
  try{
@@ -31100,13 +31322,13 @@ function baseRows(){
   else if(rep==='board-family')rows=rows.filter(r=>r.register==='board');
   return rows
  }
- if(m==='inventory')return inventoryRowsRC();
+ if(m==='inventory')return rep==='use-location'?inventoryUseRowsRC():inventoryRowsRC();
  if(m==='gatepass')return gateRowsRC().filter(r=>rep==='all'||(rep==='pending-rgp'?r.type==='RGP'&&String(r.status).toLowerCase()!=='completed':r.type.toLowerCase()===rep));
  if(m==='machineclothing')return machineRowsRC(rep);
  return[]
 }
 
-function reportColumns(){return COLUMN_SETS[R('rcModule').value]||[]}
+function reportColumns(){const m=R('rcModule').value,r=R('rcReportType').value;if(m==='inventory'&&r==='use-location')return COLUMN_SETS.inventoryUse||[];return COLUMN_SETS[m]||[]}
 function selectedColumns(){
  const checked=[...document.querySelectorAll('#rcColumnChoices input[type=checkbox]:checked')].map(x=>x.value);
  return reportColumns().filter(([k])=>checked.includes(k))
@@ -31210,6 +31432,8 @@ function groupValue(r,g){
  if(g==='register')return r.register||'—';
  if(g==='category')return r.category||'—';
  if(g==='purchaseSubtype')return r.purchaseSubtype||r.purchaseClass||'—';
+ if(g==='machine')return r.machine||'—';
+ if(g==='location')return r.area||r.location||'—';
  return''
 }
 function summaryMode(){
@@ -32363,6 +32587,51 @@ function bind(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,300),{once:true});
 else setTimeout(bind,300);
+})();
+</script>
+
+
+<script id="issueUseLocationSuggestionsV1634">
+(function(){
+'use strict';
+const KEY='erpInventoryMaterialUseLocationsV1';
+function rows(){try{return JSON.parse(localStorage.getItem(KEY)||'[]').filter(x=>!x.deletedAt)}catch(e){return[]}}
+function norm(v){return String(v||'').trim().toLowerCase()}
+function bindRow(tr,index){
+ const inputs=[...tr.querySelectorAll('input')];
+ if(inputs.length<11)return;
+ const item=inputs[2],size=inputs[3],use=inputs[10];
+ if(!item||!use||use.dataset.useLocationBound==='1')return;
+ use.dataset.useLocationBound='1';
+ const id='issueUseLocationListV1634_'+index;
+ let dl=document.getElementById(id);
+ if(!dl){dl=document.createElement('datalist');dl.id=id;document.body.appendChild(dl)}
+ use.setAttribute('list',id);
+ const refresh=()=>{
+   const n=norm(item.value),z=norm(size?.value);
+   const list=rows().filter(x=>{
+     const same=norm(x.item)===n || (n&&norm(x.item).includes(n)) || (n&&n.includes(norm(x.item)));
+     const sz=!z||!x.size||norm(x.size)===z;
+     return same&&sz
+   });
+   const vals=[];
+   list.forEach(x=>{
+     const main=[x.machine,x.position].filter(Boolean).join(' — ');
+     const full=[main,x.area].filter(Boolean).join(' • ');
+     if(full&&!vals.includes(full))vals.push(full)
+   });
+   dl.innerHTML=vals.map(v=>`<option value="${String(v).replace(/"/g,'&quot;')}"></option>`).join('');
+   use.title=vals.length?('Known use locations: '+vals.join(' | ')):'No mapped use location found for this material'
+ };
+ item.addEventListener('input',refresh);item.addEventListener('change',refresh);size?.addEventListener('input',refresh);size?.addEventListener('change',refresh);use.addEventListener('focus',refresh);
+ refresh()
+}
+function bind(){
+ document.querySelectorAll('#issueEntryTable tbody tr').forEach((tr,i)=>bindRow(tr,i));
+ const body=document.querySelector('#issueEntryTable tbody');
+ if(body&&window.MutationObserver){new MutationObserver(()=>document.querySelectorAll('#issueEntryTable tbody tr').forEach((tr,i)=>bindRow(tr,i))).observe(body,{childList:true})}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,250),{once:true});else setTimeout(bind,250);
 })();
 </script>
 
