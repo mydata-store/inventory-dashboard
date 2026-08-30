@@ -11475,19 +11475,39 @@ function gateDashboardValidRecordV1609(type,r){
   return true
 }
 function gateDashboardRowsV1609(type){
-  let rows=[];
-  if(type==='RGP')rows=typeof rgpLoad==='function'?rgpLoad():[];
-  else if(type==='OGP')rows=typeof ogpRecords==='function'?ogpRecords():gateSafeLoad(OGP_KEY);
-  else if(type==='CGP')rows=typeof cgpLoad==='function'?cgpLoad():gateSafeLoad(CGP_KEY);
+  /* V16.10 — Gate Pass Management follows the exact working list result.
+     If an RGP/OGP/CGP list currently shows zero matching records,
+     its dashboard KPI also shows zero. */
+  const seen=new Set(),out=[];
 
-  const seen=new Set();
-  return (Array.isArray(rows)?rows:[]).filter(r=>{
-    if(!gateDashboardValidRecordV1609(type,r))return false;
-    const key=String(r.id||gateNo(type,r)).trim().toLowerCase();
-    if(!key || seen.has(key))return false;
+  function addRecord(r){
+    if(!r||r.deletedAt)return;
+    const key=String(r.id||gateNo(type,r)||'').trim().toLowerCase();
+    if(!key||seen.has(key))return;
     seen.add(key);
-    return true
-  })
+    out.push(r)
+  }
+
+  try{
+    if(type==='RGP'){
+      const rows=typeof rgpFilteredRows==='function'?rgpFilteredRows():[];
+      rows.forEach(x=>addRecord(x?.rec))
+    }
+    else if(type==='OGP'){
+      const rows=typeof ogpFilteredRows==='function'?ogpFilteredRows():[];
+      rows.forEach(x=>addRecord(x?.rec))
+    }
+    else if(type==='CGP'){
+      const rows=(typeof cgpFilterCache!=='undefined' && Array.isArray(cgpFilterCache))
+        ?cgpFilterCache
+        :(typeof cgpFilteredRows==='function'?cgpFilteredRows():[]);
+      rows.forEach(r=>addRecord(r))
+    }
+  }catch(e){
+    console.error('Gate Pass dashboard list-source error',type,e)
+  }
+
+  return out
 }
 function gateAllRecent(){
   return[
@@ -11540,7 +11560,7 @@ function gateDashboardRender(){
 
   const rows=gateAllRecent().slice(0,8),body=$('#gateRecentBody');
   if(body)body.innerHTML=rows.length?rows.map(r=>`<tr>
-    <td>${escHtml(gateDashboardDateV1609(r.date)||'—')}</td>
+    <td>${escHtml(gateDashboardDateV1609(r.date)||String(r.date||'—').replace(/undefined/gi,'').replace(/--+/g,'-'))}</td>
     <td><b>${escHtml(gateNo(r._gateType,r))}</b></td>
     <td>${gateTypeBadge(r._gateType)}</td>
     <td>${escHtml(gateFirstItem(r))}</td>
@@ -11549,8 +11569,8 @@ function gateDashboardRender(){
   </tr>`).join(''):`<tr><td colspan="6" class="purchase-empty">No valid Gate Pass records saved yet.</td></tr>`;
 
   $('#gateActivityRgp')&&($('#gateActivityRgp').textContent=pending?`${pending} returnable gate pass${pending===1?'':'es'} still have pending quantity.`:'No RGP return is pending.');
-  $('#gateActivityOgp')&&($('#gateActivityOgp').textContent=ogps.length?'Latest outward material movement is available in the OGP register.':'No OGP records yet.');
-  $('#gateActivityCgp')&&($('#gateActivityCgp').textContent=cgps.length?'Latest cash gate pass is available in the CGP register.':'No CGP records yet.')
+  $('#gateActivityOgp')&&($('#gateActivityOgp').textContent=ogps.length?'OGP records are available in the current OGP List result.':'No OGP records yet.');
+  $('#gateActivityCgp')&&($('#gateActivityCgp').textContent=cgps.length?'CGP records are available in the current CGP List result.':'No CGP records yet.')
 }
 function rgpDashboardRender(){
   if(!$('#panel-rgp-dashboard'))return;
