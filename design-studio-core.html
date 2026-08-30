@@ -3341,6 +3341,11 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 }
 </style>
 
+
+<style id="ogpDeleteRecordStyleV1612">
+#ogpDeleteRecordBtn{background:#fff!important;color:#b42318!important;border:1px solid #f3b0aa!important;font-weight:800}
+#ogpDeleteRecordBtn:hover{background:#fff1f0!important;border-color:#e58a82!important}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -5073,7 +5078,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <div class="ogp-entry-total-card"><small>Total Value</small><strong id="ogpEntryTotalValue">PKR 0</strong></div>
       <div class="ogp-entry-footer-actions">
         <button class="btn" type="button" id="ogpEntryClearBtn">Clear</button>
-        <button class="btn primary" type="button" id="ogpSaveBtn" onclick="return ogpSave()">Save OGP</button>
+        <button class="btn danger" type="button" id="ogpDeleteRecordBtn" style="display:none">Delete OGP</button><button class="btn primary" type="button" id="ogpSaveBtn" onclick="return ogpSave()">Save OGP</button>
       </div>
     </div>
   </div>
@@ -11904,6 +11909,7 @@ function ogpClearEntry(){
   const body=$('#ogpEntryBody');if(body)body.innerHTML=ogpRowHtml(0);
   ogpRows().forEach(ogpBindRow);ogpBindExcel();ogpUpdateTotals();
   if($('#ogpSaveBtn')){delete $('#ogpSaveBtn').dataset.editId;$('#ogpSaveBtn').textContent='Save OGP'}
+  if($('#ogpDeleteRecordBtn'))$('#ogpDeleteRecordBtn').style.display='none';
   if($('#ogpEntryFormTitle'))$('#ogpEntryFormTitle').textContent='OGP Entry Form';
   setTimeout(()=>$('#ogpNo')?.focus(),0)
 }
@@ -11938,8 +11944,47 @@ function ogpLoadForEdit(id){
   ogpBindExcel();ogpUpdateTotals();
   $('#ogpSaveBtn').dataset.editId=rec.id||rec.ogpNo||rec.gatePassNo||'';
   $('#ogpSaveBtn').textContent='Update OGP';
+  if($('#ogpDeleteRecordBtn'))$('#ogpDeleteRecordBtn').style.display='';
   $('#ogpEntryFormTitle').textContent='Edit OGP'
 }
+
+function ogpDeleteCurrentRecord(){
+  try{
+    const editId=$('#ogpSaveBtn')?.dataset.editId||'';
+    if(!editId){toast('Open an existing OGP record to delete');return false}
+
+    const all=ogpRecords();
+    const index=all.findIndex(x=>String(x.id||x.ogpNo||x.gatePassNo)===String(editId));
+    if(index<0){toast('OGP record not found');return false}
+
+    const rec=all[index];
+    const no=String(rec.ogpNo||rec.gatePassNo||'this OGP');
+    if(!window.confirm(`Delete ${no} permanently?\n\nThis will remove the complete OGP record and all of its item rows.`))return false;
+
+    const next=all.filter((_,i)=>i!==index);
+    if(!ogpStore(next)){toast('OGP could not be deleted');return false}
+
+    const verify=ogpRecords().some(x=>String(x.id||x.ogpNo||x.gatePassNo)===String(editId));
+    if(verify){toast('OGP delete could not be verified');return false}
+
+    try{ERPAudit?.log?.({module:'Gate Pass',page:'OGP Entry',action:'Delete',recordId:rec.id||editId,before:rec})}catch(e){}
+
+    try{ogpDashboardRender()}catch(e){}
+    try{ogpRenderList()}catch(e){}
+    try{gateDashboardRender()}catch(e){}
+    try{containerRenderAll()}catch(e){}
+
+    ogpClearEntry();
+    toast(`${no} deleted successfully`);
+    gateOpenPanel('ogp-list');
+    return true
+  }catch(err){
+    console.error('OGP Delete Error',err);
+    toast('OGP delete error: '+(err?.message||'Unknown error'));
+    return false
+  }
+}
+
 function ogpSave(){
   try{
     const no=ogpFormatNo($('#ogpNo')?.value||'');
@@ -12004,6 +12049,7 @@ function ogpSave(){
 function ogpBindEntry(){
   const panel=$('#panel-ogp-entry');if(!panel||panel.dataset.ogpEntryBound)return;
   panel.dataset.ogpEntryBound='1';
+  $('#ogpDeleteRecordBtn')?.addEventListener('click',ogpDeleteCurrentRecord);
 
   const bindFmt=(id,fmt)=>{
     const el=$('#'+id);if(!el)return;
