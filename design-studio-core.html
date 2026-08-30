@@ -11046,20 +11046,11 @@ function restoreLastStudioPanel(){
 function erpSafeCall(name,fn){
   try{return fn()}catch(e){console.error('ERP startup step failed:',name,e);return null}
 }
-function erpStableStartup(){
-  const routeFirstDashboard=window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard';
-  erpSafeCall('applyThemeLinks',()=>applyThemeLinks());
-  erpSafeCall('sync',()=>sync());
-  erpSafeCall('bind',()=>bind());
-  erpSafeCall('render',()=>render());
-  const restoredPanel=erpSafeCall('restoreLastStudioPanel',()=>restoreLastStudioPanel())||'theme';
-
-  if(routeFirstDashboard){
-    document.body.classList.add('erp-dashboard-mode');
-    erpRevealAfterSafeBoot();
-    return;
-  }
-
+/* V16.00 business binding wake-up: preserves fast dashboard boot without losing Save/Edit/Delete handlers. */
+let erpBusinessCoreBoundV1600=false;
+function erpBindBusinessCoreV1600(){
+  if(erpBusinessCoreBoundV1600)return true;
+  erpBusinessCoreBoundV1600=true;
   erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
   erpSafeCall('uaInit',()=>uaInit());
   erpSafeCall('maBind',()=>maBind());
@@ -11083,6 +11074,38 @@ function erpStableStartup(){
   erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
   erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
   erpSafeCall('pdInit',()=>pdInit());
+  window.dispatchEvent(new CustomEvent('erp:business-core-bound'));
+  return true;
+}
+function erpArmDashboardBusinessWakeV1600(){
+  const wake=()=>erpBindBusinessCoreV1600();
+  const onFirstBusinessNav=e=>{
+    const b=e.target.closest('#sideMenu > .side-item');
+    if(!b || b.matches('[data-dashboard-open]'))return;
+    wake();
+    document.removeEventListener('click',onFirstBusinessNav,true);
+  };
+  document.addEventListener('click',onFirstBusinessNav,true);
+  if('requestIdleCallback' in window)requestIdleCallback(wake,{timeout:1200});
+  else setTimeout(wake,500);
+}
+
+function erpStableStartup(){
+  const routeFirstDashboard=window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard';
+  erpSafeCall('applyThemeLinks',()=>applyThemeLinks());
+  erpSafeCall('sync',()=>sync());
+  erpSafeCall('bind',()=>bind());
+  erpSafeCall('render',()=>render());
+  const restoredPanel=erpSafeCall('restoreLastStudioPanel',()=>restoreLastStudioPanel())||'theme';
+
+  if(routeFirstDashboard){
+    document.body.classList.add('erp-dashboard-mode');
+    erpRevealAfterSafeBoot();
+    erpArmDashboardBusinessWakeV1600();
+    return;
+  }
+
+  erpBindBusinessCoreV1600();
 
   setTimeout(async()=>{
     erpSafeCall('users render',()=>uaRenderAll());
