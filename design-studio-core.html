@@ -10119,7 +10119,7 @@ function pphClearFilters(){
 }
 
 function purchaseRenderSupplierAnalysis(){
-  let a=purchaseAllRows(),reg=$('#psaRegister')?.value||'',q=String($('#psaSearch')?.value||'').toLowerCase().trim();if(reg)a=a.filter(x=>x.register===reg);if(q)a=a.filter(x=>String(x.supplier||'').toLowerCase().includes(q));
+  let a=purchaseAllRows().filter(r=>!r.deletedAt),reg=$('#psaRegister')?.value||'',q=String($('#psaSearch')?.value||'').toLowerCase().trim();if(reg)a=a.filter(x=>x.register===reg);if(q)a=a.filter(x=>String(x.supplier||'').toLowerCase().includes(q));
   const map={};a.forEach(r=>{const k=r.supplier||'Unknown Supplier';map[k]=map[k]||{supplier:k,count:0,local:0,zafar:0,board:0,qty:0,value:0,last:''};const x=map[k];x.count++;x[r.register]++;x.qty+=purchaseNum(r.register==='board'?r.netWeight:r.qty);x.value+=purchaseNum(r.register==='board'?r.grossTotal:r.amount);if(String(r.createdAt)>String(x.lastCreated||'')){x.lastCreated=r.createdAt;x.last=r.date}});
   const rows=Object.values(map).sort((a,b)=>b.value-a.value);$('#psaRows').innerHTML=rows.length?rows.map(x=>`<tr><td><b>${escHtml(x.supplier)}</b></td><td>${x.count}</td><td>${x.local}</td><td>${x.zafar}</td><td>${x.board}</td><td>${purchaseMoney(x.qty)}</td><td>${purchaseMoney(x.value)}</td><td>${escHtml(x.last||'—')}</td></tr>`).join(''):'<tr><td class="purchase-empty" colspan="8">No supplier purchase data.</td></tr>';$('#psaSupplierCount').textContent=rows.length;$('#psaPurchaseCount').textContent=a.length;$('#psaTotalValue').textContent=purchaseMoney(a.reduce((n,r)=>n+purchaseNum(r.register==='board'?r.grossTotal:r.amount),0))
 }
@@ -10280,13 +10280,19 @@ document.addEventListener('click',function(e){
 },true);
 
 function purchaseRenderEntry(){
-  const local=purchaseRows('local'),zafar=purchaseRows('zafar'),board=purchaseRows('board');
-  const all=[...local,...zafar,...board];
+  /* V16.06 — Purchase Management KPI must match Purchase History.
+     Soft-deleted purchases are excluded exactly as normal Purchase History does. */
+  const all=purchaseAllRows().filter(r=>!r.deletedAt);
   const total=all.length;
-  const value=all.reduce((sum,r)=>sum+purchaseNum(r.grandTotal||r.totalAmount||r.amount||r.totalPrice||0),0);
+  const value=all.reduce((sum,r)=>{
+    if(typeof pphGrandValue==='function')return sum+pphGrandValue(r);
+    return sum+purchaseNum(r.grandTotal||r.totalAmount||r.amount||r.totalPrice||0)
+  },0);
   const indents=typeof piRowsForTenant==='function'?piRowsForTenant():[];
   const pending=indents.filter(x=>String(x.status||'Pending').toLowerCase()==='pending').length;
-  const suppliers=new Set(all.map(r=>String(r.supplier||'').trim().toLowerCase()).filter(Boolean)).size;
+  const suppliers=new Set(
+    all.map(r=>String(r.supplier||'').trim().toLowerCase()).filter(Boolean)
+  ).size;
 
   if($('#ppeTotal'))$('#ppeTotal').textContent=total;
   if($('#ppeValue'))$('#ppeValue').textContent='PKR '+purchaseMoney(value);
