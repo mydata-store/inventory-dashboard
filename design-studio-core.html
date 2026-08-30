@@ -12982,7 +12982,56 @@ function containerBind(){
 /* ===== V14.70 CGP Management operations ===== */
 const CGP_DETAIL_CONTEXT_KEY='erpCgpDetailContextV1';
 let cgpEditingId='',cgpFilterCache=null;
-function cgpLoad(){return gateSafeLoad(CGP_KEY)}
+
+function cgpLegacyValidV1615(r){
+  if(!r || r.deletedAt)return false;
+
+  // A real CGP in the current system must have a proper saved number.
+  const no=String(r.cgpNo||r.gatePassNo||'').trim().toUpperCase();
+  if(!/^CGP-\d{5}$/.test(no))return false;
+
+  // Reject historically corrupted dates such as 25-undefined-05.
+  const rawDate=String(r.date||'').trim();
+  if(!rawDate || /undefined|null|nan/i.test(rawDate))return false;
+  const formatted=typeof rgpFormatDate==='function'?rgpFormatDate(rawDate):rawDate;
+  if(!/^\d{1,2}-[A-Za-z]{3}-\d{2}$/.test(formatted))return false;
+
+  // A saved CGP must contain at least one meaningful material row.
+  const items=Array.isArray(r.items)?r.items:[];
+  const meaningful=items.some(x=>{
+    const material=String(x?.material||x?.item||x?.description||'').trim();
+    const qty=purchaseNum(x?.qty||x?.quantity||0);
+    const rate=purchaseNum(x?.rate||0);
+    const amount=purchaseNum(x?.amount||0);
+    const discount=purchaseNum(x?.discount||0);
+    return !!material || qty>0 || rate>0 || amount>0 || discount>0
+  });
+  return meaningful
+}
+
+function cgpCleanupLegacyV1615(){
+  try{
+    const raw=gateSafeLoad(CGP_KEY);
+    if(!Array.isArray(raw)||!raw.length)return {removed:0,kept:0};
+
+    const kept=raw.filter(cgpLegacyValidV1615);
+    const removed=raw.length-kept.length;
+
+    if(removed>0){
+      cgpStore(kept);
+      console.info('CGP legacy cleanup removed',removed,'invalid record(s)');
+    }
+    return {removed,kept:kept.length}
+  }catch(e){
+    console.error('CGP legacy cleanup failed',e);
+    return {removed:0,kept:0,error:e}
+  }
+}
+
+function cgpLoad(){
+  const rows=gateSafeLoad(CGP_KEY);
+  return (Array.isArray(rows)?rows:[]).filter(cgpLegacyValidV1615)
+}
 function cgpStore(rows){try{localStorage.setItem(CGP_KEY,JSON.stringify(Array.isArray(rows)?rows:[]));return true}catch(e){console.error('CGP Store Error',e);return false}}
 function cgpFormatNo(v){const x=String(v||'').trim();if(!x)return'';const d=x.replace(/\D/g,'');return d?'CGP-'+String(parseInt(d,10)).padStart(5,'0'):x.toUpperCase()}
 function cgpItems(r){return Array.isArray(r?.items)?r.items:[]}
@@ -13027,6 +13076,9 @@ function cgpExistingParties(q){
     return !query||hay.includes(query)
   }).slice(0,40)
 }
+/* V16.15: permanently remove only invalid legacy CGP rows once this build loads. */
+setTimeout(()=>{try{cgpCleanupLegacyV1615()}catch(e){}},0);
+
 function cgpMaterialRows(q){const query=String(q||'').toLowerCase().trim(),seen=new Set(),rows=[];try{(window.ERPMasters?.list?.('items')||[]).forEach(r=>{const n=[r.name,r.size].filter(Boolean).join(' ');if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());rows.push({name:n,unit:r.unit||'',code:r.code||''})}})}catch(e){};cgpLoad().forEach(r=>cgpItems(r).forEach(it=>{const n=String(it.material||'').trim();if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());rows.push({name:n,unit:it.unit||''})}}));return rows.filter(r=>String(r.name||'').toLowerCase().includes(query)).slice(0,50)}
 function cgpSimpleSearch(input,source,onChoose){if(!input||input.dataset.cgpBound)return;input.dataset.cgpBound='1';const wrap=input.closest('.purchase-auto-wrap');if(!wrap)return;let list=wrap.querySelector('.purchase-auto-list');if(!list)return;let shown=[],active=-1;const close=()=>{list.classList.remove('open');active=-1};const draw=()=>{const q=input.value.trim();if(!q)return close();shown=source(q);active=-1;list.innerHTML=shown.length?shown.map((r,i)=>`<div class="purchase-auto-option" data-cgp-opt="${i}"><b>${escHtml(r.name||'')}</b><small>${escHtml([r.code,r.unit,r.phone].filter(Boolean).join(' • '))}</small></div>`).join(''):'<div class="purchase-empty">No matching record.</div>';list.querySelectorAll('[data-cgp-opt]').forEach(el=>el.onmousedown=e=>{e.preventDefault();choose(+el.dataset.cgpOpt)});list.classList.add('open')};const choose=i=>{const r=shown[i];if(!r)return;input.value=r.name||'';close();if(onChoose)onChoose(r,input)};input.addEventListener('input',draw);input.addEventListener('keydown',e=>{if(!list.classList.contains('open'))return;const opts=[...list.querySelectorAll('[data-cgp-opt]')];if(e.key==='ArrowDown'){e.preventDefault();active=opts.length?(active+1)%opts.length:-1}else if(e.key==='ArrowUp'){e.preventDefault();active=opts.length?(active<=0?opts.length-1:active-1):-1}else if((e.key==='Enter'||e.key==='Tab')&&shown.length){e.preventDefault();choose(active>=0?active:0);return}else if(e.key==='Escape'){close();return}else return;opts.forEach((x,i)=>x.classList.toggle('active',i===active))});input.addEventListener('blur',()=>setTimeout(close,120))}
 function cgpMakeRow(data={}){const tr=document.createElement('tr');tr.innerHTML=`<td class="cgp-row-no"></td><td><div class="purchase-auto-wrap"><input class="cgp-material" value="${escHtml(data.material||'')}" autocomplete="off"><div class="purchase-auto-list"></div></div></td><td><input class="cgp-unit" value="${escHtml(data.unit||'')}"></td><td><input class="cgp-qty" inputmode="decimal" value="${data.qty??''}"></td><td><input class="cgp-rate" inputmode="decimal" value="${data.rate??''}"></td><td><input class="cgp-gross" readonly value="${data.gross??''}"></td><td><input class="cgp-discount" inputmode="decimal" value="${data.discount??''}"></td><td><input class="cgp-amount" readonly value="${data.amount??''}"></td><td><input class="cgp-item-remarks" value="${escHtml(data.remarks||'')}"></td><td><button class="btn ogp-entry-delete cgp-delete" type="button">Delete</button></td>`;$('#cgpEntryBody').appendChild(tr);cgpBindRow(tr);cgpRenumber();cgpUpdateTotals();return tr}
