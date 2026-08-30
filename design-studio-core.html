@@ -8762,7 +8762,14 @@ function masterBind(){
   const nav=$('[data-panel="masters"]');if(nav)nav.style.display=window.ERPAccessControl?.canPage?.('all-masters','view')?'':'none';
   masterRenderAll()
 }
-window.ERPMasters={list:(type)=>masterBucket(type),current:()=>masterCurrent,render:masterRenderAll};
+window.ERPMasters={
+  list:(type)=>masterBucket(type),
+  current:()=>masterCurrent,
+  render:masterRenderAll,
+  save:masterSave,
+  bind:masterBind,
+  saveButtonBound:()=>!!$('#masterSaveBtn')
+};
 window.ERPSearchableDropdown={
   standard:{match:'contains-any-word',minTyping:1,keyboard:['ArrowUp','ArrowDown','Enter','Tab','Escape'],freeTyping:true},
   search:(rows,q)=>rows.filter(r=>masterAutoMatches(r,q))
@@ -11046,16 +11053,13 @@ function restoreLastStudioPanel(){
 function erpSafeCall(name,fn){
   try{return fn()}catch(e){console.error('ERP startup step failed:',name,e);return null}
 }
+/* V16.02 — operational binding pass shared by dashboard and normal startup */
+let erpOperationalBindingsDoneV1602=false;
+let erpOperationalBindingsRunningV1602=false;
 
-/* V16.01 — restore all operational Save/Edit/Delete handlers after fast dashboard reveal.
-   Important: do not mark this complete until the binding pass itself has finished. */
-let erpBusinessBindingsReadyV1601=false;
-let erpBusinessBindingsRunningV1601=false;
-
-function erpBindBusinessCoreV1601(){
-  if(erpBusinessBindingsReadyV1601 || erpBusinessBindingsRunningV1601)return erpBusinessBindingsReadyV1601;
-  erpBusinessBindingsRunningV1601=true;
-
+function erpBindOperationalControlsV1602(){
+  if(erpOperationalBindingsDoneV1602 || erpOperationalBindingsRunningV1602)return;
+  erpOperationalBindingsRunningV1602=true;
   try{
     erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
     erpSafeCall('uaInit',()=>uaInit());
@@ -11080,20 +11084,12 @@ function erpBindBusinessCoreV1601(){
     erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
     erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
     erpSafeCall('pdInit',()=>pdInit());
-
-    erpBusinessBindingsReadyV1601=true;
-    window.dispatchEvent(new CustomEvent('erp:business-bindings-ready'));
+    erpOperationalBindingsDoneV1602=true;
   }finally{
-    erpBusinessBindingsRunningV1601=false;
+    erpOperationalBindingsRunningV1602=false;
   }
-
-  return erpBusinessBindingsReadyV1601;
 }
-
-function erpEnsureBusinessBindingsV1601(){
-  if(!erpBusinessBindingsReadyV1601)erpBindBusinessCoreV1601();
-}
-window.erpEnsureBusinessBindingsV1601=erpEnsureBusinessBindingsV1601;
+window.erpBindOperationalControlsV1602=erpBindOperationalControlsV1602;
 
 function erpStableStartup(){
   const routeFirstDashboard=window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard';
@@ -11106,26 +11102,26 @@ function erpStableStartup(){
   if(routeFirstDashboard){
     document.body.classList.add('erp-dashboard-mode');
 
-    // Reveal Dashboard immediately, then bind operational controls.
+    // Keep Dashboard fast: reveal it first.
     erpRevealAfterSafeBoot();
 
-    // First frame stays fast; Save/Edit/Delete handlers are attached immediately after.
-    setTimeout(()=>erpEnsureBusinessBindingsV1601(),0);
+    // Attach all operational Save/Edit/Delete handlers immediately afterwards.
+    setTimeout(()=>erpBindOperationalControlsV1602(),0);
 
-    // Extra safety: if the user clicks a business menu before the timer runs,
-    // bind synchronously before that navigation handler executes.
-    const firstBusinessWakeV1601=e=>{
+    // If the user clicks a business module before the timer fires,
+    // bind synchronously in capture phase before the module navigation runs.
+    const wakeBusinessV1602=e=>{
       const main=e.target.closest('#sideMenu > .side-item');
       if(!main || main.matches('[data-dashboard-open]'))return;
-      erpEnsureBusinessBindingsV1601();
-      document.removeEventListener('click',firstBusinessWakeV1601,true);
+      erpBindOperationalControlsV1602();
+      document.removeEventListener('click',wakeBusinessV1602,true);
     };
-    document.addEventListener('click',firstBusinessWakeV1601,true);
+    document.addEventListener('click',wakeBusinessV1602,true);
 
     return;
   }
 
-  erpEnsureBusinessBindingsV1601();
+  erpBindOperationalControlsV1602();
 
   setTimeout(async()=>{
     erpSafeCall('users render',()=>uaRenderAll());
@@ -29184,21 +29180,7 @@ if(document.readyState==='loading'){
 }
 
 window.ERPSingleActiveSidebarV1599={
-  clear:clearMa
-<script id="erpBusinessBindingSafetyV1601">
-(function(){
-'use strict';
-document.addEventListener('pointerdown',e=>{
-  const b=e.target.closest('button');
-  if(!b)return;
-  const t=((b.id||'')+' '+(b.textContent||'')).toLowerCase();
-  if(!/(save|update|approve|delete|return|submit)/.test(t))return;
-  try{window.erpEnsureBusinessBindingsV1601?.()}catch(err){}
-},true);
-})();
-</script>
-
-inSidebarActiveV1599,
+  clear:clearMainSidebarActiveV1599,
   sync:syncMainSidebarV1599
 };
 })();
