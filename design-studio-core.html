@@ -28710,7 +28710,7 @@ function phRows1585(type){
   try{
     if(typeof window.purchaseRows==='function'){
       const x=window.purchaseRows(type);
-      if(Array.isArray(x))return x;
+      if(Array.isArray(x))return x.filter(r=>r && !r.deletedAt);
     }
   }catch(e){}
   return [];
@@ -28734,9 +28734,9 @@ function phRenderHome1585(){
   let month=0,value=0;
 
   all.forEach(r=>{
-    value+=phNum1585(r.grandTotal||r.totalAmount||r.grossTotal||r.amount||r.total);
-    const d=new Date(r.date||r.purchaseDate||r.createdAt||'');
-    if(!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
+    value+=(typeof pphGrandValue==='function'?pphGrandValue(r):phNum1585(r.grandTotal||r.totalAmount||r.grossTotal||r.amount||r.total));
+    const d=(typeof pphParseDate==='function'?pphParseDate(r.date):new Date(r.date||r.purchaseDate||r.createdAt||''));
+    if(d&&!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
   });
 
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
