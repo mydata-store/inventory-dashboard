@@ -11538,27 +11538,50 @@ function gateNo(type,r){
 function gateDashboardRender(){
   if(!$('#panel-gate-pass-dashboard'))return;
 
-  /* V16.09 — dashboard summarizes only valid live records from each
-     operational Gate Pass register. */
-  const rgps=gateDashboardRowsV1609('RGP');
-  const ogps=gateDashboardRowsV1609('OGP');
-  const cgps=gateDashboardRowsV1609('CGP');
+  /* V16.11 — refresh each operational list first, then trust the list's
+     final KPI values. This guarantees Gate Pass Management cannot show
+     a record that its own RGP/OGP/CGP List reports as zero. */
+  try{typeof rgpRenderList==='function'&&rgpRenderList()}catch(e){}
+  try{typeof ogpRenderList==='function'&&ogpRenderList()}catch(e){}
+  try{typeof cgpRenderList==='function'&&cgpRenderList()}catch(e){}
 
-  // A Partial RGP still has quantity pending, so it belongs in Pending Returns.
-  const pendingRgpIds=new Set();
-  rgps.forEach(r=>{
-    const s=String(gateStatus(r)||'').toLowerCase();
-    if(s==='pending'||s==='partial')pendingRgpIds.add(String(r.id||r.rgpNo))
-  });
-  const pending=pendingRgpIds.size;
+  const num=id=>{
+    const e=$(id);
+    const n=Number(String(e?.textContent||'0').replace(/[^0-9.-]/g,''));
+    return Number.isFinite(n)?n:0
+  };
 
-  $('#gateRgpCount')&&($('#gateRgpCount').textContent=rgps.length);
-  $('#gateOgpCount')&&($('#gateOgpCount').textContent=ogps.length);
-  $('#gateCgpCount')&&($('#gateCgpCount').textContent=cgps.length);
+  const rgpCount=num('#rgpListTotal');
+  const ogpCount=num('#ogpListKpiTotal');
+  const cgpCount=num('#cgpListCount');
+
+  /* Use operational records only when that module's own final list KPI
+     confirms records exist. */
+  const rgps=rgpCount>0?gateDashboardRowsV1609('RGP'):[];
+  const ogps=ogpCount>0?gateDashboardRowsV1609('OGP'):[];
+  const cgps=cgpCount>0?gateDashboardRowsV1609('CGP'):[];
+
+  const pendingFromList=num('#rgpListPending')+num('#rgpListPartial');
+  const pending=pendingFromList;
+
+  $('#gateRgpCount')&&($('#gateRgpCount').textContent=rgpCount);
+  $('#gateOgpCount')&&($('#gateOgpCount').textContent=ogpCount);
+  $('#gateCgpCount')&&($('#gateCgpCount').textContent=cgpCount);
   $('#gatePendingRgp')&&($('#gatePendingRgp').textContent=pending);
-  $('#gateAllCount')&&($('#gateAllCount').textContent=rgps.length+ogps.length+cgps.length);
+  $('#gateAllCount')&&($('#gateAllCount').textContent=rgpCount+ogpCount+cgpCount);
 
-  const rows=gateAllRecent().slice(0,8),body=$('#gateRecentBody');
+  let rows=[];
+  if(rgpCount>0)rows.push(...rgps.map(r=>({...r,_gateType:'RGP'})));
+  if(ogpCount>0)rows.push(...ogps.map(r=>({...r,_gateType:'OGP'})));
+  if(cgpCount>0)rows.push(...cgps.map(r=>({...r,_gateType:'CGP'})));
+  rows=rows.sort((a,b)=>{
+    const ad=gateDashboardDateV1609(a.date),bd=gateDashboardDateV1609(b.date);
+    const ao=typeof rgpDateObj==='function'?rgpDateObj(ad):null;
+    const bo=typeof rgpDateObj==='function'?rgpDateObj(bd):null;
+    return (bo?.getTime?.()||0)-(ao?.getTime?.()||0)
+  }).slice(0,8);
+
+  const body=$('#gateRecentBody');
   if(body)body.innerHTML=rows.length?rows.map(r=>`<tr>
     <td>${escHtml(gateDashboardDateV1609(r.date)||String(r.date||'—').replace(/undefined/gi,'').replace(/--+/g,'-'))}</td>
     <td><b>${escHtml(gateNo(r._gateType,r))}</b></td>
@@ -11569,8 +11592,8 @@ function gateDashboardRender(){
   </tr>`).join(''):`<tr><td colspan="6" class="purchase-empty">No valid Gate Pass records saved yet.</td></tr>`;
 
   $('#gateActivityRgp')&&($('#gateActivityRgp').textContent=pending?`${pending} returnable gate pass${pending===1?'':'es'} still have pending quantity.`:'No RGP return is pending.');
-  $('#gateActivityOgp')&&($('#gateActivityOgp').textContent=ogps.length?'OGP records are available in the current OGP List result.':'No OGP records yet.');
-  $('#gateActivityCgp')&&($('#gateActivityCgp').textContent=cgps.length?'CGP records are available in the current CGP List result.':'No CGP records yet.')
+  $('#gateActivityOgp')&&($('#gateActivityOgp').textContent=ogpCount?'OGP records are available in the current OGP List result.':'No OGP records yet.');
+  $('#gateActivityCgp')&&($('#gateActivityCgp').textContent=cgpCount?'CGP records are available in the current CGP List result.':'No CGP records yet.')
 }
 function rgpDashboardRender(){
   if(!$('#panel-rgp-dashboard'))return;
