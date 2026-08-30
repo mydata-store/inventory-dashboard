@@ -3641,6 +3641,13 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 .ua-wipe-error-v1635.show{display:block}
 .ua-wipe-actions-v1635{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 18px}
 </style>
+
+<style id="uaSafeStrictAccessV1636aStyles">
+.ua-safe-access-note-v1636a{margin-top:10px;padding:10px 12px;border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:9px;background:var(--surface);font-size:9px;line-height:1.5;color:var(--text)}
+.ua-access-hide-v1636a{display:none!important}
+.ua-access-denied-v1636a{position:fixed;right:18px;bottom:18px;z-index:250000;display:none;max-width:360px;padding:11px 13px;border-radius:10px;background:#7f1d1d;color:#fff;font-size:10px;font-weight:800;box-shadow:0 14px 34px rgba(0,0,0,.25)}
+.ua-access-denied-v1636a.show{display:block}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -7677,6 +7684,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
         </div>
         <div class="ua-form-actions"><button class="btn primary" type="button" id="uaAddRole">+ Add Role</button><button class="btn" type="button" id="uaDeleteRole">Delete Role</button></div>
         <div class="ua-role-help">Super Administrator is protected. Roles control which ERP modules/pages a user can open and the data scope they may see. <b>Own Department Only</b> is ideal for users such as Boiler In-Charge. Actual module pages call the shared <b>ERPAccessControl</b> permission check.</div>
+        <div class="ua-safe-access-note-v1636a"><b>Strict Access Mode:</b> sidebar modules, protected routes and module actions follow the selected role. Design Studio, Users &amp; Access, Login &amp; Security and Wipe All Data remain Super Administrator-only.</div>
       </div>
       <div class="ua-panel">
         <h3>Module Permissions</h3><p class="sub">Control View, Add, Edit, Delete and Print separately for every ERP module.</p>
@@ -32950,6 +32958,201 @@ function bind(){
   q('uaWipeConfirm')?.addEventListener('click',confirmWipe);
   q('uaWipeAllModal')?.addEventListener('click',e=>{if(e.target===q('uaWipeAllModal'))closeWipe()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&q('uaWipeAllModal')?.classList.contains('open'))closeWipe()});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+})();
+</script>
+
+
+<script id="uaSafeStrictAccessV1636aLogic">
+(function(){
+'use strict';
+const SUPER='Super Administrator';
+let denyTimer=0;
+
+function currentUser(){
+  try{
+    if(window.ERPAccessControl?.currentUser)return window.ERPAccessControl.currentUser();
+    if(typeof uaActiveUser==='function')return uaActiveUser();
+  }catch(e){}
+  return null;
+}
+function isSuper(){
+  const u=currentUser();
+  return !!u && u.status!=='disabled' && u.role===SUPER;
+}
+function can(module,action='view'){
+  const u=currentUser();
+  if(!u||u.status==='disabled')return false;
+  if(isSuper())return true;
+  if(module==='designStudio'||module==='users'||module==='systemSecurity')return false;
+  try{
+    if(window.ERPAccessControl?.can)return !!window.ERPAccessControl.can(module,action);
+    if(typeof uaCan==='function')return !!uaCan(module,action,u);
+  }catch(e){}
+  return false;
+}
+function showDenied(msg){
+  let el=document.getElementById('uaAccessDeniedV1636a');
+  if(!el){
+    el=document.createElement('div');
+    el.id='uaAccessDeniedV1636a';
+    el.className='ua-access-denied-v1636a';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg||'Access denied.';
+  el.classList.add('show');
+  clearTimeout(denyTimer);
+  denyTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+function moduleFromButton(btn){
+  const p=String(btn?.dataset?.panel||'').toLowerCase();
+  const txt=(String(btn?.textContent||'')+' '+String(btn?.title||'')).toLowerCase();
+
+  if(p.includes('users'))return 'users';
+  if(/design-studio|theme|banner|sidebar|profile|company|print/.test(p))return 'designStudio';
+  if(p.includes('master'))return 'masters';
+  if(p.includes('purchase'))return 'purchase';
+  if(p.includes('issue')||p.includes('consumption'))return 'issue';
+  if(p.includes('inventory')||p.includes('stock')||p.includes('machine-clothing'))return 'store';
+  if(p.includes('gate')||p.includes('rgp')||p.includes('ogp')||p.includes('cgp'))return 'gatepass';
+  if(p.includes('report'))return 'reports';
+  if(p.includes('cost'))return 'costing';
+
+  if(txt.includes('purchase'))return 'purchase';
+  if(txt.includes('issue')||txt.includes('consumption'))return 'issue';
+  if(txt.includes('inventory')||txt.includes('stock'))return 'store';
+  if(txt.includes('gate pass'))return 'gatepass';
+  if(txt.includes('report'))return 'reports';
+  if(txt.includes('master'))return 'masters';
+  if(txt.includes('design studio'))return 'designStudio';
+  return '';
+}
+function actionFromButton(btn){
+  const s=(String(btn?.id||'')+' '+String(btn?.textContent||'')+' '+String(btn?.title||'')).toLowerCase();
+  if(/\b(delete|remove|trash)\b/.test(s))return 'delete';
+  if(/\b(edit|update|modify)\b/.test(s))return 'edit';
+  if(/\b(print|pdf)\b/.test(s) && !/print design|print studio/.test(s))return 'print';
+  if(/\b(save|add|submit|receive|create)\b/.test(s))return 'add';
+  return '';
+}
+function moduleFromPanel(el){
+  const id=String(el?.closest?.('.panel')?.id||'').toLowerCase();
+  if(id.includes('users')||id.includes('account'))return 'users';
+  if(/design-studio|theme|banner|sidebar|profile|company|print/.test(id))return 'designStudio';
+  if(id.includes('master'))return 'masters';
+  if(id.includes('purchase'))return 'purchase';
+  if(id.includes('issue')||id.includes('consumption'))return 'issue';
+  if(id.includes('inventory')||id.includes('stock')||id.includes('machine-clothing'))return 'store';
+  if(id.includes('gate')||id.includes('rgp')||id.includes('ogp')||id.includes('cgp'))return 'gatepass';
+  if(id.includes('report'))return 'reports';
+  if(id.includes('cost'))return 'costing';
+  return '';
+}
+function setHidden(el,hide){
+  if(!el)return;
+  el.classList.toggle('ua-access-hide-v1636a',!!hide);
+}
+function applySidebar(){
+  document.querySelectorAll('#sideMenu .side-item').forEach(btn=>{
+    const mod=moduleFromButton(btn);
+    if(!mod)return;
+    setHidden(btn, mod==='designStudio'||mod==='users' ? !isSuper() : !can(mod,'view'));
+  });
+}
+function applyProtectedButtons(){
+  const wipe=document.getElementById('uaOpenWipeAll');
+  if(wipe)setHidden(wipe,!isSuper());
+
+  // User/Design management navigation is Super Admin only.
+  document.querySelectorAll('[data-panel="users"],[data-panel="theme"],[data-panel="banner"],[data-panel="sidebar"],[data-panel="profile"],[data-panel="company"],[data-panel="print"]').forEach(el=>{
+    if(el.closest('#sideMenu')||el.classList.contains('ds-management-card-v1597'))setHidden(el,!isSuper());
+  });
+}
+function applyVisiblePanelActions(){
+  // Only inspect the currently visible/active panel instead of scanning the entire ERP.
+  const panel=document.querySelector('.panel.active') || document.querySelector('.panel[style*="display: block"]');
+  if(!panel)return;
+  const mod=moduleFromPanel(panel);
+  if(!mod)return;
+
+  panel.querySelectorAll('button').forEach(btn=>{
+    if(btn.id==='uaSignOut'||btn.closest('#erpLoginOverlay'))return;
+    if(mod==='users'||mod==='designStudio'){
+      if(!isSuper())setHidden(btn,true);
+      return;
+    }
+    const action=actionFromButton(btn);
+    if(action)setHidden(btn,!can(mod,action));
+  });
+}
+function applyAccess(){
+  applySidebar();
+  applyProtectedButtons();
+  applyVisiblePanelActions();
+}
+function routeGuard(){
+  if(isSuper())return;
+  const h=String(location.hash||'').toLowerCase();
+  if(/panel-(users|theme|banner|sidebar|profile|company|print|design-studio|software-center|master-control)/.test(h)){
+    showDenied('Super Administrator permission is required.');
+    const first=[...document.querySelectorAll('#sideMenu .side-item')].find(b=>!b.classList.contains('ua-access-hide-v1636a'));
+    if(first)setTimeout(()=>first.click(),0);
+  }
+}
+function clickGuard(e){
+  const btn=e.target.closest?.('button,a');
+  if(!btn)return;
+
+  if(btn.matches('#sideMenu .side-item')){
+    const mod=moduleFromButton(btn);
+    const ok=!mod ? true : ((mod==='designStudio'||mod==='users')?isSuper():can(mod,'view'));
+    if(!ok){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      showDenied('This module is not allowed for your account.');
+      return;
+    }
+  }
+
+  const p=String(btn.dataset?.panel||'').toLowerCase();
+  if(!isSuper() && /^(users|theme|banner|sidebar|profile|company|print|design-studio-home|software-center|master-control)/.test(p)){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    showDenied('Super Administrator permission is required.');
+    return;
+  }
+
+  const mod=moduleFromPanel(btn);
+  if(mod && mod!=='users' && mod!=='designStudio'){
+    const action=actionFromButton(btn);
+    if(action && !can(mod,action)){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      showDenied(action.toUpperCase()+' permission is not allowed.');
+    }
+  }
+}
+function bind(){
+  if(window.ERPAccessControl){
+    window.ERPAccessControl.strictApply=applyAccess;
+    window.ERPAccessControl.strictCan=can;
+    window.ERPAccessControl.isSuperAdministrator=isSuper;
+  }
+
+  // One lightweight capture guard; no MutationObserver and no continuous scanning.
+  document.addEventListener('click',clickGuard,true);
+
+  // Re-apply after ordinary navigation/user/role actions only.
+  document.addEventListener('click',e=>{
+    if(e.target.closest?.('#sideMenu .side-item,[data-panel],#erpLoginSubmit,#uaSetCurrentUser,#uaSaveRole,#uaSaveUser,#uaSaveSecurity,#uaSignOut,.ua-tab')){
+      setTimeout(()=>{applyAccess();routeGuard()},60);
+    }
+  });
+
+  window.addEventListener('hashchange',()=>setTimeout(()=>{applyAccess();routeGuard()},20));
+  applyAccess();
+  routeGuard();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
