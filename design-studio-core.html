@@ -11046,49 +11046,54 @@ function restoreLastStudioPanel(){
 function erpSafeCall(name,fn){
   try{return fn()}catch(e){console.error('ERP startup step failed:',name,e);return null}
 }
-/* V16.00 business binding wake-up: preserves fast dashboard boot without losing Save/Edit/Delete handlers. */
-let erpBusinessCoreBoundV1600=false;
-function erpBindBusinessCoreV1600(){
-  if(erpBusinessCoreBoundV1600)return true;
-  erpBusinessCoreBoundV1600=true;
-  erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
-  erpSafeCall('uaInit',()=>uaInit());
-  erpSafeCall('maBind',()=>maBind());
-  erpSafeCall('auditBind',()=>auditBind());
-  erpSafeCall('scBind',()=>scBind());
-  erpSafeCall('mcBind',()=>mcBind());
-  erpSafeCall('ccmpBind',()=>ccmpBind());
-  erpSafeCall('masterBind',()=>masterBind());
-  erpSafeCall('purchaseBind',()=>purchaseBind());
-  erpSafeCall('gateDashboardBind',()=>gateDashboardBind());
-  erpSafeCall('rgpBindList',()=>rgpBindList());
-  erpSafeCall('rgpReturnBind',()=>rgpReturnBind());
-  erpSafeCall('ogpBindList',()=>ogpBindList());
-  erpSafeCall('ogpBindEntry',()=>ogpBindEntry());
-  erpSafeCall('ogpBindDetail',()=>ogpBindDetail());
-  erpSafeCall('containerBind',()=>containerBind());
-  erpSafeCall('containerBindPartyDetail',()=>containerBindPartyDetail());
-  erpSafeCall('rgpBind',()=>rgpBind());
-  erpSafeCall('rgpBindDetail',()=>rgpBindDetail());
-  erpSafeCall('cgpBind',()=>cgpBind());
-  erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
-  erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
-  erpSafeCall('pdInit',()=>pdInit());
-  window.dispatchEvent(new CustomEvent('erp:business-core-bound'));
-  return true;
+
+/* V16.01 — restore all operational Save/Edit/Delete handlers after fast dashboard reveal.
+   Important: do not mark this complete until the binding pass itself has finished. */
+let erpBusinessBindingsReadyV1601=false;
+let erpBusinessBindingsRunningV1601=false;
+
+function erpBindBusinessCoreV1601(){
+  if(erpBusinessBindingsReadyV1601 || erpBusinessBindingsRunningV1601)return erpBusinessBindingsReadyV1601;
+  erpBusinessBindingsRunningV1601=true;
+
+  try{
+    erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
+    erpSafeCall('uaInit',()=>uaInit());
+    erpSafeCall('maBind',()=>maBind());
+    erpSafeCall('auditBind',()=>auditBind());
+    erpSafeCall('scBind',()=>scBind());
+    erpSafeCall('mcBind',()=>mcBind());
+    erpSafeCall('ccmpBind',()=>ccmpBind());
+    erpSafeCall('masterBind',()=>masterBind());
+    erpSafeCall('purchaseBind',()=>purchaseBind());
+    erpSafeCall('gateDashboardBind',()=>gateDashboardBind());
+    erpSafeCall('rgpBindList',()=>rgpBindList());
+    erpSafeCall('rgpReturnBind',()=>rgpReturnBind());
+    erpSafeCall('ogpBindList',()=>ogpBindList());
+    erpSafeCall('ogpBindEntry',()=>ogpBindEntry());
+    erpSafeCall('ogpBindDetail',()=>ogpBindDetail());
+    erpSafeCall('containerBind',()=>containerBind());
+    erpSafeCall('containerBindPartyDetail',()=>containerBindPartyDetail());
+    erpSafeCall('rgpBind',()=>rgpBind());
+    erpSafeCall('rgpBindDetail',()=>rgpBindDetail());
+    erpSafeCall('cgpBind',()=>cgpBind());
+    erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
+    erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
+    erpSafeCall('pdInit',()=>pdInit());
+
+    erpBusinessBindingsReadyV1601=true;
+    window.dispatchEvent(new CustomEvent('erp:business-bindings-ready'));
+  }finally{
+    erpBusinessBindingsRunningV1601=false;
+  }
+
+  return erpBusinessBindingsReadyV1601;
 }
-function erpArmDashboardBusinessWakeV1600(){
-  const wake=()=>erpBindBusinessCoreV1600();
-  const onFirstBusinessNav=e=>{
-    const b=e.target.closest('#sideMenu > .side-item');
-    if(!b || b.matches('[data-dashboard-open]'))return;
-    wake();
-    document.removeEventListener('click',onFirstBusinessNav,true);
-  };
-  document.addEventListener('click',onFirstBusinessNav,true);
-  if('requestIdleCallback' in window)requestIdleCallback(wake,{timeout:1200});
-  else setTimeout(wake,500);
+
+function erpEnsureBusinessBindingsV1601(){
+  if(!erpBusinessBindingsReadyV1601)erpBindBusinessCoreV1601();
 }
+window.erpEnsureBusinessBindingsV1601=erpEnsureBusinessBindingsV1601;
 
 function erpStableStartup(){
   const routeFirstDashboard=window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard';
@@ -11100,12 +11105,27 @@ function erpStableStartup(){
 
   if(routeFirstDashboard){
     document.body.classList.add('erp-dashboard-mode');
+
+    // Reveal Dashboard immediately, then bind operational controls.
     erpRevealAfterSafeBoot();
-    erpArmDashboardBusinessWakeV1600();
+
+    // First frame stays fast; Save/Edit/Delete handlers are attached immediately after.
+    setTimeout(()=>erpEnsureBusinessBindingsV1601(),0);
+
+    // Extra safety: if the user clicks a business menu before the timer runs,
+    // bind synchronously before that navigation handler executes.
+    const firstBusinessWakeV1601=e=>{
+      const main=e.target.closest('#sideMenu > .side-item');
+      if(!main || main.matches('[data-dashboard-open]'))return;
+      erpEnsureBusinessBindingsV1601();
+      document.removeEventListener('click',firstBusinessWakeV1601,true);
+    };
+    document.addEventListener('click',firstBusinessWakeV1601,true);
+
     return;
   }
 
-  erpBindBusinessCoreV1600();
+  erpEnsureBusinessBindingsV1601();
 
   setTimeout(async()=>{
     erpSafeCall('users render',()=>uaRenderAll());
@@ -29164,7 +29184,21 @@ if(document.readyState==='loading'){
 }
 
 window.ERPSingleActiveSidebarV1599={
-  clear:clearMainSidebarActiveV1599,
+  clear:clearMa
+<script id="erpBusinessBindingSafetyV1601">
+(function(){
+'use strict';
+document.addEventListener('pointerdown',e=>{
+  const b=e.target.closest('button');
+  if(!b)return;
+  const t=((b.id||'')+' '+(b.textContent||'')).toLowerCase();
+  if(!/(save|update|approve|delete|return|submit)/.test(t))return;
+  try{window.erpEnsureBusinessBindingsV1601?.()}catch(err){}
+},true);
+})();
+</script>
+
+inSidebarActiveV1599,
   sync:syncMainSidebarV1599
 };
 })();
