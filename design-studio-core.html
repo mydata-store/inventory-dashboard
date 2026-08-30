@@ -3429,6 +3429,17 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 .pd-v1624-simple-preview .pd-report-table,.pd-v1624-simple-preview .pd-report-table th,.pd-v1624-simple-preview .pd-report-table td{border-color:#111!important}
 @media(max-width:900px){.pd-v1624-jobbar{grid-template-columns:1fr}}
 </style>
+
+<style id="pdV1625ColumnStyles">
+.pd-v1625-width-control{border-top:1px dashed var(--border);padding-top:8px;margin-top:2px}
+.pd-v1625-width-line{display:grid;grid-template-columns:auto auto 1fr 48px auto auto;gap:5px;align-items:center;margin-top:5px}
+.pd-v1625-width-line .btn{padding:5px 7px;min-height:29px;font-size:8px}
+.pd-v1625-width-line input[type=range]{width:100%}
+#pdV1625WidthValue{font-size:9px;font-weight:900;text-align:center}
+.pd-v1625-width-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.pd-v1625-width-actions .btn{font-size:8px;padding:6px 8px}
+@media(max-width:900px){.pd-v1625-width-line{grid-template-columns:auto auto 1fr 44px}.pd-v1625-width-line button:nth-of-type(n+3){display:none}}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -7605,7 +7616,24 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
         </div></div>
         <div class="pd-section"><h3>Columns & Print Layout</h3>
           <div class="pd-field-lists"><div><div style="font-size:10px;font-weight:900;margin-bottom:5px">AVAILABLE FIELDS</div><div class="pd-field-box" id="pdAvailableFields"></div></div><div class="pd-field-controls"><button id="pdAddField">›</button><button id="pdRemoveField">‹</button><button id="pdMoveUp">↑</button><button id="pdMoveDown">↓</button></div><div><div style="font-size:10px;font-weight:900;margin-bottom:5px">PRINT LAYOUT</div><div class="pd-field-box" id="pdSelectedFields"></div></div></div>
-          <div class="pd-field-props pd-grid"><div><label>Column Heading</label><input id="pdFieldHeading" placeholder="Select a printed column"></div><div><label>Header Alignment</label><select id="pdFieldHeaderAlign"><option>Left</option><option selected>Center</option><option>Right</option></select></div><div><label>Data Alignment</label><select id="pdFieldDataAlign"><option selected>Left</option><option>Center</option><option>Right</option></select></div><div><label>Text Wrap</label><select id="pdFieldWrap"><option value="nowrap" selected>No Wrap / Single Line</option><option value="wrap">Wrap Text</option></select></div><div><label>Width %</label><input id="pdFieldWidth" type="number" min="3" max="50" value="12"></div></div>
+          <div class="pd-field-props pd-grid"><div><label>Column Heading</label><input id="pdFieldHeading" placeholder="Select a printed column"></div><div><label>Header Alignment</label><select id="pdFieldHeaderAlign"><option>Left</option><option selected>Center</option><option>Right</option></select></div><div><label>Data Alignment</label><select id="pdFieldDataAlign"><option selected>Left</option><option>Center</option><option>Right</option></select></div><div><label>Text Wrap</label><select id="pdFieldWrap"><option value="nowrap" selected>No Wrap / Single Line</option><option value="wrap">Wrap Text</option></select></div><div><label>Width %</label><input id="pdFieldWidth" type="number" min="2" max="80" step="0.5" value="12"></div>
+            <div class="pd-v1625-width-control full">
+              <label>Selected Column Width</label>
+              <div class="pd-v1625-width-line">
+                <button class="btn" type="button" id="pdV1625WidthMinus5">−5%</button>
+                <button class="btn" type="button" id="pdV1625WidthMinus1">−1%</button>
+                <input id="pdV1625WidthSlider" type="range" min="2" max="80" step="0.5" value="12">
+                <span id="pdV1625WidthValue">12%</span>
+                <button class="btn" type="button" id="pdV1625WidthPlus1">+1%</button>
+                <button class="btn" type="button" id="pdV1625WidthPlus5">+5%</button>
+              </div>
+              <div class="pd-v1625-width-actions">
+                <button class="btn" type="button" id="pdV1625AutoFit">Auto Fit Selected</button>
+                <button class="btn" type="button" id="pdV1625EqualWidths">Equal Widths</button>
+                <button class="btn" type="button" id="pdV1625Narrow">Compact All</button>
+                <button class="btn" type="button" id="pdV1625ResetWidths">Reset Widths</button>
+              </div>
+            </div></div>
         </div>
         <div class="pd-section"><h3>Table Style</h3><div class="pd-grid">
           <div><label>Header Background</label><input type="color" id="pdHeaderBg" value="#ffb000"></div><div><label>Header Text</label><input type="color" id="pdHeaderText" value="#111111"></div>
@@ -31115,6 +31143,99 @@ function bind(){
  document.addEventListener('erp:print-job-ready',()=>{updateJob();setTimeout(refreshPreview,50)});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,150),{once:true});else setTimeout(bind,150);
+})();
+</script>
+
+
+<script id="pdV1625ColumnAndNavigationFix">
+(function(){
+'use strict';
+const q=id=>document.getElementById(id);
+
+function selectedField(){
+ try{return pdDesign?.fields?.find(x=>x.key===pdSelectedField)||null}catch(e){return null}
+}
+function setWidth(v){
+ const f=selectedField();if(!f)return;
+ v=Math.max(2,Math.min(80,Math.round(Number(v)*2)/2));
+ f.width=v;
+ if(q('pdFieldWidth'))q('pdFieldWidth').value=v;
+ if(q('pdV1625WidthSlider'))q('pdV1625WidthSlider').value=v;
+ if(q('pdV1625WidthValue'))q('pdV1625WidthValue').textContent=v+'%';
+ try{pdRenderFields();pdRenderPreview()}catch(e){console.error(e)}
+}
+function syncWidth(){
+ const f=selectedField();const v=f?Number(f.width||12):12;
+ if(q('pdV1625WidthSlider'))q('pdV1625WidthSlider').value=v;
+ if(q('pdV1625WidthValue'))q('pdV1625WidthValue').textContent=v+'%';
+}
+function autoFit(){
+ const f=selectedField();if(!f)return;
+ const c=printContracts?.()[pdDesign.contractId];
+ const vals=(c?.rows||[]).slice(0,50).map(r=>String(r[f.key]??''));
+ const longest=Math.max(String(f.heading||'').length,...vals.map(x=>x.length),4);
+ // practical percentage estimate, capped so one long field cannot consume whole page
+ setWidth(Math.max(5,Math.min(35,4+longest*0.65)));
+}
+function equalWidths(){
+ if(!pdDesign?.fields?.length)return;
+ const w=Math.max(3,Math.min(40,100/pdDesign.fields.length));
+ pdDesign.fields.forEach(f=>f.width=Math.round(w*2)/2);
+ try{pdRenderFields();pdRenderPreview();syncWidth()}catch(e){}
+}
+function compactAll(){
+ if(!pdDesign?.fields?.length)return;
+ const w=Math.max(3,Math.min(12,92/pdDesign.fields.length));
+ pdDesign.fields.forEach(f=>f.width=Math.round(w*2)/2);
+ try{pdRenderFields();pdRenderPreview();syncWidth()}catch(e){}
+}
+function resetWidths(){
+ if(!pdDesign?.fields?.length)return;
+ pdDesign.fields.forEach(f=>f.width=12);
+ try{pdRenderFields();pdRenderPreview();syncWidth()}catch(e){}
+}
+function openPrintViewOnly(view){
+ // Close Page Control Studio if another global handler opened it.
+ const pcm=document.getElementById('pageControllerModal')||document.getElementById('pageControlStudio')||document.querySelector('.page-controller-modal.open,.pc-studio-modal.open');
+ if(pcm)pcm.classList.remove('open','active');
+ try{pdOpenView(view)}catch(e){
+   document.querySelectorAll('[data-print-view]').forEach(b=>b.classList.toggle('active',b.dataset.printView===view));
+   document.querySelectorAll('.print-view').forEach(x=>x.classList.toggle('active',x.id==='print-view-'+view));
+ }
+ if(view==='designer')setTimeout(()=>{try{pdRenderPreview();syncWidth()}catch(e){}},0)
+}
+function bind(){
+ // Capture-phase navigation prevents generic "Page Designer" handlers from hijacking this Print Studio tab.
+ document.querySelectorAll('#panel-print [data-print-view]').forEach(btn=>{
+   btn.addEventListener('click',function(e){
+     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+     openPrintViewOnly(this.dataset.printView);
+   },true)
+ });
+
+ // Also explicitly close Page Control Studio if it appears while Print Studio is active.
+ document.addEventListener('click',e=>{
+   if(!document.getElementById('panel-print')?.classList.contains('active'))return;
+   const tab=e.target.closest?.('#panel-print [data-print-view]');
+   if(tab)setTimeout(()=>openPrintViewOnly(tab.dataset.printView),0);
+ },true);
+
+ q('pdV1625WidthSlider')?.addEventListener('input',e=>setWidth(e.target.value));
+ q('pdV1625WidthMinus5')?.addEventListener('click',()=>setWidth((selectedField()?.width||12)-5));
+ q('pdV1625WidthMinus1')?.addEventListener('click',()=>setWidth((selectedField()?.width||12)-1));
+ q('pdV1625WidthPlus1')?.addEventListener('click',()=>setWidth((selectedField()?.width||12)+1));
+ q('pdV1625WidthPlus5')?.addEventListener('click',()=>setWidth((selectedField()?.width||12)+5));
+ q('pdV1625AutoFit')?.addEventListener('click',autoFit);
+ q('pdV1625EqualWidths')?.addEventListener('click',equalWidths);
+ q('pdV1625Narrow')?.addEventListener('click',compactAll);
+ q('pdV1625ResetWidths')?.addEventListener('click',resetWidths);
+
+ q('pdFieldWidth')?.addEventListener('input',()=>setTimeout(syncWidth,0));
+ q('pdSelectedFields')?.addEventListener('click',()=>setTimeout(syncWidth,0));
+ q('pdAvailableFields')?.addEventListener('click',()=>setTimeout(syncWidth,0));
+ setTimeout(syncWidth,100);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,180),{once:true});else setTimeout(bind,180);
 })();
 </script>
 
