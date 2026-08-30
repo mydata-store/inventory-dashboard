@@ -3477,6 +3477,16 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 .pd-v1629-switch{display:flex;align-items:center;gap:6px;font-size:8px;font-weight:900;white-space:nowrap}
 .pd-v1629-switch input{accent-color:var(--primary)}
 </style>
+
+<style id="pdV1630SimplifiedPrintStudio">
+#print-view-themes,#print-view-assignments{display:none!important}
+.pd-v1630-save-card{border:1px solid var(--border);border-radius:10px;padding:9px 10px;margin:8px 0;background:color-mix(in srgb,var(--surface) 97%,var(--primary))}
+.pd-v1630-save-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pd-v1630-save-head b{font-size:10px}.pd-v1630-save-head span{font-size:8px;color:var(--muted)}
+.pd-v1630-save-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pd-v1630-status{display:inline-flex;align-items:center;padding:4px 7px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:8px;font-weight:900}
+#panel-print.pd-v1630-has-saved .pd-v1630-status{color:var(--primary)}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -7612,9 +7622,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
   </div>
   <div class="print-tabs">
     <button class="print-tab active" data-print-view="designer">Page Designer</button>
-    <button class="print-tab" data-print-view="themes">Print Page Themes</button>
     <button class="print-tab" data-print-view="gallery">Print Gallery</button>
-    <button class="print-tab" data-print-view="assignments">Assignments / Page Mapping</button>
   </div>
   <div class="print-view active" id="print-view-designer">
     <div class="pd-layout">
@@ -7634,6 +7642,16 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
             </div>
             <div class="pd-v1627-filterline" id="pdV1627FilterLine"></div>
           </div>
+          <div class="pd-v1630-save-card full">
+            <div class="pd-v1630-save-head">
+              <div><b id="pdV1630SaveTitle">Design for Current Report</b><span>This design will load automatically next time you print this report.</span></div>
+              <span class="pd-v1630-status" id="pdV1630SaveState">Not Saved</span>
+            </div>
+            <div class="pd-v1630-save-actions">
+              <button class="btn primary" type="button" id="pdV1630SaveCurrent">Save for This Report</button>
+              <button class="btn" type="button" id="pdV1630SaveCopy">Save As New Design</button>
+            </div>
+          </div>
           <div><label>Design Name</label><input id="pdDesignName" value="Local Purchase"></div>
           <div id="pdV1627ManualSourceWrap"><label>Manual Data Source</label><select id="pdDataSource"></select></div>
           <div><label>Print Page Theme</label><select id="pdThemeSelect"></select></div>
@@ -7644,7 +7662,8 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
             <option value="detailed">Detailed Company Report</option>
           </select></div>
           <div><label>Shared ERP Font</label><select id="pdFontFamily"><option>Segoe UI</option><option>Arial</option><option>Tahoma</option><option>Verdana</option><option>Trebuchet MS</option><option>Georgia</option></select></div>
-          <div><label>Saved Draft</label><select id="pdV1624DraftSelect"><option value="">— Current / Unsaved —</option></select></div>
+          <div><label>Design For</label><input id="pdV1630DesignFor" type="text" readonly value="Current Report"></div>
+          <div><label>Design Status</label><input id="pdV1630DesignStatus" type="text" readonly value="New Design — Not Saved"></div>
         </div></div>
         <div class="pd-section"><h3>Paper & Page</h3><div class="pd-grid">
           <div><label>Paper Size</label><select id="pdPaper"><option>A4</option><option>Letter</option><option>Legal</option><option>A3</option></select></div>
@@ -7730,8 +7749,8 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
         <div class="pd-actions">
           <button class="btn" id="pdNewDesign">New</button>
           <button class="btn" id="pdDuplicateDesign">Duplicate</button>
-          <button class="btn" id="pdV1624SaveAs">Save As New Draft</button>
-          <button class="btn" id="pdV1624Default">Set as Default</button>
+          <button class="btn" id="pdV1630SaveAs">Save As New Design</button>
+          <button class="btn primary" id="pdV1630SaveForReport">Save for This Report</button>
           <button class="btn primary" id="pdSaveDesign">Save to Print Gallery</button>
         </div>
       </div>
@@ -31582,6 +31601,106 @@ function bind(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});
 else setTimeout(bind,220);
+})();
+</script>
+
+
+<script id="pdV1630SmartReportSave">
+(function(){
+'use strict';
+const q=id=>document.getElementById(id);
+function currentJob(){try{return window.ERPPrintRouting?.getCurrentJob?.()||JSON.parse(sessionStorage.getItem('erp.print.currentJob')||'null')}catch(e){return null}}
+function gallery(){try{return printGallery()}catch(e){return []}}
+function mapping(){try{const a=JSON.parse(localStorage.getItem('erp.print.reportDesignMap')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+function stableKey(j){
+ if(!j)return'report:default';
+ const p=['report',j.moduleKey||'unknown',j.reportKey||'unknown'],f=j.filters||{};
+ if(j.moduleKey==='purchase'){if(f.purchaseRegister)p.push(f.purchaseRegister);if(f.purchaseSubtype)p.push(String(f.purchaseSubtype).toLowerCase().replace(/\s+/g,'-'))}
+ return p.join(':')
+}
+function displayName(j){return j?`${j.moduleName||j.moduleKey||'ERP'} — ${j.reportName||j.reportKey||'Report'}`:'Current Report'}
+function linkedDesign(j){
+ const key=stableKey(j),link=mapping().find(x=>x.reportKey===key);
+ if(!link)return null;
+ return gallery().find(d=>d.id===link.designId)||null
+}
+function updateUi(j,d){
+ const name=displayName(j),saved=!!d;
+ if(q('pdV1630DesignFor'))q('pdV1630DesignFor').value=name;
+ if(q('pdV1630DesignStatus'))q('pdV1630DesignStatus').value=saved?`Saved Design — ${d.name}`:'New Design — Not Saved';
+ if(q('pdV1630SaveTitle'))q('pdV1630SaveTitle').textContent='Design for '+name;
+ if(q('pdV1630SaveState'))q('pdV1630SaveState').textContent=saved?'Saved':'Not Saved';
+ q('panel-print')?.classList.toggle('pd-v1630-has-saved',saved);
+ if(q('pdV1627MatchedBadge'))q('pdV1627MatchedBadge').textContent=saved?d.name:'Default ERP Design'
+}
+function saveForReport(copyMode){
+ const j=currentJob();
+ if(!j||j.source!=='report-center'){window.toast?.('Open Print Studio from Report Center first');return}
+ try{pdDesign=pdCollect()}catch(e){console.error(e);return}
+ const key=stableKey(j),base=displayName(j);
+ let g=gallery(),m=mapping(),d;
+ if(copyMode){
+  const name=prompt('Design name',base+' Design');if(!name)return;
+  d={...pdDesign,id:'print-'+Date.now(),name:name.trim(),reportIdentity:key,reportTitle:base,updatedAt:new Date().toISOString()};
+  g.push(JSON.parse(JSON.stringify(d)));
+ }else{
+  const oldLink=m.find(x=>x.reportKey===key),existing=oldLink?g.find(x=>x.id===oldLink.designId):null;
+  if(existing){
+   d={...existing,...pdDesign,id:existing.id,name:existing.name||base,reportIdentity:key,reportTitle:base,updatedAt:new Date().toISOString()};
+   g[g.findIndex(x=>x.id===existing.id)]=JSON.parse(JSON.stringify(d));
+  }else{
+   d={...pdDesign,id:'print-'+Date.now(),name:base,reportIdentity:key,reportTitle:base,updatedAt:new Date().toISOString()};
+   g.push(JSON.parse(JSON.stringify(d)));
+  }
+ }
+ savePrintGallery(g);
+ m=m.filter(x=>x.reportKey!==key);
+ m.push({reportKey:key,designId:d.id,designName:d.name,moduleKey:j.moduleKey||'',reportType:j.reportKey||'',updatedAt:new Date().toISOString()});
+ localStorage.setItem('erp.print.reportDesignMap',JSON.stringify(m));
+ let drafts=[];try{drafts=JSON.parse(localStorage.getItem('erp.print.drafts')||'[]')}catch(e){}if(!Array.isArray(drafts))drafts=[];
+ drafts=drafts.filter(x=>x.matchKey!==key);
+ drafts.push({id:d.id,name:d.name,matchKey:key,moduleKey:j.moduleKey||'',reportType:j.reportKey||'',scope:'exact',updatedAt:new Date().toISOString()});
+ localStorage.setItem('erp.print.drafts',JSON.stringify(drafts));
+ pdDesign=JSON.parse(JSON.stringify(d));
+ try{pdRenderGallery();pdSyncForm();pdRenderPreview()}catch(e){}
+ updateUi(j,d);
+ window.toast?.(copyMode?'New print design saved':'Design saved for this report')
+}
+function loadSaved(){
+ const j=currentJob();
+ if(!j||j.source!=='report-center'){updateUi(j,null);return}
+ const d=linkedDesign(j);updateUi(j,d);if(!d)return;
+ try{
+  pdDesign=pdNormalizeFields(JSON.parse(JSON.stringify(d)));
+  pdDesign.contractId='report-center-current';
+  pdSyncForm();pdRenderPreview()
+ }catch(e){console.error(e)}
+}
+function bind(){
+ q('pdV1630SaveCurrent')?.addEventListener('click',()=>saveForReport(false));
+ q('pdV1630SaveForReport')?.addEventListener('click',()=>saveForReport(false));
+ q('pdV1630SaveCopy')?.addEventListener('click',()=>saveForReport(true));
+ q('pdV1630SaveAs')?.addEventListener('click',()=>saveForReport(true));
+ document.addEventListener('erp:print-job-ready',()=>setTimeout(loadSaved,120));
+ q('pdV1627RefreshJob')?.addEventListener('click',()=>setTimeout(loadSaved,120));
+ setTimeout(loadSaved,350)
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,350),{once:true});else setTimeout(bind,350);
+})();
+</script>
+
+
+<script id="pdV1630GalleryLabels">
+(function(){
+function enhance(){
+ let m=[];try{m=JSON.parse(localStorage.getItem('erp.print.reportDesignMap')||'[]')}catch(e){}if(!Array.isArray(m))m=[];
+ document.querySelectorAll('#printGalleryGrid [data-print-design]').forEach(card=>{
+  if(card.querySelector('.pd-v1630-gallery-link'))return;
+  const x=m.find(z=>z.designId===card.dataset.printDesign);if(!x)return;
+  const d=document.createElement('div');d.className='pd-v1630-gallery-link';d.style.cssText='font-size:7px;color:var(--muted);margin-top:4px;font-weight:800';d.textContent='Linked to: '+x.reportKey;card.appendChild(d)
+ })
+}
+document.addEventListener('click',()=>setTimeout(enhance,80));setTimeout(enhance,500);
 })();
 </script>
 
