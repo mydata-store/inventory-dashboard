@@ -3346,6 +3346,11 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 #ogpDeleteRecordBtn{background:#fff!important;color:#b42318!important;border:1px solid #f3b0aa!important;font-weight:800}
 #ogpDeleteRecordBtn:hover{background:#fff1f0!important;border-color:#e58a82!important}
 </style>
+
+<style id="completeDeleteStyleV1613">
+.complete-delete-v1613{background:#fff!important;color:#b42318!important;border:1px solid #f3b0aa!important;font-weight:800}
+.complete-delete-v1613:hover{background:#fff1f0!important;border-color:#e58a82!important}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -5354,7 +5359,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       </div>
     </div>
     <div class="cgp-items-box"><div class="rgp-list-title"><div><h3>CGP Items</h3><p>Material can be selected from Item Master or typed manually.</p></div><button class="btn primary" id="cgpAddRowBtn" type="button">＋ Add Item Row</button></div><div class="cgp-table-wrap"><table class="purchase-table cgp-entry-table"><thead><tr><th>#</th><th>Material / Description</th><th>Unit</th><th>Quantity</th><th>Rate</th><th>Gross Amount</th><th>Discount</th><th>Payable Amount</th><th>Remarks</th><th>Action</th></tr></thead><tbody id="cgpEntryBody"></tbody></table></div><div class="cgp-key-help">Keyboard: Arrow keys move between cells, Enter moves down, Tab moves next, Ctrl+D copies above, Ctrl+C/Ctrl+V copy/paste, Delete clears selected cell.</div></div>
-    <div class="cgp-entry-footer"><div class="cgp-entry-totals"><div><small>Total Items</small><strong id="cgpTotalItems">0</strong></div><div><small>Total Qty</small><strong id="cgpTotalQty">0</strong></div><div><small>Gross Value</small><strong id="cgpTotalGross">PKR 0</strong></div><div><small>Total Discount</small><strong id="cgpTotalDiscount">PKR 0</strong></div><div><small>Payable Amount</small><strong id="cgpTotalPayable">PKR 0</strong></div></div><div class="gate-top-actions"><button class="btn" id="cgpEntryClearBtn" type="button">Clear</button><button class="btn primary" id="cgpSaveBtn" type="button">Save CGP</button></div></div>
+    <div class="cgp-entry-footer"><div class="cgp-entry-totals"><div><small>Total Items</small><strong id="cgpTotalItems">0</strong></div><div><small>Total Qty</small><strong id="cgpTotalQty">0</strong></div><div><small>Gross Value</small><strong id="cgpTotalGross">PKR 0</strong></div><div><small>Total Discount</small><strong id="cgpTotalDiscount">PKR 0</strong></div><div><small>Payable Amount</small><strong id="cgpTotalPayable">PKR 0</strong></div></div><div class="gate-top-actions"><button class="btn" id="cgpEntryClearBtn" type="button">Clear</button><button class="btn danger complete-delete-v1613" type="button" id="cgpDeleteRecordBtn" style="display:none">Delete CGP</button><button class="btn primary" id="cgpSaveBtn" type="button">Save CGP</button></div></div>
   </div>
 </section>
 
@@ -5856,7 +5861,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <span class="rgp-entry-bottom-spacer"></span>
       <button class="btn" id="rgpDraftBtn">Save Draft</button>
       <button class="btn" id="rgpClearBtn">Clear</button>
-      <button class="btn primary" id="rgpSaveBtn" type="button" onclick="return rgpSave()">Save RGP</button>
+      <button class="btn danger complete-delete-v1613" type="button" id="rgpDeleteRecordBtn" style="display:none">Delete RGP</button><button class="btn primary" id="rgpSaveBtn" type="button" onclick="return rgpSave()">Save RGP</button>
     </div>
   </div>
 </section>
@@ -13031,9 +13036,35 @@ function cgpRenumber(){[...$('#cgpEntryBody').children].forEach((tr,i)=>tr.query
 function cgpGridKey(e){const inputs=[...$('#cgpEntryBody').querySelectorAll('input:not([readonly])')],i=inputs.indexOf(e.target);if(i<0)return;if(e.ctrlKey&&e.key.toLowerCase()==='d'){e.preventDefault();const row=e.target.closest('tr'),prev=row.previousElementSibling;if(prev){const cls=[...e.target.classList].find(c=>c.startsWith('cgp-'));const p=prev.querySelector('.'+cls);if(p)e.target.value=p.value;cgpCalcRow(row)}}else if(e.key==='Enter'){e.preventDefault();const row=e.target.closest('tr'),next=row.nextElementSibling;if(next){const cls=[...e.target.classList].find(c=>c.startsWith('cgp-'));next.querySelector('.'+cls)?.focus()}else{cgpMakeRow();const cls=[...e.target.classList].find(c=>c.startsWith('cgp-'));$('#cgpEntryBody').lastElementChild.querySelector('.'+cls)?.focus()}}else if(e.key==='ArrowRight'&&e.target.selectionStart===e.target.value.length){if(inputs[i+1]){e.preventDefault();inputs[i+1].focus()}}else if(e.key==='ArrowLeft'&&e.target.selectionStart===0&&inputs[i-1]){e.preventDefault();inputs[i-1].focus()}else if(e.key==='Delete'&&e.target.value){e.preventDefault();e.target.value='';cgpCalcRow(e.target.closest('tr'))}}
 function cgpCollectItems(){return [...$('#cgpEntryBody').children].map(tr=>({material:String(tr.querySelector('.cgp-material').value||'').trim(),unit:String(tr.querySelector('.cgp-unit').value||'').trim(),qty:purchaseNum(tr.querySelector('.cgp-qty').value),rate:purchaseNum(tr.querySelector('.cgp-rate').value),gross:purchaseNum(String(tr.querySelector('.cgp-gross').value||'').replace(/,/g,'')),discount:purchaseNum(tr.querySelector('.cgp-discount').value),amount:purchaseNum(String(tr.querySelector('.cgp-amount').value||'').replace(/,/g,'')),remarks:String(tr.querySelector('.cgp-item-remarks').value||'').trim()})).filter(x=>x.material||x.qty||x.rate||x.discount||x.remarks)}
 function cgpUpdateTotals(){const items=cgpCollectItems(),qty=items.reduce((n,x)=>n+x.qty,0),gross=items.reduce((n,x)=>n+(x.qty*x.rate),0),disc=items.reduce((n,x)=>n+x.discount,0),pay=Math.max(0,gross-disc);$('#cgpTotalItems')&&($('#cgpTotalItems').textContent=items.length);$('#cgpTotalQty')&&($('#cgpTotalQty').textContent=purchaseMoney(qty));$('#cgpTotalGross')&&($('#cgpTotalGross').textContent='PKR '+purchaseMoney(gross));$('#cgpTotalDiscount')&&($('#cgpTotalDiscount').textContent='PKR '+purchaseMoney(disc));$('#cgpTotalPayable')&&($('#cgpTotalPayable').textContent='PKR '+purchaseMoney(pay))}
-function cgpClearEntry(){cgpEditingId='';['cgpNo','cgpDate','cgpParty','cgpDepartment','cgpPhone','cgpVehicle','cgpRemarks'].forEach(id=>{if($('#'+id))$('#'+id).value=''});$('#cgpEntryBody').innerHTML='';cgpMakeRow();$('#cgpEditBanner').style.display='none';$('#cgpSaveBtn').textContent='Save CGP'}
+function cgpClearEntry(){cgpEditingId='';if($('#cgpDeleteRecordBtn'))$('#cgpDeleteRecordBtn').style.display='none';['cgpNo','cgpDate','cgpParty','cgpDepartment','cgpPhone','cgpVehicle','cgpRemarks'].forEach(id=>{if($('#'+id))$('#'+id).value=''});$('#cgpEntryBody').innerHTML='';cgpMakeRow();$('#cgpEditBanner').style.display='none';$('#cgpSaveBtn').textContent='Save CGP'}
+
+function cgpDeleteCurrentRecord(){
+  try{
+    if(!cgpEditingId){toast('Open an existing CGP record to delete');return false}
+    const all=cgpLoad();
+    const index=all.findIndex(x=>String(x.id)===String(cgpEditingId));
+    if(index<0){toast('CGP record not found');return false}
+    const rec=all[index],no=String(rec.cgpNo||'this CGP');
+    if(!window.confirm(`Delete ${no} permanently?\n\nThis will remove the complete CGP and all material rows.`))return false;
+    const next=all.filter((_,i)=>i!==index);
+    if(!cgpStore(next)){toast('CGP could not be deleted');return false}
+    if(cgpLoad().some(x=>String(x.id)===String(rec.id))){toast('CGP delete could not be verified');return false}
+    try{ERPAudit?.log?.({module:'Gate Pass',page:'CGP Entry',action:'Delete',recordId:rec.id,before:rec})}catch(e){}
+    cgpFilterCache=null;
+    cgpClearEntry();
+    try{cgpRenderAll()}catch(e){}
+    try{gateDashboardRender()}catch(e){}
+    toast(`${no} deleted successfully`);
+    gateOpenPanel('cgp-list');
+    return true
+  }catch(err){
+    console.error('CGP Delete Error',err);
+    toast('CGP delete error: '+(err?.message||'Unknown error'));
+    return false
+  }
+}
 function cgpSave(){const no=cgpFormatNo($('#cgpNo').value),date=rgpFormatDate($('#cgpDate').value),party=String($('#cgpParty').value||'').trim(),items=cgpCollectItems();$('#cgpNo').value=no;$('#cgpDate').value=date;if(!no)return toast('CGP Number is required');if(!date)return toast('CGP Date is required');if(!party)return toast('Scrapper / Buyer is required');if(!items.length)return toast('Add at least one CGP item');let rows=cgpLoad();const duplicate=rows.find(r=>r.cgpNo===no&&r.id!==cgpEditingId);if(duplicate)return toast('This CGP number already exists');const rec={id:cgpEditingId||'CGP-'+Date.now(),cgpNo:no,date,scrapper:purchaseFormatText(party,'scrapper','Scrapper'),department:purchaseFormatText($('#cgpDepartment').value||'','department','Department'),phone:String($('#cgpPhone').value||'').trim(),vehicleNo:String($('#cgpVehicle').value||'').trim().toUpperCase(),remarks:purchaseFormatText($('#cgpRemarks').value||'','remarks','Remarks'),items,status:'Closed',createdAt:new Date().toISOString()};if(cgpEditingId){const i=rows.findIndex(r=>r.id===cgpEditingId);if(i>=0)rec.createdAt=rows[i].createdAt||rec.createdAt,rows[i]=rec}else rows.push(rec);if(!cgpStore(rows))return toast('CGP could not be saved');cgpSetContext(rec.id);cgpEditingId='';cgpRenderAll();gateDashboardRender();toast('CGP saved');gateOpenPanel('cgp-detail');cgpRenderDetail()}
-function cgpEdit(id){const r=cgpLoad().find(x=>x.id===id);if(!r)return toast('CGP not found');cgpEditingId=id;gateOpenPanel('cgp-entry');$('#cgpNo').value=r.cgpNo||'';$('#cgpDate').value=r.date||'';$('#cgpParty').value=r.scrapper||r.party||'';$('#cgpDepartment').value=r.department||'';$('#cgpPhone').value=r.phone||'';$('#cgpVehicle').value=r.vehicleNo||'';$('#cgpRemarks').value=r.remarks||'';$('#cgpEntryBody').innerHTML='';(r.items||[]).forEach(cgpMakeRow);if(!(r.items||[]).length)cgpMakeRow();$('#cgpEditBanner').style.display='flex';$('#cgpEditText').textContent=(r.cgpNo||'')+' • Update saved CGP';$('#cgpSaveBtn').textContent='Update CGP';cgpUpdateTotals()}
+function cgpEdit(id){const r=cgpLoad().find(x=>x.id===id);if(!r)return toast('CGP not found');cgpEditingId=id;gateOpenPanel('cgp-entry');$('#cgpNo').value=r.cgpNo||'';$('#cgpDate').value=r.date||'';$('#cgpParty').value=r.scrapper||r.party||'';$('#cgpDepartment').value=r.department||'';$('#cgpPhone').value=r.phone||'';$('#cgpVehicle').value=r.vehicleNo||'';$('#cgpRemarks').value=r.remarks||'';$('#cgpEntryBody').innerHTML='';(r.items||[]).forEach(cgpMakeRow);if(!(r.items||[]).length)cgpMakeRow();$('#cgpEditBanner').style.display='flex';$('#cgpEditText').textContent=(r.cgpNo||'')+' • Update saved CGP';$('#cgpSaveBtn').textContent='Update CGP';if($('#cgpDeleteRecordBtn'))$('#cgpDeleteRecordBtn').style.display='';cgpUpdateTotals()}
 function cgpDashboardRender(){const rows=cgpLoad(),qty=rows.reduce((n,r)=>n+cgpQty(r),0),gross=rows.reduce((n,r)=>n+cgpGross(r),0),disc=rows.reduce((n,r)=>n+cgpDiscount(r),0),pay=rows.reduce((n,r)=>n+cgpPayable(r),0);$('#cgpDashTotal')&&($('#cgpDashTotal').textContent=rows.length);$('#cgpDashQty')&&($('#cgpDashQty').textContent=purchaseMoney(qty));$('#cgpDashGross')&&($('#cgpDashGross').textContent='PKR '+purchaseMoney(gross));$('#cgpDashDiscount')&&($('#cgpDashDiscount').textContent='PKR '+purchaseMoney(disc));$('#cgpDashPayable')&&($('#cgpDashPayable').textContent='PKR '+purchaseMoney(pay));const recent=rows.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,8),body=$('#cgpRecentBody');if(body)body.innerHTML=recent.length?recent.map(r=>`<tr><td><b>${escHtml(r.cgpNo||'')}</b></td><td>${escHtml(r.date||'')}</td><td>${escHtml(r.scrapper||'')}</td><td>${escHtml(cgpItems(r)[0]?.material||'')}</td><td>${purchaseMoney(cgpQty(r))}</td><td>PKR ${purchaseMoney(cgpPayable(r))}</td></tr>`).join(''):'<tr><td colspan="6" class="purchase-empty">No CGP records saved yet.</td></tr>';$('#cgpActivityLatest')&&($('#cgpActivityLatest').textContent=recent[0]?`${recent[0].cgpNo} • ${recent[0].scrapper||''}`:'No CGP saved yet.');const now=new Date(),mm=String(now.getMonth()+1).padStart(2,'0'),yy=String(now.getFullYear()).slice(-2);const mcount=rows.filter(r=>{const k=cgpDateKey(r.date);return k&&k.slice(0,7)===`${now.getFullYear()}-${mm}`}).length;$('#cgpActivityMonth')&&($('#cgpActivityMonth').textContent=`${mcount} CGP${mcount===1?'':'s'} this month.`);$('#cgpActivityValue')&&($('#cgpActivityValue').textContent='PKR '+purchaseMoney(pay))}
 function cgpFilteredRows(){const vals={no:$('#cgpFilterNo')?.value||'',mat:$('#cgpFilterMaterial')?.value||'',party:$('#cgpFilterParty')?.value||'',dept:$('#cgpFilterDepartment')?.value||'',veh:$('#cgpFilterVehicle')?.value||'',from:rgpFormatDate($('#cgpFilterFrom')?.value||''),to:rgpFormatDate($('#cgpFilterTo')?.value||''),any:$('#cgpFilterAny')?.value||''};const fkey=cgpDateKey(vals.from),tkey=cgpDateKey(vals.to);return cgpLoad().filter(r=>{const mats=cgpItems(r).map(x=>x.material).join(' '),hay=[r.cgpNo,r.date,r.scrapper,r.department,r.vehicleNo,r.remarks,mats].join(' ').toLowerCase();const key=cgpDateKey(r.date);return(!vals.no||String(r.cgpNo).toLowerCase().includes(vals.no.toLowerCase()))&&(!vals.mat||mats.toLowerCase().includes(vals.mat.toLowerCase()))&&(!vals.party||String(r.scrapper||'').toLowerCase().includes(vals.party.toLowerCase()))&&(!vals.dept||String(r.department||'').toLowerCase().includes(vals.dept.toLowerCase()))&&(!vals.veh||String(r.vehicleNo||'').toLowerCase().includes(vals.veh.toLowerCase()))&&(!fkey||key>=fkey)&&(!tkey||key<=tkey)&&(!vals.any||hay.includes(vals.any.toLowerCase()))}).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))}
 function cgpRenderList(){const rows=cgpFilterCache||cgpFilteredRows(),body=$('#cgpListBody');if(!body)return;$('#cgpListCount').textContent=rows.length;$('#cgpListQty').textContent=purchaseMoney(rows.reduce((n,r)=>n+cgpQty(r),0));$('#cgpListGross').textContent='PKR '+purchaseMoney(rows.reduce((n,r)=>n+cgpGross(r),0));$('#cgpListDiscount').textContent='PKR '+purchaseMoney(rows.reduce((n,r)=>n+cgpDiscount(r),0));$('#cgpListPayable').textContent='PKR '+purchaseMoney(rows.reduce((n,r)=>n+cgpPayable(r),0));body.innerHTML=rows.length?rows.map(r=>{const first=cgpItems(r)[0]||{};return `<tr><td><b>${escHtml(r.cgpNo||'')}</b></td><td>${escHtml(r.date||'')}</td><td>${escHtml(r.scrapper||'')}</td><td>${escHtml(first.material||'')}${cgpItems(r).length>1?` <small>+${cgpItems(r).length-1} more</small>`:''}</td><td>${purchaseMoney(cgpQty(r))}</td><td>${escHtml(first.unit||'')}</td><td>PKR ${purchaseMoney(cgpGross(r))}</td><td>PKR ${purchaseMoney(cgpDiscount(r))}</td><td>PKR ${purchaseMoney(cgpPayable(r))}</td><td>${escHtml(r.department||'')}</td><td>${escHtml(r.vehicleNo||'')}</td><td><div style="display:flex;gap:4px"><button class="btn" data-cgp-detail="${escHtml(r.id)}">Detail</button><button class="btn" data-cgp-edit="${escHtml(r.id)}">Edit</button><button class="btn" data-cgp-print="${escHtml(r.id)}">Print</button></div></td></tr>`}).join(''):'<tr><td colspan="12" class="purchase-empty">No CGP records found.</td></tr>';body.querySelectorAll('[data-cgp-detail]').forEach(b=>b.onclick=()=>cgpOpenDetail(b.dataset.cgpDetail));body.querySelectorAll('[data-cgp-edit]').forEach(b=>b.onclick=()=>cgpEdit(b.dataset.cgpEdit));body.querySelectorAll('[data-cgp-print]').forEach(b=>b.onclick=()=>{cgpOpenDetail(b.dataset.cgpPrint);setTimeout(()=>window.print(),100)})}
@@ -13043,7 +13074,7 @@ function cgpRenderAll(){cgpDashboardRender();cgpRenderList();gateDashboardRender
 function cgpBind(){document.querySelectorAll('[data-cgp-go]').forEach(b=>{if(b.dataset.bound)return;b.dataset.bound='1';b.onclick=()=>{if(b.dataset.cgpGo==='cgp-detail'&&!cgpGetContext())return toast('Open CGP Detail from CGP List');gateOpenPanel(b.dataset.cgpGo)}});if($('#cgpNo')&&!$('#cgpNo').dataset.bound){$('#cgpNo').dataset.bound='1';$('#cgpNo').addEventListener('blur',e=>e.target.value=cgpFormatNo(e.target.value));$('#cgpDate').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpVehicle').addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());cgpSimpleSearch($('#cgpParty'),cgpExistingParties,(r)=>{
   if(r.phone&&!$('#cgpPhone').value)$('#cgpPhone').value=r.phone;
   if(r.vehicleNo&&!$('#cgpVehicle').value)$('#cgpVehicle').value=String(r.vehicleNo).toUpperCase()
-});cgpSimpleSearch($('#cgpDepartment'),q=>ogpMasterRows('departments',q));cgpSimpleSearch($('#cgpVehicle'),q=>ogpMasterRows('vehicles',q),(r,input)=>input.value=String(r.name||r.vehicleNo||'').toUpperCase());$('#cgpAddRowBtn').onclick=()=>cgpMakeRow();$('#cgpSaveBtn').onclick=cgpSave;$('#cgpEntryClearBtn').onclick=cgpClearEntry;$('#cgpEntryClearTop').onclick=cgpClearEntry;$('#cgpCancelEditBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-list')};if(!$('#cgpEntryBody').children.length)cgpMakeRow()}if($('#cgpSearchBtn')&&!$('#cgpSearchBtn').dataset.bound){$('#cgpSearchBtn').dataset.bound='1';$('#cgpSearchBtn').onclick=()=>{cgpFilterCache=cgpFilteredRows();cgpRenderList()};$('#cgpClearSearchBtn').onclick=()=>{['cgpFilterNo','cgpFilterMaterial','cgpFilterParty','cgpFilterDepartment','cgpFilterVehicle','cgpFilterFrom','cgpFilterTo','cgpFilterAny'].forEach(id=>$('#'+id).value='');cgpFilterCache=null;cgpRenderList()};$('#cgpFilterFrom').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpFilterTo').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpNewBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-entry')};$('#cgpPrintListBtn').onclick=()=>window.print();$('#cgpExportBtn').onclick=()=>toast('CGP Excel export will use the filtered CGP list')};if($('#cgpDetailBackBtn')&&!$('#cgpDetailBackBtn').dataset.bound){$('#cgpDetailBackBtn').dataset.bound='1';$('#cgpDetailBackBtn').onclick=()=>gateOpenPanel('cgp-list');$('#cgpDetailPrintBtn').onclick=()=>window.print()}purchaseApplyPc('cgp-dashboard');purchaseApplyPc('cgp-list');purchaseApplyPc('cgp-entry');purchaseApplyPc('cgp-detail');cgpRenderAll()}
+});cgpSimpleSearch($('#cgpDepartment'),q=>ogpMasterRows('departments',q));cgpSimpleSearch($('#cgpVehicle'),q=>ogpMasterRows('vehicles',q),(r,input)=>input.value=String(r.name||r.vehicleNo||'').toUpperCase());$('#cgpAddRowBtn').onclick=()=>cgpMakeRow();$('#cgpSaveBtn').onclick=cgpSave;$('#cgpDeleteRecordBtn').onclick=cgpDeleteCurrentRecord;$('#cgpEntryClearBtn').onclick=cgpClearEntry;$('#cgpEntryClearTop').onclick=cgpClearEntry;$('#cgpCancelEditBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-list')};if(!$('#cgpEntryBody').children.length)cgpMakeRow()}if($('#cgpSearchBtn')&&!$('#cgpSearchBtn').dataset.bound){$('#cgpSearchBtn').dataset.bound='1';$('#cgpSearchBtn').onclick=()=>{cgpFilterCache=cgpFilteredRows();cgpRenderList()};$('#cgpClearSearchBtn').onclick=()=>{['cgpFilterNo','cgpFilterMaterial','cgpFilterParty','cgpFilterDepartment','cgpFilterVehicle','cgpFilterFrom','cgpFilterTo','cgpFilterAny'].forEach(id=>$('#'+id).value='');cgpFilterCache=null;cgpRenderList()};$('#cgpFilterFrom').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpFilterTo').addEventListener('blur',e=>e.target.value=rgpFormatDate(e.target.value));$('#cgpNewBtn').onclick=()=>{cgpClearEntry();gateOpenPanel('cgp-entry')};$('#cgpPrintListBtn').onclick=()=>window.print();$('#cgpExportBtn').onclick=()=>toast('CGP Excel export will use the filtered CGP list')};if($('#cgpDetailBackBtn')&&!$('#cgpDetailBackBtn').dataset.bound){$('#cgpDetailBackBtn').dataset.bound='1';$('#cgpDetailBackBtn').onclick=()=>gateOpenPanel('cgp-list');$('#cgpDetailPrintBtn').onclick=()=>window.print()}purchaseApplyPc('cgp-dashboard');purchaseApplyPc('cgp-list');purchaseApplyPc('cgp-entry');purchaseApplyPc('cgp-detail');cgpRenderAll()}
 
 
 let gateRouteTokenV1579=0;
@@ -13424,10 +13455,40 @@ function rgpHeaderClear(){
 }
 
 function rgpClear(){
+  if($('#rgpDeleteRecordBtn'))$('#rgpDeleteRecordBtn').style.display='none';
   rgpHeaderClear();
   const body=$('#rgpEntryTable tbody');
   if(body){body.innerHTML='<tr data-rgp-row="0"><td>1</td><td><input></td><td><input></td><td><input></td><td><input></td><td><input></td><td><input readonly></td><td><button type="button" class="rgp-delete-row">Delete</button></td></tr>'}
   rgpBindDedicatedDropdowns();rgpBindExcel();rgpBindDeleteRows();rgpUpdateTotal();rgpUndo=[];rgpLastSnap=JSON.stringify(rgpSnapshot())
+}
+
+window.rgpDeleteCurrentRecord=function rgpDeleteCurrentRecord(){
+  try{
+    const editId=$('#rgpSaveBtn')?.dataset.editId||'';
+    if(!editId){toast('Open an existing RGP record to delete');return false}
+    const all=rgpLoad();
+    const index=all.findIndex(x=>String(x.id||x.rgpNo)===String(editId));
+    if(index<0){toast('RGP record not found');return false}
+    const rec=all[index],no=String(rec.rgpNo||'this RGP');
+    const returns=Array.isArray(rec.returns)?rec.returns.length:0;
+    const extra=returns?`\n\nThis RGP has ${returns} saved return record${returns===1?'':'s'}; those will also be deleted.`:'';
+    if(!window.confirm(`Delete ${no} permanently?\n\nThis will remove the complete RGP and all item rows.${extra}`))return false;
+    const next=all.filter((_,i)=>i!==index);
+    if(!rgpStore(next)){toast('RGP could not be deleted');return false}
+    if(rgpLoad().some(x=>String(x.id||x.rgpNo)===String(editId))){toast('RGP delete could not be verified');return false}
+    try{ERPAudit?.log?.({module:'Gate Pass',page:'RGP Entry',action:'Delete',recordId:rec.id||editId,before:rec})}catch(e){}
+    try{rgpRenderList()}catch(e){}
+    try{rgpDashboardRender()}catch(e){}
+    try{gateDashboardRender()}catch(e){}
+    try{containerRenderAll()}catch(e){}
+    rgpCancelEdit();
+    toast(`${no} deleted successfully`);
+    return true
+  }catch(err){
+    console.error('RGP Delete Error',err);
+    toast('RGP delete error: '+(err?.message||'Unknown error'));
+    return false
+  }
 }
 function rgpSave(){
   try{
@@ -13973,12 +14034,14 @@ function rgpEditRecord(id){
   if(!body.children.length)rgpMakeRow();
   rgpEnhanceGridDropdowns();rgpBindExcel();rgpBindDeleteRows();rgpUpdateTotal();
   $('#rgpSaveBtn').dataset.editId=id;$('#rgpSaveBtn').textContent='Update RGP';
+  if($('#rgpDeleteRecordBtn'))$('#rgpDeleteRecordBtn').style.display='';
   if($('#rgpEditModeBanner'))$('#rgpEditModeBanner').style.display='flex';
   if($('#rgpEditModeText'))$('#rgpEditModeText').textContent=`${r.rgpNo||''} • Existing return history will be preserved.`;
   window.scrollTo({top:0,behavior:'smooth'})
 }
 function rgpCancelEdit(){
   if($('#rgpSaveBtn')){delete $('#rgpSaveBtn').dataset.editId;$('#rgpSaveBtn').textContent='Save RGP'}
+  if($('#rgpDeleteRecordBtn'))$('#rgpDeleteRecordBtn').style.display='none';
   if($('#rgpEditModeBanner'))$('#rgpEditModeBanner').style.display='none';
   if($('#rgpEditModeText'))$('#rgpEditModeText').textContent='';
   rgpClear();
@@ -29804,4 +29867,11 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<script id="rgpDeleteBindV1613">
+document.addEventListener('click',function(e){
+  const b=e.target.closest('#rgpDeleteRecordBtn');
+  if(b){e.preventDefault();window.rgpDeleteCurrentRecord?.()}
+},true);
+</script>
 </body></html>
