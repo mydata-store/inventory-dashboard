@@ -31098,9 +31098,9 @@ function decoratePreview(){
 
  if(by('pdV1624Serial')?.checked){
   const h=table.tHead?.rows?.[0];
-  if(h){const th=document.createElement('th');th.textContent='SR #';th.dataset.pdv1624Sr='1';th.style.textAlign='center';h.insertBefore(th,h.firstChild)}
+  if(h){const th=document.createElement('th');th.textContent='SR #';th.dataset.pdv1624Sr='1';th.style.textAlign='center';th.style.whiteSpace='nowrap';th.style.width='6%';th.style.minWidth='42px';th.style.maxWidth='60px';h.insertBefore(th,h.firstChild)}
   const tbody=table.tBodies?.[0];
-  if(tbody)[...tbody.rows].forEach((tr,i)=>{const td=document.createElement('td');td.textContent=i+1;td.dataset.pdv1624Sr='1';td.style.textAlign='center';tr.insertBefore(td,tr.firstChild)})
+  if(tbody)[...tbody.rows].forEach((tr,i)=>{const td=document.createElement('td');td.textContent=i+1;td.dataset.pdv1624Sr='1';td.style.textAlign='center';td.style.whiteSpace='nowrap';td.style.width='6%';td.style.minWidth='42px';td.style.maxWidth='60px';tr.insertBefore(td,tr.firstChild)})
  }
  const tbody=table.tBodies?.[0];
  if(tbody){
@@ -31458,6 +31458,47 @@ function bind(){
  setTimeout(applyJob,180)
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});else setTimeout(bind,220);
+})();
+</script>
+
+
+<script id="pdV1628SerialColumnFix">
+(function(){
+'use strict';
+function fixSerialColumn(){
+ const paper=document.getElementById('pdPaperPreview');
+ const table=paper?.querySelector('.pd-report-table');
+ if(!table)return;
+ const head=table.tHead?.rows?.[0];if(!head)return;
+ let idx=-1;
+ [...head.cells].forEach((th,i)=>{
+  const t=(th.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+  if(t==='sr #'||t==='sr#'||t==='sr no.'||t==='sr no'||t==='serial no.'||t==='serial no')idx=i;
+ });
+ if(idx<0)return;
+ const th=head.cells[idx];
+ [th,...[...(table.tBodies?.[0]?.rows||[])].map(r=>r.cells[idx]).filter(Boolean)].forEach(cell=>{
+  cell.style.width='6%';
+  cell.style.minWidth='42px';
+  cell.style.maxWidth='60px';
+  cell.style.whiteSpace='nowrap';
+  cell.style.wordBreak='normal';
+  cell.style.overflowWrap='normal';
+  cell.style.textAlign='center';
+  cell.style.paddingLeft='4px';
+  cell.style.paddingRight='4px';
+ });
+}
+function bind(){
+ const panel=document.getElementById('panel-print');
+ panel?.addEventListener('input',()=>setTimeout(fixSerialColumn,0));
+ panel?.addEventListener('change',()=>setTimeout(fixSerialColumn,0));
+ panel?.addEventListener('click',()=>setTimeout(fixSerialColumn,0));
+ document.addEventListener('erp:print-job-ready',()=>setTimeout(fixSerialColumn,100));
+ setTimeout(fixSerialColumn,200);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});
+else setTimeout(bind,220);
 })();
 </script>
 
