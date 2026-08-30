@@ -10301,7 +10301,20 @@ function purchaseRenderEntry(){
   if($('#ppeSuppliers'))$('#ppeSuppliers').textContent=suppliers;
   if($('#ppeRegisters'))$('#ppeRegisters').textContent='3';
 }
-function purchaseRenderAll(){purchaseRefreshSectionFilters();purchaseRenderEntry();purchaseRenderIndent();purchaseRenderLocal();purchaseRenderZafar();purchaseRenderBoard();purchaseRenderHistory();purchaseRenderSupplierAnalysis();PURCHASE_PAGE_IDS.forEach(purchaseApplyPc)}
+function purchaseRenderAll(){
+  purchaseRefreshSectionFilters();
+  purchaseRenderEntry();
+  purchaseRenderIndent();
+  purchaseRenderLocal();
+  purchaseRenderZafar();
+  purchaseRenderBoard();
+  purchaseRenderHistory();
+  purchaseRenderSupplierAnalysis();
+  try{renderLocalHomeV1581()}catch(e){}
+  try{renderZafarHomeV1583()}catch(e){}
+  try{renderBoardHomeV1584()}catch(e){}
+  PURCHASE_PAGE_IDS.forEach(purchaseApplyPc)
+}
 
 function purchasePcDefaults(){
   return{
@@ -28346,21 +28359,33 @@ window.ERPPurchaseIndentModuleV1580={open:function(){activate('purchase-indent-h
 <script id="erpLocalPurchaseFullModuleV1581Script">
 (function(){
 'use strict';
-function localRowsV1581(){try{if(typeof window.purchaseRows==='function'){const x=window.purchaseRows('local');if(Array.isArray(x))return x}}catch(e){}return[]}
+function localRowsV1581(){
+  try{
+    if(typeof window.purchaseRows==='function'){
+      const x=window.purchaseRows('local');
+      if(Array.isArray(x))return x.filter(r=>!r.deletedAt);
+    }
+  }catch(e){}
+  return[]
+}
 function n1581(v){const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0}
 function kind1581(v){const s=String(v??'').trim().toLowerCase();if(s.includes('cattle'))return'cattle';if(s.includes('mess'))return'mess';if(s.includes('inventory')||s.includes('store'))return'inventory';return'other'}
 function renderLocalHomeV1581(){
   const a=localRowsV1581(),now=new Date();let value=0,month=0,inventory=0,mess=0,cattle=0;
   a.forEach(r=>{
-    value+=n1581(r.grandTotal||r.totalAmount||r.amount||r.total);
+    value+=typeof pphGrandValue==='function'?pphGrandValue({...r,register:'local'}):n1581(r.amount||r.grandTotal||r.totalAmount||r.total);
     const k=kind1581(r.section||r.purchaseSection||r.purchaseType);
     if(k==='inventory')inventory++;else if(k==='mess')mess++;else if(k==='cattle')cattle++;
-    const d=new Date(r.date||r.purchaseDate||r.createdAt||'');
-    if(!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
+    const d=typeof pphParseDate==='function'?pphParseDate(r.date||r.purchaseDate||''):new Date(r.date||r.purchaseDate||r.createdAt||'');
+    if(d&&!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
   });
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-  set('localHomeTotal',a.length);set('localHomeValue','PKR '+value.toLocaleString(undefined,{maximumFractionDigits:2}));
-  set('localHomeMonth',month);set('localHomeInventory',inventory);set('localHomeMess',mess);set('localHomeCattle',cattle);
+  set('localHomeTotal',a.length);
+  set('localHomeValue','PKR '+value.toLocaleString(undefined,{maximumFractionDigits:2}));
+  set('localHomeMonth',month);
+  set('localHomeInventory',inventory);
+  set('localHomeMess',mess);
+  set('localHomeCattle',cattle);
 }
 function activateLocalPanelV1581(panel){
   try{history.replaceState(null,'','#panel-'+panel)}catch(e){}
@@ -28433,7 +28458,7 @@ function zafarRowsV1583(){
   try{
     if(typeof window.purchaseRows==='function'){
       const x=window.purchaseRows('zafar');
-      if(Array.isArray(x))return x;
+      if(Array.isArray(x))return x.filter(r=>!r.deletedAt);
     }
   }catch(e){}
   return [];
@@ -28445,19 +28470,25 @@ function renderZafarHomeV1583(){
   const suppliers=new Set();
 
   a.forEach(r=>{
-    value+=n1583(r.grandTotal||r.totalAmount||r.amount||r.total);
-    qty+=n1583(r.qty||r.quantity||r.netQty||0);
+    value+=typeof pphGrandValue==='function'?pphGrandValue({...r,register:'zafar'}):n1583(r.amount||r.grandTotal||r.totalAmount||r.total);
+    qty+=typeof pphQtyValue==='function'?pphQtyValue({...r,register:'zafar'}):n1583(r.qty||r.quantity||r.netQty||0);
     const s=String(r.supplier||'').trim().toLowerCase();
     if(s)suppliers.add(s);
 
-    const d=new Date(r.date||r.purchaseDate||r.createdAt||'');
-    if(!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
+    const d=typeof pphParseDate==='function'?pphParseDate(r.date||r.purchaseDate||''):new Date(r.date||r.purchaseDate||r.createdAt||'');
+    if(d&&!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
   });
 
   let latest='—';
   if(a.length){
-    const sorted=[...a].sort((x,y)=>String(y.createdAt||y.date||'').localeCompare(String(x.createdAt||x.date||'')));
-    latest=String(sorted[0].date||sorted[0].createdAt||'—').slice(0,12);
+    const sorted=[...a].sort((x,y)=>{
+      const xc=String(x.createdAt||''),yc=String(y.createdAt||'');
+      if(xc||yc)return yc.localeCompare(xc);
+      const xd=typeof pphParseDate==='function'?pphParseDate(x.date||''):null;
+      const yd=typeof pphParseDate==='function'?pphParseDate(y.date||''):null;
+      return (yd?.getTime?.()||0)-(xd?.getTime?.()||0)
+    });
+    latest=String(sorted[0].date||'—');
   }
 
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
@@ -28552,7 +28583,7 @@ function boardRowsV1584(){
   try{
     if(typeof window.purchaseRows==='function'){
       const x=window.purchaseRows('board');
-      if(Array.isArray(x))return x;
+      if(Array.isArray(x))return x.filter(r=>!r.deletedAt);
     }
   }catch(e){}
   return [];
@@ -28569,14 +28600,14 @@ function renderBoardHomeV1584(){
   let value=0,month=0,board=0,paper=0,board3=0;
 
   a.forEach(r=>{
-    value+=n1584(r.totalAmount||r.grandTotal||r.grossTotal||r.amount||r.total);
+    value+=typeof pphGrandValue==='function'?pphGrandValue({...r,register:'board'}):n1584(r.totalAmount||r.grandTotal||r.grossTotal||r.amount||r.total);
     const type=boardTypeV1584(r);
     if(type==='paper')paper++;
     else if(type==='board3')board3++;
     else board++;
 
-    const d=new Date(r.date||r.purchaseDate||r.createdAt||'');
-    if(!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
+    const d=typeof pphParseDate==='function'?pphParseDate(r.date||r.purchaseDate||''):new Date(r.date||r.purchaseDate||r.createdAt||'');
+    if(d&&!isNaN(d)&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth())month++;
   });
 
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
