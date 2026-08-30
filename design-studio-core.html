@@ -29077,4 +29077,74 @@ window.ERPRawSourceLeakGuardV1596={clean};
 })();
 </script>
 
+
+<script id="erpSingleActiveSidebarV1599">
+(function(){
+'use strict';
+
+function clearMainSidebarActiveV1599(){
+  document.querySelectorAll('#sideMenu > .side-item').forEach(b=>b.classList.remove('active'));
+}
+
+function mainOwnerForPanelV1599(panel){
+  if(!panel)return null;
+  if(panel==='dashboard')return document.querySelector('#sideMenu > [data-dashboard-open]');
+  if(panel==='masters' || panel.startsWith('master'))return document.querySelector('#sideMenu > [data-panel="masters"]');
+  if(panel.startsWith('purchase') || panel.startsWith('local-purchase') || panel.startsWith('zafar-purchase') || panel.startsWith('board-purchase') || panel.startsWith('supplier-analysis'))
+    return document.querySelector('#sideMenu > [data-panel="purchase-entry"]');
+  if(panel.startsWith('issue'))return document.querySelector('#sideMenu > [data-panel="issue-entry"]');
+  if(panel.startsWith('inventory') || panel.startsWith('stock-ledger'))return document.querySelector('#sideMenu > [data-inventory-open]');
+  if(panel.startsWith('gate-pass') || panel.startsWith('rgp') || panel.startsWith('ogp') || panel.startsWith('cgp') || panel.startsWith('container'))
+    return document.querySelector('#sideMenu > [data-panel="gate-pass-dashboard"]');
+  if(panel==='design-studio-home' || ['theme','banner-studio','sidebar','profile','company','print','users','account','software-center','companies','company-control'].includes(panel))
+    return document.querySelector('#sideMenu > [data-panel="design-studio-home"]');
+  return null;
+}
+
+function syncMainSidebarV1599(panel){
+  clearMainSidebarActiveV1599();
+  const owner=mainOwnerForPanelV1599(panel);
+  owner?.classList.add('active');
+}
+
+document.addEventListener('click',e=>{
+  const main=e.target.closest('#sideMenu > .side-item');
+  if(!main)return;
+
+  clearMainSidebarActiveV1599();
+  main.classList.add('active');
+},true);
+
+window.addEventListener('hashchange',()=>{
+  const panel=(location.hash||'').replace(/^#panel-/,'');
+  syncMainSidebarV1599(panel);
+});
+
+window.addEventListener('popstate',()=>{
+  const panel=(location.hash||'').replace(/^#panel-/,'');
+  syncMainSidebarV1599(panel);
+});
+
+function initialSyncV1599(){
+  let panel=(location.hash||'').replace(/^#panel-/,'');
+  if(!panel){
+    const active=document.querySelector('section.panel.active');
+    panel=(active?.id||'').replace(/^panel-/,'');
+  }
+  syncMainSidebarV1599(panel);
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',initialSyncV1599,{once:true});
+}else{
+  initialSyncV1599();
+}
+
+window.ERPSingleActiveSidebarV1599={
+  clear:clearMainSidebarActiveV1599,
+  sync:syncMainSidebarV1599
+};
+})();
+</script>
+
 </body></html>
