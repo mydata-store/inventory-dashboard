@@ -3469,6 +3469,14 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 #panel-print.pd-v1627-live-report #pdV1627ManualSourceWrap{display:none}
 @media(max-width:900px){.pd-v1627-current-main{align-items:flex-start;flex-direction:column}.pd-v1627-current-actions{justify-content:flex-start}}
 </style>
+
+<style id="pdV1629SerialAllThemesStyle">
+.pd-v1629-serial-control{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;padding:8px 9px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--surface) 97%,var(--primary))}
+.pd-v1629-serial-control b{display:block;font-size:9px}
+.pd-v1629-serial-control small{display:block;font-size:7px;color:var(--muted);margin-top:2px}
+.pd-v1629-switch{display:flex;align-items:center;gap:6px;font-size:8px;font-weight:900;white-space:nowrap}
+.pd-v1629-switch input{accent-color:var(--primary)}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -7659,6 +7667,13 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
         </div></div>
         <div class="pd-section"><h3>Columns & Print Layout</h3>
           <div class="pd-field-lists"><div><div style="font-size:10px;font-weight:900;margin-bottom:5px">AVAILABLE FIELDS</div><div class="pd-field-box" id="pdAvailableFields"></div></div><div class="pd-field-controls"><button id="pdAddField">›</button><button id="pdRemoveField">‹</button><button id="pdMoveUp">↑</button><button id="pdMoveDown">↓</button></div><div><div style="font-size:10px;font-weight:900;margin-bottom:5px">PRINT LAYOUT</div><div class="pd-field-box" id="pdSelectedFields"></div></div></div>
+          <div class="pd-v1629-serial-control">
+            <div>
+              <b>Serial Number Column</b>
+              <small>Available in every print theme and every report.</small>
+            </div>
+            <label class="pd-v1629-switch"><input id="pdV1629SerialMaster" type="checkbox" checked> Show SR #</label>
+          </div>
           <div class="pd-v1626-inline-width">
             <div class="pd-v1626-inline-title">
               <div><b>Selected Column Width</b><small>Select a column from PRINT LAYOUT, then adjust its width here.</small></div>
@@ -31146,12 +31161,12 @@ function applyPreset(style){
   chk('pdShowLogo',true);chk('pdShowCompany',true);chk('pdShowAddress',true);chk('pdShowDate',true);
   set('pdTitleAlign','Center');set('pdTitleSize','22');set('pdHeaderBg','#0d2b52');set('pdHeaderText','#ffffff');set('pdBorderColor','#9fb0c2');
   set('pdRowHeight','28');set('pdBodySize','10');chk('pdZebra',true);chk('pdPageNumbers',true);chk('pdComputerGenerated',true);
-  chk('pdV1624Serial',false);chk('pdV1624FillPage',false);set('pdV1624BlankRows','0');set('pdV1624BorderWidth','1');set('pdV1624TotalsStyle','existing')
+  chk('pdV1624Serial',true);chk('pdV1624FillPage',false);set('pdV1624BlankRows','0');set('pdV1624BorderWidth','1');set('pdV1624TotalsStyle','existing')
  }else if(style==='colored'){
   chk('pdShowLogo',true);chk('pdShowCompany',true);chk('pdShowAddress',false);chk('pdShowDate',true);
   set('pdTitleAlign','Center');set('pdTitleSize','22');set('pdHeaderBg','#ffb000');set('pdHeaderText','#111111');set('pdBorderColor','#b9c3cc');
   set('pdRowHeight','28');set('pdBodySize','10');chk('pdZebra',true);chk('pdPageNumbers',true);chk('pdComputerGenerated',true);
-  chk('pdV1624Serial',false);chk('pdV1624FillPage',false);set('pdV1624BlankRows','0');set('pdV1624BorderWidth','1');set('pdV1624TotalsStyle','existing')
+  chk('pdV1624Serial',true);chk('pdV1624FillPage',false);set('pdV1624BlankRows','0');set('pdV1624BorderWidth','1');set('pdV1624TotalsStyle','existing')
  }else return;
  ['pdShowLogo','pdShowCompany','pdShowAddress','pdShowDate','pdTitleAlign','pdTitleSize','pdHeaderBg','pdHeaderText','pdBorderColor','pdRowHeight','pdBodySize','pdZebra','pdPageNumbers','pdComputerGenerated'].forEach(id=>trigger(id));
  setTimeout(refreshPreview,0)
@@ -31496,6 +31511,74 @@ function bind(){
  panel?.addEventListener('click',()=>setTimeout(fixSerialColumn,0));
  document.addEventListener('erp:print-job-ready',()=>setTimeout(fixSerialColumn,100));
  setTimeout(fixSerialColumn,200);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});
+else setTimeout(bind,220);
+})();
+</script>
+
+
+<script id="pdV1629SerialAllThemesLogic">
+(function(){
+'use strict';
+const q=id=>document.getElementById(id);
+
+function syncFromExisting(){
+ const existing=q('pdV1624Serial'),master=q('pdV1629SerialMaster');
+ if(!master)return;
+ master.checked=existing ? !!existing.checked : true;
+}
+function setSerial(on){
+ const existing=q('pdV1624Serial');
+ const master=q('pdV1629SerialMaster');
+ if(master)master.checked=!!on;
+ if(existing){
+  existing.checked=!!on;
+  existing.dispatchEvent(new Event('change',{bubbles:true}));
+ }
+ try{pdRenderPreview()}catch(e){}
+ setTimeout(()=>document.dispatchEvent(new Event('change')),0);
+}
+function ensureLiveReportSerial(){
+ let job=null;
+ try{job=window.ERPPrintRouting?.getCurrentJob?.()||JSON.parse(sessionStorage.getItem('erp.print.currentJob')||'null')}catch(e){}
+ if(job?.source==='report-center'){
+  const existing=q('pdV1624Serial');
+  // New/current Report Center print jobs should start with SR# enabled.
+  if(existing && !existing.dataset.pdV1629UserChanged){
+   existing.checked=true;
+   if(q('pdV1629SerialMaster'))q('pdV1629SerialMaster').checked=true;
+   try{pdRenderPreview()}catch(e){}
+  }
+ }
+}
+function bind(){
+ const existing=q('pdV1624Serial'),master=q('pdV1629SerialMaster');
+
+ master?.addEventListener('change',()=>setSerial(master.checked));
+
+ existing?.addEventListener('change',()=>{
+  existing.dataset.pdV1629UserChanged='1';
+  syncFromExisting();
+ });
+
+ // Theme/preset changes should never silently remove SR#.
+ ['pdThemeSelect','pdV1624Preset','pdReportStylePreset'].forEach(id=>{
+  q(id)?.addEventListener('change',()=>{
+   setTimeout(()=>{
+    if(existing?.dataset.pdV1629UserChanged==='1'){
+      syncFromExisting();
+    }else{
+      setSerial(true);
+    }
+   },0);
+  });
+ });
+
+ document.addEventListener('erp:print-job-ready',()=>setTimeout(ensureLiveReportSerial,80));
+
+ syncFromExisting();
+ setTimeout(ensureLiveReportSerial,180);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});
 else setTimeout(bind,220);
