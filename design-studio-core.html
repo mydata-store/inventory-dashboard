@@ -1,5 +1,119 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head>
+<script id="erpStorageQuotaGuardV1603">
+(function(){
+'use strict';
+if(window.__erpStorageQuotaGuardV1603)return;
+window.__erpStorageQuotaGuardV1603=true;
+
+const SNAP='erpCoreAutoSnapshotsV1';
+const HIST='erpCoreBackupHistoryV1';
+const LAST='erpCoreLastSnapshotHashV1';
+
+const nativeSet=Storage.prototype.setItem;
+const nativeGet=Storage.prototype.getItem;
+const nativeRemove=Storage.prototype.removeItem;
+
+function isQuotaError(e){
+  return !!e && (
+    e.name==='QuotaExceededError' ||
+    e.name==='NS_ERROR_DOM_QUOTA_REACHED' ||
+    e.code===22 || e.code===1014 ||
+    /quota|storage.*full|exceeded/i.test(String(e.message||''))
+  );
+}
+
+function writeNative(store,key,value){
+  return nativeSet.call(store,key,String(value));
+}
+function removeNative(store,key){
+  try{nativeRemove.call(store,key)}catch(e){}
+}
+function readNative(store,key){
+  try{return nativeGet.call(store,key)}catch(e){return null}
+}
+
+function compactSnapshots(store,keep=2){
+  let arr=[];
+  try{
+    arr=JSON.parse(readNative(store,SNAP)||'[]');
+    if(!Array.isArray(arr))arr=[];
+  }catch(e){arr=[]}
+
+  if(!arr.length){
+    removeNative(store,SNAP);
+    removeNative(store,LAST);
+    return 0;
+  }
+
+  const slim=arr.slice(-Math.max(1,keep));
+  removeNative(store,SNAP);
+  try{writeNative(store,SNAP,JSON.stringify(slim))}catch(e){
+    // Snapshots are safety copies only. If even the slim copy is too large,
+    // leave them removed rather than blocking live ERP saves.
+  }
+  return slim.length;
+}
+
+function compactHistory(store){
+  let arr=[];
+  try{
+    arr=JSON.parse(readNative(store,HIST)||'[]');
+    if(!Array.isArray(arr))arr=[];
+  }catch(e){arr=[]}
+
+  if(arr.length>50){
+    removeNative(store,HIST);
+    try{writeNative(store,HIST,JSON.stringify(arr.slice(-50)))}catch(e){}
+  }
+}
+
+function maintenance(store){
+  if(!store)return;
+  try{
+    compactSnapshots(store,2);
+    compactHistory(store);
+  }catch(e){}
+}
+
+try{maintenance(window.localStorage)}catch(e){}
+
+Storage.prototype.setItem=function(key,value){
+  try{
+    return nativeSet.call(this,key,value);
+  }catch(err){
+    let isLocal=false;
+    try{isLocal=(this===window.localStorage)}catch(e){}
+    if(!isLocal || !isQuotaError(err))throw err;
+
+    // First recovery: shrink automatic backup copies only.
+    maintenance(this);
+    try{
+      return nativeSet.call(this,key,value);
+    }catch(err2){
+      if(!isQuotaError(err2))throw err2;
+
+      // Last recovery: remove only auto snapshots, never live ERP records.
+      removeNative(this,SNAP);
+      removeNative(this,LAST);
+      try{
+        return nativeSet.call(this,key,value);
+      }catch(err3){
+        console.error('ERP storage is still full after safe snapshot cleanup.',err3);
+        throw err3;
+      }
+    }
+  }
+};
+
+window.ERPStorageHealthV1603={
+  cleanup:function(){try{maintenance(window.localStorage);return true}catch(e){return false}},
+  snapshotKey:SNAP,
+  historyKey:HIST
+};
+})();
+</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ERP Design Studio Core V15.48</title>
 <script>
 (function(){
@@ -8092,14 +8206,25 @@ let masterCurrent='items',masterEditingId='';
 
 function masterTenantId(){try{return window.ERPTenant?.currentId?.()||'local'}catch(e){return'local'}}
 function masterLoadAll(){try{const d=JSON.parse(localStorage.getItem(MASTER_DATA_KEY)||'{}');return d&&typeof d==='object'?d:{}}catch(e){return{}}}
-function masterSaveAll(d){localStorage.setItem(MASTER_DATA_KEY,JSON.stringify(d));try{window.ERPCore?.markPending?.(1)}catch(e){}}
+function masterSaveAll(d){
+  try{
+    localStorage.setItem(MASTER_DATA_KEY,JSON.stringify(d));
+    try{window.ERPCore?.markPending?.(1)}catch(e){}
+    return true
+  }catch(e){
+    console.error('Masters save failed',e);
+    toast('Save failed: browser storage is full or unavailable');
+    return false
+  }
+}
 function masterBucket(type=masterCurrent){
   const all=masterLoadAll(),tenant=masterTenantId();
   return Array.isArray(all[tenant]?.[type])?all[tenant][type]:[];
 }
 function masterWriteBucket(type,rows){
   const all=masterLoadAll(),tenant=masterTenantId();
-  all[tenant]=all[tenant]||{};all[tenant][type]=rows;masterSaveAll(all);
+  all[tenant]=all[tenant]||{};all[tenant][type]=rows;
+  return masterSaveAll(all)
 }
 function masterNextCode(type){
   const cfg=MASTER_TYPES[type],rows=masterBucket(type);
@@ -8662,13 +8787,13 @@ function masterSave(){
     rows[i]={...rows[i],...data,updatedAt:now,updatedBy:u?.id||''};
     savedId=rows[i].id;
     masterReorderSequence(rows,savedId,rows[i].sequence,masterCurrent);
-    masterWriteBucket(masterCurrent,rows);
+    if(masterWriteBucket(masterCurrent,rows)===false)return;
     window.ERPAudit?.log?.({module:'Masters',page:MASTER_TYPES[masterCurrent].name,action:'Edit',recordId:rows[i].code,before,after:rows[i]});
   }else{
     const rec={id:'M-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),code:masterNextCode(masterCurrent),tenantId:masterTenantId(),...data,createdAt:now,updatedAt:now,createdBy:u?.id||''};
     rows.push(rec);savedId=rec.id;
     masterReorderSequence(rows,savedId,rec.sequence,masterCurrent);
-    masterWriteBucket(masterCurrent,rows);
+    if(masterWriteBucket(masterCurrent,rows)===false)return;
     window.ERPAudit?.log?.({module:'Masters',page:MASTER_TYPES[masterCurrent].name,action:'Add',recordId:rec.code,after:rec});
   }
   masterEditingId='';masterClearForm();masterRenderAll();toast('Master record saved')
@@ -8762,14 +8887,7 @@ function masterBind(){
   const nav=$('[data-panel="masters"]');if(nav)nav.style.display=window.ERPAccessControl?.canPage?.('all-masters','view')?'':'none';
   masterRenderAll()
 }
-window.ERPMasters={
-  list:(type)=>masterBucket(type),
-  current:()=>masterCurrent,
-  render:masterRenderAll,
-  save:masterSave,
-  bind:masterBind,
-  saveButtonBound:()=>!!$('#masterSaveBtn')
-};
+window.ERPMasters={list:(type)=>masterBucket(type),current:()=>masterCurrent,render:masterRenderAll};
 window.ERPSearchableDropdown={
   standard:{match:'contains-any-word',minTyping:1,keyboard:['ArrowUp','ArrowDown','Enter','Tab','Escape'],freeTyping:true},
   search:(rows,q)=>rows.filter(r=>masterAutoMatches(r,q))
@@ -8798,7 +8916,15 @@ function purchaseRows(register){
 }
 function purchaseWrite(register,rows){
   const d=purchaseAll(),t=purchaseTid();d[t]=d[t]||{};d[t][register]=rows;
-  localStorage.setItem(PURCHASE_DATA_KEY,JSON.stringify(d));window.ERPCore?.markPending?.(1)
+  try{
+    localStorage.setItem(PURCHASE_DATA_KEY,JSON.stringify(d));
+    window.ERPCore?.markPending?.(1);
+    return true
+  }catch(e){
+    console.error('Purchase save failed',e);
+    toast('Save failed: browser storage is full or unavailable');
+    return false
+  }
 }
 function purchaseNum(v){const n=parseFloat(String(v||'').replace(/,/g,''));return Number.isFinite(n)?n:0}
 function purchaseMoney(v){return purchaseNum(v).toLocaleString(undefined,{maximumFractionDigits:2})}
@@ -10564,9 +10690,9 @@ function coreSafeKeys(){const skip=[ERP_CORE_INTERNAL.snapshotKey,ERP_CORE_INTER
 function coreCollectState(){const data={};coreSafeKeys().forEach(k=>{try{data[k]=localStorage.getItem(k)}catch(e){}});return{format:'ERP-SOFTWARE-BACKUP',schema:ERP_CORE_INTERNAL.schema,createdAt:new Date().toISOString(),origin:location.origin||'local',data}}
 function coreHashState(obj){const str=JSON.stringify(obj.data||{});let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(16)}
 function coreBackupHistory(){try{const a=JSON.parse(localStorage.getItem(ERP_CORE_INTERNAL.historyKey)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
-function coreSaveHistory(a){localStorage.setItem(ERP_CORE_INTERNAL.historyKey,JSON.stringify(a.slice(-150)))}
+function coreSaveHistory(a){localStorage.setItem(ERP_CORE_INTERNAL.historyKey,JSON.stringify(a.slice(-50)))}
 function coreAddHistory(type,state,status='Saved'){const a=coreBackupHistory(),u=(typeof uaActiveUser==='function'?uaActiveUser():null)||{};a.push({at:new Date().toISOString(),type,size:JSON.stringify(state).length,keys:Object.keys(state.data||{}).length,by:u.name||u.username||'System',status});coreSaveHistory(a);return a[a.length-1]}
-function coreAutoSnapshot(force=false){const state=coreCollectState(),hash=coreHashState(state),last=localStorage.getItem(ERP_CORE_INTERNAL.lastHashKey)||'';if(!force&&hash===last)return false;let a=[];try{a=JSON.parse(localStorage.getItem(ERP_CORE_INTERNAL.snapshotKey)||'[]');if(!Array.isArray(a))a=[]}catch(e){}a.push({at:state.createdAt,hash,state});a=a.slice(-12);localStorage.setItem(ERP_CORE_INTERNAL.snapshotKey,JSON.stringify(a));localStorage.setItem(ERP_CORE_INTERNAL.lastHashKey,hash);coreAddHistory('Auto Snapshot',state);localStorage.setItem('erpCoreLastSnapshotAt',state.createdAt);return true}
+function coreAutoSnapshot(force=false){const state=coreCollectState(),hash=coreHashState(state),last=localStorage.getItem(ERP_CORE_INTERNAL.lastHashKey)||'';if(!force&&hash===last)return false;let a=[];try{a=JSON.parse(localStorage.getItem(ERP_CORE_INTERNAL.snapshotKey)||'[]');if(!Array.isArray(a))a=[]}catch(e){}a.push({at:state.createdAt,hash,state});a=a.slice(-2);localStorage.setItem(ERP_CORE_INTERNAL.snapshotKey,JSON.stringify(a));localStorage.setItem(ERP_CORE_INTERNAL.lastHashKey,hash);coreAddHistory('Auto Snapshot',state);localStorage.setItem('erpCoreLastSnapshotAt',state.createdAt);return true}
 function corePendingSync(){return Math.max(0,+localStorage.getItem(ERP_CORE_INTERNAL.pendingKey)||0)}
 function coreMarkPending(count=1){localStorage.setItem(ERP_CORE_INTERNAL.pendingKey,String(corePendingSync()+count));window.dispatchEvent(new CustomEvent('erp:sync-status-change'))}
 function coreMarkSynced(){localStorage.setItem(ERP_CORE_INTERNAL.pendingKey,'0');localStorage.setItem('erpCoreLastSyncAt',new Date().toISOString());window.dispatchEvent(new CustomEvent('erp:sync-status-change'))}
@@ -11053,44 +11179,6 @@ function restoreLastStudioPanel(){
 function erpSafeCall(name,fn){
   try{return fn()}catch(e){console.error('ERP startup step failed:',name,e);return null}
 }
-/* V16.02 — operational binding pass shared by dashboard and normal startup */
-let erpOperationalBindingsDoneV1602=false;
-let erpOperationalBindingsRunningV1602=false;
-
-function erpBindOperationalControlsV1602(){
-  if(erpOperationalBindingsDoneV1602 || erpOperationalBindingsRunningV1602)return;
-  erpOperationalBindingsRunningV1602=true;
-  try{
-    erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
-    erpSafeCall('uaInit',()=>uaInit());
-    erpSafeCall('maBind',()=>maBind());
-    erpSafeCall('auditBind',()=>auditBind());
-    erpSafeCall('scBind',()=>scBind());
-    erpSafeCall('mcBind',()=>mcBind());
-    erpSafeCall('ccmpBind',()=>ccmpBind());
-    erpSafeCall('masterBind',()=>masterBind());
-    erpSafeCall('purchaseBind',()=>purchaseBind());
-    erpSafeCall('gateDashboardBind',()=>gateDashboardBind());
-    erpSafeCall('rgpBindList',()=>rgpBindList());
-    erpSafeCall('rgpReturnBind',()=>rgpReturnBind());
-    erpSafeCall('ogpBindList',()=>ogpBindList());
-    erpSafeCall('ogpBindEntry',()=>ogpBindEntry());
-    erpSafeCall('ogpBindDetail',()=>ogpBindDetail());
-    erpSafeCall('containerBind',()=>containerBind());
-    erpSafeCall('containerBindPartyDetail',()=>containerBindPartyDetail());
-    erpSafeCall('rgpBind',()=>rgpBind());
-    erpSafeCall('rgpBindDetail',()=>rgpBindDetail());
-    erpSafeCall('cgpBind',()=>cgpBind());
-    erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
-    erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
-    erpSafeCall('pdInit',()=>pdInit());
-    erpOperationalBindingsDoneV1602=true;
-  }finally{
-    erpOperationalBindingsRunningV1602=false;
-  }
-}
-window.erpBindOperationalControlsV1602=erpBindOperationalControlsV1602;
-
 function erpStableStartup(){
   const routeFirstDashboard=window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard';
   erpSafeCall('applyThemeLinks',()=>applyThemeLinks());
@@ -11101,27 +11189,33 @@ function erpStableStartup(){
 
   if(routeFirstDashboard){
     document.body.classList.add('erp-dashboard-mode');
-
-    // Keep Dashboard fast: reveal it first.
     erpRevealAfterSafeBoot();
-
-    // Attach all operational Save/Edit/Delete handlers immediately afterwards.
-    setTimeout(()=>erpBindOperationalControlsV1602(),0);
-
-    // If the user clicks a business module before the timer fires,
-    // bind synchronously in capture phase before the module navigation runs.
-    const wakeBusinessV1602=e=>{
-      const main=e.target.closest('#sideMenu > .side-item');
-      if(!main || main.matches('[data-dashboard-open]'))return;
-      erpBindOperationalControlsV1602();
-      document.removeEventListener('click',wakeBusinessV1602,true);
-    };
-    document.addEventListener('click',wakeBusinessV1602,true);
-
     return;
   }
 
-  erpBindOperationalControlsV1602();
+  erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
+  erpSafeCall('uaInit',()=>uaInit());
+  erpSafeCall('maBind',()=>maBind());
+  erpSafeCall('auditBind',()=>auditBind());
+  erpSafeCall('scBind',()=>scBind());
+  erpSafeCall('mcBind',()=>mcBind());
+  erpSafeCall('ccmpBind',()=>ccmpBind());
+  erpSafeCall('masterBind',()=>masterBind());
+  erpSafeCall('purchaseBind',()=>purchaseBind());
+  erpSafeCall('gateDashboardBind',()=>gateDashboardBind());
+  erpSafeCall('rgpBindList',()=>rgpBindList());
+  erpSafeCall('rgpReturnBind',()=>rgpReturnBind());
+  erpSafeCall('ogpBindList',()=>ogpBindList());
+  erpSafeCall('ogpBindEntry',()=>ogpBindEntry());
+  erpSafeCall('ogpBindDetail',()=>ogpBindDetail());
+  erpSafeCall('containerBind',()=>containerBind());
+  erpSafeCall('containerBindPartyDetail',()=>containerBindPartyDetail());
+  erpSafeCall('rgpBind',()=>rgpBind());
+  erpSafeCall('rgpBindDetail',()=>rgpBindDetail());
+  erpSafeCall('cgpBind',()=>cgpBind());
+  erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
+  erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
+  erpSafeCall('pdInit',()=>pdInit());
 
   setTimeout(async()=>{
     erpSafeCall('users render',()=>uaRenderAll());
