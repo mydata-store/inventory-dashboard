@@ -3454,6 +3454,21 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 #pdSelectedFields .pd-v1626-width-badge{display:inline-block;margin-left:4px;padding:1px 4px;border:1px solid var(--border);border-radius:5px;font-weight:900;color:var(--primary);background:var(--surface)}
 @media(max-width:850px){.pd-v1626-inline-controls{grid-template-columns:auto auto 1fr auto auto}.pd-v1626-inline-controls #pdV1626AutoFit{grid-column:1/-1}}
 </style>
+
+<style id="pdV1627SmartPrintStyles">
+.pd-v1627-current-report{border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:color-mix(in srgb,var(--surface) 97%,var(--primary));margin-bottom:2px}
+.pd-v1627-current-main{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pd-v1627-current-main small{display:block;font-size:7px;font-weight:950;letter-spacing:.5px;color:var(--muted)}
+.pd-v1627-current-main b{display:block;font-size:11px;margin-top:2px}
+.pd-v1627-current-main span{display:block;font-size:8px;color:var(--muted);margin-top:2px}
+.pd-v1627-current-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pd-v1627-badge{padding:5px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:8px!important;font-weight:900!important;color:var(--text)!important;margin:0!important}
+.pd-v1627-filterline{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.pd-v1627-filterline:empty{display:none}
+.pd-v1627-filterline span{padding:3px 6px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:7px;color:var(--muted);font-weight:800}
+#panel-print.pd-v1627-live-report #pdV1627ManualSourceWrap{display:none}
+@media(max-width:900px){.pd-v1627-current-main{align-items:flex-start;flex-direction:column}.pd-v1627-current-actions{justify-content:flex-start}}
+</style>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -7597,8 +7612,22 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
     <div class="pd-layout">
       <div class="pd-builder">
         <div class="pd-section"><h3>Design & Data Source</h3><div class="pd-grid">
+          <div class="pd-v1627-current-report full" id="pdV1627CurrentReport">
+            <div class="pd-v1627-current-main">
+              <div>
+                <small>CURRENT REPORT</small>
+                <b id="pdV1627ReportName">Design mode • No incoming report</b>
+                <span id="pdV1627ReportMeta">Open a report in Report Center and press Print.</span>
+              </div>
+              <div class="pd-v1627-current-actions">
+                <span class="pd-v1627-badge" id="pdV1627MatchedBadge">Manual Design</span>
+                <button class="btn" type="button" id="pdV1627RefreshJob">Refresh Report</button>
+              </div>
+            </div>
+            <div class="pd-v1627-filterline" id="pdV1627FilterLine"></div>
+          </div>
           <div><label>Design Name</label><input id="pdDesignName" value="Local Purchase"></div>
-          <div><label>Data Contract / Page</label><select id="pdDataSource"></select></div>
+          <div id="pdV1627ManualSourceWrap"><label>Manual Data Source</label><select id="pdDataSource"></select></div>
           <div><label>Print Page Theme</label><select id="pdThemeSelect"></select></div>
           <div><label>Report Style Preset</label><select id="pdV1624Preset">
             <option value="existing">Current Theme</option>
@@ -31320,6 +31349,113 @@ function bind(){
  q('pdSelectedFields')?.addEventListener('click',()=>setTimeout(sync,0));
  q('pdFieldWidth')?.addEventListener('input',()=>setTimeout(sync,0));
  setTimeout(sync,120)
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});else setTimeout(bind,220);
+})();
+</script>
+
+
+<script id="pdV1627SmartCurrentReport">
+(function(){
+'use strict';
+const Q=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const n=v=>{const x=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(x)?x:0};
+
+function readJob(){try{return window.ERPPrintRouting?.getCurrentJob?.()||JSON.parse(sessionStorage.getItem('erp.print.currentJob')||'null')}catch(e){return null}}
+function readDraft(){try{return window.ERPPrintRouting?.getMatchedDraft?.()||JSON.parse(sessionStorage.getItem('erp.print.matchedDraft')||'null')}catch(e){return null}}
+function prettyFilters(job){
+ const f=job?.filters||{},parts=[];
+ const labels={item:'Item',department:'Department',person:'Person',supplier:'Supplier',status:'Status',purchaseRegister:'Register',purchaseSubtype:'Sub Type'};
+ Object.keys(labels).forEach(k=>{if(f[k])parts.push(`${labels[k]}: ${f[k]}`)});
+ if(job?.period&&job.period!=='all')parts.push(`Period: ${job.period.replace(/-/g,' ')}`);
+ if(job?.fromDate||job?.toDate)parts.push(`${job.fromDate||'Beginning'} → ${job.toDate||'Today'}`);
+ if(job?.groupBy)parts.push(`Group: ${job.groupBy}`);
+ return parts
+}
+function totalsFor(job){
+ const totals={};
+ (job?.columns||[]).forEach(c=>{
+  const lk=String(c.key||'').toLowerCase();
+  if(/qty|quantity|amount|value|weight|pending|available|balance|total/.test(lk)){
+   const sum=(job.rows||[]).reduce((s,r)=>s+n(r[c.key]),0);
+   if(sum)totals[c.key]=sum
+  }
+ });
+ return totals
+}
+function liveContract(job){
+ return {
+  id:'report-center-current',
+  name:`${job.moduleName||'Report Center'} — ${job.reportName||'Current Report'}`,
+  module:job.moduleName||'Report Center',
+  title:job.title||job.reportName||'ERP Report',
+  subtitle:job.subtitle||'',
+  fields:(job.columns||[]).map(c=>[c.key,c.label]),
+  rows:Array.isArray(job.rows)?job.rows:[],
+  totals:totalsFor(job)
+ }
+}
+function saveLiveContract(c){
+ try{
+  const all=JSON.parse(localStorage.getItem(PRINT_CONTRACT_KEY)||'{}');
+  all[c.id]=c;localStorage.setItem(PRINT_CONTRACT_KEY,JSON.stringify(all))
+ }catch(e){console.warn(e)}
+}
+function galleryDraft(draft){
+ if(!draft||draft.pendingSetup)return null;
+ let g=[];try{g=printGallery()}catch(e){}
+ return (draft.id&&g.find(x=>x.id===draft.id))||(draft.name&&g.find(x=>x.name===draft.name))||null
+}
+function suggestOrientation(job){
+ const count=(job?.columns||[]).length;
+ const long=(job?.columns||[]).some(c=>/description|purpose|remarks|department|supplier|workshop|issued to/i.test(c.label||''));
+ if(Q('pdOrientation'))Q('pdOrientation').value=(count>=8||long)?'landscape':'portrait'
+}
+function applyJob(){
+ const job=readJob(),panel=Q('panel-print');
+ if(!job||job.source!=='report-center'){
+  panel?.classList.remove('pd-v1627-live-report');
+  if(Q('pdV1627ReportName'))Q('pdV1627ReportName').textContent='Design mode • No incoming report';
+  if(Q('pdV1627ReportMeta'))Q('pdV1627ReportMeta').textContent='Open a report in Report Center and press Print.';
+  if(Q('pdV1627FilterLine'))Q('pdV1627FilterLine').innerHTML='';
+  return false
+ }
+ panel?.classList.add('pd-v1627-live-report');
+ const c=liveContract(job);saveLiveContract(c);
+
+ try{
+  pdPopulateSelectors();
+  if(Q('pdDataSource'))Q('pdDataSource').value=c.id;
+  const match=galleryDraft(readDraft());
+  pdDesign=match?pdNormalizeFields(JSON.parse(JSON.stringify(match))):pdCollect();
+  pdDesign.contractId=c.id;
+  pdDesign.name=match?.name||`${job.reportName||job.moduleName||'Current Report'} Print`;
+  pdDesign.title=c.title;
+  pdDesign.subtitle=c.subtitle;
+  pdDesign.fields=c.fields.map(([key,heading])=>{
+   const lk=String(key).toLowerCase(),old=pdDesign.fields?.find(x=>x.key===key);
+   const numeric=/qty|quantity|rate|amount|value|weight|pending|available|balance|total/.test(lk);
+   return {key,heading,headerAlign:old?.headerAlign||'Center',dataAlign:old?.dataAlign||(numeric?'Right':'Left'),wrap:old?.wrap||(/description|purpose|remarks|supplier|department/.test(lk)?'wrap':'nowrap'),width:old?.width||(numeric?9:12)}
+  });
+  if(!match)suggestOrientation(job);
+  pdSyncForm();pdRenderFields();pdRenderPreview()
+ }catch(e){console.error('Smart Print Studio:',e)}
+
+ const rec=(job.rows||[]).length,col=(job.columns||[]).length,draft=readDraft();
+ if(Q('pdV1627ReportName'))Q('pdV1627ReportName').textContent=`${job.moduleName||job.moduleKey||'ERP'} — ${job.reportName||job.reportKey||'Report'}`;
+ if(Q('pdV1627ReportMeta'))Q('pdV1627ReportMeta').textContent=`${rec} record${rec===1?'':'s'} • ${col} column${col===1?'':'s'} • ${job.subtitle||'Current generated report'}`;
+ if(Q('pdV1627MatchedBadge'))Q('pdV1627MatchedBadge').textContent=draft?.name||'Default ERP Design';
+ if(Q('pdV1627FilterLine'))Q('pdV1627FilterLine').innerHTML=prettyFilters(job).map(x=>`<span>${esc(x)}</span>`).join('');
+ const totalKeys=Object.keys(c.totals||{});
+ const totalInput=Q('pdV1624TotalColumns');
+ if(totalInput&&totalKeys.length)totalInput.value=totalKeys.join(',');
+ return true
+}
+function bind(){
+ Q('pdV1627RefreshJob')?.addEventListener('click',()=>{applyJob();window.toast?.('Current report refreshed')});
+ document.addEventListener('erp:print-job-ready',()=>setTimeout(applyJob,50));
+ setTimeout(applyJob,180)
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});else setTimeout(bind,220);
 })();
