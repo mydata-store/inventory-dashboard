@@ -8024,8 +8024,43 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
     <div class="dept-table-wrap-v1637"><table class="dept-table-v1637"><thead><tr><th>Date</th><th>Material</th><th>Purpose</th><th>Input</th><th>Output</th><th>Loss</th><th>Standard %</th><th>Actual %</th><th>Variance %</th><th>Status</th><th>Shift / Batch</th></tr></thead><tbody id="y39Rows"></tbody></table></div>
   </div>
 </div>
-        <div class="straw38c-pane" data-straw38c-pane="costing"><div class="straw38c-card"><h4>Costing</h4><p>Prepared for material value, freight, unloading/handling, deductions and your actual costing method.</p></div></div>
-        <div class="straw38c-pane" data-straw38c-pane="ledger">
+        <div class="straw38c-pane" data-straw38c-pane="costing">
+  <div class="straw38c-card">
+    <div class="dept-box-head-v1637">
+      <div>
+        <h4>Costing</h4>
+        <p>Calculated automatically from Straw Cell Receiving. No duplicate material entry is required.</p>
+      </div>
+    </div>
+
+    <div class="c47-period">
+      <button class="btn c47-period-btn" type="button" data-c47-cost-period="daily">Daily</button>
+      <button class="btn c47-period-btn" type="button" data-c47-cost-period="monthly">Monthly</button>
+      <button class="btn c47-period-btn active" type="button" data-c47-cost-period="total">Total</button>
+      <input type="date" id="c47CostDate">
+      <input type="month" id="c47CostMonth">
+      <input id="c47CostSearch" placeholder="Search material, supplier, vehicle, purpose...">
+    </div>
+
+    <div class="c47-kpis">
+      <div><small>Total Net Weight</small><strong id="c47CostQty">0</strong></div>
+      <div><small>Material Amount</small><strong id="c47CostAmount">0</strong></div>
+      <div><small>Average Rate</small><strong id="c47CostAvgRate">0</strong></div>
+      <div><small>Suppliers</small><strong id="c47CostSuppliers">0</strong></div>
+    </div>
+
+    <div class="dept-table-wrap-v1637">
+      <table class="dept-table-v1637 c47-table">
+        <thead><tr>
+          <th>Sr. No.</th><th>Date</th><th>Material</th><th>Supplier</th><th>Vehicle</th>
+          <th>Gross Weight</th><th>Ded Weight</th><th>Net Weight</th><th>Rate</th><th>Amount</th><th>Purpose</th>
+        </tr></thead>
+        <tbody id="c47CostRows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="straw38c-pane" data-straw38c-pane="ledger">
   <div class="straw38c-card">
     <div class="dept-box-head-v1637">
       <div><h4>Party Ledger</h4><p>Receiving automatically increases supplier payable. Payment entries reduce the outstanding balance.</p></div>
@@ -8041,9 +8076,9 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
     </div>
 
     <div class="sc46-period">
-      <button class="btn sc46-period-btn active" type="button" data-sc46-ledger-period="daily">Daily</button>
+      <button class="btn sc46-period-btn" type="button" data-sc46-ledger-period="daily">Daily</button>
       <button class="btn sc46-period-btn" type="button" data-sc46-ledger-period="monthly">Monthly</button>
-      <button class="btn sc46-period-btn" type="button" data-sc46-ledger-period="total">Total</button>
+      <button class="btn sc46-period-btn active" type="button" data-sc46-ledger-period="total">Total</button>
       <input type="date" id="sc46LedgerDate">
       <input type="month" id="sc46LedgerMonth">
       <input id="sc46LedgerSearch" placeholder="Search party or material...">
@@ -34462,7 +34497,7 @@ const $$=s=>[...document.querySelectorAll(s)];
 const num=v=>{const x=parseFloat(String(v??"").replace(/,/g,""));return Number.isFinite(x)?x:0};
 const esc=v=>String(v??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 const fmt=v=>num(v).toLocaleString(undefined,{maximumFractionDigits:2});
-let stockPeriod="daily", conPeriod="daily", ledgerPeriod="daily";
+let stockPeriod="daily", conPeriod="daily", ledgerPeriod="total";
 
 function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}}
 function save(a){localStorage.setItem(KEY,JSON.stringify(a))}
@@ -34538,17 +34573,36 @@ function renderConsumption(){
 }
 
 function ledgerRows(period,date,month,search){
-  const b=periodBounds(period,date,month),allR=recs(),allP=pays(),map={};
+  const b=periodBounds(period,date,month),allR=recs(),allP=pays(),map={},partyTotals={};
   allR.filter(r=>inBounds(r.date,b)).forEach(r=>{
     const party=r.supplier||r.party||"Unspecified",material=r.material||"";
     const k=party+"|"+material;
-    if(!map[k])map[k]={party,material,received:0,amount:0,paid:0};
-    map[k].received+=receivedQty(r);map[k].amount+=amountOf(r);
+    if(!map[k])map[k]={party,material,received:0,amount:0,paid:0,balance:0};
+    map[k].received+=receivedQty(r);
+    map[k].amount+=amountOf(r);
+    partyTotals[party]=(partyTotals[party]||0)+amountOf(r);
   });
+
+  const partyPaid={};
+  allP.filter(p=>inBounds(p.date,b)).forEach(p=>{
+    const party=p.party||p.supplier||"";
+    partyPaid[party]=(partyPaid[party]||0)+num(p.amount);
+  });
+
+  const usedPaid={};
   Object.values(map).forEach(g=>{
-    g.paid=allP.filter(p=>(p.party||p.supplier||"")===g.party&&inBounds(p.date,b)).reduce((s,p)=>s+num(p.amount),0);
+    const total=partyTotals[g.party]||0;
+    const paidTotal=partyPaid[g.party]||0;
+    if(!usedPaid[g.party])usedPaid[g.party]=0;
+    let allocated=0;
+    if(total>0){
+      allocated=paidTotal*(g.amount/total);
+    }
+    usedPaid[g.party]+=allocated;
+    g.paid=allocated;
     g.balance=g.amount-g.paid;
   });
+
   let arr=Object.values(map);
   const q=String(search||"").trim().toLowerCase();
   if(q)arr=arr.filter(x=>[x.party,x.material].join(" ").toLowerCase().includes(q));
@@ -34635,6 +34689,113 @@ function bind(){
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
 setTimeout(bind,300);
 window.ERPStrawStockV1646={renderStock,renderConsumption,renderLedger};
+})();
+</script>
+
+
+<style id="strawCostingV1647Css">
+#deptViewStrawCell .c47-period{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+#deptViewStrawCell .c47-period input{height:36px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 8px;font-size:9px;font-weight:400!important}
+#deptViewStrawCell .c47-period input:last-child{min-width:260px;flex:1}
+#deptViewStrawCell .c47-period-btn.active{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
+#deptViewStrawCell .c47-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+#deptViewStrawCell .c47-kpis>div{border:1px solid var(--border);border-radius:9px;padding:10px;background:var(--surface)}
+#deptViewStrawCell .c47-kpis small{display:block;font-size:7px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+#deptViewStrawCell .c47-kpis strong{display:block;font-size:18px;margin-top:4px}
+#deptViewStrawCell .c47-table{min-width:1150px}
+@media(max-width:800px){#deptViewStrawCell .c47-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){#deptViewStrawCell .c47-kpis{grid-template-columns:1fr}}
+</style>
+
+<script id="strawCostingLedgerYieldV1647Js">
+(function(){
+"use strict";
+const KEY="erpDepartmentDataV1637:dept-straw-cell";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const num=v=>{const x=parseFloat(String(v??"").replace(/,/g,""));return Number.isFinite(x)?x:0};
+const esc=v=>String(v??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const fmt=v=>num(v).toLocaleString(undefined,{maximumFractionDigits:2});
+let costPeriod="total";
+
+function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}}
+function today(){return new Date().toISOString().slice(0,10)}
+function month(){return new Date().toISOString().slice(0,7)}
+function formatDate(r){
+  if(r.displayDate)return r.displayDate;
+  const m=String(r.date||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return String(r.date||"");
+  const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return m[3]+"-"+mon[Number(m[2])-1]+"-"+m[1].slice(-2);
+}
+function normalize(r){
+  const gross=num(r.grossWeight!=null?r.grossWeight:r.qty);
+  const ded=r.deductionQty!=null?num(r.deductionQty):gross*num(r.deductionPct||r.deductionValue||0)/100;
+  const net=num(r.netWeight!=null?r.netWeight:(gross-ded));
+  const rate=num(r.rate);
+  const amount=num(r.amount!=null?r.amount:net*rate);
+  return{gross,ded,net,rate,amount};
+}
+function bounds(){
+  if(costPeriod==="daily"){
+    const d=$("#c47CostDate")?.value||today(); return{start:d,end:d};
+  }
+  if(costPeriod==="monthly"){
+    const mo=$("#c47CostMonth")?.value||month(),y=Number(mo.slice(0,4)),m=Number(mo.slice(5,7));
+    return{start:mo+"-01",end:new Date(y,m,0).toISOString().slice(0,10)};
+  }
+  return{start:"0000-01-01",end:"9999-12-31"};
+}
+function renderCost(){
+  const b=bounds(),search=String($("#c47CostSearch")?.value||"").trim().toLowerCase();
+  let rows=load().filter(x=>x.type==="receiving"&&String(x.date||"")>=b.start&&String(x.date||"")<=b.end);
+  if(search){
+    rows=rows.filter(r=>[r.material,r.supplier||r.party,r.vehicle,r.purpose,formatDate(r)].join(" ").toLowerCase().includes(search));
+  }
+  const totalQty=rows.reduce((s,r)=>s+normalize(r).net,0);
+  const totalAmount=rows.reduce((s,r)=>s+normalize(r).amount,0);
+  const suppliers=new Set(rows.map(r=>r.supplier||r.party).filter(Boolean));
+  if($("#c47CostQty"))$("#c47CostQty").textContent=fmt(totalQty);
+  if($("#c47CostAmount"))$("#c47CostAmount").textContent=fmt(totalAmount);
+  if($("#c47CostAvgRate"))$("#c47CostAvgRate").textContent=totalQty?fmt(totalAmount/totalQty):"0";
+  if($("#c47CostSuppliers"))$("#c47CostSuppliers").textContent=suppliers.size;
+
+  const body=$("#c47CostRows");if(!body)return;
+  body.innerHTML=rows.length?rows.slice().reverse().map((r,i)=>{const n=normalize(r);return `<tr>
+    <td>${i+1}</td><td>${esc(formatDate(r))}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.supplier||r.party)}</td>
+    <td>${esc(String(r.vehicle||"").toUpperCase())}</td><td>${fmt(n.gross)}</td><td>${fmt(n.ded)}</td><td><b>${fmt(n.net)}</b></td>
+    <td>${fmt(n.rate)}</td><td>${fmt(n.amount)}</td><td>${esc(r.purpose)}</td>
+  </tr>`}).join(""):'<tr><td colspan="11">No receiving records for this period.</td></tr>';
+}
+
+function syncYieldMaterials(){
+  const materials=[...new Set(load().filter(x=>x.type==="receiving").map(x=>String(x.material||"").trim()).filter(Boolean))].sort();
+  const dl=$("#y39Materials");
+  if(dl)dl.innerHTML=materials.map(x=>`<option value="${esc(x)}"></option>`).join("");
+}
+
+function bind(){
+  if($("#c47CostDate")&&!$("#c47CostDate").value)$("#c47CostDate").value=today();
+  if($("#c47CostMonth")&&!$("#c47CostMonth").value)$("#c47CostMonth").value=month();
+
+  $$("[data-c47-cost-period]").forEach(btn=>btn.addEventListener("click",()=>{
+    costPeriod=btn.dataset.c47CostPeriod;
+    $$("[data-c47-cost-period]").forEach(x=>x.classList.toggle("active",x===btn));
+    renderCost();
+  }));
+  ["c47CostDate","c47CostMonth","c47CostSearch"].forEach(id=>{
+    $("#"+id)?.addEventListener("input",renderCost);
+    $("#"+id)?.addEventListener("change",renderCost);
+  });
+
+  syncYieldMaterials();
+  renderCost();
+
+  // Ensure existing ledger appears immediately when opening page.
+  try{window.ERPStrawStockV1646?.renderLedger?.()}catch(e){}
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
+setTimeout(bind,350);
+window.ERPStrawCostingV1647={render:renderCost};
 })();
 </script>
 
