@@ -34117,7 +34117,241 @@ function bind(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 window.ERPStrawReceivingV1640={refresh:render,analysis:renderAnalysis};
 })();
-</script></body></html>
+</script>
+<script id="strawReceivingV1644Repair">
+(function(){
+"use strict";
+
+const STORE_KEY = "erpDepartmentDataV1637:dept-straw-cell";
+const q = id => document.getElementById(id);
+const n = v => {
+  const x = parseFloat(String(v ?? "").replace(/,/g,""));
+  return Number.isFinite(x) ? x : 0;
+};
+const esc = v => String(v ?? "").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+
+function readRows(){
+  try{
+    const a = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
+    return Array.isArray(a) ? a : [];
+  }catch(e){ return []; }
+}
+function writeRows(a){
+  localStorage.setItem(STORE_KEY, JSON.stringify(a));
+  return true;
+}
+function fmt(v){
+  return n(v).toLocaleString(undefined,{maximumFractionDigits:2});
+}
+function displayDate(iso, fallback){
+  if(fallback) return fallback;
+  const m = String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return String(iso||"");
+  const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return m[3]+"-"+mon[Number(m[2])-1]+"-"+m[1].slice(-2);
+}
+function parseDisplayDate(v){
+  const s=String(v||"").trim();
+  let m=s.match(/^(\d{1,2})[-\/.](\d{1,2})(?:[-\/.](\d{2,4}))?$/);
+  if(m){
+    let y=m[3]?Number(m[3]):new Date().getFullYear();
+    if(y<100)y+=2000;
+    const d=new Date(y,Number(m[2])-1,Number(m[1]));
+    if(!isNaN(d)){
+      const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      return {
+        display:String(d.getDate()).padStart(2,"0")+"-"+mon[d.getMonth()]+"-"+String(d.getFullYear()).slice(-2),
+        iso:d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")
+      };
+    }
+  }
+  m=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+  if(m){
+    const months={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    const mo=months[m[2].toLowerCase()];
+    let y=Number(m[3]); if(y<100)y+=2000;
+    if(mo!=null){
+      const d=new Date(y,mo,Number(m[1]));
+      const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      return {
+        display:String(d.getDate()).padStart(2,"0")+"-"+mon[d.getMonth()]+"-"+String(d.getFullYear()).slice(-2),
+        iso:d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")
+      };
+    }
+  }
+  return {display:s,iso:s};
+}
+
+function calculate(){
+  const gross = n(q("r40Gross")?.value);
+  let pct = n(q("r40Deduction")?.value);
+  if(pct < 0) pct = 0;
+  if(pct > 100) pct = 100;
+
+  const deductionWeight = gross * pct / 100;
+  const netWeight = Math.max(0, gross - deductionWeight);
+  const rate = n(q("r40Rate")?.value);
+  const amount = netWeight * rate;
+
+  if(q("r40DedQty")) q("r40DedQty").value = gross ? deductionWeight.toFixed(2) : "";
+  if(q("r40Net")) q("r40Net").value = gross ? netWeight.toFixed(2) : "";
+  if(q("r40Amount")) q("r40Amount").value = gross ? amount.toFixed(2) : "";
+
+  return {gross,pct,deductionWeight,netWeight,rate,amount};
+}
+
+function renderReceiving(){
+  const tbody=q("r40ReceivingRows");
+  if(!tbody) return;
+  const rows=readRows().filter(x=>x.type==="receiving").slice().reverse();
+  tbody.innerHTML = rows.length ? rows.map(r=>{
+    const gross=n(r.grossWeight ?? r.qty);
+    const ded=n(r.deductionQty ?? (gross*n(r.deductionPct)/100));
+    const net=n(r.netWeight ?? r.qty);
+    const amount=n(r.amount ?? net*n(r.rate));
+    return `<tr>
+      <td>${esc(displayDate(r.date,r.displayDate))}</td>
+      <td>${esc(r.material)}</td>
+      <td>${esc(r.supplier||r.party)}</td>
+      <td>${esc(r.vehicle)}</td>
+      <td>${fmt(gross)} ${esc(r.unit||"")}</td>
+      <td>${fmt(ded)}</td>
+      <td><b>${fmt(net)}</b></td>
+      <td>${fmt(r.rate)}</td>
+      <td>${fmt(amount)}</td>
+      <td>${esc(r.purpose)}</td>
+      <td>${esc(r.area)}</td>
+    </tr>`;
+  }).join("") : '<tr><td colspan="11">No receiving records yet.</td></tr>';
+}
+
+function clearEntry(){
+  ["r40Material","r40Supplier","r40Vehicle","r40Gross","r40Deduction","r40DedQty","r40Net",
+   "r40Rate","r40Amount","r40Area","r40Quality","r40Remarks"].forEach(id=>{
+    if(q(id)) q(id).value="";
+  });
+  if(q("r40Unit")) q("r40Unit").value="Kg";
+  if(q("r40Purpose")) q("r40Purpose").value="Pulp Mill";
+  if(q("r40Unload")) q("r40Unload").value="Pending";
+}
+
+function saveReceiving(ev){
+  ev?.preventDefault?.();
+  ev?.stopImmediatePropagation?.();
+
+  const material=String(q("r40Material")?.value||"").trim();
+  const supplier=String(q("r40Supplier")?.value||"").trim();
+  const vehicle=String(q("r40Vehicle")?.value||"").trim().toUpperCase();
+  const c=calculate();
+
+  if(!material){
+    window.toast?.("Select or enter Product / Material");
+    q("r40Material")?.focus();
+    return;
+  }
+  if(!supplier){
+    window.toast?.("Select or enter Supplier");
+    q("r40Supplier")?.focus();
+    return;
+  }
+  if(c.gross<=0){
+    window.toast?.("Enter Gross Weight");
+    q("r40Gross")?.focus();
+    return;
+  }
+
+  const dt=parseDisplayDate(q("r40Date")?.value||"");
+  const rows=readRows();
+  rows.push({
+    id:"straw-rec-"+Date.now()+"-"+Math.random().toString(36).slice(2,6),
+    type:"receiving",
+    departmentName:"Straw Cell",
+    date:dt.iso,
+    displayDate:dt.display,
+    material,
+    supplier,
+    party:supplier,
+    vehicle,
+    purpose:q("r40Purpose")?.value||"Pulp Mill",
+    grossWeight:c.gross,
+    deductionType:"pct",
+    deductionPct:c.pct,
+    deductionValue:c.pct,
+    deductionQty:c.deductionWeight,
+    netWeight:c.netWeight,
+    qty:c.netWeight,
+    unit:String(q("r40Unit")?.value||"Kg").trim(),
+    rate:c.rate,
+    amount:c.amount,
+    area:String(q("r40Area")?.value||"").trim(),
+    unloading:q("r40Unload")?.value||"Pending",
+    quality:String(q("r40Quality")?.value||"").trim(),
+    remarks:String(q("r40Remarks")?.value||"").trim(),
+    createdAt:new Date().toISOString()
+  });
+
+  try{
+    writeRows(rows);
+    renderReceiving();
+    try{ window.ERPStrawReceivingV1640?.refresh?.(); }catch(e){}
+    try{ window.ERPStrawCell?.refresh?.(); }catch(e){}
+    window.toast?.("Receiving saved successfully");
+    clearEntry();
+  }catch(e){
+    console.error("Straw Cell receiving save failed",e);
+    window.toast?.("Receiving could not be saved");
+  }
+}
+
+function bind(){
+  ["r40Gross","r40Deduction","r40Rate"].forEach(id=>{
+    const el=q(id);
+    if(!el || el.dataset.v1644Calc) return;
+    el.dataset.v1644Calc="1";
+    el.addEventListener("input",calculate);
+    el.addEventListener("change",calculate);
+    el.addEventListener("keyup",calculate);
+  });
+
+  const veh=q("r40Vehicle");
+  if(veh && !veh.dataset.v1644Upper){
+    veh.dataset.v1644Upper="1";
+    veh.addEventListener("input",()=>{
+      const p=veh.selectionStart;
+      veh.value=veh.value.toUpperCase();
+      try{veh.setSelectionRange(p,p)}catch(e){}
+    });
+  }
+
+  const saveBtn=q("r40Save");
+  if(saveBtn && !saveBtn.dataset.v1644Save){
+    saveBtn.dataset.v1644Save="1";
+    saveBtn.addEventListener("click",saveReceiving,true);
+  }
+
+  const clearBtn=q("r40Clear");
+  if(clearBtn && !clearBtn.dataset.v1644Clear){
+    clearBtn.dataset.v1644Clear="1";
+    clearBtn.addEventListener("click",e=>{
+      e.preventDefault(); e.stopImmediatePropagation(); clearEntry();
+    },true);
+  }
+
+  calculate();
+  renderReceiving();
+}
+
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",bind,{once:true});
+}else{
+  bind();
+}
+setTimeout(bind,250);
+window.ERPStrawReceivingV1644={calculate,save:saveReceiving,render:renderReceiving};
+})();
+</script>
+
+</body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
 <!-- V16.38d: removed misplaced Straw Cell script/style blocks that caused raw ERP code to render on screen. -->
