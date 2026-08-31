@@ -7900,7 +7900,47 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
         <div class="straw38c-pane" data-straw38c-pane="quality"><div class="straw38c-card"><h4>Quality Control</h4><p>Prepared for moisture, deductions, accepted/rejected quantity and your exact Straw Cell quality parameters.</p></div></div>
         <div class="straw38c-pane" data-straw38c-pane="stock"><div class="straw38c-card"><h4>Stock Area Control</h4><p>Prepared for material-wise and yard/stock-area-wise quantity control.</p></div></div>
         <div class="straw38c-pane" data-straw38c-pane="consumption"><div class="straw38c-card"><h4>Consumption / Transfer</h4><p>Prepared for material transferred to Pulp Mill or Boiler Fuel by date, shift, area and quantity.</p></div></div>
-        <div class="straw38c-pane" data-straw38c-pane="yield"><div class="straw38c-card"><h4>Yield</h4><p>Prepared for the Straw Cell yield system. We will use your exact factory formula rather than assume it.</p></div></div>
+        <div class="straw38c-pane" data-straw38c-pane="yield">
+  <div class="straw38c-card">
+    <div class="dept-box-head-v1637">
+      <div><h4>Item Yield Standards</h4><p>Set the standard yield for every Straw Cell material. Yield entries use these standards automatically.</p></div>
+      <button class="btn" type="button" id="y39LoadMaterials">Load Receiving Materials</button>
+    </div>
+    <div class="y39-form">
+      <input type="hidden" id="y39StdId">
+      <label>Material<input id="y39StdMaterial" list="y39Materials" placeholder="Material"></label>
+      <label>Purpose<select id="y39StdPurpose"><option>Pulp Mill</option><option>Boiler Fuel</option><option>Both / General</option></select></label>
+      <label>Standard Yield %<input type="number" step="any" id="y39StdPct" placeholder="0"></label>
+      <label>Minimum %<input type="number" step="any" id="y39MinPct" placeholder="Optional"></label>
+      <label>Target / Maximum %<input type="number" step="any" id="y39MaxPct" placeholder="Optional"></label>
+      <label>Remarks<input id="y39StdRemarks" placeholder="Optional"></label>
+      <div class="y39-actions"><button class="btn" type="button" id="y39StdClear">Clear</button><button class="btn primary" type="button" id="y39StdSave">Save Standard</button></div>
+    </div>
+    <datalist id="y39Materials"></datalist>
+    <div class="dept-table-wrap-v1637"><table class="dept-table-v1637"><thead><tr><th>#</th><th>Material</th><th>Purpose</th><th>Standard %</th><th>Minimum %</th><th>Target / Max %</th><th>Remarks</th><th>Action</th></tr></thead><tbody id="y39StdRows"></tbody></table></div>
+  </div>
+
+  <div class="straw38c-card">
+    <div class="dept-box-head-v1637"><div><h4>Yield Entry</h4><p>Actual Yield = Output ÷ Input × 100. Variance and status are calculated automatically against the selected material standard.</p></div></div>
+    <div class="y39-form">
+      <label>Date<input type="date" id="y39Date"></label>
+      <label>Material<input id="y39Material" list="y39Materials" placeholder="Material"></label>
+      <label>Purpose<select id="y39Purpose"><option>Pulp Mill</option><option>Boiler Fuel</option><option>Both / General</option></select></label>
+      <label>Input Quantity<input type="number" step="any" id="y39Input" placeholder="0"></label>
+      <label>Output Quantity<input type="number" step="any" id="y39Output" placeholder="0"></label>
+      <label>Loss / Waste<input type="number" step="any" id="y39Loss" placeholder="0"></label>
+      <label>Standard %<input id="y39Standard" readonly></label>
+      <label>Actual Yield %<input id="y39Actual" readonly></label>
+      <label>Variance %<input id="y39Variance" readonly></label>
+      <label>Status<input id="y39Status" readonly></label>
+      <label>Shift<select id="y39Shift"><option>General</option><option>A</option><option>B</option><option>C</option></select></label>
+      <label>Batch / Ref<input id="y39Batch"></label>
+      <label class="wide">Remarks<input id="y39Remarks"></label>
+      <div class="y39-actions"><button class="btn" type="button" id="y39Clear">Clear</button><button class="btn primary" type="button" id="y39Save">Save Yield</button></div>
+    </div>
+    <div class="dept-table-wrap-v1637"><table class="dept-table-v1637"><thead><tr><th>Date</th><th>Material</th><th>Purpose</th><th>Input</th><th>Output</th><th>Loss</th><th>Standard %</th><th>Actual %</th><th>Variance %</th><th>Status</th><th>Shift / Batch</th></tr></thead><tbody id="y39Rows"></tbody></table></div>
+  </div>
+</div>
         <div class="straw38c-pane" data-straw38c-pane="costing"><div class="straw38c-card"><h4>Costing</h4><p>Prepared for material value, freight, unloading/handling, deductions and your actual costing method.</p></div></div>
         <div class="straw38c-pane" data-straw38c-pane="ledger"><div class="straw38c-card"><h4>Party-wise Ledger</h4><p>Will be generated automatically from receiving, quality and costing records.</p></div></div>
         <div class="straw38c-pane" data-straw38c-pane="reports"><div class="straw38c-card"><h4>History / Reports</h4><p>Prepared for search by date, month, material, party, vehicle, stock area and destination.</p></div></div>
@@ -32955,7 +32995,10 @@ function exportExcel(){
  const rows=[cols.map(c=>c.heading).join('\t'),...(j.rows||[]).map((r,i)=>{const x={...r,__sr:i+1};return cols.map(c=>x[c.key]??'').join('\t')})].join('\n');
  const b=new Blob([rows],{type:'text/tab-separated-values'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='report.xls';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)
 }
-function printNow(){const p=q('pd31PaperPreview').outerHTML,w=window.open('','_blank');if(!w)return;w.document.write(`<html><head><title>${state.title}</title><style>body{margin:0;background:#fff}.pd-v1631-paper{box-shadow:none!important;margin:auto!important}.pd-v1631-table,.pd-v1631-table th,.pd-v1631-table td{border-collapse:collapse}.pd-v1631-footer{position:fixed;bottom:10px;left:20px;right:20px}</style></head><body>${p}<script>onload=()=>print()<\/script></body></html>`);w.document.close()}
+function printNow(){const p=q('pd31PaperPreview').outerHTML,w=window.open('','_blank');if(!w)return;w.document.write(`<html><head><title>${state.title}</title><style>body{margin:0;background:#fff}.pd-v1631-paper{box-shadow:none!important;margin:auto!important}.pd-v1631-table,.pd-v1631-table th,.pd-v1631-table td{border-collapse:collapse}.pd-v1631-footer{position:fixed;bottom:10px;left:20px;right:20px}</style><style id="strawYieldV1639Css">
+.y39-form{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:12px 0}.y39-form label{font-size:7px;font-weight:900;text-transform:uppercase;color:var(--muted)}.y39-form input,.y39-form select{display:block;width:100%;height:35px;margin-top:3px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 8px;font-size:9px}.y39-form input[readonly]{background:color-mix(in srgb,var(--bg) 70%,var(--surface));font-weight:900}.y39-form .wide{grid-column:span 2}.y39-actions{display:flex;gap:6px;align-items:end;flex-wrap:wrap}.y39-status{display:inline-flex;padding:3px 7px;border-radius:999px;font-size:7px;font-weight:900}.y39-good{background:#dcfce7;color:#166534}.y39-warn{background:#fef3c7;color:#92400e}.y39-bad{background:#fee2e2;color:#991b1b}
+@media(max-width:1200px){.y39-form{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.y39-form{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.y39-form{grid-template-columns:1fr}.y39-form .wide{grid-column:auto}}
+</style></head><body>${p}<script>onload=()=>print()<\/script></body></html>`);w.document.close()}
 
 function bind(){
  document.querySelectorAll('[data-pd31-toggle]').forEach(b=>b.onclick=()=>{const el=q('pd31-'+b.dataset.pd31Toggle);if(el)el.hidden=!el.hidden});
@@ -33714,7 +33757,37 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
-</body></html>
+<script id="strawYieldV1639Js">
+(function(){
+"use strict";
+const DATA_KEY='erpDepartmentDataV1637:dept-straw-cell',STD_KEY='erpStrawCellYieldStandardsV1639';
+const $=s=>document.querySelector(s),num=v=>Number(v)||0,esc=v=>String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function load(k){try{const a=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+function save(k,a){localStorage.setItem(k,JSON.stringify(a))}
+function fmt(v){return num(v).toLocaleString(undefined,{maximumFractionDigits:2})}
+function materials(){const s=new Set();load(DATA_KEY).filter(x=>x.type==='receiving').forEach(x=>x.material&&s.add(String(x.material).trim()));load(STD_KEY).forEach(x=>x.material&&s.add(String(x.material).trim()));return [...s].filter(Boolean).sort()}
+function renderList(){const d=$('#y39Materials');if(d)d.innerHTML=materials().map(x=>`<option value="${esc(x)}"></option>`).join('')}
+function findStd(material,purpose){const a=load(STD_KEY),m=String(material||'').trim().toLowerCase(),p=String(purpose||'').trim().toLowerCase();return a.find(x=>String(x.material||'').trim().toLowerCase()===m&&String(x.purpose||'').trim().toLowerCase()===p)||a.find(x=>String(x.material||'').trim().toLowerCase()===m&&String(x.purpose||'').trim().toLowerCase()==='both / general')||null}
+function calc(){const st=findStd($('#y39Material')?.value,$('#y39Purpose')?.value),input=num($('#y39Input')?.value),output=num($('#y39Output')?.value),actual=input?output/input*100:0,standard=st?num(st.standardPct):0,variance=st&&input?actual-standard:0;let status='No Standard';if(st){const min=st.minPct!==''&&st.minPct!=null?num(st.minPct):standard,max=st.maxPct!==''&&st.maxPct!=null?num(st.maxPct):0;if(actual<min)status='Below Standard';else if(max&&actual>max)status='Above Target';else if(actual>=standard)status='At / Above Standard';else status='Within Range'}if($('#y39Standard'))$('#y39Standard').value=st?standard.toFixed(2):'';if($('#y39Actual'))$('#y39Actual').value=input?actual.toFixed(2):'';if($('#y39Variance'))$('#y39Variance').value=st&&input?variance.toFixed(2):'';if($('#y39Status'))$('#y39Status').value=status;return{st,standard,actual,variance,status}}
+function render(){
+ renderList();const std=load(STD_KEY),body=$('#y39StdRows');if(body)body.innerHTML=std.length?std.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.purpose)}</td><td>${fmt(r.standardPct)}%</td><td>${r.minPct===''?'—':fmt(r.minPct)+'%'}</td><td>${r.maxPct===''?'—':fmt(r.maxPct)+'%'}</td><td>${esc(r.remarks||'')}</td><td><div class="dept-row-actions-v1637"><button data-y39-edit="${esc(r.id)}">Edit</button><button class="danger" data-y39-delete="${esc(r.id)}">Delete</button></div></td></tr>`).join(''):'<tr><td colspan="8">No item yield standards yet.</td></tr>';
+ const ys=load(DATA_KEY).filter(x=>x.type==='yield');const yb=$('#y39Rows');if(yb)yb.innerHTML=ys.length?ys.slice().reverse().map(r=>{const cls=r.status==='Below Standard'?'y39-bad':(r.status==='Above Target'?'y39-warn':'y39-good');return `<tr><td>${esc(r.date)}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.purpose)}</td><td>${fmt(r.inputQty)}</td><td>${fmt(r.outputQty)}</td><td>${fmt(r.lossQty)}</td><td>${fmt(r.standardPct)}%</td><td><b>${fmt(r.actualPct)}%</b></td><td>${fmt(r.variancePct)}%</td><td><span class="y39-status ${cls}">${esc(r.status)}</span></td><td>${esc((r.shift||'')+(r.batch?' / '+r.batch:''))}</td></tr>`}).join(''):'<tr><td colspan="11">No yield entries yet.</td></tr>';
+}
+function clearStd(){['y39StdId','y39StdMaterial','y39StdPct','y39MinPct','y39MaxPct','y39StdRemarks'].forEach(id=>{const x=$('#'+id);if(x)x.value=''});if($('#y39StdPurpose'))$('#y39StdPurpose').value='Pulp Mill'}
+function clearEntry(){['y39Material','y39Input','y39Output','y39Loss','y39Standard','y39Actual','y39Variance','y39Status','y39Batch','y39Remarks'].forEach(id=>{const x=$('#'+id);if(x)x.value=''});if($('#y39Purpose'))$('#y39Purpose').value='Pulp Mill';if($('#y39Shift'))$('#y39Shift').value='General';if($('#y39Date'))$('#y39Date').value=new Date().toISOString().slice(0,10)}
+function bind(){
+ $('#y39LoadMaterials')?.addEventListener('click',()=>{const a=load(STD_KEY);let c=0;materials().forEach(material=>['Pulp Mill','Boiler Fuel'].forEach(purpose=>{if(!a.some(x=>String(x.material).toLowerCase()===material.toLowerCase()&&String(x.purpose).toLowerCase()===purpose.toLowerCase())){a.push({id:'ys-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),material,purpose,standardPct:0,minPct:'',maxPct:'',remarks:'Set standard yield %'});c++}}));save(STD_KEY,a);render();window.toast?.(c?c+' standards added':'All materials already loaded')});
+ $('#y39StdSave')?.addEventListener('click',()=>{const material=String($('#y39StdMaterial')?.value||'').trim(),pct=num($('#y39StdPct')?.value),purpose=$('#y39StdPurpose')?.value;if(!material||!pct){window.toast?.('Enter material and standard yield %');return}const a=load(STD_KEY),id=$('#y39StdId')?.value||('ys-'+Date.now());if(a.some(x=>x.id!==id&&String(x.material).toLowerCase()===material.toLowerCase()&&x.purpose===purpose)){window.toast?.('Standard already exists for this material and purpose');return}const r={id,material,purpose,standardPct:pct,minPct:$('#y39MinPct')?.value||'',maxPct:$('#y39MaxPct')?.value||'',remarks:String($('#y39StdRemarks')?.value||'').trim()};const i=a.findIndex(x=>x.id===id);if(i>=0)a[i]=r;else a.push(r);save(STD_KEY,a);clearStd();render();window.toast?.('Yield standard saved')});
+ $('#y39StdClear')?.addEventListener('click',clearStd);
+ $('#y39StdRows')?.addEventListener('click',e=>{const ed=e.target.closest('[data-y39-edit]'),del=e.target.closest('[data-y39-delete]'),a=load(STD_KEY);if(ed){const r=a.find(x=>x.id===ed.dataset.y39Edit);if(r){$('#y39StdId').value=r.id;$('#y39StdMaterial').value=r.material;$('#y39StdPurpose').value=r.purpose;$('#y39StdPct').value=r.standardPct;$('#y39MinPct').value=r.minPct||'';$('#y39MaxPct').value=r.maxPct||'';$('#y39StdRemarks').value=r.remarks||''}}if(del){const r=a.find(x=>x.id===del.dataset.y39Delete);if(r&&confirm('Delete yield standard for '+r.material+'?')){save(STD_KEY,a.filter(x=>x.id!==r.id));render()}}});
+ ['y39Material','y39Purpose','y39Input','y39Output'].forEach(id=>$('#'+id)?.addEventListener(id==='y39Purpose'?'change':'input',calc));
+ $('#y39Clear')?.addEventListener('click',clearEntry);
+ $('#y39Save')?.addEventListener('click',()=>{const material=String($('#y39Material')?.value||'').trim(),input=num($('#y39Input')?.value),output=num($('#y39Output')?.value),c=calc();if(!material||!input){window.toast?.('Enter material and input quantity');return}if(!c.st){window.toast?.('Set this material standard yield first');return}const a=load(DATA_KEY);a.push({id:'yield-'+Date.now(),type:'yield',departmentName:'Straw Cell',date:$('#y39Date')?.value||'',material,purpose:$('#y39Purpose')?.value,inputQty:input,outputQty:output,lossQty:num($('#y39Loss')?.value),standardPct:c.standard,actualPct:c.actual,yieldPct:c.actual,variancePct:c.variance,status:c.status,shift:$('#y39Shift')?.value,batch:String($('#y39Batch')?.value||'').trim(),remarks:String($('#y39Remarks')?.value||'').trim(),createdAt:new Date().toISOString()});save(DATA_KEY,a);clearEntry();render();window.ERPStrawCell?.refresh?.();window.toast?.('Yield entry saved')});
+ clearEntry();render()
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+})();
+</script></body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
 <!-- V16.38d: removed misplaced Straw Cell script/style blocks that caused raw ERP code to render on screen. -->
