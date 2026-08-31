@@ -7874,10 +7874,10 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <div><h4>Material Receiving</h4><p>One entry controls vehicle receiving, quality deduction, accepted stock and supplier payable.</p></div>
     </div>
     <div class="r40-form">
-      <label>Date<input type="date" id="r40Date"></label>
-      <label>Product / Material<input id="r40Material" list="r40MaterialList" placeholder="Select / type material"></label>
-      <label>Supplier<input id="r40Supplier" list="r40SupplierList" placeholder="Select supplier"></label>
-      <label>Vehicle #<input id="r40Vehicle" list="r40VehicleList" placeholder="Vehicle number"></label>
+      <label>Date<input type="text" id="r40Date" placeholder="25-Jun-26" autocomplete="off"></label>
+      <label>Product / Material<div class="r41-search-wrap"><input id="r40Material" placeholder="Type product..." autocomplete="off"><div class="r41-suggest" id="r41MaterialSuggest"></div></div></label>
+      <label>Supplier<div class="r41-search-wrap"><input id="r40Supplier" placeholder="Type supplier..." autocomplete="off"><div class="r41-suggest" id="r41SupplierSuggest"></div></div></label>
+      <label>Vehicle #<div class="r41-search-wrap"><input id="r40Vehicle" placeholder="Type vehicle..." autocomplete="off" style="text-transform:uppercase"><div class="r41-suggest" id="r41VehicleSuggest"></div></div></label>
       <label>Purpose<select id="r40Purpose"><option>Pulp Mill</option><option>Boiler Fuel</option><option>Both / General</option></select></label>
 
       <label>Gross Weight<input type="number" step="any" id="r40Gross" placeholder="0"></label>
@@ -7886,17 +7886,17 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <label>Deduction Qty<input id="r40DedQty" readonly></label>
       <label>Net Weight<input id="r40Net" readonly></label>
 
-      <label>Unit<input id="r40Unit" list="r40UnitList" placeholder="Kg"></label>
+      <label>Unit<div class="r41-search-wrap"><input id="r40Unit" placeholder="Type unit..." autocomplete="off"><div class="r41-suggest" id="r41UnitSuggest"></div></div></label>
       <label>Rate / Unit<input type="number" step="any" id="r40Rate" placeholder="0"></label>
       <label>Material Amount<input id="r40Amount" readonly></label>
-      <label>Stock Area<input id="r40Area" list="r40LocationList" placeholder="Stock area"></label>
+      <label>Stock Area<div class="r41-search-wrap"><input id="r40Area" placeholder="Type stock area..." autocomplete="off"><div class="r41-suggest" id="r41AreaSuggest"></div></div></label>
       <label>Unloading<select id="r40Unload"><option>Pending</option><option>In Progress</option><option>Completed</option></select></label>
 
       <label>Quality / Moisture Note<input id="r40Quality" placeholder="Optional quality detail"></label>
       <label class="wide">Remarks<input id="r40Remarks" placeholder="Optional remarks"></label>
       <div class="r40-actions"><button class="btn" type="button" id="r40Clear">Clear</button><button class="btn primary" type="button" id="r40Save">Save Receiving</button></div>
     </div>
-    <datalist id="r40MaterialList"></datalist><datalist id="r40SupplierList"></datalist><datalist id="r40VehicleList"></datalist><datalist id="r40LocationList"></datalist><datalist id="r40UnitList"></datalist>
+    
     <div class="dept-table-wrap-v1637"><table class="dept-table-v1637 r40-table"><thead><tr><th>Date</th><th>Product</th><th>Supplier</th><th>Vehicle</th><th>Gross</th><th>Deduction</th><th>Net</th><th>Rate</th><th>Amount</th><th>Purpose</th><th>Area</th></tr></thead><tbody id="r40ReceivingRows"></tbody></table></div>
   </div>
 </div>
@@ -7905,11 +7905,11 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
   <div class="straw38c-card">
     <div class="dept-box-head-v1637"><div><h4>Product Receiving Analysis</h4><p>Product is the main key. See how much each supplier supplied by day/month, with all vehicle and deduction details.</p></div></div>
     <div class="r40-filters">
-      <label>Product<input id="r40AnaProduct" list="r40MaterialList" placeholder="All products"></label>
+      <label>Product<input id="r40AnaProduct" placeholder="All products"></label>
       <label>Date<input type="date" id="r40AnaDate"></label>
       <label>Month<input type="month" id="r40AnaMonth"></label>
-      <label>Supplier<input id="r40AnaSupplier" list="r40SupplierList" placeholder="All suppliers"></label>
-      <label>Vehicle<input id="r40AnaVehicle" list="r40VehicleList" placeholder="All vehicles"></label>
+      <label>Supplier<input id="r40AnaSupplier" placeholder="All suppliers"></label>
+      <label>Vehicle<input id="r40AnaVehicle" placeholder="All vehicles"></label>
       <label>Purpose<select id="r40AnaPurpose"><option value="">All</option><option>Pulp Mill</option><option>Boiler Fuel</option><option>Both / General</option></select></label>
       <div class="r40-actions"><button class="btn" type="button" id="r40AnaClear">Clear Filters</button></div>
     </div>
@@ -33914,10 +33914,28 @@ function fmt(v){return num(v).toLocaleString(undefined,{maximumFractionDigits:2}
 function materials(){const s=new Set();load(DATA_KEY).filter(x=>x.type==='receiving').forEach(x=>x.material&&s.add(String(x.material).trim()));load(STD_KEY).forEach(x=>x.material&&s.add(String(x.material).trim()));return [...s].filter(Boolean).sort()}
 function renderList(){const d=$('#y39Materials');if(d)d.innerHTML=materials().map(x=>`<option value="${esc(x)}"></option>`).join('')}
 function findStd(material,purpose){const a=load(STD_KEY),m=String(material||'').trim().toLowerCase(),p=String(purpose||'').trim().toLowerCase();return a.find(x=>String(x.material||'').trim().toLowerCase()===m&&String(x.purpose||'').trim().toLowerCase()===p)||a.find(x=>String(x.material||'').trim().toLowerCase()===m&&String(x.purpose||'').trim().toLowerCase()==='both / general')||null}
+function r41FormatDate(date){
+ if(!(date instanceof Date)||isNaN(date))return'';
+ const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+ return String(date.getDate()).padStart(2,'0')+'-'+mon[date.getMonth()]+'-'+String(date.getFullYear()).slice(-2);
+}
+function r41ParseDate(v){
+ const s=String(v||'').trim();if(!s)return'';
+ let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/);
+ if(m){let y=m[3]?Number(m[3]):new Date().getFullYear();if(y<100)y+=2000;const d=new Date(y,Number(m[2])-1,Number(m[1]));if(d.getFullYear()===y&&d.getMonth()===Number(m[2])-1&&d.getDate()===Number(m[1]))return r41FormatDate(d)}
+ m=s.match(/^(\d{1,2})[\/\-. ]([A-Za-z]{3,9})(?:[\/\-. ](\d{2,4}))?$/);
+ if(m){let y=m[3]?Number(m[3]):new Date().getFullYear();if(y<100)y+=2000;const months={jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,sep:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11};const mo=months[m[2].toLowerCase()];if(mo!=null){const d=new Date(y,mo,Number(m[1]));if(d.getMonth()===mo&&d.getDate()===Number(m[1]))return r41FormatDate(d)}}
+ return s;
+}
+function r41StorageDate(v){
+ const s=String(v||'').trim();let m=s.match(/^(\d{2})-([A-Za-z]{3})-(\d{2})$/);if(!m)return s;
+ const mo={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'}[m[2]];
+ return mo?'20'+m[3]+'-'+mo+'-'+m[1]:s;
+}
 function calc(){const st=findStd($('#y39Material')?.value,$('#y39Purpose')?.value),input=num($('#y39Input')?.value),output=num($('#y39Output')?.value),actual=input?output/input*100:0,standard=st?num(st.standardPct):0,variance=st&&input?actual-standard:0;let status='No Standard';if(st){const min=st.minPct!==''&&st.minPct!=null?num(st.minPct):standard,max=st.maxPct!==''&&st.maxPct!=null?num(st.maxPct):0;if(actual<min)status='Below Standard';else if(max&&actual>max)status='Above Target';else if(actual>=standard)status='At / Above Standard';else status='Within Range'}if($('#y39Standard'))$('#y39Standard').value=st?standard.toFixed(2):'';if($('#y39Actual'))$('#y39Actual').value=input?actual.toFixed(2):'';if($('#y39Variance'))$('#y39Variance').value=st&&input?variance.toFixed(2):'';if($('#y39Status'))$('#y39Status').value=status;return{st,standard,actual,variance,status}}
 function render(){
  renderList();const std=load(STD_KEY),body=$('#y39StdRows');if(body)body.innerHTML=std.length?std.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.purpose)}</td><td>${fmt(r.standardPct)}%</td><td>${r.minPct===''?'—':fmt(r.minPct)+'%'}</td><td>${r.maxPct===''?'—':fmt(r.maxPct)+'%'}</td><td>${esc(r.remarks||'')}</td><td><div class="dept-row-actions-v1637"><button data-y39-edit="${esc(r.id)}">Edit</button><button class="danger" data-y39-delete="${esc(r.id)}">Delete</button></div></td></tr>`).join(''):'<tr><td colspan="8">No item yield standards yet.</td></tr>';
- const ys=load(DATA_KEY).filter(x=>x.type==='yield');const yb=$('#y39Rows');if(yb)yb.innerHTML=ys.length?ys.slice().reverse().map(r=>{const cls=r.status==='Below Standard'?'y39-bad':(r.status==='Above Target'?'y39-warn':'y39-good');return `<tr><td>${esc(r.date)}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.purpose)}</td><td>${fmt(r.inputQty)}</td><td>${fmt(r.outputQty)}</td><td>${fmt(r.lossQty)}</td><td>${fmt(r.standardPct)}%</td><td><b>${fmt(r.actualPct)}%</b></td><td>${fmt(r.variancePct)}%</td><td><span class="y39-status ${cls}">${esc(r.status)}</span></td><td>${esc((r.shift||'')+(r.batch?' / '+r.batch:''))}</td></tr>`}).join(''):'<tr><td colspan="11">No yield entries yet.</td></tr>';
+ const ys=load(DATA_KEY).filter(x=>x.type==='yield');const yb=$('#y39Rows');if(yb)yb.innerHTML=ys.length?ys.slice().reverse().map(r=>{const cls=r.status==='Below Standard'?'y39-bad':(r.status==='Above Target'?'y39-warn':'y39-good');return `<tr><td>${esc(r41DisplayStoredDate(r))}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.purpose)}</td><td>${fmt(r.inputQty)}</td><td>${fmt(r.outputQty)}</td><td>${fmt(r.lossQty)}</td><td>${fmt(r.standardPct)}%</td><td><b>${fmt(r.actualPct)}%</b></td><td>${fmt(r.variancePct)}%</td><td><span class="y39-status ${cls}">${esc(r.status)}</span></td><td>${esc((r.shift||'')+(r.batch?' / '+r.batch:''))}</td></tr>`}).join(''):'<tr><td colspan="11">No yield entries yet.</td></tr>';
 }
 function clearStd(){['y39StdId','y39StdMaterial','y39StdPct','y39MinPct','y39MaxPct','y39StdRemarks'].forEach(id=>{const x=$('#'+id);if(x)x.value=''});if($('#y39StdPurpose'))$('#y39StdPurpose').value='Pulp Mill'}
 function clearEntry(){['y39Material','y39Input','y39Output','y39Loss','y39Standard','y39Actual','y39Variance','y39Status','y39Batch','y39Remarks'].forEach(id=>{const x=$('#'+id);if(x)x.value=''});if($('#y39Purpose'))$('#y39Purpose').value='Pulp Mill';if($('#y39Shift'))$('#y39Shift').value='General';if($('#y39Date'))$('#y39Date').value=new Date().toISOString().slice(0,10)}
@@ -33933,7 +33951,32 @@ function bind(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
-</script><script id="strawReceivingAnalysisV1640Js">
+</script><style id="strawSearchAutofillV1641Css">
+#deptViewStrawCell .r41-search-wrap{position:relative;width:100%}
+#deptViewStrawCell .r41-search-wrap>input{width:100%!important}
+#deptViewStrawCell .r41-suggest{
+  display:none;
+  position:absolute;
+  left:0;right:0;top:calc(100% + 3px);
+  max-height:230px;
+  overflow:auto;
+  z-index:10020;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
+}
+#deptViewStrawCell .r41-suggest.open{display:block}
+#deptViewStrawCell .r41-option{
+  display:block;width:100%;padding:8px 10px;border:0;border-bottom:1px solid var(--border);
+  background:var(--surface);color:var(--text);text-align:left;font-size:9px;cursor:pointer
+}
+#deptViewStrawCell .r41-option:last-child{border-bottom:0}
+#deptViewStrawCell .r41-option:hover,#deptViewStrawCell .r41-option.active{background:color-mix(in srgb,var(--primary) 10%,var(--surface))}
+#deptViewStrawCell .r41-empty{padding:8px 10px;font-size:8px;color:var(--muted)}
+#r40Vehicle,#r40AnaVehicle{text-transform:uppercase!important}
+</style>
+<script id="strawReceivingAnalysisV1640Js">
 (function(){
 "use strict";
 const KEY='erpDepartmentDataV1637:dept-straw-cell';
@@ -33943,14 +33986,56 @@ function save(a){localStorage.setItem(KEY,JSON.stringify(a))}
 function fmt(v){return num(v).toLocaleString(undefined,{maximumFractionDigits:2})}
 function masterList(name){try{return window.ERPMasters?.list?.(name)||[]}catch(e){return[]}}
 function firstVal(o,keys){for(const k of keys){if(o&&o[k]!=null&&String(o[k]).trim())return String(o[k]).trim()}return''}
-function fillList(id,vals){const d=$('#'+id);if(d)d.innerHTML=[...new Set(vals.filter(Boolean))].sort().map(x=>`<option value="${esc(x)}"></option>`).join('')}
+let R41_MASTER={materials:[],suppliers:[],vehicles:[],areas:[],units:[]};
+function uniq(vals){return [...new Set(vals.map(x=>String(x||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
 function setupMasters(){
  const items=masterList('items'),sup=masterList('suppliers'),veh=masterList('vehicles'),loc=masterList('locations')?.length?masterList('locations'):masterList('locationsRacks'),units=masterList('units');
- fillList('r40MaterialList',items.map(x=>firstVal(x,['name','itemName','item','description'])).concat(load().filter(x=>x.type==='receiving').map(x=>x.material)));
- fillList('r40SupplierList',sup.map(x=>firstVal(x,['name','supplierName','supplier'])).concat(load().filter(x=>x.type==='receiving').map(x=>x.party||x.supplier)));
- fillList('r40VehicleList',veh.map(x=>firstVal(x,['name','vehicleNo','vehicle','number'])).concat(load().filter(x=>x.type==='receiving').map(x=>x.vehicle)));
- fillList('r40LocationList',(loc||[]).map(x=>firstVal(x,['name','locationName','location','rack'])));
- fillList('r40UnitList',units.map(x=>firstVal(x,['name','unitName','unit'])));
+ const rec=load().filter(x=>x.type==='receiving');
+ R41_MASTER.materials=uniq(items.map(x=>firstVal(x,['name','itemName','item','description'])).concat(rec.map(x=>x.material)));
+ R41_MASTER.suppliers=uniq(sup.map(x=>firstVal(x,['name','supplierName','supplier'])).concat(rec.map(x=>x.party||x.supplier)));
+ R41_MASTER.vehicles=uniq(veh.map(x=>firstVal(x,['name','vehicleNo','vehicle','number'])).concat(rec.map(x=>x.vehicle))).map(x=>x.toUpperCase());
+ R41_MASTER.areas=uniq((loc||[]).map(x=>firstVal(x,['name','locationName','location','rack'])).concat(rec.map(x=>x.area)));
+ R41_MASTER.units=uniq(units.map(x=>firstVal(x,['name','unitName','unit'])).concat(rec.map(x=>x.unit)));
+}
+function r41Matches(values,term){
+ term=String(term||'').trim().toLowerCase();
+ if(!term)return [];
+ const starts=[],contains=[];
+ values.forEach(v=>{const s=String(v),l=s.toLowerCase();if(l.startsWith(term))starts.push(s);else if(l.includes(term))contains.push(s)});
+ return starts.concat(contains).slice(0,20);
+}
+function r41BindSearch(inputId,boxId,getValues,onPick,uppercase=false){
+ const input=$('#'+inputId),box=$('#'+boxId);if(!input||!box||input.dataset.r41Bound)return;
+ input.dataset.r41Bound='1';let active=-1,items=[];
+ function close(){box.classList.remove('open');box.innerHTML='';active=-1}
+ function draw(){
+   let value=input.value;if(uppercase){value=value.toUpperCase();if(input.value!==value)input.value=value}
+   items=r41Matches(getValues(),value);active=-1;
+   if(!String(value).trim()){close();return}
+   if(!items.length){box.innerHTML='<div class="r41-empty">No matching record</div>';box.classList.add('open');return}
+   box.innerHTML=items.map((v,i)=>`<button type="button" class="r41-option" data-r41-index="${i}">${esc(v)}</button>`).join('');
+   box.classList.add('open');
+ }
+ function choose(i){if(i<0||i>=items.length)return;input.value=uppercase?items[i].toUpperCase():items[i];close();onPick?.(input.value);input.dispatchEvent(new Event('change',{bubbles:true}))}
+ input.addEventListener('input',draw);
+ input.addEventListener('focus',()=>{if(input.value.trim())draw()});
+ input.addEventListener('keydown',e=>{
+   if(!box.classList.contains('open')||!items.length)return;
+   if(e.key==='ArrowDown'){e.preventDefault();active=Math.min(items.length-1,active+1)}
+   else if(e.key==='ArrowUp'){e.preventDefault();active=Math.max(0,active-1)}
+   else if(e.key==='Enter'&&active>=0){e.preventDefault();choose(active);return}
+   else if(e.key==='Escape'){close();return}else return;
+   [...box.querySelectorAll('.r41-option')].forEach((b,i)=>b.classList.toggle('active',i===active));
+ });
+ box.addEventListener('mousedown',e=>{const b=e.target.closest('[data-r41-index]');if(b){e.preventDefault();choose(Number(b.dataset.r41Index))}});
+ document.addEventListener('mousedown',e=>{if(e.target!==input&&!box.contains(e.target))close()});
+}
+function r41BindAllSearches(){
+ r41BindSearch('r40Material','r41MaterialSuggest',()=>R41_MASTER.materials,itemAutofill,false);
+ r41BindSearch('r40Supplier','r41SupplierSuggest',()=>R41_MASTER.suppliers,null,false);
+ r41BindSearch('r40Vehicle','r41VehicleSuggest',()=>R41_MASTER.vehicles,null,true);
+ r41BindSearch('r40Area','r41AreaSuggest',()=>R41_MASTER.areas,null,false);
+ r41BindSearch('r40Unit','r41UnitSuggest',()=>R41_MASTER.units,null,false);
 }
 function itemAutofill(){
  const n=String($('#r40Material')?.value||'').trim().toLowerCase(),items=masterList('items');
@@ -33967,18 +34052,19 @@ function calc(){
 }
 function clearEntry(){
  ['r40Material','r40Supplier','r40Vehicle','r40Gross','r40Deduction','r40DedQty','r40Net','r40Rate','r40Amount','r40Area','r40Quality','r40Remarks'].forEach(id=>{const e=$('#'+id);if(e)e.value=''});
- if($('#r40Unit'))$('#r40Unit').value='Kg';if($('#r40DedType'))$('#r40DedType').value='qty';if($('#r40Purpose'))$('#r40Purpose').value='Pulp Mill';if($('#r40Unload'))$('#r40Unload').value='Pending';if($('#r40Date'))$('#r40Date').value=new Date().toISOString().slice(0,10)
+ if($('#r40Unit'))$('#r40Unit').value='Kg';if($('#r40DedType'))$('#r40DedType').value='qty';if($('#r40Purpose'))$('#r40Purpose').value='Pulp Mill';if($('#r40Unload'))$('#r40Unload').value='Pending';if($('#r40Date'))$('#r40Date').value=r41FormatDate(new Date())
 }
 function receiving(){return load().filter(x=>x.type==='receiving')}
 function filtered(){
  const product=String($('#r40AnaProduct')?.value||'').trim().toLowerCase(),date=$('#r40AnaDate')?.value||'',month=$('#r40AnaMonth')?.value||'',supplier=String($('#r40AnaSupplier')?.value||'').trim().toLowerCase(),vehicle=String($('#r40AnaVehicle')?.value||'').trim().toLowerCase(),purpose=$('#r40AnaPurpose')?.value||'';
  return receiving().filter(r=>(!product||String(r.material||'').toLowerCase().includes(product))&&(!date||r.date===date)&&(!month||String(r.date||'').slice(0,7)===month)&&(!supplier||String(r.party||r.supplier||'').toLowerCase().includes(supplier))&&(!vehicle||String(r.vehicle||'').toLowerCase().includes(vehicle))&&(!purpose||r.purpose===purpose));
 }
+function r41DisplayStoredDate(r){if(r.displayDate)return r.displayDate;const s=String(r.date||'');const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(m){const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));return r41FormatDate(d)}return s}
 function normalize(r){const gross=num(r.grossWeight!=null?r.grossWeight:r.qty),dq=num(r.deductionQty),net=num(r.netWeight!=null?r.netWeight:r.qty),rate=num(r.rate),amount=num(r.amount!=null?r.amount:net*rate);return{gross,dq,net,rate,amount}}
 function render(){
  setupMasters();
  const rows=receiving().slice().reverse(),tb=$('#r40ReceivingRows');
- if(tb)tb.innerHTML=rows.length?rows.map(r=>{const n=normalize(r);return `<tr><td>${esc(r.date)}</td><td>${esc(r.material)}</td><td>${esc(r.party||r.supplier)}</td><td>${esc(r.vehicle)}</td><td>${fmt(n.gross)} ${esc(r.unit||'')}</td><td>${fmt(n.dq)}</td><td><b>${fmt(n.net)}</b></td><td>${fmt(n.rate)}</td><td>${fmt(n.amount)}</td><td>${esc(r.purpose)}</td><td>${esc(r.area)}</td></tr>`}).join(''):'<tr><td colspan="11">No receiving records yet.</td></tr>';
+ if(tb)tb.innerHTML=rows.length?rows.map(r=>{const n=normalize(r);return `<tr><td>${esc(r41DisplayStoredDate(r))}</td><td>${esc(r.material)}</td><td>${esc(r.party||r.supplier)}</td><td>${esc(r.vehicle)}</td><td>${fmt(n.gross)} ${esc(r.unit||'')}</td><td>${fmt(n.dq)}</td><td><b>${fmt(n.net)}</b></td><td>${fmt(n.rate)}</td><td>${fmt(n.amount)}</td><td>${esc(r.purpose)}</td><td>${esc(r.area)}</td></tr>`}).join(''):'<tr><td colspan="11">No receiving records yet.</td></tr>';
  renderAnalysis();
 }
 function renderAnalysis(){
@@ -33986,13 +34072,17 @@ function renderAnalysis(){
  a.forEach(r=>{const n=normalize(r),s=r.party||r.supplier||'Unspecified';gross+=n.gross;ded+=n.dq;net+=n.net;amount+=n.amount;suppliers.add(s);if(r.vehicle)vehicles.add(r.vehicle);if(!groups[s])groups[s]={vehicles:new Set(),gross:0,ded:0,net:0,amount:0};const g=groups[s];if(r.vehicle)g.vehicles.add(r.vehicle);g.gross+=n.gross;g.ded+=n.dq;g.net+=n.net;g.amount+=n.amount});
  const vals={r40KpiSuppliers:suppliers.size,r40KpiVehicles:vehicles.size,r40KpiGross:fmt(gross),r40KpiDed:fmt(ded),r40KpiNet:fmt(net),r40KpiAmount:fmt(amount)};Object.entries(vals).forEach(([id,v])=>{if($('#'+id))$('#'+id).textContent=v});
  const sb=$('#r40SupplierSummary');if(sb)sb.innerHTML=Object.keys(groups).length?Object.entries(groups).map(([s,g])=>`<tr><td><b>${esc(s)}</b></td><td>${g.vehicles.size}</td><td>${fmt(g.gross)}</td><td>${fmt(g.ded)}</td><td><b>${fmt(g.net)}</b></td><td>${fmt(g.amount)}</td></tr>`).join(''):'<tr><td colspan="6">No matching supplier records.</td></tr>';
- const db=$('#r40AnalysisRows');if(db)db.innerHTML=a.length?a.slice().reverse().map(r=>{const n=normalize(r);return `<tr><td>${esc(r.date)}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.party||r.supplier)}</td><td>${esc(r.vehicle)}</td><td>${fmt(n.gross)}</td><td>${fmt(n.dq)}</td><td><b>${fmt(n.net)}</b></td><td>${fmt(n.rate)}</td><td>${fmt(n.amount)}</td><td>${esc(r.purpose)}</td></tr>`}).join(''):'<tr><td colspan="10">No matching receiving records.</td></tr>';
+ const db=$('#r40AnalysisRows');if(db)db.innerHTML=a.length?a.slice().reverse().map(r=>{const n=normalize(r);return `<tr><td>${esc(r41DisplayStoredDate(r))}</td><td><b>${esc(r.material)}</b></td><td>${esc(r.party||r.supplier)}</td><td>${esc(r.vehicle)}</td><td>${fmt(n.gross)}</td><td>${fmt(n.dq)}</td><td><b>${fmt(n.net)}</b></td><td>${fmt(n.rate)}</td><td>${fmt(n.amount)}</td><td>${esc(r.purpose)}</td></tr>`}).join(''):'<tr><td colspan="10">No matching receiving records.</td></tr>';
 }
 function bind(){
- setupMasters();clearEntry();
+ setupMasters();clearEntry();r41BindAllSearches();
+ $('#r40Date')?.addEventListener('blur',()=>{const d=$('#r40Date');if(d)d.value=r41ParseDate(d.value)});
+ $('#r40Date')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.value=r41ParseDate(e.currentTarget.value)}});
+ $('#r40Vehicle')?.addEventListener('input',e=>{const p=e.target.selectionStart;e.target.value=e.target.value.toUpperCase();try{e.target.setSelectionRange(p,p)}catch(_){}});
+ $('#r40AnaVehicle')?.addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase()});
  ['r40Gross','r40Deduction','r40Rate'].forEach(id=>$('#'+id)?.addEventListener('input',calc));$('#r40DedType')?.addEventListener('change',calc);$('#r40Material')?.addEventListener('change',itemAutofill);
  $('#r40Clear')?.addEventListener('click',clearEntry);
- $('#r40Save')?.addEventListener('click',()=>{const material=String($('#r40Material')?.value||'').trim(),supplier=String($('#r40Supplier')?.value||'').trim(),vehicle=String($('#r40Vehicle')?.value||'').trim().toUpperCase(),c=calc();if(!material||!supplier||!c.gross){window.toast?.('Enter product, supplier and gross weight');return}const a=load();a.push({id:'straw-rec-'+Date.now(),type:'receiving',departmentName:'Straw Cell',date:$('#r40Date')?.value||'',material,party:supplier,supplier,vehicle,purpose:$('#r40Purpose')?.value||'Pulp Mill',grossWeight:c.gross,deductionType:c.type,deductionValue:c.ded,deductionQty:c.dq,netWeight:c.net,qty:c.net,unit:String($('#r40Unit')?.value||'Kg').trim(),rate:c.rate,amount:c.amount,area:String($('#r40Area')?.value||'').trim(),unloading:$('#r40Unload')?.value||'Pending',quality:String($('#r40Quality')?.value||'').trim(),remarks:String($('#r40Remarks')?.value||'').trim(),createdAt:new Date().toISOString()});save(a);clearEntry();render();window.ERPStrawCell?.refresh?.();window.toast?.('Receiving saved — stock and supplier payable updated')});
+ $('#r40Save')?.addEventListener('click',()=>{const material=String($('#r40Material')?.value||'').trim(),supplier=String($('#r40Supplier')?.value||'').trim(),vehicle=String($('#r40Vehicle')?.value||'').trim().toUpperCase(),c=calc();if(!material||!supplier||!c.gross){window.toast?.('Enter product, supplier and gross weight');return}const a=load();a.push({id:'straw-rec-'+Date.now(),type:'receiving',departmentName:'Straw Cell',date:r41StorageDate(r41ParseDate($('#r40Date')?.value||'')),displayDate:r41ParseDate($('#r40Date')?.value||''),material,party:supplier,supplier,vehicle,purpose:$('#r40Purpose')?.value||'Pulp Mill',grossWeight:c.gross,deductionType:c.type,deductionValue:c.ded,deductionQty:c.dq,netWeight:c.net,qty:c.net,unit:String($('#r40Unit')?.value||'Kg').trim(),rate:c.rate,amount:c.amount,area:String($('#r40Area')?.value||'').trim(),unloading:$('#r40Unload')?.value||'Pending',quality:String($('#r40Quality')?.value||'').trim(),remarks:String($('#r40Remarks')?.value||'').trim(),createdAt:new Date().toISOString()});save(a);clearEntry();render();window.ERPStrawCell?.refresh?.();window.toast?.('Receiving saved — stock and supplier payable updated')});
  ['r40AnaProduct','r40AnaDate','r40AnaMonth','r40AnaSupplier','r40AnaVehicle','r40AnaPurpose'].forEach(id=>{const e=$('#'+id);if(e){e.addEventListener('input',renderAnalysis);e.addEventListener('change',renderAnalysis)}});
  $('#r40AnaClear')?.addEventListener('click',()=>{['r40AnaProduct','r40AnaDate','r40AnaMonth','r40AnaSupplier','r40AnaVehicle'].forEach(id=>{if($('#'+id))$('#'+id).value=''});if($('#r40AnaPurpose'))$('#r40AnaPurpose').value='';renderAnalysis()});
  render()
