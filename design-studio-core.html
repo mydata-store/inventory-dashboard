@@ -7881,10 +7881,9 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <label>Purpose<select id="r40Purpose"><option>Pulp Mill</option><option>Boiler Fuel</option><option>Both / General</option></select></label>
 
       <label>Gross Weight<input type="number" step="any" id="r40Gross" placeholder="0"></label>
-      <label>Deduction Type<select id="r40DedType"><option value="qty">Quantity</option><option value="pct">Percentage</option></select></label>
-      <label>Deduction<input type="number" step="any" id="r40Deduction" placeholder="0"></label>
-      <label>Deduction Qty<input id="r40DedQty" readonly></label>
-      <label>Net Weight<input id="r40Net" readonly></label>
+      <label>Deduction %<input type="number" step="any" id="r40Deduction" placeholder="0"></label>
+      <label>Deduction Weight<input id="r40DedQty" readonly></label>
+      <label>Actual / Net Weight<input id="r40Net" readonly></label>
 
       <label>Unit<div class="purchase-auto-wrap"><input id="r40Unit" data-purchase-auto="units" placeholder="Type unit..." autocomplete="off"><div class="purchase-auto-list"></div></div></label>
       <label>Rate / Unit<input type="number" step="any" id="r40Rate" placeholder="0"></label>
@@ -33961,6 +33960,22 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #deptViewStrawCell .r42-native-date{position:absolute!important;right:0!important;top:100%!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
 #r40Vehicle,#r40AnaVehicle{text-transform:uppercase!important}
 </style>
+<style id="strawReceivingV1643FieldFix">
+#deptViewStrawCell .r40-form input,
+#deptViewStrawCell .r40-form select,
+#deptViewStrawCell .r40-form input[readonly],
+#deptViewStrawCell .purchase-auto-wrap>input{
+  font-weight:400!important;
+}
+#deptViewStrawCell .r40-form label{
+  font-weight:700!important;
+}
+#deptViewStrawCell #r40DedQty,
+#deptViewStrawCell #r40Net,
+#deptViewStrawCell #r40Amount{
+  font-weight:500!important;
+}
+</style>
 <script id="strawReceivingAnalysisV1640Js">
 (function(){
 "use strict";
@@ -34028,16 +34043,22 @@ function itemAutofill(){
  if(x&&$('#r40Unit'))$('#r40Unit').value=firstVal(x,['unit','unitName','uom'])||$('#r40Unit').value;
 }
 function calc(){
- const gross=num($('#r40Gross')?.value),ded=num($('#r40Deduction')?.value),type=$('#r40DedType')?.value||'qty';
- const dq=type==='pct'?gross*ded/100:ded,net=Math.max(0,gross-dq),rate=num($('#r40Rate')?.value),amount=net*rate;
- if($('#r40DedQty'))$('#r40DedQty').value=dq.toFixed(2);
- if($('#r40Net'))$('#r40Net').value=net.toFixed(2);
- if($('#r40Amount'))$('#r40Amount').value=amount.toFixed(2);
- return{gross,ded,dq,net,rate,amount,type};
+ const gross=num($('#r40Gross')?.value);
+ let ded=num($('#r40Deduction')?.value);
+ if(ded<0)ded=0;
+ if(ded>100)ded=100;
+ const dq=gross*ded/100;
+ const net=Math.max(0,gross-dq);
+ const rate=num($('#r40Rate')?.value);
+ const amount=net*rate;
+ if($('#r40DedQty'))$('#r40DedQty').value=gross?dq.toFixed(2):'';
+ if($('#r40Net'))$('#r40Net').value=gross?net.toFixed(2):'';
+ if($('#r40Amount'))$('#r40Amount').value=(gross&&rate)?amount.toFixed(2):'';
+ return{gross,ded,dq,net,rate,amount};
 }
 function clearEntry(){
  ['r40Material','r40Supplier','r40Vehicle','r40Gross','r40Deduction','r40DedQty','r40Net','r40Rate','r40Amount','r40Area','r40Quality','r40Remarks'].forEach(id=>{const e=$('#'+id);if(e)e.value=''});
- if($('#r40Unit'))$('#r40Unit').value='Kg';if($('#r40DedType'))$('#r40DedType').value='qty';if($('#r40Purpose'))$('#r40Purpose').value='Pulp Mill';if($('#r40Unload'))$('#r40Unload').value='Pending';if($('#r40Date'))$('#r40Date').value=r41FormatDate(new Date())
+ if($('#r40Unit'))$('#r40Unit').value='Kg';if($('#r40Purpose'))$('#r40Purpose').value='Pulp Mill';if($('#r40Unload'))$('#r40Unload').value='Pending';if($('#r40Date'))$('#r40Date').value=r41FormatDate(new Date())
 }
 function receiving(){return load().filter(x=>x.type==='receiving')}
 function filtered(){
@@ -34045,7 +34066,7 @@ function filtered(){
  return receiving().filter(r=>(!product||String(r.material||'').toLowerCase().includes(product))&&(!date||r.date===date)&&(!month||String(r.date||'').slice(0,7)===month)&&(!supplier||String(r.party||r.supplier||'').toLowerCase().includes(supplier))&&(!vehicle||String(r.vehicle||'').toLowerCase().includes(vehicle))&&(!purpose||r.purpose===purpose));
 }
 function r41DisplayStoredDate(r){if(r.displayDate)return r.displayDate;const s=String(r.date||'');const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(m){const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));return r41FormatDate(d)}return s}
-function normalize(r){const gross=num(r.grossWeight!=null?r.grossWeight:r.qty),dq=num(r.deductionQty),net=num(r.netWeight!=null?r.netWeight:r.qty),rate=num(r.rate),amount=num(r.amount!=null?r.amount:net*rate);return{gross,dq,net,rate,amount}}
+function normalize(r){const gross=num(r.grossWeight!=null?r.grossWeight:r.qty);const dq=r.deductionQty!=null?num(r.deductionQty):(r.deductionPct!=null?gross*num(r.deductionPct)/100:0);const net=num(r.netWeight!=null?r.netWeight:(gross-dq));const rate=num(r.rate),amount=num(r.amount!=null?r.amount:net*rate);return{gross,dq,net,rate,amount}}
 function render(){
  setupMasters();
  const rows=receiving().slice().reverse(),tb=$('#r40ReceivingRows');
@@ -34086,9 +34107,9 @@ function bind(){
    if(m)_dateText.value=r41FormatDate(new Date(Number(m[1]),Number(m[2])-1,Number(m[3])));
  });
  
- ['r40Gross','r40Deduction','r40Rate'].forEach(id=>$('#'+id)?.addEventListener('input',calc));$('#r40DedType')?.addEventListener('change',calc);$('#r40Material')?.addEventListener('change',itemAutofill);
+ ['r40Gross','r40Deduction','r40Rate'].forEach(id=>$('#'+id)?.addEventListener('input',calc));$('#r40Material')?.addEventListener('change',itemAutofill);
  $('#r40Clear')?.addEventListener('click',clearEntry);
- $('#r40Save')?.addEventListener('click',()=>{const material=String($('#r40Material')?.value||'').trim(),supplier=String($('#r40Supplier')?.value||'').trim(),vehicle=String($('#r40Vehicle')?.value||'').trim().toUpperCase(),c=calc();if(!material||!supplier||!c.gross){window.toast?.('Enter product, supplier and gross weight');return}const a=load();a.push({id:'straw-rec-'+Date.now(),type:'receiving',departmentName:'Straw Cell',date:r41StorageDate(r41ParseDate($('#r40Date')?.value||'')),displayDate:r41ParseDate($('#r40Date')?.value||''),material,party:supplier,supplier,vehicle,purpose:$('#r40Purpose')?.value||'Pulp Mill',grossWeight:c.gross,deductionType:c.type,deductionValue:c.ded,deductionQty:c.dq,netWeight:c.net,qty:c.net,unit:String($('#r40Unit')?.value||'Kg').trim(),rate:c.rate,amount:c.amount,area:String($('#r40Area')?.value||'').trim(),unloading:$('#r40Unload')?.value||'Pending',quality:String($('#r40Quality')?.value||'').trim(),remarks:String($('#r40Remarks')?.value||'').trim(),createdAt:new Date().toISOString()});save(a);clearEntry();render();window.ERPStrawCell?.refresh?.();window.toast?.('Receiving saved — stock and supplier payable updated')});
+ $('#r40Save')?.addEventListener('click',()=>{const material=String($('#r40Material')?.value||'').trim(),supplier=String($('#r40Supplier')?.value||'').trim(),vehicle=String($('#r40Vehicle')?.value||'').trim().toUpperCase(),c=calc();if(!material||!supplier||!c.gross){window.toast?.('Enter product, supplier and gross weight');return}const a=load();a.push({id:'straw-rec-'+Date.now(),type:'receiving',departmentName:'Straw Cell',date:r41StorageDate(r41ParseDate($('#r40Date')?.value||'')),displayDate:r41ParseDate($('#r40Date')?.value||''),material,party:supplier,supplier,vehicle,purpose:$('#r40Purpose')?.value||'Pulp Mill',grossWeight:c.gross,deductionType:'pct',deductionPct:c.ded,deductionValue:c.ded,deductionQty:c.dq,netWeight:c.net,qty:c.net,unit:String($('#r40Unit')?.value||'Kg').trim(),rate:c.rate,amount:c.amount,area:String($('#r40Area')?.value||'').trim(),unloading:$('#r40Unload')?.value||'Pending',quality:String($('#r40Quality')?.value||'').trim(),remarks:String($('#r40Remarks')?.value||'').trim(),createdAt:new Date().toISOString()});save(a);clearEntry();render();window.ERPStrawCell?.refresh?.();window.toast?.('Receiving saved — stock and supplier payable updated')});
  ['r40AnaProduct','r40AnaDate','r40AnaMonth','r40AnaSupplier','r40AnaVehicle','r40AnaPurpose'].forEach(id=>{const e=$('#'+id);if(e){e.addEventListener('input',renderAnalysis);e.addEventListener('change',renderAnalysis)}});
  $('#r40AnaClear')?.addEventListener('click',()=>{['r40AnaProduct','r40AnaDate','r40AnaMonth','r40AnaSupplier','r40AnaVehicle'].forEach(id=>{if($('#'+id))$('#'+id).value=''});if($('#r40AnaPurpose'))$('#r40AnaPurpose').value='';renderAnalysis()});
  render()
