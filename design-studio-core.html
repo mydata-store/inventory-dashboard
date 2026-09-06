@@ -35797,6 +35797,107 @@ window.ERPMastersControllerV1651b={
 })();
 </script>
 
+
+<script id="dashboardTimeOnlyFixV1651c">
+(function(){
+"use strict";
+
+let timer=null;
+
+function pakistanNow(){
+  /* Pakistan Standard Time = UTC+05:00, no DST */
+  return new Date(Date.now() + (5 * 60 * 60 * 1000));
+}
+
+function pad(v){
+  return String(v).padStart(2,"0");
+}
+
+function update(){
+  const host=document.getElementById("dashboardBannerHostV1565");
+  if(!host)return;
+
+  const d=pakistanNow();
+
+  const h24=d.getUTCHours();
+  const min=d.getUTCMinutes();
+  const sec=d.getUTCSeconds();
+  const h12=(h24%12)||12;
+  const ampm=h24>=12?"PM":"AM";
+
+  const time=host.querySelector('[data-dashboard-source-id="bstPreviewTime"]');
+  const ap=host.querySelector('[data-dashboard-source-id="bstPreviewAmPm"]');
+  const weekday=host.querySelector('[data-dashboard-source-id="bstPreviewWeekday"]');
+  const date=host.querySelector('[data-dashboard-source-id="bstPreviewDate"]');
+
+  if(time)time.textContent=pad(h12)+":"+pad(min)+":"+pad(sec);
+  if(ap)ap.textContent=ampm;
+
+  const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  if(weekday)weekday.textContent=days[d.getUTCDay()];
+  if(date)date.textContent=
+    pad(d.getUTCDate())+" "+months[d.getUTCMonth()]+" "+d.getUTCFullYear();
+
+  /* Keep the existing analog clock, only correct its hand positions */
+  const analog=host.querySelector('[data-dashboard-source-id="bstAnalogClock"]');
+  if(analog){
+    const hour=analog.querySelector(".h");
+    const minute=analog.querySelector(".m");
+    const second=analog.querySelector(".s");
+
+    const hourDeg=((h24%12)+(min/60)+(sec/3600))*30;
+    const minuteDeg=(min+(sec/60))*6;
+    const secondDeg=sec*6;
+
+    if(hour)hour.style.transform="translateX(-50%) rotate("+hourDeg+"deg)";
+    if(minute)minute.style.transform="translateX(-50%) rotate("+minuteDeg+"deg)";
+    if(second)second.style.transform="translateX(-50%) rotate("+secondDeg+"deg)";
+  }
+}
+
+function start(){
+  if(timer)clearInterval(timer);
+  update();
+
+  /* Align with the next real second */
+  const delay=1000-(Date.now()%1000)+25;
+  setTimeout(()=>{
+    update();
+    timer=setInterval(update,1000);
+  },delay);
+}
+
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){
+    if(timer)clearInterval(timer);
+    timer=null;
+  }else{
+    start();
+  }
+});
+
+window.addEventListener("pageshow",()=>setTimeout(start,80));
+window.addEventListener("focus",()=>setTimeout(start,80));
+window.addEventListener("hashchange",()=>setTimeout(start,80));
+
+document.addEventListener("click",e=>{
+  if(e.target.closest('[data-dashboard-open],[data-panel="dashboard"]')){
+    setTimeout(start,100);
+  }
+},true);
+
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",()=>setTimeout(start,120),{once:true});
+}else{
+  setTimeout(start,120);
+}
+
+window.ERPDashboardTimeV1651c={start,update};
+})();
+</script>
+
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
