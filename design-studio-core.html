@@ -4461,6 +4461,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 
     <div class="purchase-instruction" data-purchase-instruction="purchase-history">
       Whatever is visible after filtering is what <b>Print Results</b> and <b>Export Excel</b> will use.
+      <span style="margin-left:8px"><b>Challan rule:</b> if Rate or Amount is blank, the record is automatically <b>Challan Pending</b>. When both are entered later, it becomes <b>Completed</b>.</span>
     </div>
 
     <div class="pph-toolbar" id="pphToolbar" data-purchase-filters="purchase-history">
@@ -4496,7 +4497,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <div><label>Vehicle No.</label><input id="pphVehicle"></div>
       <div><label>User</label><input id="pphUser"></div>
 
-      <div><label>Billing Status</label><select id="pphBilling"><option value="">All Billing</option><option value="billed">Billed</option><option value="pending">Bill Pending</option></select></div>
+      <div><label>Challan Status</label><select id="pphBilling"><option value="">All</option><option value="pending">Challan Pending</option><option value="billed">Rate / Amount Completed</option></select></div>
       <div><label>Return Status</label><select id="pphReturn"><option value="">All Returns</option><option value="none">No Return</option><option value="partial">Partial Return</option><option value="full">Fully Returned</option></select></div>
       <div class="pph-search-wide"><label>Any Word Search</label><input id="pphSearch" placeholder="Supplier, item, bill, date, vehicle, remarks..."></div>
     </div>
@@ -4521,7 +4522,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
         <thead><tr>
           <th>#</th><th>Date</th><th>Type</th><th>Section</th><th>Supplier</th><th>Item</th>
           <th>Qty / Net Wt.</th><th>Unit</th><th>Rate</th><th>Purchase Value</th><th>Tax</th><th>Grand Total</th>
-          <th>Bill / Challan</th><th>Billing</th><th>Return</th><th>IGP</th><th>Control / GRN</th><th>Vehicle</th><th>Action</th>
+          <th>Bill / Challan</th><th>Challan Status</th><th>Return</th><th>IGP</th><th>Control / GRN</th><th>Vehicle</th><th>Action</th>
         </tr></thead>
         <tbody id="pphRows"></tbody>
       </table>
@@ -10967,7 +10968,18 @@ function pphGrandValue(r){return purchaseNum(r.register==='board'?(r.totalAmount
 function pphReturns(r){return Array.isArray(r.returns)?r.returns:[]}
 function pphReturnQty(r){return pphReturns(r).reduce((n,x)=>n+purchaseNum(x.qty),0)}
 function pphReturnAmount(r){return pphReturns(r).reduce((n,x)=>n+purchaseNum(x.amount),0)}
-function pphBillingStatus(r){return String(r.bill||'').trim()&&pphGrandValue(r)>0?'billed':'pending'}
+function pphBillingStatus(r){
+  /* V16.50 Challan rule:
+     Rate AND Amount must both be entered to count as completed.
+     Only blank/null/undefined means missing. Numeric/string zero is still an entered value. */
+  const rawRate=(r.rate!==undefined&&r.rate!==null)?r.rate:r.unitPrice;
+  const rawAmount=r.register==='board'
+    ? ((r.totalPrice!==undefined&&r.totalPrice!==null)?r.totalPrice:r.amount)
+    : r.amount;
+  const rateFilled=rawRate!==undefined&&rawRate!==null&&String(rawRate).trim()!=='';
+  const amountFilled=rawAmount!==undefined&&rawAmount!==null&&String(rawAmount).trim()!=='';
+  return rateFilled&&amountFilled?'billed':'pending';
+}
 function pphReturnStatus(r){
   const q=pphReturnQty(r),base=pphQtyValue(r);if(!q)return'none';if(base&&q>=base)return'full';return'partial'
 }
@@ -11023,7 +11035,7 @@ function purchaseHistoryFiltered(){
 }
 function pphStatusLabel(r){
   const b=pphBillingStatus(r),rr=pphReturnStatus(r);
-  return {billing:`<span class="pph-status ${b}">${b==='billed'?'Billed':'Bill Pending'}</span>`,
+  return {billing:`<span class="pph-status ${b}">${b==='billed'?'Completed':'Challan Pending'}</span>`,
           returns:`<span class="pph-status return-${rr}">${rr==='none'?'No Return':rr==='partial'?'Partial Return':'Fully Returned'}</span>`}
 }
 function purchaseRenderHistory(){
@@ -11075,7 +11087,7 @@ function pphDetailCells(r){
     ['Purchase Type',pphType(r)],['Date',r.date],['Section',r.section],['Supplier',r.supplier],['Item',r.itemWithSize||[r.item,r.size].filter(Boolean).join(' ')],
     ['Quantity / Net Weight',purchaseMoney(pphQtyValue(r))],['Unit',r.unit],['Rate / Unit Price',purchaseMoney(r.rate||r.unitPrice)],
     ['Purchase Value',purchaseMoney(pphPurchaseValue(r))],['Sales Tax',purchaseMoney(pphTaxValue(r))],['Grand Total',purchaseMoney(pphGrandValue(r))],
-    ['Bill / Bility / Challan',r.bill],['IGP No.',r.igp],['Control No.',r.controlNo],['GRN No.',r.grn],['Vehicle No.',r.vehicle],
+    ['Bill / Bility / Challan',r.bill],['Challan Status',pphBillingStatus(r)==='pending'?'Challan Pending':'Rate / Amount Completed'],['IGP No.',r.igp],['Control No.',r.controlNo],['GRN No.',r.grn],['Vehicle No.',r.vehicle],
     ['Purchase By',r.purchasedBy],['Brand',r.brand],['Package',r.package],['No. of Item',r.count],['Weight / Item',r.weightItem],
     ['Gross Weight',r.grossWeight],['Ded %',r.deduction],['Ded Weight',r.dedWeight],['Net Weight',r.netWeight],
     ['Bill Received Date',r.billReceivedDate],['Created By',r.createdByName],['Last Updated By',r.updatedByName],['Remarks',r.remarks]
