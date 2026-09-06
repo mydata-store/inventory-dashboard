@@ -27722,6 +27722,13 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
 
 <script id="erpUniversalSamePageControllerV1525">
 (function(){
+  /*
+    V16.51b lightweight universal Page Controller.
+    - No MutationObserver
+    - No repeated full-document button scans
+    - Masters keeps its own native Page Controller modal
+    - Print Studio keeps its own Page Designer
+  */
   const BTN_CLASS='erp-universal-page-controller-v1526';
   const LEGACY_SELECTOR=[
     '.purchase-controller-btn',
@@ -27730,22 +27737,34 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
     '[data-page-controller]'
   ].join(',');
 
-  function pageId(panel){
-    return String(panel?.id||'').replace(/^panel-/,'').trim();
-  }
-
   function activePanel(){
     return document.querySelector('main.content section.panel.active');
   }
 
-  function looksLikeController(btn){
+  function pageId(panel){
+    return String(panel?.id||'').replace(/^panel-/,'').trim();
+  }
+
+  function isNativeController(btn){
+    if(!btn)return false;
+
+    /* These pages own their own controller logic. */
+    if(btn.matches('.master-controller-btn,#masterPageControllerBtn'))return true;
+    if(btn.closest('#panel-print'))return true;
+
+    return false;
+  }
+
+  function looksLikeUniversalController(btn){
     if(!btn || btn.closest('#advancedPageDesignerModal'))return false;
-    // Print Design Studio owns all controls inside #panel-print.
-    // Never route its Page Designer / Gallery / print controls into the
-    // general Page Control Studio.
-    if(btn.closest('#panel-print'))return false;
+    if(isNativeController(btn))return false;
+
     if(btn.matches(LEGACY_SELECTOR))return true;
-    return /page\s*(controller|designer)/i.test(String(btn.textContent||'').trim());
+
+    /* Only universal buttons created by this layer should be text-matched. */
+    if(btn.classList.contains(BTN_CLASS))return true;
+
+    return false;
   }
 
   function openStudioFor(panel){
@@ -27754,19 +27773,40 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
 
     if(window.ERPAdvancedPageDesigner?.openPage){
       window.ERPAdvancedPageDesigner.openPage(panel);
+
       setTimeout(()=>{
-        window.ERPPageControlExtras?.loadDesigner?.();
-        window.ERPColumnSummaryDesigner?.applySaved?.();
-        window.ERPColumnSummaryDesigner?.prepare?.();
-        window.ERPPerPageDesign?.apply?.();
+        try{window.ERPPageControlExtras?.loadDesigner?.()}catch(e){}
+        try{window.ERPColumnSummaryDesigner?.applySaved?.()}catch(e){}
+        try{window.ERPColumnSummaryDesigner?.prepare?.()}catch(e){}
+        try{window.ERPPerPageDesign?.apply?.()}catch(e){}
       },0);
+
       return;
     }
+
     if(window.ERPAdvancedPageDesigner?.open){
       window.ERPAdvancedPageDesigner.open();
       return;
     }
+
     window.toast?.('Page Control Studio is not ready yet');
+  }
+
+  function hasController(panel){
+    if(!panel)return false;
+
+    /* Native Masters controller counts as an existing controller. */
+    if(panel.id==='panel-masters' && panel.querySelector('#masterPageControllerBtn'))return true;
+
+    if(panel.id==='panel-print')return true;
+
+    return !!panel.querySelector(
+      '.erp-universal-page-controller-v1526,'+
+      '.purchase-controller-btn,'+
+      '.apd-launch,'+
+      '[data-purchase-controller],'+
+      '[data-page-controller]'
+    );
   }
 
   function buttonHost(panel){
@@ -27783,43 +27823,56 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
       '.page-actions',
       '.toolbar-actions'
     ];
+
     for(const sel of selectors){
       const host=panel.querySelector(sel);
       if(host)return host;
     }
 
-    for(const sel of ['.inv-page-head','.purchase-page-head','.page-head','.module-head','.section-head']){
+    for(const sel of [
+      '.inv-page-head',
+      '.purchase-page-head',
+      '.page-head',
+      '.module-head',
+      '.section-head'
+    ]){
       const head=panel.querySelector(sel);
+
       if(head){
-        let actions=head.querySelector(':scope > .erp-universal-controller-actions-v1526');
+        let actions=head.querySelector(
+          ':scope > .erp-universal-controller-actions-v1526'
+        );
+
         if(!actions){
           actions=document.createElement('div');
           actions.className='erp-universal-controller-actions-v1526';
           head.appendChild(actions);
         }
+
         return actions;
       }
     }
 
-    let row=panel.querySelector(':scope > .erp-universal-controller-fallback-v1526');
+    let row=panel.querySelector(
+      ':scope > .erp-universal-controller-fallback-v1526'
+    );
+
     if(!row){
       row=document.createElement('div');
       row.className='erp-universal-controller-fallback-v1526';
       panel.insertBefore(row,panel.firstChild);
     }
-    return row;
-  }
 
-  function hasAnyController(panel){
-    return [...panel.querySelectorAll('button')].some(looksLikeController);
+    return row;
   }
 
   function ensureController(panel){
     if(!panel || !panel.matches('section.panel'))return;
-    // Print Design Studio already contains its own Page Designer.
-    // Do not inject the universal Page Controller here.
+
     if(panel.id==='panel-print')return;
-    if(hasAnyController(panel))return;
+    if(panel.id==='panel-masters')return;
+
+    if(hasController(panel))return;
 
     const host=buttonHost(panel);
     if(!host)return;
@@ -27832,59 +27885,78 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
     host.appendChild(btn);
   }
 
-  function ensureAll(){
-    document.querySelectorAll('main.content section.panel').forEach(ensureController);
+  function ensureActive(){
+    const panel=activePanel();
+    if(panel)ensureController(panel);
   }
 
-  function bindOne(btn){
-    if(!looksLikeController(btn) || btn.dataset.unifiedPageStudioV1526==='1')return;
-    btn.dataset.unifiedPageStudioV1526='1';
+  /*
+    One delegated listener replaces hundreds of per-button listeners.
+    Masters native controller is deliberately ignored.
+  */
+  document.addEventListener('click',function(e){
+    const btn=e.target.closest('button');
+    if(!btn)return;
 
-    btn.addEventListener('click',function(e){
-      if(!looksLikeController(btn))return;
+    if(isNativeController(btn))return;
+
+    if(looksLikeUniversalController(btn)){
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
+
       const panel=btn.closest('section.panel')||activePanel();
       openStudioFor(panel);
-    },true);
-  }
-
-  function bindExisting(){
-    document.querySelectorAll('button').forEach(bindOne);
-  }
-
-  function refresh(){
-    // Remove any old universal controller buttons accidentally injected
-    // into Print Design Studio by earlier versions.
-    document.querySelectorAll('#panel-print .erp-universal-page-controller-v1526').forEach(b=>b.remove());
-    ensureAll();
-    bindExisting();
-  }
-
-  function bind(){
-    refresh();
-
-    let refreshTimer=null;
-    const scheduleRefresh=(delay=30)=>{
-      clearTimeout(refreshTimer);
-      refreshTimer=setTimeout(refresh,delay)
-    };
-    window.addEventListener('hashchange',()=>scheduleRefresh(20));
-    window.addEventListener('popstate',()=>scheduleRefresh(20));
-
-    const main=document.querySelector('main.content');
-    if(main){
-      const obs=new MutationObserver(records=>{
-        if(records.some(r=>r.type==='childList' && r.addedNodes.length)){
-          scheduleRefresh(50);
-        }
-      });
-      obs.observe(main,{subtree:true,childList:true});
+      return;
     }
 
+    /*
+      When navigation changes the active panel, only inspect that one panel.
+      No whole-DOM refresh and no observer.
+    */
+    if(
+      btn.matches(
+        '[data-panel],'+
+        '[data-dashboard-open],'+
+        '[data-inventory-open],'+
+        '[data-report-center-open],'+
+        '[data-formula-control-open]'
+      ) ||
+      btn.closest(
+        '[data-panel],'+
+        '[data-dashboard-open],'+
+        '[data-inventory-open],'+
+        '[data-report-center-open],'+
+        '[data-formula-control-open]'
+      )
+    ){
+      setTimeout(ensureActive,0);
+    }
+  },false);
+
+  window.addEventListener('hashchange',()=>{
+    setTimeout(ensureActive,0);
+  });
+
+  window.addEventListener('popstate',()=>{
+    setTimeout(ensureActive,0);
+  });
+
+  function bind(){
+    /*
+      Clean up any controller accidentally added to native-owned pages.
+      This is a one-time tiny cleanup, not a repeating scan.
+    */
+    document
+      .querySelectorAll(
+        '#panel-print .erp-universal-page-controller-v1526,'+
+        '#panel-masters .erp-universal-page-controller-v1526'
+      )
+      .forEach(b=>b.remove());
+
+    ensureActive();
+
     window.ERPUniversalPageController={
-      refresh,
+      refresh:ensureActive,
       ensurePage:ensureController,
       openPage:openStudioFor
     };
@@ -35678,6 +35750,50 @@ function bind(){
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
 window.ERPPurchaseChallansV1651a={open,render};
+})();
+</script>
+
+
+<script id="mastersControllerDirectFixV1651b">
+(function(){
+"use strict";
+
+function openMasterController(e){
+  const btn=e.target.closest('#masterPageControllerBtn');
+  if(!btn)return;
+
+  /*
+    Do not stop Masters' own normal handler.
+    Just guarantee the modal opens even if another old layer exists.
+  */
+  const modal=document.getElementById('masterPageControllerModal');
+  if(!modal)return;
+
+  requestAnimationFrame(()=>{
+    modal.classList.add('open');
+    try{
+      if(typeof masterApplyPageSettings==='function'){
+        masterApplyPageSettings();
+      }
+    }catch(err){}
+  });
+}
+
+document.addEventListener('click',openMasterController,true);
+
+window.ERPMastersControllerV1651b={
+  open:function(){
+    const modal=document.getElementById('masterPageControllerModal');
+    if(modal){
+      modal.classList.add('open');
+      try{
+        if(typeof masterApplyPageSettings==='function'){
+          masterApplyPageSettings();
+        }
+      }catch(e){}
+    }
+  }
+};
 })();
 </script>
 
