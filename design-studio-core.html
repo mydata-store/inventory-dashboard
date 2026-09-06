@@ -35898,6 +35898,99 @@ window.ERPDashboardTimeV1651c={start,update};
 })();
 </script>
 
+
+<script id="dashboardLiveClockFixV1651d">
+(function(){
+"use strict";
+
+let liveTimer=0, alignTimer=0;
+
+function pkParts(){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone:"Asia/Karachi",
+    year:"numeric",month:"short",day:"2-digit",weekday:"short",
+    hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true
+  }).formatToParts(new Date());
+  const o={};
+  parts.forEach(p=>{ if(p.type!=="literal")o[p.type]=p.value; });
+  return o;
+}
+
+function setText(el,v){
+  if(el && el.textContent!==v) el.textContent=v;
+}
+
+function setClock(root, cloned){
+  if(!root)return;
+  const p=pkParts();
+  const time=(p.hour||"00")+":"+(p.minute||"00")+":"+(p.second||"00");
+  const ampm=p.dayPeriod||"";
+  const date=(p.day||"")+" "+(p.month||"")+" "+(p.year||"");
+
+  const q=id=>cloned
+    ? root.querySelector('[data-dashboard-source-id="'+id+'"]')
+    : document.getElementById(id);
+
+  setText(q("bstPreviewTime"),time);
+  setText(q("bstPreviewAmPm"),ampm);
+  setText(q("bstPreviewWeekday"),p.weekday||"");
+  setText(q("bstPreviewDate"),date);
+
+  const analog=q("bstAnalogClock");
+  if(analog){
+    let h=parseInt(p.hour||"0",10)%12;
+    let m=parseInt(p.minute||"0",10);
+    let s=parseInt(p.second||"0",10);
+    const hd=(h+m/60+s/3600)*30;
+    const md=(m+s/60)*6;
+    const sd=s*6;
+    const H=analog.querySelector(".h"), M=analog.querySelector(".m"), S=analog.querySelector(".s");
+    if(H)H.style.transform='translateX(-50%) rotate('+hd+'deg)';
+    if(M)M.style.transform='translateX(-50%) rotate('+md+'deg)';
+    if(S)S.style.transform='translateX(-50%) rotate('+sd+'deg)';
+  }
+}
+
+function tick(){
+  /* Update BOTH the hidden Banner Studio source and the visible Dashboard clone.
+     This prevents the existing dashboard sync from copying an old/frozen time back. */
+  setClock(document,false);
+  const host=document.getElementById("dashboardBannerHostV1565");
+  if(host)setClock(host,true);
+}
+
+function start(){
+  clearInterval(liveTimer);
+  clearTimeout(alignTimer);
+  tick();
+  alignTimer=setTimeout(function(){
+    tick();
+    liveTimer=setInterval(tick,1000);
+  },Math.max(25,1000-(Date.now()%1000)+30));
+}
+
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden){
+    clearInterval(liveTimer); liveTimer=0;
+    clearTimeout(alignTimer); alignTimer=0;
+  }else start();
+});
+window.addEventListener("pageshow",start);
+window.addEventListener("focus",start);
+window.addEventListener("hashchange",function(){setTimeout(start,40)});
+document.addEventListener("click",function(e){
+  if(e.target.closest('[data-dashboard-open],[data-panel="dashboard"]'))setTimeout(start,80);
+},true);
+
+if(document.readyState==="loading")
+  document.addEventListener("DOMContentLoaded",start,{once:true});
+else
+  start();
+
+window.ERPDashboardLiveClockV1651d={start:start,tick:tick};
+})();
+</script>
+
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
