@@ -3723,39 +3723,6 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 </aside>
 <div class="page-shell"><header class="top"><div class="title"><h1 id="workspaceTitle">Design Studio</h1><p id="workspaceSubtitle">Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control</p></div><div class="actions"><span class="core-status" id="saveStatus">Ready</span><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
 <main class="content">
-<script id="erpFastInitialRouteV1651k">
-(function(){
-'use strict';
-
-function targetId(){
-  const h=String(location.hash||'').replace(/^#/,'').trim();
-  return h && document.getElementById(h) ? h : '';
-}
-
-function activate(){
-  const id=targetId();
-  if(!id)return false;
-
-  const target=document.getElementById(id);
-  if(!target || !target.matches('section.panel'))return false;
-
-  document.querySelectorAll('main.content > section.panel.active, main.content section.panel.active').forEach(p=>{
-    if(p!==target)p.classList.remove('active');
-  });
-  target.classList.add('active');
-
-  return true;
-}
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',activate,{once:true});
-}else{
-  activate();
-}
-
-window.ERPFastInitialRouteV1651k={activate};
-})();
-</script>
 <div class="notice">Changes preview instantly. <b>Save & Apply</b> stores the shared design settings for connected ERP modules.</div>
 
 
@@ -22462,10 +22429,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
   }
 
-  window.addEventListener('popstate',function(e){
-    const id=(e.state&&e.state.erpPanel) || (location.hash||'').replace(/^#/,'');
-    restore(id);
-  });
+  /* V16.51m: BrowserHistory no longer restores pages itself. */
 
   // V16.51g: navigation history is updated from actual navigation events only.
   function start(){
@@ -22478,8 +22442,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     window.addEventListener('hashchange',()=>setTimeout(pushIfChanged,20));
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
-  else start();
+  /* V16.51m: BrowserHistory startup ownership removed. */
 
   window.ERPBrowserHistory={
     current:activePanelId,
@@ -22945,7 +22908,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     boot();
   }
 
-  /* V16.51k: hash navigation is handled by ERPExactPageRestoreV1540.
+  /* V16.51m: hash navigation is handled by ERPExactPageRestoreV1540.
      This older saved-state helper now runs only at no-hash startup. */
 })();
 </script>
@@ -27695,7 +27658,7 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
       try{
         dynamic[target]?.();
         forcePanel(target);
-        /* V16.51k: target panel is already active. Avoid heavy design reapply during initial restore. */
+        /* V16.51m: target panel is already active. Avoid heavy design reapply during initial restore. */
         window.ERPSidebarStartClosedV1524?.closeAll?.();
         document.documentElement.classList.remove('erp-route-restoring-v1545');
       }catch(e){}
@@ -27709,17 +27672,8 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
     else restoreOtherPage();
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',restore,{once:true});
-  else restore();
-
-  window.addEventListener('hashchange',()=>{
-    dashboardRestored=false;
-    restore();
-  });
-  window.addEventListener('popstate',()=>{
-    dashboardRestored=false;
-    restore();
-  });
+  /* V16.51m: automatic startup/hash/popstate restore disabled here.
+     ERPSingleRefreshRouterV1651m is now the only refresh/history restorer. */
 
   window.ERPExactPageRestoreV1540={restore};
 })();
@@ -29913,7 +29867,7 @@ function sync(){
   timer=null;
   if(window.ERPDateTime?.refresh)window.ERPDateTime.refresh();
 
-  // V16.51k: central ERPDateTime updates all clock displays.
+  // V16.51m: central ERPDateTime updates all clock displays.
 }
 
 document.addEventListener('visibilitychange',function(){
@@ -31262,7 +31216,7 @@ if(document.readyState==='loading'){
   clean();
 }
 window.addEventListener('pageshow',clean);
-/* V16.51k: removed full-document raw-source scan on every page navigation. */
+/* V16.51m: removed full-document raw-source scan on every page navigation. */
 
 window.ERPRawSourceLeakGuardV1596={clean};
 })();
@@ -31736,7 +31690,7 @@ function ensure(){
 }
 document.addEventListener('click',e=>{const b=e.target.closest('.inv-tab[data-invtab="machine-clothing"],[data-inventory-open]');if(b)setTimeout(ensure,0)},true);
 window.addEventListener('storage',e=>{if([KEY,'erpPurchaseDataV1','erpIssueRecordsV1'].includes(e.key))setTimeout(ensure,0)});
-/* V16.51k: removed 1.5s Machine Clothing polling; event-based refresh remains. */
+/* V16.51m: removed 1.5s Machine Clothing polling; event-based refresh remains. */
 window.ERPMachineClothing={refresh:renderAll,assignments:load,undefined:undefinedRows};
 })();
 </script>
@@ -35596,6 +35550,120 @@ document.addEventListener('visibilitychange',()=>document.hidden?stop():start())
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
+
+<script id="erpSingleRefreshRouterV1651m">
+(function(){
+'use strict';
+
+let restoring=false;
+let lastRestored='';
+
+function normalizePanelId(v){
+  let x=String(v||'').replace(/^#/,'').trim();
+  if(!x)return 'panel-dashboard';
+  return x.startsWith('panel-') ? x : 'panel-'+x;
+}
+
+function targetFromLocation(){
+  return normalizePanelId(location.hash || 'panel-dashboard');
+}
+
+function prepareDynamic(id){
+  try{
+    const map={
+      'panel-dashboard':()=>window.ERPManagementDashboard?.open?.(),
+      'panel-inventory-dashboard':()=>window.ERPInventory?.open?.(),
+      'panel-report-center':()=>window.ERPReportCenter?.open?.(),
+      'panel-department-center':()=>window.ERPDepartmentCenter?.open?.(),
+      'panel-formula-control-center':()=>window.ERPFormulaControlCenter?.open?.(),
+      'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
+      'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
+      'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
+      'panel-material-balance-report':()=>window.ERPMaterialBalanceReport?.open?.(),
+      'panel-material-master':()=>window.ERPMaterialMaster?.open?.(),
+      'panel-management-summary':()=>window.ERPManagementSummary?.open?.(),
+      'panel-month-summary':()=>window.ERPMonthSummary?.open?.(),
+      'panel-operating-expenses':()=>window.ERPOperatingExpenses?.open?.(),
+      'panel-final-cost-report':()=>window.ERPFinalCostReport?.open?.(),
+      'panel-comparison-variance-report':()=>window.ERPComparisonVarianceReport?.open?.()
+    };
+    map[id]?.();
+  }catch(e){}
+}
+
+function activate(id){
+  const panel=document.getElementById(id);
+  if(!panel || !panel.matches('section.panel'))return false;
+
+  document.querySelectorAll('main.content section.panel.active').forEach(p=>{
+    if(p!==panel)p.classList.remove('active');
+  });
+  panel.classList.add('active');
+
+  document.querySelectorAll('[data-panel]').forEach(b=>{
+    b.classList.toggle('active', normalizePanelId(b.getAttribute('data-panel'))===id);
+  });
+
+  const logical=id.replace(/^panel-/,'');
+  document.body.classList.toggle('erp-dashboard-mode',id==='panel-dashboard');
+
+  try{
+    localStorage.setItem('erpActiveStudioPanel',logical);
+    localStorage.setItem('erpStudioLastPanel',logical);
+  }catch(e){}
+
+  return true;
+}
+
+function restore(){
+  if(restoring)return;
+
+  let id=targetFromLocation();
+  if(lastRestored===id && document.getElementById(id)?.classList.contains('active'))return;
+
+  restoring=true;
+  try{
+    prepareDynamic(id);
+
+    if(!activate(id)){
+      id='panel-dashboard';
+      prepareDynamic(id);
+      activate(id);
+      if(location.hash && location.hash!=='#panel-dashboard'){
+        history.replaceState({erpPanel:id},'', '#'+id);
+      }
+    }
+
+    lastRestored=id;
+
+    requestAnimationFrame(()=>{
+      try{window.ERPAdvancedPageDesigner?.applySaved?.()}catch(e){}
+      try{window.ERPPageControlExtras?.applySaved?.()}catch(e){}
+      try{window.ERPColumnSummaryDesigner?.applySaved?.()}catch(e){}
+      try{window.ERPSidebarStartClosedV1524?.closeAll?.()}catch(e){}
+      try{window.ERPDateTime?.refresh?.()}catch(e){}
+    });
+  }finally{
+    restoring=false;
+  }
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',restore,{once:true});
+}else{
+  restore();
+}
+
+window.addEventListener('hashchange',restore);
+window.addEventListener('popstate',restore);
+
+window.ERPSingleRefreshRouterV1651m={
+  restore,
+  current:()=>lastRestored||targetFromLocation()
+};
+})();
+</script>
+
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
