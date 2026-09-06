@@ -17837,7 +17837,7 @@ function build(){
   const host=document.querySelector('main.content');if(!host)return;
   const sec=document.createElement('section');sec.className='panel purchase-page';sec.id='panel-formula-control-center';
   sec.innerHTML=`<div class="fcc-topbar">
-    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Daily Production & Consumption</button><button class="fcc-tab" data-fcctab="materials">Material Master</button></div><div style="display:flex;gap:8px">
+    <div class="fcc-tabs"><button class="fcc-tab active" data-fcctab="library">Formula Library</button><button class="fcc-tab" data-fcctab="tester">Formula Tester</button><button class="fcc-tab" data-fcctab="standards">Standards Master</button><button class="fcc-tab" data-fcctab="ash">Daily Production & Consumption</button><button class="fcc-tab" data-fcctab="production-costing">Production Costing</button><button class="fcc-tab" data-fcctab="materials">Material Master</button></div><div style="display:flex;gap:8px">
       <button class="fcc-btn" id="fccPageController">⚙ Page Controller</button>
       <button class="fcc-btn dark" data-fcctab="mapping">Cost Group Mapping</button>
     </div></div>
@@ -17992,7 +17992,72 @@ function build(){
 <div class="fcc-std-rule-note" style="margin-top:12px"><b>Working rule:</b> Actual Yield = Actual Output ÷ Material Consumed. Expected Output = Material Consumed × Standard Yield %. Standard Material Required = Actual Output ÷ Standard Yield %. Status compares Actual Yield with Standard Yield.</div>
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="fcc-btn" id="fccDpcClear">Clear</button><button class="fcc-btn dark" id="fccDpcSave">Save Daily Record</button></div></div>
 <div class="fcc-card"><div class="fcc-toolbar"><div><h3 style="margin:0">Daily Production & Consumption History</h3><div style="font-size:10px;color:var(--muted);margin-top:4px">Search by date, department, process, material or status.</div></div><input id="fccDpcSearch" class="fcc-master-control" style="max-width:330px" placeholder="Search history..."></div><div class="fcc-table-wrap"><table class="fcc-table dpc-history-table"><thead><tr><th>Date</th><th>Department</th><th>Process</th><th>Material</th><th>Consumed</th><th>Actual Output</th><th>Actual Yield</th><th>Standard</th><th>Expected Output</th><th>Output Difference</th><th>Standard Material Required</th><th>Extra / Saved Material</th><th>Status</th></tr></thead><tbody id="fccDpcHistoryBody"></tbody></table></div></div>
-</div><div class="fcc-section" data-fccsection="materials">
+</div>
+<div class="fcc-section" data-fccsection="production-costing">
+  <div class="fcc-card">
+    <div class="fcc-toolbar">
+      <div>
+        <h3 style="margin:0">Production Costing</h3>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">
+          Calculate total production cost and cost per production unit. Cost heads are linked with Cost Group Mapping where available.
+        </div>
+      </div>
+      <button class="fcc-btn" type="button" id="fccPcAddCostHead">+ Add Cost Head</button>
+    </div>
+
+    <div class="fcc-pc-grid">
+      <label>Date<input id="fccPcDate" placeholder="25-Jun-26"></label>
+      <label>Department / Process<input id="fccPcDepartment" placeholder="e.g. Machine Hall"></label>
+      <label>Product / Output<input id="fccPcProduct" placeholder="e.g. Paper"></label>
+      <label>Production Quantity<input id="fccPcQty" type="number" step="any" placeholder="0"></label>
+      <label>Production Unit<input id="fccPcUnit" placeholder="Ton"></label>
+      <label>Formula
+        <select id="fccPcFormula">
+          <option value="standard">Total Production Cost ÷ Production Quantity</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="fcc-table-wrap" style="margin-top:14px">
+      <table class="fcc-table fcc-pc-cost-table">
+        <thead><tr><th>Sr. No.</th><th>Cost Head</th><th>Amount</th><th>Remarks</th><th>Action</th></tr></thead>
+        <tbody id="fccPcCostRows"></tbody>
+      </table>
+    </div>
+
+    <div class="fcc-pc-summary">
+      <div><small>Production Quantity</small><strong id="fccPcSumQty">0</strong></div>
+      <div><small>Total Production Cost</small><strong id="fccPcTotalCost">0</strong></div>
+      <div><small>Cost / Unit</small><strong id="fccPcCostPerUnit">0</strong></div>
+      <div><small>Cost Heads</small><strong id="fccPcHeadCount">0</strong></div>
+    </div>
+
+    <div class="fcc-pc-actions">
+      <button class="fcc-btn" type="button" id="fccPcClear">Clear</button>
+      <button class="fcc-btn dark" type="button" id="fccPcSave">Save Production Costing</button>
+    </div>
+  </div>
+
+  <div class="fcc-card" style="margin-top:14px">
+    <div class="fcc-toolbar">
+      <div>
+        <h3 style="margin:0">Production Costing History</h3>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Search saved costing by date, department, product or cost head.</div>
+      </div>
+      <input id="fccPcSearch" class="fcc-master-control" style="max-width:340px" placeholder="Search costing...">
+    </div>
+    <div class="fcc-table-wrap">
+      <table class="fcc-table fcc-pc-history-table">
+        <thead><tr>
+          <th>Date</th><th>Department / Process</th><th>Product</th><th>Production Qty</th><th>Unit</th>
+          <th>Total Cost</th><th>Cost / Unit</th><th>Cost Heads</th><th>Action</th>
+        </tr></thead>
+        <tbody id="fccPcHistoryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="fcc-section" data-fccsection="materials">
   <div class="fcc-card">
     <div class="fcc-toolbar"><div><h3 style="margin:0">Material Master</h3><div style="font-size:10px;color:var(--muted);margin-top:4px">Maintain daily-use materials department-wise. Saved materials feed the Daily Data Entry material fields.</div></div><button class="fcc-btn dark" id="fccSaveAllMaterials">Save All Materials</button></div>
     <div id="fccMaterialMasterSections"></div>
@@ -18059,7 +18124,7 @@ function build(){
 }
 function renderAll(){
   if(!f$('#panel-formula-control-center'))return;
-  renderLibrary();renderTester();renderStandards();renderAsh();renderVersions();renderMaterialMaster();renderMappings();
+  renderLibrary();renderTester();renderStandards();renderAsh();renderVersions();renderMaterialMaster();renderMappings();try{window.FCCProductionCostingV1652?.render?.()}catch(e){}
   f$('#fccMapFormula').innerHTML='<option value="">Select Formula</option>'+formulas().map(x=>`<option value="${x.id}">${x.no} — ${x.name}</option>`).join('')
 }
 function open(){
@@ -35857,6 +35922,167 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 setTimeout(bind,300);
 
 window.ERPPurchaseChallansV1651={open:openPage,render};
+})();
+</script>
+
+
+<style id="fccProductionCostingV1652Css">
+#panel-formula-control-center .fcc-pc-grid{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:10px;margin-top:12px}
+#panel-formula-control-center .fcc-pc-grid label{display:flex;flex-direction:column;gap:4px;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+#panel-formula-control-center .fcc-pc-grid input,#panel-formula-control-center .fcc-pc-grid select{width:100%;height:38px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 9px;font-size:10px;font-weight:400}
+#panel-formula-control-center .fcc-pc-cost-table{min-width:850px}
+#panel-formula-control-center .fcc-pc-cost-table input{width:100%;height:34px;box-sizing:border-box;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);padding:0 8px;font-size:9px;font-weight:400}
+#panel-formula-control-center .fcc-pc-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0}
+#panel-formula-control-center .fcc-pc-summary>div{border:1px solid var(--border);border-radius:10px;padding:11px;background:color-mix(in srgb,var(--primary) 3%,var(--surface))}
+#panel-formula-control-center .fcc-pc-summary small{display:block;font-size:8px;font-weight:900;text-transform:uppercase;color:var(--muted)}
+#panel-formula-control-center .fcc-pc-summary strong{display:block;font-size:19px;margin-top:4px}
+#panel-formula-control-center .fcc-pc-actions{display:flex;justify-content:flex-end;gap:7px}
+#panel-formula-control-center .fcc-pc-remove{height:28px;border:1px solid #fecaca;border-radius:6px;background:#fff7f7;color:#b91c1c;font-size:8px;font-weight:900;padding:0 8px;cursor:pointer}
+#panel-formula-control-center .fcc-pc-history-table{min-width:1050px}
+@media(max-width:1200px){#panel-formula-control-center .fcc-pc-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){#panel-formula-control-center .fcc-pc-grid{grid-template-columns:repeat(2,1fr)}#panel-formula-control-center .fcc-pc-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){#panel-formula-control-center .fcc-pc-grid,#panel-formula-control-center .fcc-pc-summary{grid-template-columns:1fr}}
+</style>
+
+<script id="fccProductionCostingV1652Js">
+(function(){
+"use strict";
+const RECORD_KEY="erpFormulaProductionCostingV1";
+const MAP_KEY="erpFormulaCostGroupMapV1";
+const $=s=>document.querySelector(s);
+const num=v=>{const n=parseFloat(String(v??"").replace(/,/g,""));return Number.isFinite(n)?n:0};
+const esc=v=>String(v??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const money=v=>num(v).toLocaleString(undefined,{maximumFractionDigits:2});
+
+function load(key){try{const a=JSON.parse(localStorage.getItem(key)||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}}
+function save(key,a){localStorage.setItem(key,JSON.stringify(a));try{window.ERPCore?.markPending?.(1)}catch(e){}}
+
+function defaultHeads(){
+  const mapped=load(MAP_KEY).map(x=>String(x.costGroup||"").trim()).filter(Boolean);
+  const base=["Raw Material","Chemicals","Fuel / Steam","Electricity","Labor","Overhead","Other"];
+  return [...new Set(mapped.concat(base))];
+}
+function rowHtml(head="",amount="",remarks=""){
+  return `<tr>
+    <td class="fcc-pc-sr"></td>
+    <td><input class="fcc-pc-head" value="${esc(head)}" placeholder="Cost head"></td>
+    <td><input class="fcc-pc-amount" type="number" step="any" value="${esc(amount)}" placeholder="0"></td>
+    <td><input class="fcc-pc-remarks" value="${esc(remarks)}" placeholder="Optional"></td>
+    <td><button type="button" class="fcc-pc-remove">Delete</button></td>
+  </tr>`;
+}
+function renumber(){
+  [...($("#fccPcCostRows")?.children||[])].forEach((tr,i)=>tr.querySelector(".fcc-pc-sr").textContent=i+1);
+}
+function bindRows(){
+  $("#fccPcCostRows")?.querySelectorAll(".fcc-pc-amount").forEach(x=>x.oninput=calculate);
+  $("#fccPcCostRows")?.querySelectorAll(".fcc-pc-remove").forEach(b=>b.onclick=()=>{
+    b.closest("tr").remove();renumber();calculate();
+  });
+}
+function buildRows(rows){
+  const body=$("#fccPcCostRows");if(!body)return;
+  body.innerHTML=(rows&&rows.length?rows:defaultHeads().map(x=>({head:x}))).map(x=>rowHtml(x.head||x.costHead,x.amount??"",x.remarks||"")).join("");
+  renumber();bindRows();calculate();
+}
+function addHead(){
+  const body=$("#fccPcCostRows");if(!body)return;
+  body.insertAdjacentHTML("beforeend",rowHtml());
+  renumber();bindRows();
+  body.lastElementChild?.querySelector(".fcc-pc-head")?.focus();
+}
+function calculate(){
+  const qty=num($("#fccPcQty")?.value);
+  const amounts=[...($("#fccPcCostRows")?.querySelectorAll(".fcc-pc-amount")||[])].map(x=>num(x.value));
+  const total=amounts.reduce((a,b)=>a+b,0);
+  const cpu=qty?total/qty:0;
+  if($("#fccPcSumQty"))$("#fccPcSumQty").textContent=money(qty);
+  if($("#fccPcTotalCost"))$("#fccPcTotalCost").textContent=money(total);
+  if($("#fccPcCostPerUnit"))$("#fccPcCostPerUnit").textContent=money(cpu);
+  if($("#fccPcHeadCount"))$("#fccPcHeadCount").textContent=amounts.length;
+  return{qty,total,cpu};
+}
+function clearEntry(){
+  ["fccPcDate","fccPcDepartment","fccPcProduct","fccPcQty"].forEach(id=>{if($("#"+id))$("#"+id).value=""});
+  if($("#fccPcUnit"))$("#fccPcUnit").value="Ton";
+  buildRows();
+}
+function saveEntry(){
+  const date=String($("#fccPcDate")?.value||"").trim();
+  const department=String($("#fccPcDepartment")?.value||"").trim();
+  const product=String($("#fccPcProduct")?.value||"").trim();
+  const unit=String($("#fccPcUnit")?.value||"Ton").trim();
+  const c=calculate();
+  if(!date||!product||c.qty<=0){window.toast?.("Enter date, product and production quantity");return}
+
+  const costs=[...($("#fccPcCostRows")?.querySelectorAll("tr")||[])].map(tr=>({
+    head:String(tr.querySelector(".fcc-pc-head")?.value||"").trim(),
+    amount:num(tr.querySelector(".fcc-pc-amount")?.value),
+    remarks:String(tr.querySelector(".fcc-pc-remarks")?.value||"").trim()
+  })).filter(x=>x.head||x.amount);
+
+  const rows=load(RECORD_KEY);
+  rows.unshift({
+    id:"PCOST-"+Date.now(),
+    date,department,product,productionQty:c.qty,unit,
+    formula:"Total Production Cost ÷ Production Quantity",
+    totalCost:c.total,costPerUnit:c.cpu,costs,
+    createdAt:new Date().toISOString()
+  });
+  save(RECORD_KEY,rows);
+  renderHistory();
+  window.toast?.("Production costing saved");
+}
+function renderHistory(){
+  const body=$("#fccPcHistoryBody");if(!body)return;
+  const q=String($("#fccPcSearch")?.value||"").trim().toLowerCase();
+  let rows=load(RECORD_KEY);
+  if(q)rows=rows.filter(r=>[r.date,r.department,r.product,...(r.costs||[]).map(x=>x.head)].join(" ").toLowerCase().includes(q));
+  body.innerHTML=rows.length?rows.map(r=>`<tr>
+    <td>${esc(r.date)}</td>
+    <td>${esc(r.department)}</td>
+    <td><b>${esc(r.product)}</b></td>
+    <td>${money(r.productionQty)}</td>
+    <td>${esc(r.unit)}</td>
+    <td>${money(r.totalCost)}</td>
+    <td><b>${money(r.costPerUnit)}</b></td>
+    <td>${(r.costs||[]).length}</td>
+    <td><button class="fcc-btn fcc-pc-view" type="button" data-id="${esc(r.id)}">View</button></td>
+  </tr>`).join(""):'<tr><td colspan="9" style="text-align:center;padding:24px">No production costing records saved yet.</td></tr>';
+
+  body.querySelectorAll(".fcc-pc-view").forEach(b=>b.onclick=()=>viewRecord(b.dataset.id));
+}
+function viewRecord(id){
+  const r=load(RECORD_KEY).find(x=>x.id===id);if(!r)return;
+  const detail=(r.costs||[]).map((x,i)=>`${i+1}. ${x.head}: ${money(x.amount)}${x.remarks?" — "+x.remarks:""}`).join("\n");
+  alert(`${r.date} | ${r.product}\nDepartment: ${r.department||"—"}\nProduction: ${money(r.productionQty)} ${r.unit}\nTotal Cost: ${money(r.totalCost)}\nCost / ${r.unit}: ${money(r.costPerUnit)}\n\n${detail}`);
+}
+function populateFormula(){
+  const sel=$("#fccPcFormula");if(!sel)return;
+  let rows=[];try{rows=JSON.parse(localStorage.getItem("erpFormulaControlLibraryV1")||"[]")||[]}catch(e){}
+  const opts=rows.filter(x=>x&&x.name).map(x=>`<option value="${esc(x.id)}">${esc(x.no||"")} — ${esc(x.name)}</option>`).join("");
+  sel.innerHTML='<option value="standard">Total Production Cost ÷ Production Quantity</option>'+opts;
+}
+function bind(){
+  const panel=$("#panel-formula-control-center");if(!panel)return;
+  if(panel.dataset.pc52Bound)return;
+  panel.dataset.pc52Bound="1";
+  $("#fccPcAddCostHead")?.addEventListener("click",addHead);
+  $("#fccPcQty")?.addEventListener("input",calculate);
+  $("#fccPcSave")?.addEventListener("click",saveEntry);
+  $("#fccPcClear")?.addEventListener("click",clearEntry);
+  $("#fccPcSearch")?.addEventListener("input",renderHistory);
+  buildRows();populateFormula();renderHistory();
+}
+function render(){
+  if(!$("#panel-formula-control-center"))return;
+  bind();populateFormula();renderHistory();calculate();
+}
+document.addEventListener("click",e=>{
+  if(e.target.closest('[data-fcctab="production-costing"]'))setTimeout(render,0);
+});
+setTimeout(render,400);
+window.FCCProductionCostingV1652={render};
 })();
 </script>
 
