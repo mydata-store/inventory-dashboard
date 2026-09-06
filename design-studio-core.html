@@ -3696,6 +3696,27 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 @media(max-width:750px){.straw38c-grid2{grid-template-columns:1fr}.straw38c-kpis,.straw38c-form{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.straw38c-kpis,.straw38c-form{grid-template-columns:1fr}.straw38c-form label.wide{grid-column:auto}}
 </style>
+
+<style id="erpRouteFirstRevealV1651j">
+html.erp-route-first-v1651j main.content > section.panel{visibility:hidden!important}
+html.erp-route-first-v1651j main.content > section.panel.active{visibility:hidden!important}
+</style>
+<script id="erpRouteFirstRevealV1651jScript">
+(function(){
+  'use strict';
+  const h=String(location.hash||'').replace(/^#/,'').trim();
+  if(!h || !document.getElementById(h))return;
+  document.documentElement.classList.add('erp-route-first-v1651j');
+  const reveal=()=>document.documentElement.classList.remove('erp-route-first-v1651j');
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(()=>requestAnimationFrame(reveal)),{once:true});
+  }else{
+    requestAnimationFrame(()=>requestAnimationFrame(reveal));
+  }
+  window.addEventListener('pageshow',()=>setTimeout(reveal,0),{once:true});
+})();
+</script>
+
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -22370,8 +22391,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function seed(){
     const current=activePanelId();
     const hash=(location.hash||'').replace(/^#/,'');
-    if(hash && document.getElementById(hash) && hash!==current){
-      restore(hash);
+    if(hash && document.getElementById(hash)){
+      lastPanel=hash;
+      history.replaceState(stateFor(hash),'','#'+hash);
       return;
     }
     if(current){
@@ -22910,9 +22932,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     boot();
   }
 
-  window.addEventListener('hashchange',function(){
-    setTimeout(restoreExactPage,0);
-  });
+  /* V16.51j: hash navigation is handled by ERPExactPageRestoreV1540.
+     This older saved-state helper now runs only at no-hash startup. */
 })();
 </script>
 
@@ -27775,64 +27796,6 @@ window.ERPUniversalPageController={
 </script>
 
 
-<script id="erpPageDesignPersistenceV1528">
-(function(){
-  function reapply(){
-    const p=document.querySelector('main.content section.panel.active');
-    if(!p)return;
-    window.ERPAdvancedPageDesigner?.applySaved?.();
-    window.ERPPerPageDesign?.apply?.();
-  }
-  let lateTimer=null;
-  function scheduled(){
-    reapply();
-    clearTimeout(lateTimer);
-    lateTimer=setTimeout(reapply,100);
-  }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',scheduled,{once:true});
-  }else{
-    scheduled();
-  }
-  window.addEventListener('hashchange',scheduled);
-  window.addEventListener('popstate',scheduled);
-  window.ERPPageDesignPersistenceV1528={reapply:scheduled};
-})();
-</script>
-
-
-<script id="erpPurchaseColumnDesignReapplyV1531">
-(function(){
-  function reapply(){
-    if(document.querySelector('#panel-local-purchase.active,#panel-zafar-purchase.active,#panel-board-purchase.active')){
-      setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),0);
-      setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),40);
-    }
-  }
-  document.addEventListener('click',reapply,true);
-  window.addEventListener('hashchange',reapply);
-  window.addEventListener('load',reapply,{once:true});
-})();
-</script>
-
-
-<script id="erpColumnWisePersistenceV1532">
-(function(){
-  /* V16.51g: event-based only; no whole-content MutationObserver */
-  let timer=null;
-  function apply(){
-    clearTimeout(timer);
-    timer=setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),20);
-  }
-  window.addEventListener('hashchange',apply);
-  window.addEventListener('popstate',apply);
-  window.addEventListener('load',apply,{once:true});
-  document.addEventListener('click',e=>{
-    if(e.target.closest('[data-panel],[data-go-purchase],[data-inventory-open],[data-report-center-open]'))apply();
-  },false);
-})();
-</script>
-
 
 <script id="erpManagementDashboardV1534">
 (function(){
@@ -29939,7 +29902,7 @@ function sync(){
   timer=null;
   if(window.ERPDateTime?.refresh)window.ERPDateTime.refresh();
 
-  // V16.51i: central ERPDateTime updates all clock displays.
+  // V16.51j: central ERPDateTime updates all clock displays.
 }
 
 document.addEventListener('visibilitychange',function(){
@@ -31288,7 +31251,7 @@ if(document.readyState==='loading'){
   clean();
 }
 window.addEventListener('pageshow',clean);
-window.addEventListener('hashchange',()=>setTimeout(clean,20));
+/* V16.51j: removed full-document raw-source scan on every page navigation. */
 
 window.ERPRawSourceLeakGuardV1596={clean};
 })();
@@ -31762,7 +31725,7 @@ function ensure(){
 }
 document.addEventListener('click',e=>{const b=e.target.closest('.inv-tab[data-invtab="machine-clothing"],[data-inventory-open]');if(b)setTimeout(ensure,0)},true);
 window.addEventListener('storage',e=>{if([KEY,'erpPurchaseDataV1','erpIssueRecordsV1'].includes(e.key))setTimeout(ensure,0)});
-setInterval(()=>{if($('mcViewSelect')&&document.querySelector('[data-invsub="machine-clothing"]')?.classList.contains('active'))ensure()},1500);
+/* V16.51j: removed 1.5s Machine Clothing polling; event-based refresh remains. */
 window.ERPMachineClothing={refresh:renderAll,assignments:load,undefined:undefinedRows};
 })();
 </script>
