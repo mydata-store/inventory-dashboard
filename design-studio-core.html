@@ -22432,20 +22432,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     restore(id);
   });
 
-  // Observe the ERP's own navigation rather than replacing it.
-  const observer=new MutationObserver(function(mutations){
-    if(restoring)return;
-    for(const m of mutations){
-      if(m.type==='attributes' && m.attributeName==='class' && m.target.classList.contains('panel')){
-        pushIfChanged();
-        break;
-      }
-    }
-  });
-
+  // V16.51g: navigation history is updated from actual navigation events only.
   function start(){
-    document.querySelectorAll('.panel').forEach(p=>observer.observe(p,{attributes:true,attributeFilter:['class']}));
     seed();
+    document.addEventListener('click',function(e){
+      if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-go-purchase]')){
+        setTimeout(pushIfChanged,40);
+      }
+    },false);
+    window.addEventListener('hashchange',()=>setTimeout(pushIfChanged,20));
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
@@ -25287,8 +25282,7 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
       $('#purchasePcModal')?.classList.remove('open');open(p)
     });
 
-    // Lightweight persistence: reapply only when navigation actually changes.
-    // No whole-page MutationObserver.
+    // Lightweight persistence: reapply only on real navigation.
     let applyTimer=null;
     const scheduleApply=(delay=20)=>{
       clearTimeout(applyTimer);
@@ -27711,20 +27705,16 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
 "use strict";
 
 /*
-  V16.51f Page Controller Core
-  One delegated controller router for dynamic and static pages.
-  No MutationObserver. No full DOM scans. No duplicate per-button handlers.
+  V16.51g unified controller router.
+  Capture phase ensures old page scripts cannot swallow generic controller clicks.
+  Masters and Purchase's dedicated controller remain native.
 */
 
 function activePanel(){
-  return document.querySelector(
-    'main.content > section.panel.active,'+
-    'main.content section.panel.active,'+
-    'section.panel.active'
-  );
+  return document.querySelector('main.content section.panel.active,section.panel.active');
 }
 
-function openAdvanced(panel){
+function openDesigner(panel){
   panel=panel||activePanel();
   if(!panel)return;
 
@@ -27745,63 +27735,38 @@ function openAdvanced(panel){
   window.toast?.('Page Controller is not ready yet');
 }
 
-function isMastersNative(btn){
-  return !!btn?.matches(
-    '#masterPageControllerBtn,.master-controller-btn'
-  );
+function isNative(btn){
+  if(!btn)return true;
+  if(btn.matches('#masterPageControllerBtn,.master-controller-btn'))return true;
+  if(btn.matches('.purchase-controller-btn[data-purchase-controller]'))return true;
+  if(btn.closest('#panel-print'))return true;
+  return false;
 }
 
-function isPurchaseSpecial(btn){
-  return !!btn?.matches(
-    '.purchase-controller-btn[data-purchase-controller]'
-  );
-}
-
-function isPrintNative(btn){
-  return !!btn?.closest('#panel-print');
-}
-
-function isGenericController(btn){
+function isGeneric(btn){
   if(!btn)return false;
-
+  if(btn.classList.contains('purchase-controller-btn') && !btn.hasAttribute('data-purchase-controller'))return true;
   if(btn.classList.contains('erp-universal-page-controller-v1526'))return true;
   if(btn.classList.contains('apd-launch'))return true;
-
-  if(
-    btn.classList.contains('purchase-controller-btn') &&
-    !btn.hasAttribute('data-purchase-controller')
-  )return true;
-
   if(btn.hasAttribute('data-page-controller'))return true;
-
   if(btn.id==='fccPageController')return true;
 
-  const txt=String(btn.textContent||'').trim().toLowerCase();
-  return txt==='⚙ page controller' || txt==='page controller';
+  const t=String(btn.textContent||'').trim().replace(/\s+/g,' ').toLowerCase();
+  return t==='⚙ page controller' || t==='page controller';
 }
 
-/*
-  Bubble phase is intentional:
-  native Masters / Purchase handlers run normally.
-  Generic buttons are handled here, including dynamically built Inventory pages.
-*/
 document.addEventListener('click',function(e){
   const btn=e.target.closest('button');
-  if(!btn)return;
+  if(!btn || isNative(btn) || !isGeneric(btn))return;
 
-  if(isMastersNative(btn))return;
-  if(isPurchaseSpecial(btn))return;
-  if(isPrintNative(btn))return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
 
-  if(isGenericController(btn)){
-    e.preventDefault();
-    e.stopPropagation();
-    openAdvanced(btn.closest('section.panel')||activePanel());
-  }
-},false);
+  openDesigner(btn.closest('section.panel')||activePanel());
+},true);
 
 window.ERPUniversalPageController={
-  openPage:openAdvanced,
+  openPage:openDesigner,
   refresh:function(){},
   ensurePage:function(){}
 };
@@ -27853,23 +27818,18 @@ window.ERPUniversalPageController={
 
 <script id="erpColumnWisePersistenceV1532">
 (function(){
+  /* V16.51g: event-based only; no whole-content MutationObserver */
   let timer=null;
   function apply(){
     clearTimeout(timer);
-    timer=setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),0)
-  }
-  const main=document.querySelector('main.content');
-  if(main){
-    const obs=new MutationObserver(records=>{
-      const active=document.querySelector('main.content section.panel.active');
-      if(!active)return;
-      if(records.some(r=>r.type==='childList'&&(r.target===active||active.contains(r.target))))apply()
-    });
-    obs.observe(main,{subtree:true,childList:true})
+    timer=setTimeout(()=>window.ERPColumnSummaryDesigner?.applySaved?.(),20);
   }
   window.addEventListener('hashchange',apply);
   window.addEventListener('popstate',apply);
   window.addEventListener('load',apply,{once:true});
+  document.addEventListener('click',e=>{
+    if(e.target.closest('[data-panel],[data-go-purchase],[data-inventory-open],[data-report-center-open]'))apply();
+  },false);
 })();
 </script>
 
@@ -31330,11 +31290,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 'use strict';
 
 const sourceFingerprints=[
-  'escHtml(d.footerText',
-  'pphPrintRows(rows',
-  'function pdRenderPreview',
-  'paper.innerHTML=`${d.watermark',
-  'document.querySelector(\'style\').outerHTML'
+  'function purchaseRouteTokenV1577',
+  'function purchaseRouteRefreshV1576',
+  'document.querySelectorAll',
+  'window.addEventListener',
+  'const purchase',
+  'function pph',
+  'function render',
+  'innerHTML=`${d.watermark',
+  "document.querySelector('style').outerHTML"
 ];
 
 function looksLikeLeakedSource(t){
@@ -31356,9 +31320,7 @@ function cleanNode(root){
   remove.forEach(n=>n.remove());
 }
 
-function clean(){
-  cleanNode(document.body);
-}
+function clean(){ cleanNode(document.body); }
 
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',clean,{once:true});
@@ -31366,17 +31328,7 @@ if(document.readyState==='loading'){
   clean();
 }
 window.addEventListener('pageshow',clean);
-window.addEventListener('hashchange',()=>setTimeout(clean,0));
-
-const mo=new MutationObserver(muts=>{
-  for(const m of muts){
-    for(const n of m.addedNodes){
-      if(n.nodeType===3 && looksLikeLeakedSource(n.nodeValue)){n.remove();continue}
-      if(n.nodeType===1)cleanNode(n);
-    }
-  }
-});
-if(document.body)mo.observe(document.body,{childList:true,subtree:true});
+window.addEventListener('hashchange',()=>setTimeout(clean,20));
 
 window.ERPRawSourceLeakGuardV1596={clean};
 })();
@@ -35591,246 +35543,6 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 window.ERPPurchaseChallansV1651a={open,render};
 })();
 </script>
-
-
-<script id="mastersControllerDirectFixV1651b">
-(function(){
-"use strict";
-
-function openMasterController(e){
-  const btn=e.target.closest('#masterPageControllerBtn');
-  if(!btn)return;
-
-  /*
-    Do not stop Masters' own normal handler.
-    Just guarantee the modal opens even if another old layer exists.
-  */
-  const modal=document.getElementById('masterPageControllerModal');
-  if(!modal)return;
-
-  requestAnimationFrame(()=>{
-    modal.classList.add('open');
-    try{
-      if(typeof masterApplyPageSettings==='function'){
-        masterApplyPageSettings();
-      }
-    }catch(err){}
-  });
-}
-
-document.addEventListener('click',openMasterController,true);
-
-window.ERPMastersControllerV1651b={
-  open:function(){
-    const modal=document.getElementById('masterPageControllerModal');
-    if(modal){
-      modal.classList.add('open');
-      try{
-        if(typeof masterApplyPageSettings==='function'){
-          masterApplyPageSettings();
-        }
-      }catch(e){}
-    }
-  }
-};
-})();
-</script>
-
-
-<script id="dashboardTimeOnlyFixV1651c">
-(function(){
-"use strict";
-
-let timer=null;
-
-function pakistanNow(){
-  /* Pakistan Standard Time = UTC+05:00, no DST */
-  return new Date(Date.now() + (5 * 60 * 60 * 1000));
-}
-
-function pad(v){
-  return String(v).padStart(2,"0");
-}
-
-function update(){
-  const host=document.getElementById("dashboardBannerHostV1565");
-  if(!host)return;
-
-  const d=pakistanNow();
-
-  const h24=d.getUTCHours();
-  const min=d.getUTCMinutes();
-  const sec=d.getUTCSeconds();
-  const h12=(h24%12)||12;
-  const ampm=h24>=12?"PM":"AM";
-
-  const time=host.querySelector('[data-dashboard-source-id="bstPreviewTime"]');
-  const ap=host.querySelector('[data-dashboard-source-id="bstPreviewAmPm"]');
-  const weekday=host.querySelector('[data-dashboard-source-id="bstPreviewWeekday"]');
-  const date=host.querySelector('[data-dashboard-source-id="bstPreviewDate"]');
-
-  if(time)time.textContent=pad(h12)+":"+pad(min)+":"+pad(sec);
-  if(ap)ap.textContent=ampm;
-
-  const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-  if(weekday)weekday.textContent=days[d.getUTCDay()];
-  if(date)date.textContent=
-    pad(d.getUTCDate())+" "+months[d.getUTCMonth()]+" "+d.getUTCFullYear();
-
-  /* Keep the existing analog clock, only correct its hand positions */
-  const analog=host.querySelector('[data-dashboard-source-id="bstAnalogClock"]');
-  if(analog){
-    const hour=analog.querySelector(".h");
-    const minute=analog.querySelector(".m");
-    const second=analog.querySelector(".s");
-
-    const hourDeg=((h24%12)+(min/60)+(sec/3600))*30;
-    const minuteDeg=(min+(sec/60))*6;
-    const secondDeg=sec*6;
-
-    if(hour)hour.style.transform="translateX(-50%) rotate("+hourDeg+"deg)";
-    if(minute)minute.style.transform="translateX(-50%) rotate("+minuteDeg+"deg)";
-    if(second)second.style.transform="translateX(-50%) rotate("+secondDeg+"deg)";
-  }
-}
-
-function start(){
-  if(timer)clearInterval(timer);
-  update();
-
-  /* Align with the next real second */
-  const delay=1000-(Date.now()%1000)+25;
-  setTimeout(()=>{
-    update();
-    timer=setInterval(update,1000);
-  },delay);
-}
-
-document.addEventListener("visibilitychange",()=>{
-  if(document.hidden){
-    if(timer)clearInterval(timer);
-    timer=null;
-  }else{
-    start();
-  }
-});
-
-window.addEventListener("pageshow",()=>setTimeout(start,80));
-window.addEventListener("focus",()=>setTimeout(start,80));
-window.addEventListener("hashchange",()=>setTimeout(start,80));
-
-document.addEventListener("click",e=>{
-  if(e.target.closest('[data-dashboard-open],[data-panel="dashboard"]')){
-    setTimeout(start,100);
-  }
-},true);
-
-if(document.readyState==="loading"){
-  document.addEventListener("DOMContentLoaded",()=>setTimeout(start,120),{once:true});
-}else{
-  setTimeout(start,120);
-}
-
-window.ERPDashboardTimeV1651c={start,update};
-})();
-</script>
-
-
-<script id="dashboardLiveClockFixV1651d">
-(function(){
-"use strict";
-
-let liveTimer=0, alignTimer=0;
-
-function pkParts(){
-  const parts=new Intl.DateTimeFormat("en-US",{
-    timeZone:"Asia/Karachi",
-    year:"numeric",month:"short",day:"2-digit",weekday:"short",
-    hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true
-  }).formatToParts(new Date());
-  const o={};
-  parts.forEach(p=>{ if(p.type!=="literal")o[p.type]=p.value; });
-  return o;
-}
-
-function setText(el,v){
-  if(el && el.textContent!==v) el.textContent=v;
-}
-
-function setClock(root, cloned){
-  if(!root)return;
-  const p=pkParts();
-  const time=(p.hour||"00")+":"+(p.minute||"00")+":"+(p.second||"00");
-  const ampm=p.dayPeriod||"";
-  const date=(p.day||"")+" "+(p.month||"")+" "+(p.year||"");
-
-  const q=id=>cloned
-    ? root.querySelector('[data-dashboard-source-id="'+id+'"]')
-    : document.getElementById(id);
-
-  setText(q("bstPreviewTime"),time);
-  setText(q("bstPreviewAmPm"),ampm);
-  setText(q("bstPreviewWeekday"),p.weekday||"");
-  setText(q("bstPreviewDate"),date);
-
-  const analog=q("bstAnalogClock");
-  if(analog){
-    let h=parseInt(p.hour||"0",10)%12;
-    let m=parseInt(p.minute||"0",10);
-    let s=parseInt(p.second||"0",10);
-    const hd=(h+m/60+s/3600)*30;
-    const md=(m+s/60)*6;
-    const sd=s*6;
-    const H=analog.querySelector(".h"), M=analog.querySelector(".m"), S=analog.querySelector(".s");
-    if(H)H.style.transform='translateX(-50%) rotate('+hd+'deg)';
-    if(M)M.style.transform='translateX(-50%) rotate('+md+'deg)';
-    if(S)S.style.transform='translateX(-50%) rotate('+sd+'deg)';
-  }
-}
-
-function tick(){
-  /* Update BOTH the hidden Banner Studio source and the visible Dashboard clone.
-     This prevents the existing dashboard sync from copying an old/frozen time back. */
-  setClock(document,false);
-  const host=document.getElementById("dashboardBannerHostV1565");
-  if(host)setClock(host,true);
-}
-
-function start(){
-  clearInterval(liveTimer);
-  clearTimeout(alignTimer);
-  tick();
-  alignTimer=setTimeout(function(){
-    tick();
-    liveTimer=setInterval(tick,1000);
-  },Math.max(25,1000-(Date.now()%1000)+30));
-}
-
-document.addEventListener("visibilitychange",function(){
-  if(document.hidden){
-    clearInterval(liveTimer); liveTimer=0;
-    clearTimeout(alignTimer); alignTimer=0;
-  }else start();
-});
-window.addEventListener("pageshow",start);
-window.addEventListener("focus",start);
-window.addEventListener("hashchange",function(){setTimeout(start,40)});
-document.addEventListener("click",function(e){
-  if(e.target.closest('[data-dashboard-open],[data-panel="dashboard"]'))setTimeout(start,80);
-},true);
-
-if(document.readyState==="loading")
-  document.addEventListener("DOMContentLoaded",start,{once:true});
-else
-  start();
-
-window.ERPDashboardLiveClockV1651d={start:start,tick:tick};
-})();
-</script>
-
-
 <script id="mastersPageControllerCloseFixV1651e">
 (function(){
 "use strict";
@@ -35902,39 +35614,6 @@ if(document.readyState==="loading"){
 
 window.ERPMastersPageControllerV1651e={
   close:closeMastersController
-};
-})();
-</script>
-
-
-<script id="pageControllerSafetyV1651f">
-(function(){
-"use strict";
-
-/*
-  Safety bridge for dynamic modules.
-  It only acts if the click survived all earlier page-specific handlers.
-*/
-document.addEventListener('click',function(e){
-  const btn=e.target.closest(
-    '#panel-inventory-dashboard .purchase-controller-btn:not([data-purchase-controller])'
-  );
-  if(!btn)return;
-
-  e.preventDefault();
-
-  const panel=btn.closest('section.panel');
-  if(window.ERPAdvancedPageDesigner?.openPage){
-    window.ERPAdvancedPageDesigner.openPage(panel);
-  }
-},false);
-
-window.ERPPageControllerCoreV1651f={
-  open:function(panel){
-    if(window.ERPAdvancedPageDesigner?.openPage){
-      window.ERPAdvancedPageDesigner.openPage(panel||document.querySelector('section.panel.active'));
-    }
-  }
 };
 })();
 </script>
