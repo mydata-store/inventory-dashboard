@@ -3941,7 +3941,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
       <div class="purchase-kpi purchase-home-kpi-v1575"><span class="purchase-home-kpi-icon-v1575">⌛</span><small>Pending Indents</small><strong id="ppePendingIndents">0</strong><em>Waiting for approval</em></div>
       <div class="purchase-kpi purchase-home-kpi-v1575"><span class="purchase-home-kpi-icon-v1575">▤</span><small>Total Indents</small><strong id="ppeIndentTotal">0</strong><em>All saved indents</em></div>
       <div class="purchase-kpi purchase-home-kpi-v1575"><span class="purchase-home-kpi-icon-v1575">◉</span><small>Active Suppliers</small><strong id="ppeSuppliers">0</strong><em>Used in Purchase records</em></div>
-      <div class="purchase-kpi purchase-home-kpi-v1575"><span class="purchase-home-kpi-icon-v1575">✓</span><small>Purchase Registers</small><strong id="ppeRegisters">3</strong><em>Local • Zafar • Board</em></div>
+      <div class="purchase-kpi purchase-home-kpi-v1575" data-open-purchase-challans="1" style="cursor:pointer"><span class="purchase-home-kpi-icon-v1575">⌛</span><small>Pending Challans</small><strong id="ppeChallans">0</strong><em>Rate / Amount still pending</em></div>
     </div>
 
     <div class="purchase-home-section-title-v1575 purchase-home-pages-title-v1575">
@@ -3997,6 +3997,13 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
           <span class="supplier-analysis-arrow-v1586">›</span>
         </button>
       </div>
+      <div class="purchase-folder-v1576">
+        <button class="purchase-folder-head-v1576" type="button" data-open-purchase-challans="1">
+          <span class="purchase-home-card-icon-v1575">⌛</span>
+          <span class="purchase-home-card-copy-v1575"><b>Challans</b><small>Purchases where Rate or Amount is still pending.</small></span>
+          <span class="purchase-history-arrow-v1585">›</span>
+        </button>
+      </div>
 
     </div>
   </div>
@@ -4004,6 +4011,40 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 
 
 
+<section class="panel purchase-page" id="panel-purchase-challans">
+  <div class="card">
+    <div class="purchase-page-head">
+      <div><h2>Purchase Challans</h2><p>Automatic challan list from existing Purchase records.</p></div>
+      <button class="btn" type="button" id="pc51Back">← Purchase Management</button>
+    </div>
+    <div class="purchase-instruction"><b>Rule:</b> Rate or Amount blank = <b>Challan Pending</b>. When both are entered later, it becomes <b>Completed</b>.</div>
+    <div class="pc51-tabs">
+      <button class="btn primary" data-pc51-status="pending">Pending Challans</button>
+      <button class="btn" data-pc51-status="completed">Completed</button>
+      <button class="btn" data-pc51-status="all">All</button>
+    </div>
+    <div class="pc51-filters">
+      <input id="pc51Search" placeholder="Search supplier, material, challan/bill, date, vehicle...">
+      <select id="pc51Register"><option value="">All Types</option><option value="local">Local Purchase</option><option value="zafar">Zafar Purchase</option><option>Board</option><option>Paper</option><option>Board III</option></select>
+      <input id="pc51Month" placeholder="Sep-26">
+      <input id="pc51Supplier" placeholder="Supplier">
+      <input id="pc51Item" placeholder="Material">
+      <button class="btn" id="pc51Clear">Clear</button>
+    </div>
+    <div class="purchase-kpis pc51-kpis">
+      <div class="purchase-kpi"><small>Pending Challans</small><strong id="pc51Pending">0</strong></div>
+      <div class="purchase-kpi"><small>Pending Suppliers</small><strong id="pc51Suppliers">0</strong></div>
+      <div class="purchase-kpi"><small>Pending Quantity</small><strong id="pc51Qty">0</strong></div>
+      <div class="purchase-kpi"><small>This Month</small><strong id="pc51MonthCount">0</strong></div>
+    </div>
+    <div class="purchase-table-wrap">
+      <table class="purchase-table pc51-table">
+        <thead><tr><th>Sr. No.</th><th>Date</th><th>Purchase Type</th><th>Supplier</th><th>Material</th><th>Qty / Net Wt.</th><th>Unit</th><th>Challan / Bill No.</th><th>Vehicle</th><th>Rate</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="pc51Rows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 <section class="panel purchase-page" id="panel-purchase-indent-home">
   <div class="card pi-module-home-v1580">
     <div class="pi-module-head-v1580">
@@ -11554,7 +11595,9 @@ function purchaseRenderEntry(){
   if($('#ppePendingIndents'))$('#ppePendingIndents').textContent=pending;
   if($('#ppeIndentTotal'))$('#ppeIndentTotal').textContent=indents.length;
   if($('#ppeSuppliers'))$('#ppeSuppliers').textContent=suppliers;
-  if($('#ppeRegisters'))$('#ppeRegisters').textContent='3';
+  const challans=all.filter(r=>{try{return pphBillingStatus(r)==='pending'}catch(e){return false}}).length;
+  if($('#ppeChallans'))$('#ppeChallans').textContent=challans;
+  try{window.ERPPurchaseChallansV1651a?.render?.()}catch(e){}
 }
 function purchaseRenderAll(){
   purchaseRefreshSectionFilters();
@@ -35568,6 +35611,75 @@ window.ERPStrawMobileV1648={renderStockCards:renderCards,open:mobileGo};
   }
 }
 </style>
+
+
+<style id="purchaseChallansV1651aCss">
+#panel-purchase-challans .pc51-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#panel-purchase-challans .pc51-filters{display:grid;grid-template-columns:2fr repeat(4,1fr) auto;gap:8px;margin:10px 0 12px;align-items:end}
+#panel-purchase-challans .pc51-filters input,#panel-purchase-challans .pc51-filters select{height:36px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 8px;font-size:9px}
+#panel-purchase-challans .pc51-kpis{grid-template-columns:repeat(4,1fr)}
+#panel-purchase-challans .pc51-table{min-width:1450px}
+#panel-purchase-challans .pc51-badge{display:inline-flex;padding:3px 7px;border-radius:999px;font-size:8px;font-weight:900}
+#panel-purchase-challans .pc51-badge.pending{background:#fff8e1;color:#8a5a00}
+#panel-purchase-challans .pc51-badge.completed{background:#ecfdf5;color:#166534}
+@media(max-width:900px){#panel-purchase-challans .pc51-filters{grid-template-columns:1fr 1fr}#panel-purchase-challans .pc51-kpis{grid-template-columns:1fr 1fr}}
+</style>
+<script id="purchaseChallansV1651aJs">
+(function(){
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+let mode="pending";
+const n=v=>{const x=parseFloat(String(v??"").replace(/,/g,""));return Number.isFinite(x)?x:0};
+const esc=v=>String(v??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const money=v=>n(v).toLocaleString(undefined,{maximumFractionDigits:2});
+function all(){try{return purchaseAllRows().filter(r=>!r.deletedAt)}catch(e){return[]}}
+function status(r){try{return pphBillingStatus(r)==="pending"?"pending":"completed"}catch(e){return"completed"}}
+function type(r){try{return pphType(r)}catch(e){return r.register||""}}
+function qty(r){try{return pphQtyValue(r)}catch(e){return n(r.qty||r.netWeight)}}
+function rate(r){return r.rate!==undefined&&r.rate!==null?r.rate:r.unitPrice}
+function amount(r){return r.register==="board"?(r.totalPrice!==undefined&&r.totalPrice!==null?r.totalPrice:r.amount):r.amount}
+function filled(v){return v!==undefined&&v!==null&&String(v).trim()!==""}
+function monthKey(d){try{return pphMonthKey(d)}catch(e){return""}}
+function rows(){
+  const q=String($("#pc51Search")?.value||"").toLowerCase().trim();
+  const reg=$("#pc51Register")?.value||"",mo=String($("#pc51Month")?.value||"").toLowerCase().trim();
+  const sup=String($("#pc51Supplier")?.value||"").toLowerCase().trim(),item=String($("#pc51Item")?.value||"").toLowerCase().trim();
+  return all().filter(r=>{
+    const st=status(r); if(mode!=="all"&&st!==mode)return false;
+    const t=type(r); if(reg){if(["Board","Paper","Board III"].includes(reg)){if(t!==reg)return false}else if(r.register!==reg)return false}
+    if(mo&&monthKey(r.date).toLowerCase()!==mo)return false;
+    if(sup&&!String(r.supplier||"").toLowerCase().includes(sup))return false;
+    if(item&&!String(r.itemWithSize||r.item||"").toLowerCase().includes(item))return false;
+    if(q&&!([r.date,t,r.supplier,r.itemWithSize||r.item,r.bill,r.vehicle,r.igp,r.grn].join(" ").toLowerCase().includes(q)))return false;
+    return true;
+  });
+}
+function render(){
+  const a=all(),p=a.filter(r=>status(r)==="pending");
+  if($("#ppeChallans"))$("#ppeChallans").textContent=p.length;
+  if($("#pc51Pending"))$("#pc51Pending").textContent=p.length;
+  if($("#pc51Suppliers"))$("#pc51Suppliers").textContent=new Set(p.map(r=>r.supplier).filter(Boolean)).size;
+  if($("#pc51Qty"))$("#pc51Qty").textContent=money(p.reduce((s,r)=>s+n(qty(r)),0));
+  const now=new Date(),mk=now.toLocaleString("en",{month:"short"})+"-"+String(now.getFullYear()).slice(-2);
+  if($("#pc51MonthCount"))$("#pc51MonthCount").textContent=p.filter(r=>monthKey(r.date)===mk).length;
+  const list=rows(),b=$("#pc51Rows"); if(!b)return;
+  b.innerHTML=list.length?list.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.date)}</td><td>${esc(type(r))}</td><td>${esc(r.supplier)}</td><td>${esc(r.itemWithSize||[r.item,r.size].filter(Boolean).join(" "))}</td><td>${money(qty(r))}</td><td>${esc(r.unit)}</td><td>${esc(r.bill)}</td><td>${esc(r.vehicle)}</td><td>${filled(rate(r))?money(rate(r)):"—"}</td><td>${filled(amount(r))?money(amount(r)):"—"}</td><td><span class="pc51-badge ${status(r)}">${status(r)==="pending"?"Challan Pending":"Completed"}</span></td><td><button class="btn" onclick="pphOpenDetail('${r.register}','${r.id}')">Detail</button> <button class="btn primary" onclick="pphOpenEdit('${r.register}','${r.id}')">${status(r)==="pending"?"Update Rate / Amount":"Edit"}</button></td></tr>`).join(""):'<tr><td colspan="13">No matching challan records.</td></tr>';
+}
+function open(){document.querySelectorAll("section.panel").forEach(p=>p.classList.remove("active"));$("#panel-purchase-challans")?.classList.add("active");history.replaceState(null,"","#panel-purchase-challans");render()}
+function back(){document.querySelectorAll("section.panel").forEach(p=>p.classList.remove("active"));$("#panel-purchase-entry")?.classList.add("active");history.replaceState(null,"","#panel-purchase-entry")}
+function bind(){
+  document.addEventListener("click",e=>{if(e.target.closest("[data-open-purchase-challans]")){e.preventDefault();open()}});
+  $("#pc51Back")?.addEventListener("click",back);
+  $("#pc51Clear")?.addEventListener("click",()=>{["pc51Search","pc51Month","pc51Supplier","pc51Item"].forEach(id=>{if($("#"+id))$("#"+id).value=""});if($("#pc51Register"))$("#pc51Register").value="";mode="pending";render()});
+  $$("[data-pc51-status]").forEach(b=>b.addEventListener("click",()=>{mode=b.dataset.pc51Status;render()}));
+  ["pc51Search","pc51Month","pc51Supplier","pc51Item"].forEach(id=>$("#"+id)?.addEventListener("input",render));
+  $("#pc51Register")?.addEventListener("change",render);
+  render();
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
+window.ERPPurchaseChallansV1651a={open,render};
+})();
+</script>
 
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
