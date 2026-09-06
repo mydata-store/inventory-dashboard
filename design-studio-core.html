@@ -25281,41 +25281,27 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
     $('#apdCancel').onclick=()=>close(true);$('#apdClose').onclick=()=>close(true);
     $('#advancedPageDesignerModal').addEventListener('click',e=>{if(e.target===$('#advancedPageDesignerModal'))close(true)});
 
-    // Existing generic Page Controller buttons (without a dedicated page id) open this studio.
-    $$('.purchase-controller-btn:not([data-purchase-controller])').forEach(b=>{
-      b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();open(b.closest('section.panel')||activePanel())},true)
-    });
-
     // Existing specialized Page Controller gets an Advanced Designer bridge.
     $('#purchasePcAdvanced')?.addEventListener('click',()=>{
       const p=document.querySelector('#panel-'+(window.purchasePcPage||''))||activePanel();
       $('#purchasePcModal')?.classList.remove('open');open(p)
     });
 
-    // Apply stored settings on initial load, page navigation, and after an
-    // active page rebuilds its inner HTML. This keeps saved Page Control Studio
-    // profiles persistent after refresh without changing business logic.
-    const main=document.querySelector('main.content');
+    // Lightweight persistence: reapply only when navigation actually changes.
+    // No whole-page MutationObserver.
     let applyTimer=null;
     const scheduleApply=(delay=20)=>{
       clearTimeout(applyTimer);
       applyTimer=setTimeout(applySavedToActive,delay)
     };
-    if(main){
-      const obs=new MutationObserver(ms=>{
-        const active=activePanel();
-        if(!active)return;
-        const needsApply=ms.some(m=>
-          (m.type==='attributes'&&m.attributeName==='class'&&m.target.matches?.('section.panel')) ||
-          (m.type==='childList'&&(m.target===active||active.contains(m.target)))
-        );
-        if(needsApply)scheduleApply(25)
-      });
-      obs.observe(main,{subtree:true,attributes:true,attributeFilter:['class'],childList:true})
-    }
     window.addEventListener('hashchange',()=>scheduleApply(20));
     window.addEventListener('popstate',()=>scheduleApply(20));
     window.addEventListener('load',()=>scheduleApply(30),{once:true});
+    document.addEventListener('click',e=>{
+      if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open]')){
+        scheduleApply(30)
+      }
+    },false);
     scheduleApply(80)
   }
 
@@ -27722,251 +27708,104 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
 
 <script id="erpUniversalSamePageControllerV1525">
 (function(){
-  /*
-    V16.51b lightweight universal Page Controller.
-    - No MutationObserver
-    - No repeated full-document button scans
-    - Masters keeps its own native Page Controller modal
-    - Print Studio keeps its own Page Designer
-  */
-  const BTN_CLASS='erp-universal-page-controller-v1526';
-  const LEGACY_SELECTOR=[
-    '.purchase-controller-btn',
-    '.apd-launch',
-    '[data-purchase-controller]',
-    '[data-page-controller]'
-  ].join(',');
+"use strict";
 
-  function activePanel(){
-    return document.querySelector('main.content section.panel.active');
+/*
+  V16.51f Page Controller Core
+  One delegated controller router for dynamic and static pages.
+  No MutationObserver. No full DOM scans. No duplicate per-button handlers.
+*/
+
+function activePanel(){
+  return document.querySelector(
+    'main.content > section.panel.active,'+
+    'main.content section.panel.active,'+
+    'section.panel.active'
+  );
+}
+
+function openAdvanced(panel){
+  panel=panel||activePanel();
+  if(!panel)return;
+
+  if(window.ERPAdvancedPageDesigner?.openPage){
+    window.ERPAdvancedPageDesigner.openPage(panel);
+    setTimeout(()=>{
+      try{window.ERPPageControlExtras?.loadDesigner?.()}catch(e){}
+      try{window.ERPColumnSummaryDesigner?.prepare?.()}catch(e){}
+    },0);
+    return;
   }
 
-  function pageId(panel){
-    return String(panel?.id||'').replace(/^panel-/,'').trim();
+  if(window.ERPAdvancedPageDesigner?.open){
+    window.ERPAdvancedPageDesigner.open();
+    return;
   }
 
-  function isNativeController(btn){
-    if(!btn)return false;
+  window.toast?.('Page Controller is not ready yet');
+}
 
-    /* These pages own their own controller logic. */
-    if(btn.matches('.master-controller-btn,#masterPageControllerBtn'))return true;
-    if(btn.closest('#panel-print'))return true;
+function isMastersNative(btn){
+  return !!btn?.matches(
+    '#masterPageControllerBtn,.master-controller-btn'
+  );
+}
 
-    return false;
+function isPurchaseSpecial(btn){
+  return !!btn?.matches(
+    '.purchase-controller-btn[data-purchase-controller]'
+  );
+}
+
+function isPrintNative(btn){
+  return !!btn?.closest('#panel-print');
+}
+
+function isGenericController(btn){
+  if(!btn)return false;
+
+  if(btn.classList.contains('erp-universal-page-controller-v1526'))return true;
+  if(btn.classList.contains('apd-launch'))return true;
+
+  if(
+    btn.classList.contains('purchase-controller-btn') &&
+    !btn.hasAttribute('data-purchase-controller')
+  )return true;
+
+  if(btn.hasAttribute('data-page-controller'))return true;
+
+  if(btn.id==='fccPageController')return true;
+
+  const txt=String(btn.textContent||'').trim().toLowerCase();
+  return txt==='⚙ page controller' || txt==='page controller';
+}
+
+/*
+  Bubble phase is intentional:
+  native Masters / Purchase handlers run normally.
+  Generic buttons are handled here, including dynamically built Inventory pages.
+*/
+document.addEventListener('click',function(e){
+  const btn=e.target.closest('button');
+  if(!btn)return;
+
+  if(isMastersNative(btn))return;
+  if(isPurchaseSpecial(btn))return;
+  if(isPrintNative(btn))return;
+
+  if(isGenericController(btn)){
+    e.preventDefault();
+    e.stopPropagation();
+    openAdvanced(btn.closest('section.panel')||activePanel());
   }
+},false);
 
-  function looksLikeUniversalController(btn){
-    if(!btn || btn.closest('#advancedPageDesignerModal'))return false;
-    if(isNativeController(btn))return false;
+window.ERPUniversalPageController={
+  openPage:openAdvanced,
+  refresh:function(){},
+  ensurePage:function(){}
+};
 
-    if(btn.matches(LEGACY_SELECTOR))return true;
-
-    /* Only universal buttons created by this layer should be text-matched. */
-    if(btn.classList.contains(BTN_CLASS))return true;
-
-    return false;
-  }
-
-  function openStudioFor(panel){
-    panel=panel||activePanel();
-    if(!panel)return;
-
-    if(window.ERPAdvancedPageDesigner?.openPage){
-      window.ERPAdvancedPageDesigner.openPage(panel);
-
-      setTimeout(()=>{
-        try{window.ERPPageControlExtras?.loadDesigner?.()}catch(e){}
-        try{window.ERPColumnSummaryDesigner?.applySaved?.()}catch(e){}
-        try{window.ERPColumnSummaryDesigner?.prepare?.()}catch(e){}
-        try{window.ERPPerPageDesign?.apply?.()}catch(e){}
-      },0);
-
-      return;
-    }
-
-    if(window.ERPAdvancedPageDesigner?.open){
-      window.ERPAdvancedPageDesigner.open();
-      return;
-    }
-
-    window.toast?.('Page Control Studio is not ready yet');
-  }
-
-  function hasController(panel){
-    if(!panel)return false;
-
-    /* Native Masters controller counts as an existing controller. */
-    if(panel.id==='panel-masters' && panel.querySelector('#masterPageControllerBtn'))return true;
-
-    if(panel.id==='panel-print')return true;
-
-    return !!panel.querySelector(
-      '.erp-universal-page-controller-v1526,'+
-      '.purchase-controller-btn,'+
-      '.apd-launch,'+
-      '[data-purchase-controller],'+
-      '[data-page-controller]'
-    );
-  }
-
-  function buttonHost(panel){
-    const selectors=[
-      '.inv-page-head .actions',
-      '.purchase-page-head .actions',
-      '.page-head .actions',
-      '.fcr-actions',
-      '.mbr-top-actions',
-      '.cvr-head-actions',
-      '.pc-month-head-actions',
-      '.dde-head-actions',
-      '.header-actions',
-      '.page-actions',
-      '.toolbar-actions'
-    ];
-
-    for(const sel of selectors){
-      const host=panel.querySelector(sel);
-      if(host)return host;
-    }
-
-    for(const sel of [
-      '.inv-page-head',
-      '.purchase-page-head',
-      '.page-head',
-      '.module-head',
-      '.section-head'
-    ]){
-      const head=panel.querySelector(sel);
-
-      if(head){
-        let actions=head.querySelector(
-          ':scope > .erp-universal-controller-actions-v1526'
-        );
-
-        if(!actions){
-          actions=document.createElement('div');
-          actions.className='erp-universal-controller-actions-v1526';
-          head.appendChild(actions);
-        }
-
-        return actions;
-      }
-    }
-
-    let row=panel.querySelector(
-      ':scope > .erp-universal-controller-fallback-v1526'
-    );
-
-    if(!row){
-      row=document.createElement('div');
-      row.className='erp-universal-controller-fallback-v1526';
-      panel.insertBefore(row,panel.firstChild);
-    }
-
-    return row;
-  }
-
-  function ensureController(panel){
-    if(!panel || !panel.matches('section.panel'))return;
-
-    if(panel.id==='panel-print')return;
-    if(panel.id==='panel-masters')return;
-
-    if(hasController(panel))return;
-
-    const host=buttonHost(panel);
-    if(!host)return;
-
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.className='btn '+BTN_CLASS;
-    btn.textContent='⚙ Page Controller';
-    btn.dataset.pageId=pageId(panel);
-    host.appendChild(btn);
-  }
-
-  function ensureActive(){
-    const panel=activePanel();
-    if(panel)ensureController(panel);
-  }
-
-  /*
-    One delegated listener replaces hundreds of per-button listeners.
-    Masters native controller is deliberately ignored.
-  */
-  document.addEventListener('click',function(e){
-    const btn=e.target.closest('button');
-    if(!btn)return;
-
-    if(isNativeController(btn))return;
-
-    if(looksLikeUniversalController(btn)){
-      e.preventDefault();
-      e.stopPropagation();
-
-      const panel=btn.closest('section.panel')||activePanel();
-      openStudioFor(panel);
-      return;
-    }
-
-    /*
-      When navigation changes the active panel, only inspect that one panel.
-      No whole-DOM refresh and no observer.
-    */
-    if(
-      btn.matches(
-        '[data-panel],'+
-        '[data-dashboard-open],'+
-        '[data-inventory-open],'+
-        '[data-report-center-open],'+
-        '[data-formula-control-open]'
-      ) ||
-      btn.closest(
-        '[data-panel],'+
-        '[data-dashboard-open],'+
-        '[data-inventory-open],'+
-        '[data-report-center-open],'+
-        '[data-formula-control-open]'
-      )
-    ){
-      setTimeout(ensureActive,0);
-    }
-  },false);
-
-  window.addEventListener('hashchange',()=>{
-    setTimeout(ensureActive,0);
-  });
-
-  window.addEventListener('popstate',()=>{
-    setTimeout(ensureActive,0);
-  });
-
-  function bind(){
-    /*
-      Clean up any controller accidentally added to native-owned pages.
-      This is a one-time tiny cleanup, not a repeating scan.
-    */
-    document
-      .querySelectorAll(
-        '#panel-print .erp-universal-page-controller-v1526,'+
-        '#panel-masters .erp-universal-page-controller-v1526'
-      )
-      .forEach(b=>b.remove());
-
-    ensureActive();
-
-    window.ERPUniversalPageController={
-      refresh:ensureActive,
-      ensurePage:ensureController,
-      openPage:openStudioFor
-    };
-  }
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',bind,{once:true});
-  }else{
-    bind();
-  }
 })();
 </script>
 
@@ -36063,6 +35902,39 @@ if(document.readyState==="loading"){
 
 window.ERPMastersPageControllerV1651e={
   close:closeMastersController
+};
+})();
+</script>
+
+
+<script id="pageControllerSafetyV1651f">
+(function(){
+"use strict";
+
+/*
+  Safety bridge for dynamic modules.
+  It only acts if the click survived all earlier page-specific handlers.
+*/
+document.addEventListener('click',function(e){
+  const btn=e.target.closest(
+    '#panel-inventory-dashboard .purchase-controller-btn:not([data-purchase-controller])'
+  );
+  if(!btn)return;
+
+  e.preventDefault();
+
+  const panel=btn.closest('section.panel');
+  if(window.ERPAdvancedPageDesigner?.openPage){
+    window.ERPAdvancedPageDesigner.openPage(panel);
+  }
+},false);
+
+window.ERPPageControllerCoreV1651f={
+  open:function(panel){
+    if(window.ERPAdvancedPageDesigner?.openPage){
+      window.ERPAdvancedPageDesigner.openPage(panel||document.querySelector('section.panel.active'));
+    }
+  }
 };
 })();
 </script>
