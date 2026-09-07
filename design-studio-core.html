@@ -3722,8 +3722,7 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
   </div>
 </aside>
 <div class="page-shell"><header class="top"><div class="title"><h1 id="workspaceTitle">Design Studio</h1><p id="workspaceSubtitle">Theme Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control</p></div><div class="actions"><span class="core-status" id="saveStatus">Ready</span><button class="btn warn" id="undoBtn">Undo</button><button class="btn" id="restoreBtn">Restore Default</button><button class="btn primary" id="saveBtn">Save & Apply</button></div></header>
-<main class="content">
-<div class="notice">Changes preview instantly. <b>Save & Apply</b> stores the shared design settings for connected ERP modules.</div>
+<main class="content"><div class="notice">Changes preview instantly. <b>Save & Apply</b> stores the shared design settings for connected ERP modules.</div>
 
 
 <section class="panel" id="panel-dashboard">
@@ -11370,6 +11369,24 @@ function pphRenderPrintStudioHtml(contract,design){
     <div class="signatures"><div class="sig">Prepared By</div><div class="sig">Checked By</div><div class="sig">Authorized By</div></div>
     <div class="footer"><span>${escHtml(footer)}</span><span>${d.pageNumbers===false?'':'Page'}</span></div>
   </div><script>window.onload=()=>setTimeout(()=>window.print(),180)<\/script>
+
+<script id="erpStabilityCleanupV1651o">
+(function(){
+  function release(){
+    document.documentElement.classList.remove(
+      'erp-route-restoring-v1545',
+      'erp-route-first-dashboard-v1571'
+    );
+    window.__ERP_ROUTE_FIRST_DASHBOARD__=false;
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',release,{once:true});
+  }else{
+    release();
+  }
+})();
+</script>
+
 </body></html>`
 }
 function pphPrintRows(rows,titleOverride){
@@ -12693,7 +12710,7 @@ function erpStableStartup(){
   erpSafeCall('rgpBind',()=>rgpBind());
   erpSafeCall('rgpBindDetail',()=>rgpBindDetail());
   erpSafeCall('cgpBind',()=>cgpBind());
-  erpSafeCall('coreAutoSnapshot',()=>coreAutoSnapshot(true));
+  /* V16.51o: forced full ERP snapshot removed from startup; manual/change snapshots remain available. */
   erpSafeCall('maApplySavedTheme',()=>maApplySavedTheme());
   erpSafeCall('pdInit',()=>pdInit());
 
@@ -22371,9 +22388,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function seed(){
     const current=activePanelId();
     const hash=(location.hash||'').replace(/^#/,'');
-    if(hash && document.getElementById(hash)){
-      lastPanel=hash;
-      history.replaceState(stateFor(hash),'','#'+hash);
+    if(hash && document.getElementById(hash) && hash!==current){
+      restore(hash);
       return;
     }
     if(current){
@@ -22429,7 +22445,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
   }
 
-  /* V16.51m: BrowserHistory no longer restores pages itself. */
+  window.addEventListener('popstate',function(e){
+    const id=(e.state&&e.state.erpPanel) || (location.hash||'').replace(/^#/,'');
+    restore(id);
+  });
 
   // V16.51g: navigation history is updated from actual navigation events only.
   function start(){
@@ -22439,10 +22458,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         setTimeout(pushIfChanged,40);
       }
     },false);
-    window.addEventListener('hashchange',()=>setTimeout(pushIfChanged,20));
+    /* V16.51o: native ERP hash navigation is authoritative; no duplicate hashchange history pass. */
   }
 
-  /* V16.51m: BrowserHistory startup ownership removed. */
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
 
   window.ERPBrowserHistory={
     current:activePanelId,
@@ -22807,113 +22827,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   #panel-year-summary .pc-year-unit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 </style>
-
-
-<script id="erpRefreshPageStateV1541">
-(function(){
-  const PC_LAST_PAGE_KEY='erpProductionConsumptionLastPage';
-  const reveal=()=>document.documentElement.classList.remove('erp-route-restoring-v1545');
-
-  function getHashPanel(){
-    const h=String(location.hash||'').replace(/^#/,'').trim();
-    if(!h)return '';
-    return h.indexOf('panel-')===0?h.slice(6):h;
-  }
-
-  function restoreExactPage(){
-    const hash=getHashPanel();
-    let saved='', studioLast='', pcPage='';
-    try{
-      saved=localStorage.getItem(PC_LAST_PAGE_KEY)||'';
-      studioLast=localStorage.getItem('erpStudioLastPanel')||'';
-      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
-    }catch(e){}
-
-    const routes={
-      'dashboard':()=>window.ERPManagementDashboard?.open?.(),
-      'production-consumption':()=>window.ERPProductionConsumption?.open?.(),
-      'daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
-      'daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
-      'material-balance-report':()=>window.ERPMaterialBalanceReport?.open?.(),
-      'material-master':()=>window.ERPMaterialMaster?.open?.(),
-      'management-summary':()=>window.ERPManagementSummary?.open?.(),
-      'month-summary':()=>window.ERPMonthSummary?.open?.(),
-      'year-summary':()=>window.ERPYearSummary?.open?.(),
-      'operating-expenses':()=>window.ERPOperatingExpenses?.open?.(),
-      'final-cost-report':()=>window.ERPFinalCostReport?.open?.()
-    };
-
-    // V15.41 — EXPLICIT URL ALWAYS WINS.
-    // If a hash is present, never fall through to a previously saved page.
-    // The final exact-route restorer handles the actual activation.
-    if(hash){
-      if(hash==='dashboard'){
-        // Dashboard has its own single-pass restorer; do not open it again here.
-        reveal();
-        return true;
-      }
-      if(routes[hash]){
-        routes[hash]();
-        reveal();
-        return true;
-      }
-      reveal();
-      return true;
-    }
-
-    // Only when there is NO explicit URL hash may saved state be used.
-    if(studioLast && routes[studioLast]){
-      routes[studioLast]();
-      reveal();
-      return true;
-    }
-
-    const logical={
-      'home':()=>window.ERPProductionConsumption?.open?.(),
-      'daily':()=>window.ERPDailyDataEntry?.open?.(),
-      'history':()=>window.ERPConsumptionHistory?.open?.(),
-      'material':()=>window.ERPMaterialMaster?.open?.(),
-      'summary':()=>window.ERPManagementSummary?.open?.(),
-      'month':()=>window.ERPMonthSummary?.open?.(),
-      'year':()=>window.ERPYearSummary?.open?.(),
-      'expenses':()=>window.ERPOperatingExpenses?.open?.()
-    };
-
-    const key=pcPage||saved;
-    if(key && logical[key]){
-      logical[key]();
-      reveal();
-      return true;
-    }
-    reveal();
-    return false;
-  }
-  function boot(){
-    const hash=getHashPanel();
-
-    /* An explicit URL/hash is handled by the single exact-route restorer
-       later in the file. Do not open the same page repeatedly here. */
-    if(hash){
-      reveal();
-      return;
-    }
-
-    /* No explicit page: restore saved last page once only. */
-    setTimeout(restoreExactPage,80);
-  }
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',boot,{once:true});
-  }else{
-    boot();
-  }
-
-  /* V16.51m: hash navigation is handled by ERPExactPageRestoreV1540.
-     This older saved-state helper now runs only at no-hash startup. */
-})();
-</script>
-
-
 <style id="operatingExpensesV1542Style">
 #panel-operating-expenses{display:none}
 #panel-operating-expenses.active{display:block}
@@ -23627,86 +23540,6 @@ window.ERPOperatingExpenses={
  #panel-operating-expenses .oe-provisional-summary-v1543{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>
-
-
-<script id="operatingExpensesRuntimeFixV1544">
-(function(){
-  function q(s){return document.querySelector(s)}
-  function reveal(){document.documentElement.classList.remove('erp-route-restoring-v1545')}
-
-  function ensureRulesOption(){
-    const sel=q('#oeView');
-    if(!sel)return;
-    if(![...sel.options].some(o=>o.value==='rules')){
-      const opt=document.createElement('option');
-      opt.value='rules';
-      opt.textContent='Automatic Cost Rules';
-      const master=[...sel.options].find(o=>o.value==='master');
-      if(master)sel.insertBefore(opt,master);else sel.appendChild(opt);
-    }
-  }
-
-  function shouldRestoreOperatingExpenses(){
-    const hash=String(location.hash||'');
-
-    // V15.39: an explicit page in the browser URL always wins.
-    // In particular, Dashboard refresh must NEVER be replaced by the
-    // previously saved Operating Expenses page.
-    if(hash && hash!=='#panel-operating-expenses'){
-      return false;
-    }
-
-    let last='',pcPage='';
-    try{
-      last=localStorage.getItem('erpStudioLastPanel')||'';
-      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
-    }catch(e){}
-
-    // Only fall back to saved state when there is NO explicit hash.
-    return hash==='#panel-operating-expenses' ||
-      (!hash && (last==='operating-expenses' || pcPage==='expenses'));
-  }
-
-  function restore(){
-    if(!shouldRestoreOperatingExpenses())return false;
-    if(window.ERPOperatingExpenses?.open){
-      window.ERPOperatingExpenses.open();
-      ensureRulesOption();
-      reveal();
-      return true;
-    }
-    return false;
-  }
-
-  function boot(){
-    // Try immediately after DOM is ready; no visible Theme page should appear.
-    if(!restore()){
-      let tries=0;
-      const timer=setInterval(function(){
-        tries++;
-        if(restore()||tries>40){
-          clearInterval(timer);
-          reveal();
-        }
-      },10);
-    }
-  }
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',boot,{once:true});
-  }else{
-    boot();
-  }
-
-  window.addEventListener('hashchange',function(){
-    if(location.hash==='#panel-operating-expenses'){
-      restore();
-    }
-  });
-})();
-</script>
-
-
 <style id="operatingExpenseViewIsolationV1545">
 #panel-operating-expenses #oeHistoryPanel #oeSave,
 #panel-operating-expenses #oeRulesPanel #oeSave,
@@ -27575,111 +27408,6 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
   }
 })();
 </script>
-
-
-<script id="erpExactRefreshRestoreV1524">
-(function(){
-  let dashboardRestored=false;
-
-  function targetFromUrl(){
-    const h=String(location.hash||'').replace(/^#/,'').trim();
-    return h && document.getElementById(h)?.matches?.('section.panel') ? h : '';
-  }
-
-  function forcePanel(target){
-    const panel=document.getElementById(target);
-    if(!panel)return false;
-    const page=target.replace(/^panel-/,'');
-    document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active',p===panel));
-    document.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===page));
-    try{
-      localStorage.setItem('erpActiveStudioPanel',page);
-      localStorage.setItem('erpStudioLastPanel',page);
-      if(typeof ACTIVE_STUDIO_PANEL_KEY!=='undefined')localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,page);
-    }catch(e){}
-    document.body.classList.toggle('erp-dashboard-mode',page==='dashboard');
-    return true;
-  }
-
-  const dynamic={
-    'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
-    'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
-    'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
-    'panel-material-balance-report':()=>window.ERPMaterialBalanceReport?.open?.(),
-    'panel-material-master':()=>window.ERPMaterialMaster?.open?.(),
-    'panel-management-summary':()=>window.ERPManagementSummary?.open?.(),
-    'panel-month-summary':()=>window.ERPMonthSummary?.open?.(),
-    'panel-operating-expenses':()=>window.ERPOperatingExpenses?.open?.(),
-    'panel-final-cost-report':()=>window.ERPFinalCostReport?.open?.(),
-    'panel-comparison-variance-report':()=>window.ERPComparisonVarianceReport?.open?.()
-  };
-
-  function restoreDashboardOnce(){
-    if(dashboardRestored || location.hash!=='#panel-dashboard')return;
-    const panel=document.getElementById('panel-dashboard');
-    if(!panel)return;
-
-    // Activate the already-existing dashboard immediately.
-    forcePanel('panel-dashboard');
-
-    const finish=()=>{
-      if(dashboardRestored || location.hash!=='#panel-dashboard')return;
-      if(!window.ERPManagementDashboard?.render)return false;
-      dashboardRestored=true;
-      document.body.classList.add('erp-dashboard-mode');
-      window.ERPManagementDashboard.render();
-      window.ERPAdvancedPageDesigner?.applySaved?.();
-      window.ERPPageControlExtras?.applySaved?.();
-      window.ERPColumnSummaryDesigner?.applySaved?.();
-      document.documentElement.classList.remove('erp-route-restoring-v1545');
-      document.documentElement.classList.remove('erp-route-first-dashboard-v1571');
-      window.__ERP_ROUTE_FIRST_DASHBOARD__=false;
-      return true;
-    };
-
-    if(finish())return;
-
-    // Only wait for the dashboard module to become available; once found,
-    // open it exactly one time. No repeated re-render after success.
-    let tries=0;
-    const timer=setInterval(()=>{
-      tries++;
-      if(finish() || tries>=12){
-        clearInterval(timer);
-        document.documentElement.classList.remove('erp-route-restoring-v1545');
-      }
-    },10);
-  }
-
-  function restoreOtherPage(){
-    const target=targetFromUrl();
-    if(!target || target==='panel-dashboard')return;
-    const run=()=>{
-      try{
-        dynamic[target]?.();
-        forcePanel(target);
-        /* V16.51m: target panel is already active. Avoid heavy design reapply during initial restore. */
-        window.ERPSidebarStartClosedV1524?.closeAll?.();
-        document.documentElement.classList.remove('erp-route-restoring-v1545');
-      }catch(e){}
-    };
-    run();
-  }
-
-  function restore(){
-    const target=targetFromUrl();
-    if(target==='panel-dashboard')restoreDashboardOnce();
-    else restoreOtherPage();
-  }
-
-  /* V16.51m: automatic startup/hash/popstate restore disabled here.
-     ERPSingleRefreshRouterV1651m is now the only refresh/history restorer. */
-
-  window.ERPExactPageRestoreV1540={restore};
-})();
-</script>
-
-
 <style id="erpUniversalSamePageControllerV1526Style">
 .erp-universal-page-controller-v1526{flex:0 0 auto;white-space:nowrap}
 .erp-universal-controller-actions-v1526{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-left:auto}
@@ -27759,9 +27487,6 @@ window.ERPUniversalPageController={
 
 })();
 </script>
-
-
-
 <script id="erpManagementDashboardV1534">
 (function(){
   const $=s=>document.querySelector(s), num=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0};
@@ -29867,7 +29592,7 @@ function sync(){
   timer=null;
   if(window.ERPDateTime?.refresh)window.ERPDateTime.refresh();
 
-  // V16.51m: central ERPDateTime updates all clock displays.
+  // V16.51o: central ERPDateTime updates all clock displays.
 }
 
 document.addEventListener('visibilitychange',function(){
@@ -31216,7 +30941,7 @@ if(document.readyState==='loading'){
   clean();
 }
 window.addEventListener('pageshow',clean);
-/* V16.51m: removed full-document raw-source scan on every page navigation. */
+/* V16.51o: no full-document source scan on every page navigation. */
 
 window.ERPRawSourceLeakGuardV1596={clean};
 })();
@@ -31690,7 +31415,7 @@ function ensure(){
 }
 document.addEventListener('click',e=>{const b=e.target.closest('.inv-tab[data-invtab="machine-clothing"],[data-inventory-open]');if(b)setTimeout(ensure,0)},true);
 window.addEventListener('storage',e=>{if([KEY,'erpPurchaseDataV1','erpIssueRecordsV1'].includes(e.key))setTimeout(ensure,0)});
-/* V16.51m: removed 1.5s Machine Clothing polling; event-based refresh remains. */
+/* V16.51o: removed continuous Machine Clothing polling; refresh remains event-driven. */
 window.ERPMachineClothing={refresh:renderAll,assignments:load,undefined:undefinedRows};
 })();
 </script>
@@ -35550,120 +35275,6 @@ document.addEventListener('visibilitychange',()=>document.hidden?stop():start())
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
-
-<script id="erpSingleRefreshRouterV1651m">
-(function(){
-'use strict';
-
-let restoring=false;
-let lastRestored='';
-
-function normalizePanelId(v){
-  let x=String(v||'').replace(/^#/,'').trim();
-  if(!x)return 'panel-dashboard';
-  return x.startsWith('panel-') ? x : 'panel-'+x;
-}
-
-function targetFromLocation(){
-  return normalizePanelId(location.hash || 'panel-dashboard');
-}
-
-function prepareDynamic(id){
-  try{
-    const map={
-      'panel-dashboard':()=>window.ERPManagementDashboard?.open?.(),
-      'panel-inventory-dashboard':()=>window.ERPInventory?.open?.(),
-      'panel-report-center':()=>window.ERPReportCenter?.open?.(),
-      'panel-department-center':()=>window.ERPDepartmentCenter?.open?.(),
-      'panel-formula-control-center':()=>window.ERPFormulaControlCenter?.open?.(),
-      'panel-production-consumption':()=>window.ERPProductionConsumption?.open?.(),
-      'panel-daily-data-entry':()=>window.ERPDailyDataEntry?.open?.(),
-      'panel-daily-consumption-history':()=>window.ERPConsumptionHistory?.open?.(),
-      'panel-material-balance-report':()=>window.ERPMaterialBalanceReport?.open?.(),
-      'panel-material-master':()=>window.ERPMaterialMaster?.open?.(),
-      'panel-management-summary':()=>window.ERPManagementSummary?.open?.(),
-      'panel-month-summary':()=>window.ERPMonthSummary?.open?.(),
-      'panel-operating-expenses':()=>window.ERPOperatingExpenses?.open?.(),
-      'panel-final-cost-report':()=>window.ERPFinalCostReport?.open?.(),
-      'panel-comparison-variance-report':()=>window.ERPComparisonVarianceReport?.open?.()
-    };
-    map[id]?.();
-  }catch(e){}
-}
-
-function activate(id){
-  const panel=document.getElementById(id);
-  if(!panel || !panel.matches('section.panel'))return false;
-
-  document.querySelectorAll('main.content section.panel.active').forEach(p=>{
-    if(p!==panel)p.classList.remove('active');
-  });
-  panel.classList.add('active');
-
-  document.querySelectorAll('[data-panel]').forEach(b=>{
-    b.classList.toggle('active', normalizePanelId(b.getAttribute('data-panel'))===id);
-  });
-
-  const logical=id.replace(/^panel-/,'');
-  document.body.classList.toggle('erp-dashboard-mode',id==='panel-dashboard');
-
-  try{
-    localStorage.setItem('erpActiveStudioPanel',logical);
-    localStorage.setItem('erpStudioLastPanel',logical);
-  }catch(e){}
-
-  return true;
-}
-
-function restore(){
-  if(restoring)return;
-
-  let id=targetFromLocation();
-  if(lastRestored===id && document.getElementById(id)?.classList.contains('active'))return;
-
-  restoring=true;
-  try{
-    prepareDynamic(id);
-
-    if(!activate(id)){
-      id='panel-dashboard';
-      prepareDynamic(id);
-      activate(id);
-      if(location.hash && location.hash!=='#panel-dashboard'){
-        history.replaceState({erpPanel:id},'', '#'+id);
-      }
-    }
-
-    lastRestored=id;
-
-    requestAnimationFrame(()=>{
-      try{window.ERPAdvancedPageDesigner?.applySaved?.()}catch(e){}
-      try{window.ERPPageControlExtras?.applySaved?.()}catch(e){}
-      try{window.ERPColumnSummaryDesigner?.applySaved?.()}catch(e){}
-      try{window.ERPSidebarStartClosedV1524?.closeAll?.()}catch(e){}
-      try{window.ERPDateTime?.refresh?.()}catch(e){}
-    });
-  }finally{
-    restoring=false;
-  }
-}
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',restore,{once:true});
-}else{
-  restore();
-}
-
-window.addEventListener('hashchange',restore);
-window.addEventListener('popstate',restore);
-
-window.ERPSingleRefreshRouterV1651m={
-  restore,
-  current:()=>lastRestored||targetFromLocation()
-};
-})();
-</script>
-
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
