@@ -35309,6 +35309,154 @@ html,body{
 }
 </style>
 
+
+
+<style id="erpFastStableNavigationV1656Style">
+/* V16.56 — stable desktop navigation and sidebar geometry. */
+
+/* Do not animate the whole ERP grid. Animated grid-template-columns was making
+   the page visibly "settle" after every sidebar state change. */
+.layout-left{
+  transition:none!important;
+}
+
+/* Collapsed = compact column. Hover/peek = full column immediately.
+   This reserves real space, so the sidebar never covers page content. */
+.layout-left.collapsed{
+  grid-template-columns:var(--side-cw) minmax(0,1fr)!important;
+}
+.layout-left.collapsed.peek{
+  grid-template-columns:var(--side-w) minmax(0,1fr)!important;
+}
+.layout-left:not(.collapsed){
+  grid-template-columns:var(--side-w) minmax(0,1fr)!important;
+}
+
+.layout-left .studio-sidebar{
+  transition:background-color 120ms ease!important;
+}
+.layout-left.collapsed:not(.peek) .studio-sidebar{
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+}
+.layout-left.collapsed.peek .studio-sidebar,
+.layout-left:not(.collapsed) .studio-sidebar{
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  box-shadow:none!important;
+}
+
+/* During the first frames of a real page change, remove visual transitions that
+   make the new page shift after it has already appeared. */
+html.erp-nav-settling-v1656 *,
+html.erp-nav-settling-v1656 *::before,
+html.erp-nav-settling-v1656 *::after{
+  transition-duration:0s!important;
+  animation-duration:0s!important;
+  animation-delay:0s!important;
+}
+
+/* Keep the workspace geometry predictable while content changes. */
+.layout-left .page-shell{
+  min-width:0!important;
+  width:100%!important;
+}
+</style>
+
+
+<script id="erpFastStableNavigationV1656">
+(function(){
+'use strict';
+if(window.__erpFastStableNavigationV1656)return;
+window.__erpFastStableNavigationV1656=true;
+
+let settleRAF1=0, settleRAF2=0, settleTimer=0;
+
+function activePanel(){
+  return document.querySelector('section.panel.active');
+}
+function activeId(){
+  return (activePanel()?.id||'').replace(/^panel-/,'');
+}
+function syncImmediate(){
+  const id=activeId();
+  if(!id)return;
+
+  /* URL must describe the panel already on screen. */
+  try{
+    const wanted='#panel-'+id;
+    if(location.hash!==wanted)history.replaceState(null,'',wanted);
+  }catch(e){}
+
+  /* Dashboard layout must be based on the real active panel only. */
+  document.body.classList.toggle('erp-dashboard-mode',id==='dashboard');
+
+  /* Keep sidebar active state synchronized without waiting for old delayed hooks. */
+  try{window.ERPSingleActiveSidebarV1599?.sync?.(id)}catch(e){}
+
+  /* Only render the dashboard when dashboard is actually active. */
+  if(id==='dashboard'){
+    try{window.ERPManagementDashboard?.render?.()}catch(e){}
+    try{window.ERPDashboardBannerV1572?.sync?.()}catch(e){}
+  }
+}
+
+function beginSettle(){
+  document.documentElement.classList.add('erp-nav-settling-v1656');
+  cancelAnimationFrame(settleRAF1);
+  cancelAnimationFrame(settleRAF2);
+  clearTimeout(settleTimer);
+
+  /* First frame: let the page's original click handler activate its panel. */
+  settleRAF1=requestAnimationFrame(function(){
+    syncImmediate();
+
+    /* Second frame: commit final geometry after module/page-controller hooks. */
+    settleRAF2=requestAnimationFrame(function(){
+      syncImmediate();
+      document.documentElement.classList.remove('erp-nav-settling-v1656');
+    });
+  });
+
+  /* Safety release only; normally removed after two frames. */
+  settleTimer=setTimeout(function(){
+    document.documentElement.classList.remove('erp-nav-settling-v1656');
+  },180);
+}
+
+const selector=[
+  '#sideMenu [data-panel]',
+  '#sideMenu [data-dashboard-open]',
+  '[data-dashboard-banner-route]',
+  '[data-panel-jump]',
+  '[data-pi-module-home]',
+  '[data-pi-open-page]',
+  '[data-local-module-home]',
+  '[data-zafar-module-home]',
+  '[data-board-module-home]',
+  '[data-rgp-module-home]',
+  '[data-ogp-module-home]'
+].join(',');
+
+/* Capture starts the no-animation settling window before legacy handlers run.
+   We do not preventDefault/stopPropagation, so all existing module logic survives. */
+document.addEventListener('click',function(e){
+  if(e.target.closest(selector)){
+    document.documentElement.classList.add('erp-nav-settling-v1656');
+    try{window.scrollTo(0,0)}catch(_){}
+    beginSettle();
+  }
+},true);
+
+window.addEventListener('hashchange',beginSettle);
+window.addEventListener('popstate',beginSettle);
+
+window.ERPFastStableNavigationV1656={sync:syncImmediate,settle:beginSettle};
+})();
+</script>
+
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
