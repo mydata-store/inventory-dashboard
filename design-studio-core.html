@@ -14672,6 +14672,14 @@ function gateToggleFolderV1579(name){
   });
 }
 
+const gateOpenRevisionV1672=new Map();
+function gateRevisionV1672(){try{return window.ERPPanelRenderCacheV1659?.revision?.()??0}catch(e){return 0}}
+function gateRenderIfChangedV1672(panel,fn){
+  const rev=gateRevisionV1672();
+  if(gateOpenRevisionV1672.get(panel)===rev)return;
+  fn();
+  gateOpenRevisionV1672.set(panel,rev);
+}
 function gateOpenPanel(panel){
   const target=ERPPanelRegistryV1665.activate(panel);
   if(!target)return false;
@@ -14697,15 +14705,15 @@ function gateOpenPanel(panel){
       panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'Cash Gate Pass dashboard, scrap sale and scrapper controls.':panel==='container-ledger'?'Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.':panel==='container-party-detail'?'Complete returnable-container detail for one party.':'Returnable Gate Pass dashboard and entry controls.';
   }
 
-  if(panel==='gate-pass-dashboard')gateDashboardRender();
-  if(panel==='rgp-dashboard')rgpDashboardRender();
-  if(panel==='rgp-list')rgpRenderList();
+  if(panel==='gate-pass-dashboard')gateRenderIfChangedV1672(panel,gateDashboardRender);
+  if(panel==='rgp-dashboard')gateRenderIfChangedV1672(panel,rgpDashboardRender);
+  if(panel==='rgp-list')gateRenderIfChangedV1672(panel,rgpRenderList);
   if(panel==='rgp-entry'){rgpUpdateTotal();setTimeout(()=>rgpInputs()[0]?.[0]?.focus(),0)}
-  if(panel==='rgp-return'){rgpReturnBind();rgpRenderReturn()}
-  if(panel==='ogp-dashboard')ogpDashboardRender()
-  if(panel==='ogp-detail'){ogpBindDetail();ogpRenderDetail()}
-  if(panel==='container-ledger'){containerBind();containerRenderAll()}
-  if(panel==='container-party-detail'){containerBindPartyDetail();containerRenderPartyDetail()}
+  if(panel==='rgp-return'){rgpRenderReturn()}
+  if(panel==='ogp-dashboard')gateRenderIfChangedV1672(panel,ogpDashboardRender)
+  if(panel==='ogp-detail'){ogpRenderDetail()}
+  if(panel==='container-ledger'){gateRenderIfChangedV1672(panel,containerRenderAll)}
+  if(panel==='container-party-detail'){gateRenderIfChangedV1672(panel,containerRenderPartyDetail)}
 
   window.scrollTo({top:0,behavior:'auto'});
   return true
@@ -14747,7 +14755,7 @@ function gateDashboardBind(){
     btn.addEventListener('click',e=>{
       const panel=btn.dataset.panel;
       if(['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','rgp-detail','ogp-dashboard','ogp-list','ogp-entry','ogp-detail','cgp-dashboard','cgp-list','cgp-entry','cgp-detail','container-ledger','container-party-detail'].includes(panel)){
-        e.preventDefault();e.stopPropagation();gateOpenPanel(panel);
+        e.preventDefault();gateOpenPanel(panel);
       }
     });
   });
@@ -17073,7 +17081,7 @@ function invUseRender(){
 }
 function invBind(){
   document.querySelectorAll('.inv-tab').forEach(b=>b.onclick=()=>invShow(b.dataset.invtab));
-  inv$('#invRefresh').onclick=invRender;
+  inv$('#invRefresh').onclick=()=>{invRender();invOpenRevisionV1672=invRevisionV1672()};
   inv$('#invSearch').oninput=invRender;
   inv$('#invCategory').onchange=invRender;
   inv$('#invStatus').onchange=invRender;
@@ -17128,6 +17136,10 @@ function invBind(){
   invRender()
 }
 
+let invOpenRevisionV1672=-1;
+function invRevisionV1672(){
+  try{return window.ERPPanelRenderCacheV1659?.revision?.()??0}catch(e){return 0}
+}
 function invOpen(){
   invBuild();
   ERPPanelRegistryV1665.register(invPanel());
@@ -17136,12 +17148,14 @@ function invOpen(){
     localStorage.setItem('erpStudioLastPanel','inventory-dashboard');
     localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'inventory-dashboard')
   }catch(e){}
-  document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('[data-inventory-open]').forEach(x=>x.classList.add('active'));
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(inv$('#workspaceTitle'))inv$('#workspaceTitle').textContent='Inventory Management';
   if(inv$('#workspaceSubtitle'))inv$('#workspaceSubtitle').textContent='Store Inventory • Monthly / Department Stock • Direct Consumption';
-  invRender()
+  const rev=invRevisionV1672();
+  if(invOpenRevisionV1672!==rev){
+    invRender();
+    invOpenRevisionV1672=rev;
+  }
 }
 
 function invNav(){
@@ -17163,7 +17177,6 @@ function invNav(){
 
   b.onclick=(e)=>{
     e.preventDefault();
-    e.stopPropagation();
     invOpen()
   }
 }
@@ -17349,17 +17362,21 @@ function costBuild(){
   C$('#costSearch').oninput=costRender;C$('#costMonth').onchange=costRender;C$('#costGroup').onchange=costRender;
   C$('#costClear').onclick=()=>{C$('#costSearch').value='';C$('#costMonth').value='';C$('#costGroup').value='';costRender()}
 }
+let costOpenRevisionV1672=-1;
+function costRevisionV1672(){try{return window.ERPPanelRenderCacheV1659?.revision?.()??0}catch(e){return 0}}
 function costOpen(){
   costBuild();
   ERPPanelRegistryV1665.register(C$('#panel-costing-analysis'));
   ERPPanelRegistryV1665.activate('costing-analysis');
-  document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('[data-costing-open]').forEach(x=>x.classList.add('active'));
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(C$('#workspaceTitle'))C$('#workspaceTitle').textContent='Costing & Analysis';
   if(C$('#workspaceSubtitle'))C$('#workspaceSubtitle').textContent='Item Costing • Department Costing • Raw Material • Mess • Cattle Farm • RGP / Repair';
   try{localStorage.setItem('erpStudioLastPanel','costing-analysis');localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'costing-analysis')}catch(e){}
-  costRender()
+  const rev=costRevisionV1672();
+  if(costOpenRevisionV1672!==rev){
+    costRender();
+    costOpenRevisionV1672=rev;
+  }
 }
 function costNav(){
   const menu=document.getElementById('sideMenu')||document.querySelector('.side-menu');if(!menu)return;
@@ -17370,7 +17387,7 @@ function costNav(){
     const inv=menu.querySelector('[data-inventory-open]'),gate=document.getElementById('gatePassGroup');
     if(inv&&inv.nextSibling)menu.insertBefore(b,inv.nextSibling);else if(gate)menu.insertBefore(b,gate);else menu.appendChild(b)
   }
-  b.onclick=e=>{e.preventDefault();e.stopPropagation();costOpen()}
+  b.onclick=e=>{e.preventDefault();costOpen()}
 }
 function costStartup(){
   try{costNav()}catch(e){console.error('Costing startup error',e)}
@@ -18214,18 +18231,23 @@ function renderAll(){
   renderLibrary();renderTester();renderStandards();renderAsh();renderVersions();renderMaterialMaster();renderMappings();
   f$('#fccMapFormula').innerHTML='<option value="">Select Formula</option>'+formulas().map(x=>`<option value="${x.id}">${x.no} — ${x.name}</option>`).join('')
 }
+let formulaOpenRevisionV1672=-1;
+function formulaRevisionV1672(){try{return window.ERPPanelRenderCacheV1659?.revision?.()??0}catch(e){return 0}}
 function open(){
   ensureSeed();
   build();
   f$('#panel-formula-control-center')?.classList.remove('fcc-material-only');
   ERPPanelRegistryV1665.register(f$('#panel-formula-control-center'));ERPPanelRegistryV1665.activate('formula-control-center');
-  document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));document.querySelectorAll('[data-formula-control-open]').forEach(x=>x.classList.add('active'));
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(f$('#workspaceTitle'))f$('#workspaceTitle').textContent='Formula Control Center';
   if(f$('#workspaceSubtitle'))f$('#workspaceSubtitle').textContent='Approved production, costing, filler, pulp and ash reporting calculations.';
   applyTitleSettings();
   try{localStorage.setItem('erpStudioLastPanel','formula-control-center');localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'formula-control-center')}catch(e){}
-  renderAll()
+  const rev=formulaRevisionV1672();
+  if(formulaOpenRevisionV1672!==rev){
+    renderAll();
+    formulaOpenRevisionV1672=rev;
+  }
 }
 
 
@@ -18453,7 +18475,7 @@ function nav(){
     const cost=menu.querySelector('[data-costing-open]'),gate=document.getElementById('gatePassGroup');
     if(cost&&cost.nextSibling)menu.insertBefore(b,cost.nextSibling);else if(gate)menu.insertBefore(b,gate);else menu.appendChild(b)
   }
-  b.onclick=e=>{e.preventDefault();e.stopPropagation();open()}
+  b.onclick=e=>{e.preventDefault();open()}
 }
 function startup(){
   try{
@@ -19583,8 +19605,6 @@ function pcOpen(){
   pcBuild();
   ERPPanelRegistryV1665.register(pc$('#panel-production-consumption'));
   ERPPanelRegistryV1665.activate('production-consumption');
-  document.querySelectorAll('.side-item,.side-subitem').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('[data-production-consumption-open]').forEach(x=>x.classList.add('active'));
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(pc$('#workspaceTitle'))pc$('#workspaceTitle').textContent='Production & Consumption';
   if(pc$('#workspaceSubtitle'))pc$('#workspaceSubtitle').textContent='Daily Operations • Production Summary • Materials • Cost';
@@ -19613,7 +19633,7 @@ function pcNav(){
     else if(gate)menu.insertBefore(b,gate);
     else menu.appendChild(b)
   }
-  b.onclick=e=>{e.preventDefault();e.stopPropagation();pcOpen()}
+  b.onclick=e=>{e.preventDefault();pcOpen()}
 }
 function pcStartup(){
   try{
@@ -31791,18 +31811,25 @@ document.addEventListener('keydown',e=>{
  }
 });
 
+let reportCenterRevisionV1672=-1;
+function reportCenterRevisionNowV1672(){try{return window.ERPPanelRenderCacheV1659?.revision?.()??0}catch(e){return 0}}
 function openReportCenter(){
- document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
- R('panel-report-center')?.classList.add('active');
- document.querySelectorAll('.side-item').forEach(b=>b.classList.toggle('active',b.hasAttribute('data-report-center-open')));
+ ERPPanelRegistryV1665.register(R('panel-report-center'));
+ ERPPanelRegistryV1665.activate('report-center');
  ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
  if(R('workspaceTitle'))R('workspaceTitle').textContent='Report Center';
  if(R('workspaceSubtitle'))R('workspaceSubtitle').textContent='Universal ERP Reports • Excel-style Grid • Dynamic Filters • Print / Export';
- fillFilterOptions();generate();window.scrollTo({top:0,behavior:'smooth'})
+ const rev=reportCenterRevisionNowV1672();
+ if(reportCenterRevisionV1672!==rev){
+   fillFilterOptions();
+   generate();
+   reportCenterRevisionV1672=rev;
+ }
+ window.scrollTo({top:0,behavior:'auto'})
 }
 let rcBoundV1670=false;
 function bind(){if(rcBoundV1670)return;rcBoundV1670=true;
- document.querySelectorAll('[data-report-center-open]').forEach(b=>{if(b.dataset.rcBound)return;b.dataset.rcBound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openReportCenter()})});
+ document.querySelectorAll('[data-report-center-open]').forEach(b=>{if(b.dataset.rcBound)return;b.dataset.rcBound='1';b.addEventListener('click',e=>{e.preventDefault();openReportCenter()})});
  R('rcModule').onchange=updateReportTypes;
  R('rcReportType').onchange=()=>{fillFilterOptions();generate()};
  ['rcPeriod','rcFromDate','rcToDate','rcGroupBy','rcItemFilter','rcDepartmentFilter','rcPersonFilter','rcSupplierFilter','rcStatusFilter'].forEach(id=>R(id).onchange=generate);
@@ -33338,18 +33365,25 @@ function showTab(name){
   const map={dashboard:'deptViewDashboard',control:'deptViewControl',stores:'deptViewStores',workspaces:'deptViewWorkspaces',strawcell:'deptViewStrawCell'};
   $$('.dept-center-view-v1637').forEach(v=>v.classList.toggle('active',v.id===map[name]));
 }
+let deptCenterRevisionV1672=-1;
+function deptCenterRevisionNowV1672(){try{return window.ERPPanelRenderCacheV1659?.revision?.()??0}catch(e){return 0}}
 function openCenter(){
   if(window.ERPAccessControl && !isSuper() && !ERPAccessControl.canPage?.('department-center','view'))return window.toast?.('Access denied');
   ERPPanelRegistryV1665.activate('department-center');
   if($('#workspaceTitle'))$('#workspaceTitle').textContent='Department Center';
   if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central department control • separate data stores • connected users & ERP services';}
   try{localStorage.setItem('erpStudioLastPanel','department-center');localStorage.setItem('erpActiveStudioPanel','department-center')}catch(e){}
-  render();showTab(isSuper()?'dashboard':'workspaces')
+  const rev=deptCenterRevisionNowV1672();
+  if(deptCenterRevisionV1672!==rev){
+    render();
+    deptCenterRevisionV1672=rev;
+  }
+  showTab(isSuper()?'dashboard':'workspaces')
 }
 function bind(){
   $$('[data-panel="department-center"]').forEach(b=>{
     if(b.dataset.deptCenterBound)return;b.dataset.deptCenterBound='1';
-    b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openCenter()},true)
+    b.addEventListener('click',e=>{e.preventDefault();openCenter()},true)
   });
   $$('.dept-center-tab-v1637').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.deptTab)));
   $('#deptCenterRefresh')?.addEventListener('click',render);
@@ -33357,7 +33391,7 @@ function bind(){
   $('#deptSyncMasters')?.addEventListener('click',syncMasters);$('#deptAddStandard')?.addEventListener('click',addStandard);$('#deptExportStores')?.addEventListener('click',exportStores);
   $('#deptControlRows')?.addEventListener('click',e=>{const ed=e.target.closest('[data-dept-edit]'),del=e.target.closest('[data-dept-delete]');if(ed)editDepartment(ed.dataset.deptEdit);if(del)deleteDepartment(del.dataset.deptDelete)});
   document.addEventListener('click',e=>{if(e.target.closest('#erpLoginSubmit,#uaSetCurrentUser,#uaSaveUser,#uaSaveRole'))setTimeout(render,120)});
-  clearForm();render();
+  clearForm();
 
   // Expose a stable connector for future department modules.
   window.ERPDepartmentCenter={
@@ -35499,6 +35533,7 @@ const NAV_SELECTOR=[
   '[data-report-center-open]',
   '[data-formula-control-open]',
   '[data-costing-open]',
+  '[data-production-consumption-open]',
   '[data-go-purchase]',
   '[data-panel-jump]',
   '[data-dashboard-banner-route]',
