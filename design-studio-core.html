@@ -9700,6 +9700,7 @@ function erpFormatText(v,field='',label=''){
   return erpIsUppercaseField(field,label) ? raw.toUpperCase() : erpTitleCase(raw);
 }
 function masterCap(v){return erpTitleCase(v)}
+let masterPageSettingsRawV1674=null,masterPageSettingsCacheV1674=null;
 function masterPageSettings(){
   const def={
     subtitle:true,instruction:true,summary:true,filters:true,compact:false,rowNumbers:true,
@@ -9710,10 +9711,18 @@ function masterPageSettings(){
     dataAlign:'left',dataBold:false,dataItalic:false
   };
   try{
-    const legacy=JSON.parse(localStorage.getItem(MASTER_PAGE_SETTINGS_KEY)||'{}');
+    const raw=localStorage.getItem(MASTER_PAGE_SETTINGS_KEY)||'{}';
+    if(raw===masterPageSettingsRawV1674 && masterPageSettingsCacheV1674)return masterPageSettingsCacheV1674;
+    const legacy=JSON.parse(raw);
     const shared=window.ERPPageController?.load?.('all-masters',{})||{};
-    return {...def,...shared,...legacy};
-  }catch(e){return def}
+    masterPageSettingsRawV1674=raw;
+    masterPageSettingsCacheV1674={...def,...shared,...legacy};
+    return masterPageSettingsCacheV1674;
+  }catch(e){
+    masterPageSettingsRawV1674='{}';
+    masterPageSettingsCacheV1674=def;
+    return def
+  }
 }
 function masterControllerValues(){
   const pairs=[
@@ -9794,6 +9803,8 @@ function masterRenderTabs(){
       if(masterCurrent===b.dataset.masterType)return;
       masterCurrent=b.dataset.masterType;
       masterEditingId='';
+      masterFormSignatureV1673='';
+      masterTableSignatureV1674='';
       masterRenderAll()
     });
     masterTabsBuiltV1673=true;
@@ -10170,9 +10181,19 @@ function masterFilteredRows(){
     return true;
   }).sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))
 }
+let masterTableSignatureV1674='';
 function masterRenderTable(){
   const cfg=MASTER_TYPES[masterCurrent],settings=masterPageSettings(),rows=masterFilteredRows();
+  const sig=JSON.stringify([
+    masterCurrent,
+    !!settings.rowNumbers,
+    rows.map(r=>[r.id,r.updatedAt,r.createdAt,r.status,...cfg.columns.map(([k])=>r[k])])
+  ]);
+
   $('#masterListTitle').textContent=cfg.name+' List';
+  if(sig===masterTableSignatureV1674)return;
+  masterTableSignatureV1674=sig;
+
   $('#masterTableHead').innerHTML='<tr>'+(settings.rowNumbers?'<th>#</th>':'')+cfg.columns.map(c=>`<th>${escHtml(c[1])}</th>`).join('')+'<th>Action</th></tr>';
   $('#masterTableBody').innerHTML=rows.length?rows.map((r,i)=>'<tr>'+(settings.rowNumbers?`<td>${i+1}</td>`:'')+cfg.columns.map(([k])=>`<td>${escHtml(Array.isArray(r[k])?r[k].join(', '):(r[k]??''))}</td>`).join('')+`<td><div class="master-row-actions"><button class="master-mini" onclick="masterEdit('${r.id}')">Edit</button><button class="master-mini danger" onclick="masterDelete('${r.id}')">Delete</button></div></td></tr>`).join(''):`<tr><td class="master-empty" colspan="${cfg.columns.length+(settings.rowNumbers?2:1)}">No ${escHtml(cfg.name.toLowerCase())} records found.</td></tr>`;
 }
@@ -10329,7 +10350,14 @@ function masterBind(){
   ensureDefaultMaterialGroups();
   ensureDefaultPurchaseSections();
   window.ERPAccessControl?.registerPage?.({id:'all-masters',name:'All Masters',module:'masters',actions:['view','add','edit','delete','print'],description:'Central ERP master data'});
-  $('#masterSearch')?.addEventListener('input',masterRenderTable);$('#masterStatusFilter')?.addEventListener('change',masterRenderTable);$('#masterClearSearch')?.addEventListener('click',()=>{$('#masterSearch').value='';$('#masterStatusFilter').value='';masterRenderTable()});
+  const rerenderMasterTableV1674=()=>{masterTableSignatureV1674='';masterRenderTable()};
+  $('#masterSearch')?.addEventListener('input',rerenderMasterTableV1674);
+  $('#masterStatusFilter')?.addEventListener('change',rerenderMasterTableV1674);
+  $('#masterClearSearch')?.addEventListener('click',()=>{
+    $('#masterSearch').value='';
+    $('#masterStatusFilter').value='';
+    rerenderMasterTableV1674()
+  });
   $('#masterSaveBtn')?.addEventListener('click',masterSave);$('#masterClearBtn')?.addEventListener('click',()=>{masterEditingId='';masterClearForm()});
   $('#masterPageControllerBtn')?.addEventListener('click',()=>{$('#masterPageControllerModal').classList.add('open');masterApplyPageSettings()});
   $('#masterPageControllerClose')?.addEventListener('click',()=>$('#masterPageControllerModal').classList.remove('open'));
@@ -10347,20 +10375,20 @@ function masterBind(){
       headerItalic:$('#mpcHeaderItalic').checked,dataAlign:$('#mpcDataAlign').value,dataBold:$('#mpcDataBold').checked,
       dataItalic:$('#mpcDataItalic').checked
     };
-    localStorage.setItem(MASTER_PAGE_SETTINGS_KEY,JSON.stringify(x));
+    localStorage.setItem(MASTER_PAGE_SETTINGS_KEY,JSON.stringify(x));masterPageSettingsRawV1674=null;masterPageSettingsCacheV1674=null;masterPageSettingsSignatureV1673='';masterTableSignatureV1674='';
     window.ERPPageController?.save?.('all-masters',x);
     $('#masterPageControllerModal').classList.remove('open');
     masterRenderAll();
     toast('Page settings saved');
   });
   $('#masterPageControllerReset')?.addEventListener('click',()=>{
-    localStorage.removeItem(MASTER_PAGE_SETTINGS_KEY);
+    localStorage.removeItem(MASTER_PAGE_SETTINGS_KEY);masterPageSettingsRawV1674=null;masterPageSettingsCacheV1674=null;masterPageSettingsSignatureV1673='';masterTableSignatureV1674='';
     window.ERPPageController?.reset?.('all-masters');
     masterRenderAll();
     toast('Page defaults restored');
   });
   const nav=$('[data-panel="masters"]');if(nav)nav.style.display=window.ERPAccessControl?.canPage?.('all-masters','view')?'':'none';
-  masterRenderAll()
+  /* V16.74: binding only. The active navigation/startup path owns rendering. */
 }
 window.ERPMasters={list:(type)=>masterBucket(type),current:()=>masterCurrent,render:masterRenderAll};
 window.ERPSearchableDropdown={
@@ -35571,7 +35599,8 @@ side.addEventListener('mouseleave',()=>schedule(false),{passive:true});
 
 window.ERPSidebarHoverV1662={
   expand:()=>schedule(true),
-  collapse:()=>schedule(false)
+  collapse:()=>schedule(false),
+  hovered:()=>!!side.matches?.(':hover')
 };
 })();
 </script>
@@ -35628,6 +35657,13 @@ function hasKey(key){
 function closeSidebarPeek(){
   try{
     const app=document.getElementById('app');
+    const side=document.getElementById('studioSidebar');
+
+    /* V16.74:
+       A click inside the expanded sidebar must NOT collapse it while the pointer
+       is still there. Mouseleave remains the only normal collapse trigger. */
+    if(side?.matches?.(':hover'))return;
+
     if(app)app.classList.remove('peek');
     window.ERPSidebarHoverV1662?.collapse?.();
   }catch(e){}
@@ -35837,6 +35873,16 @@ window.ERPNavigationControllerV1664={
 /* V16.65: inactive ERP panels are fully excluded from layout/paint. */
 section.panel:not(.active),.panel:not(.active){display:none!important}
 section.panel.active,.panel.active{content-visibility:visible}
+</style>
+
+
+
+<style id="erpSidebarNavPersistenceV1674">
+/* A navigation click while pointer is over the sidebar keeps the expanded width.
+   Collapse occurs naturally on mouseleave. */
+.layout-left.collapsed.peek{
+  transition:grid-template-columns 70ms cubic-bezier(.2,.8,.2,1)!important;
+}
 </style>
 
 </body></html>
