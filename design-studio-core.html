@@ -12561,6 +12561,52 @@ const profileName=activeUser?.name||p.name, profileRole=activeUser?.designation|
 const pc=$('#collapsedPreviewClock');if(pc){pc.style.display=c.collapsedShow?'block':'none';$('#collapsedPreviewTime').style.display=c.collapsedShowTime?'block':'none';$('#collapsedPreviewDate').style.display=c.collapsedShowDate?'block':'none'}const pp=$('#collapsedPreviewProfile');if(pp)pp.style.display=p.collapsedShow?'grid':'none';if(co){const logoBox=$('#sideCompanyLogo'),prevLogo=$('#companyPreviewLogo');const logoRad=co.logoShape==='circle'?'50%':co.logoShape==='square'?'0':co.logoShape==='original'?'0':'10px';[logoBox,prevLogo].forEach(el=>{if(!el)return;el.style.width=co.logoSize+'px';el.style.height=co.logoSize+'px';el.style.borderRadius=logoRad;el.style.background=co.logoBackground;el.style.border=co.logoBorderWidth+'px solid '+co.logoBorder;if(co.logo){el.classList.add('has-company-logo');el.innerHTML=`<img src="${co.logo}" alt="Logo">`}else{el.classList.remove('has-company-logo');el.textContent=co.shortName||'ERP'}});const scn=$('#sideCompanyName'),spn=$('#sideProgramName');if(scn){scn.textContent=co.companyName||'';scn.style.fontFamily=co.companyFont;scn.style.fontSize=Math.min(co.companyFontSize,18)+'px';scn.style.fontWeight=co.companyFontWeight;scn.style.color=co.companyColor}if(spn){spn.textContent=co.programName||'';spn.style.fontFamily=co.programFont;spn.style.fontSize=Math.min(co.programFontSize,12)+'px';spn.style.color=co.programColor}const mode=co.sidebarBrandMode||'company-program';if(scn)scn.style.display=(mode==='company-program'||mode==='company')?'block':'none';if(spn)spn.style.display=(mode==='company-program'||mode==='program')?'block':'none';const pn=$('#companyPreviewName'),ppg=$('#companyPreviewProgram');if(pn){pn.textContent=co.companyName||'Company Name';pn.style.fontFamily=co.companyFont;pn.style.fontSize=co.companyFontSize+'px';pn.style.fontWeight=co.companyFontWeight;pn.style.color=co.companyColor}if(ppg){ppg.textContent=co.programName||'Program Name';ppg.style.fontFamily=co.programFont;ppg.style.fontSize=co.programFontSize+'px';ppg.style.color=co.programColor}if($('#companyPreviewTagline'))$('#companyPreviewTagline').textContent=co.tagline||'';if($('#companyPreviewAddress'))$('#companyPreviewAddress').textContent=co.address||'Address';if($('#companyPreviewPhone'))$('#companyPreviewPhone').textContent=[co.telephone,co.mobile].filter(Boolean).join(' • ')||'Telephone';if($('#companyPreviewEmail'))$('#companyPreviewEmail').textContent=[co.email,co.website].filter(Boolean).join(' • ')||'Email / Website'}renderThemes();updateClock();updateThemePreviews()}
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem(LEGACY_KEY,JSON.stringify(state));localStorage.setItem('erpThemeSettingsV1',JSON.stringify(state.theme));localStorage.setItem('erpSidebarSettingsV1',JSON.stringify(state.sidebar));localStorage.setItem('erpProfileSettingsV1',JSON.stringify(state.profile));localStorage.setItem('erpClockSettingsV1',JSON.stringify(state.clock));localStorage.setItem('erpCompanyIdentityV1',JSON.stringify(state.company));$('#saveStatus').textContent='Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});toast('Design saved & applied')}
+
+/* V16.59 — session render cache.
+   Re-render business pages only when ERP data has actually changed. */
+let __erpDataRevisionV1659=0;
+const __erpPanelRenderRevisionV1659=new Map();
+
+(function(){
+  const previousSet=Storage.prototype.setItem;
+  if(previousSet.__erpRevisionV1659)return;
+  function isUiOnlyKey(k){
+    k=String(k||'');
+    return /(?:LastPanel|ActivePanel|DetailContext|PageDesign|PageController|Theme|Sidebar|Profile|Banner|PrintDesign|Preview|SearchCache|SessionCache|Snapshot|Backup|Sync|erpCoreLast|erpOnline|erp\.print|ContextV1$)/i.test(k);
+  }
+  function wrappedSetItem(key,value){
+    let before=null;
+    try{before=this.getItem(key)}catch(e){}
+    const result=previousSet.call(this,key,value);
+    try{
+      if(this===window.localStorage && before!==String(value) && !isUiOnlyKey(key)){
+        __erpDataRevisionV1659++;
+      }
+    }catch(e){}
+    return result;
+  }
+  wrappedSetItem.__erpRevisionV1659=true;
+  wrappedSetItem.__erpPrevious=previousSet;
+  Storage.prototype.setItem=wrappedSetItem;
+})();
+
+function erpRenderIfNeededV1659(panel,fn){
+  const last=__erpPanelRenderRevisionV1659.get(panel);
+  if(last===__erpDataRevisionV1659)return false;
+  try{fn()}finally{
+    __erpPanelRenderRevisionV1659.set(panel,__erpDataRevisionV1659);
+  }
+  return true;
+}
+function erpMarkPanelDirtyV1659(panel){
+  if(panel)__erpPanelRenderRevisionV1659.delete(panel);
+  else __erpPanelRenderRevisionV1659.clear();
+}
+window.ERPPanelRenderCacheV1659={
+  dirty:erpMarkPanelDirtyV1659,
+  revision:()=>__erpDataRevisionV1659
+};
+
 const ACTIVE_STUDIO_PANEL_KEY='erpDesignStudioActivePanelV1';
 function bind(){
  if(window.__erpCoreDesignBindV1653)return;window.__erpCoreDesignBindV1653=true;
@@ -12575,7 +12621,7 @@ function bind(){
    toggleSideGroup('gatePassGroup');
    if(!wasOpen)setTimeout(()=>document.querySelector('[data-panel="gate-pass-dashboard"]')?.click(),0)
  });
- $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;erpEnsurePanelBindingsV1658(panel);const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','rgp-detail','ogp-dashboard','ogp-list','ogp-entry','ogp-detail','cgp-dashboard','cgp-list','cgp-entry','cgp-detail','container-ledger','container-party-detail'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');try{history.replaceState(null,'','#panel-'+panel)}catch(e){};window.scrollTo(0,0);$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}queueMicrotask(()=>masterRenderAll())}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Management','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):panel==='purchase-entry'?'Purchase Management • Planning • Entry • History • Analysis':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';queueMicrotask(()=>{if(panel==='purchase-entry')purchaseRenderEntry();else if(panel==='purchase-indent')purchaseRenderIndent();else if(panel==='local-purchase')purchaseRenderLocal();else if(panel==='zafar-purchase')purchaseRenderZafar();else if(panel==='board-purchase')purchaseRenderBoard();else if(panel==='purchase-history')purchaseRenderHistory();else if(panel==='supplier-analysis')purchaseRenderSupplierAnalysis();try{purchaseApplyPc(panel)}catch(e){}})}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';queueMicrotask(()=>{if(panel==='issue-history')issueRenderHistory()})}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'||panel==='rgp-detail'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'CGP Management':panel==='container-ledger'?'Returnable Container Management':panel==='container-party-detail'?'Party Container Detail':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'RGP, OGP, CGP and Party Container control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'Cash Gate Pass dashboard, scrap sale and scrapper controls.':panel==='container-ledger'?'Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.':panel==='container-party-detail'?'Complete returnable-container detail for one party.':'Returnable Gate Pass dashboard and entry controls.';queueMicrotask(()=>{if(panel==='gate-pass-dashboard')gateDashboardRender();else if(panel==='rgp-dashboard')rgpDashboardRender();else if(panel==='rgp-list')rgpRenderList();else if(panel==='rgp-return')rgpRenderReturn();else if(panel==='rgp-detail'){rgpRenderDetail()}else if(panel==='ogp-dashboard')ogpDashboardRender();else if(panel==='ogp-list'){ogpRenderList()}else if(panel==='ogp-detail'){ogpRenderDetail()}else if(panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'){if(panel==='cgp-dashboard')cgpDashboardRender();if(panel==='cgp-list')cgpRenderList();if(panel==='cgp-detail')cgpRenderDetail()}else if(panel==='container-ledger'){containerRenderAll()}else if(panel==='container-party-detail'){containerRenderPartyDetail()}
+ $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;erpEnsurePanelBindingsV1658(panel);const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','rgp-detail','ogp-dashboard','ogp-list','ogp-entry','ogp-detail','cgp-dashboard','cgp-list','cgp-entry','cgp-detail','container-ledger','container-party-detail'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');try{history.replaceState(null,'','#panel-'+panel)}catch(e){};window.scrollTo(0,0);$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$$('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+panel));const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}queueMicrotask(()=>erpRenderIfNeededV1659(panel,()=>masterRenderAll()))}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Management','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):panel==='purchase-entry'?'Purchase Management • Planning • Entry • History • Analysis':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';queueMicrotask(()=>{if(panel==='purchase-entry')erpRenderIfNeededV1659(panel,()=>purchaseRenderEntry());else if(panel==='purchase-indent')erpRenderIfNeededV1659(panel,()=>purchaseRenderIndent());else if(panel==='local-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderLocal());else if(panel==='zafar-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderZafar());else if(panel==='board-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderBoard());else if(panel==='purchase-history')erpRenderIfNeededV1659(panel,()=>purchaseRenderHistory());else if(panel==='supplier-analysis')erpRenderIfNeededV1659(panel,()=>purchaseRenderSupplierAnalysis());try{purchaseApplyPc(panel)}catch(e){}})}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';queueMicrotask(()=>{if(panel==='issue-history')erpRenderIfNeededV1659(panel,()=>issueRenderHistory())})}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'||panel==='rgp-detail'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'CGP Management':panel==='container-ledger'?'Returnable Container Management':panel==='container-party-detail'?'Party Container Detail':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'RGP, OGP, CGP and Party Container control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'Cash Gate Pass dashboard, scrap sale and scrapper controls.':panel==='container-ledger'?'Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.':panel==='container-party-detail'?'Complete returnable-container detail for one party.':'Returnable Gate Pass dashboard and entry controls.';queueMicrotask(()=>{if(panel==='gate-pass-dashboard')erpRenderIfNeededV1659(panel,()=>gateDashboardRender());else if(panel==='rgp-dashboard')erpRenderIfNeededV1659(panel,()=>rgpDashboardRender());else if(panel==='rgp-list')erpRenderIfNeededV1659(panel,()=>rgpRenderList());else if(panel==='rgp-return')erpRenderIfNeededV1659(panel,()=>rgpRenderReturn());else if(panel==='rgp-detail'){erpRenderIfNeededV1659(panel,()=>rgpRenderDetail())}else if(panel==='ogp-dashboard')erpRenderIfNeededV1659(panel,()=>ogpDashboardRender());else if(panel==='ogp-list'){erpRenderIfNeededV1659(panel,()=>ogpRenderList())}else if(panel==='ogp-detail'){erpRenderIfNeededV1659(panel,()=>ogpRenderDetail())}else if(panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'){if(panel==='cgp-dashboard')erpRenderIfNeededV1659(panel,()=>cgpDashboardRender());if(panel==='cgp-list')erpRenderIfNeededV1659(panel,()=>cgpRenderList());if(panel==='cgp-detail')erpRenderIfNeededV1659(panel,()=>cgpRenderDetail())}else if(panel==='container-ledger'){erpRenderIfNeededV1659(panel,()=>containerRenderAll())}else if(panel==='container-party-detail'){erpRenderIfNeededV1659(panel,()=>containerRenderPartyDetail())}
   if(panel==='ogp-entry'){ogpUpdateTotals()}else rgpUpdateTotal()},0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='design-studio-home'?'Design Studio Management':'Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='design-studio-home'?'Appearance, identity, print and access controls from one management page.':'Theme Studio • Banner Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); const side=$('#studioSidebar'),app=$('#app'); side.addEventListener('mouseenter',()=>{if(state.sidebar.position==='left'&&state.sidebar.expandHover&&app.classList.contains('collapsed'))app.classList.add('peek')});side.addEventListener('mouseleave',()=>app.classList.remove('peek'))}
 
 /* Shared Print Designer V1.0 */
@@ -22507,7 +22553,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     seed();
     document.addEventListener('click',function(e){
       if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-go-purchase]')){
-        setTimeout(pushIfChanged,40);
+        queueMicrotask(pushIfChanged);
       }
     },false);
     /* V16.51o: native ERP hash navigation is authoritative; no duplicate hashchange history pass. */
@@ -29554,8 +29600,8 @@ document.addEventListener('visibilitychange',function(){
     findLegacyTopBlocks();
   }
 });
-window.addEventListener('pageshow',function(){setTimeout(sync,20)});
-window.addEventListener('hashchange',function(){setTimeout(sync,20)});
+window.addEventListener('pageshow',()=>queueMicrotask(sync));
+window.addEventListener('hashchange',()=>queueMicrotask(sync));
 
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',function(){
@@ -33107,14 +33153,17 @@ function bind(){
   // One lightweight capture guard; no MutationObserver and no continuous scanning.
   document.addEventListener('click',clickGuard,true);
 
-  // Re-apply after ordinary navigation/user/role actions only.
+  // Navigation must not trigger a delayed full access scan.
+  // Full access recalculation is only needed when user/role/security changes.
   document.addEventListener('click',e=>{
-    if(e.target.closest?.('#sideMenu .side-item,[data-panel],#erpLoginSubmit,#uaSetCurrentUser,#uaSaveRole,#uaSaveUser,#uaSaveSecurity,#uaSignOut,.ua-tab')){
-      setTimeout(()=>{applyAccess();routeGuard()},60);
+    if(e.target.closest?.('#erpLoginSubmit,#uaSetCurrentUser,#uaSaveRole,#uaSaveUser,#uaSaveSecurity,#uaSignOut,.ua-tab')){
+      queueMicrotask(()=>{applyAccess();routeGuard()});
+    }else if(e.target.closest?.('#sideMenu .side-item,[data-panel]')){
+      queueMicrotask(()=>{applyVisiblePanelActions();routeGuard()});
     }
   });
 
-  window.addEventListener('hashchange',()=>setTimeout(()=>{applyAccess();routeGuard()},20));
+  window.addEventListener('hashchange',()=>queueMicrotask(()=>{applyVisiblePanelActions();routeGuard()}));
   applyAccess();
   routeGuard();
 }
@@ -35215,7 +35264,7 @@ function refresh(){const m=model();source(m);clone(m);try{window.dispatchEvent(n
 function stop(){clearInterval(timer);timer=null;clearTimeout(alignTimer);alignTimer=null}
 function start(){stop();refresh();alignTimer=setTimeout(()=>{refresh();timer=setInterval(refresh,1000)},Math.max(25,1000-(Date.now()%1000)+20))}
 window.ERPDateTime={timeZone:TZ,now:model,refresh,start,stop,today:()=>model().date,monthKey:()=>model().monthKey,year:()=>model().year};
-document.addEventListener('visibilitychange',()=>document.hidden?stop():start());window.addEventListener('pageshow',()=>setTimeout(start,30));window.addEventListener('focus',()=>setTimeout(start,30));window.addEventListener('hashchange',()=>setTimeout(refresh,30));document.addEventListener('click',e=>{if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open]'))setTimeout(refresh,40)},false);
+document.addEventListener('visibilitychange',()=>document.hidden?stop():start());window.addEventListener('pageshow',()=>setTimeout(start,30));window.addEventListener('focus',()=>setTimeout(start,30));window.addEventListener('hashchange',()=>queueMicrotask(refresh));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
@@ -35351,23 +35400,46 @@ document.addEventListener('click',e=>{
 window.addEventListener('hashchange',queueCommit);
 window.addEventListener('popstate',queueCommit);
 
-/* Avoid duplicate mouseenter state writes. */
-const side=document.getElementById('studioSidebar');
-const app=document.getElementById('app');
-if(side&&app){
-  let inside=false;
-  side.addEventListener('mouseenter',()=>{
-    if(inside)return;
-    inside=true;
-  },{passive:true});
-  side.addEventListener('mouseleave',()=>{
-    inside=false;
-  },{passive:true});
-}
 
 window.ERPConsolidatedSmoothCoreV1658={sync:commit};
 })();
 </script>
+
+
+
+<style id="erpCompositorSidebarV1659Style">
+/* V16.59 — collapsed hover expansion without full-page layout reflow. */
+.layout-left.collapsed{
+  grid-template-columns:var(--side-cw) minmax(0,1fr)!important;
+}
+.layout-left.collapsed.peek{
+  grid-template-columns:var(--side-cw) minmax(0,1fr)!important;
+}
+.layout-left.collapsed.peek .studio-sidebar{
+  position:fixed!important;
+  top:0!important;
+  left:0!important;
+  width:var(--side-w)!important;
+  min-width:var(--side-w)!important;
+  max-width:var(--side-w)!important;
+  height:100vh!important;
+  z-index:200!important;
+  box-shadow:10px 0 26px rgba(0,0,0,.15)!important;
+}
+.layout-left.collapsed .page-shell{
+  transform:translate3d(0,0,0);
+  will-change:transform;
+}
+.layout-left.collapsed.peek .page-shell{
+  transform:translate3d(calc(var(--side-w) - var(--side-cw)),0,0)!important;
+}
+.layout-left.collapsed .page-shell{
+  transition:transform 90ms cubic-bezier(.2,.8,.2,1)!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .layout-left.collapsed .page-shell{transition:none!important}
+}
+</style>
 
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
