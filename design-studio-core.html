@@ -12455,7 +12455,7 @@ function maRender(){
  if($('#maPhotoPreview'))$('#maPhotoPreview').src=uaUserAvatar(u);
  const grid=$('#maThemeGrid');if(grid){maSelectedTheme=localStorage.getItem(maThemeKey())||state.theme.name||'';grid.innerHTML=Object.keys(themes).map(n=>`<button type="button" class="ma-theme-card ${n===maSelectedTheme?'active':''}" data-ma-theme="${escHtml(n)}"><b>${escHtml(n)}</b><small>Approved ERP theme</small></button>`).join('');$$('[data-ma-theme]').forEach(b=>b.onclick=()=>{maSelectedTheme=b.dataset.maTheme;$$('[data-ma-theme]').forEach(x=>x.classList.toggle('active',x===b))})}
 }
-function maApplySavedTheme(){const n=localStorage.getItem(maThemeKey());if(n&&themes[n]){previous=clone(state);state.theme={...state.theme,...themes[n],name:n};applyThemeLinks();sync();render();return true}return false}
+function maApplySavedTheme(){const n=localStorage.getItem(maThemeKey());if(n&&themes[n]){previous=clone(state);state.theme={...state.theme,...themes[n],name:n};applyThemeLinks();const id=(document.querySelector('.panel.active')?.id||'').replace(/^panel-/,'');if(erpIsDesignPanelV1666(id)){sync();render()}else{erpRenderShellOnlyV1666()}return true}return false}
 function maOpen(){const b=$('[data-panel="account"]');if(b)b.click();maRender()}
 async function maChangePassword(){
  const u=uaActiveUser(),cur=$('#maCurrentPassword').value,next=$('#maNewPassword').value,confirmPw=$('#maConfirmPassword').value;
@@ -12474,7 +12474,7 @@ function maBind(){
 }
 window.ERPMyAccount={open:maOpen,render:maRender,applySavedTheme:maApplySavedTheme};
 
-function uaInit(){mcSeedDefaultCompany();try{const users=uaUsers();let changed=false;users.forEach(u=>{if(u.role==='Super Administrator'&&!u.tenantId){u.tenantId=tenantCurrentId();changed=true}});if(changed)uaSaveUsers(users)}catch(e){}uaSaveRoles(uaRoles());uaUsers();uaClearForm();uaRenderAll();$$('[data-ua-view]').forEach(b=>b.onclick=()=>{$$('[data-ua-view]').forEach(x=>x.classList.toggle('active',x===b));$$('.ua-view').forEach(v=>v.classList.toggle('active',v.id==='ua-view-'+b.dataset.uaView));if(b.dataset.uaView==='audit')auditRender()});$('#uaSetCurrentUser')?.addEventListener('click',()=>{if(uaSetActiveUser($('#uaCurrentUserSelect').value))toast('Current user changed')});$('#uaSaveUser')?.addEventListener('click',uaSaveUser);$('#uaClearUser')?.addEventListener('click',uaClearForm);$('#uaPhotoFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{uaEditingPicture=rd.result;$('#uaPhotoPreview').src=rd.result};rd.readAsDataURL(f)});$('#uaReplacePhoto')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{uaReplacementPicture=rd.result};rd.readAsDataURL(f)});$('#uaReplaceClose')?.addEventListener('click',uaCloseReplace);$('#uaReplaceCancel')?.addEventListener('click',uaCloseReplace);$('#uaReplaceConfirm')?.addEventListener('click',uaConfirmReplace);$('#uaReplaceModal')?.addEventListener('click',e=>{if(e.target===$('#uaReplaceModal'))uaCloseReplace()});$('#uaRolePicker')?.addEventListener('change',e=>{uaSelectedRole=e.target.value;uaRenderRoles()});$('#uaSaveRole')?.addEventListener('click',uaSaveRolePerms);$('#uaAddRole')?.addEventListener('click',uaAddRole);$('#uaDeleteRole')?.addEventListener('click',uaDeleteRole);$('#uaSelectAllPerms')?.addEventListener('click',()=>$$('[data-ua-perm-module],[data-ua-page]').forEach(x=>{if(!x.disabled)x.checked=true}));$('#uaClearAllPerms')?.addEventListener('click',()=>$$('[data-ua-perm-module],[data-ua-page]').forEach(x=>{if(!x.disabled)x.checked=false}));$('#uaSaveSecurity')?.addEventListener('click',uaSaveSecuritySettings);$('#uaSignOut')?.addEventListener('click',uaSignOut);$('#uaTestLogin')?.addEventListener('click',async()=>{const u=await uaAuthenticate($('#uaTestUsername').value,$('#uaTestPassword').value,false);toast(u?'Login successful: '+u.name:'Invalid username or password')});$('#erpLoginButton')?.addEventListener('click',async()=>{const u=await uaAuthenticate($('#erpLoginUsername').value,$('#erpLoginPassword').value,true);if(!u)$('#erpLoginError').classList.add('show')});$('#erpLoginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('#erpLoginButton')?.click()});['click','keydown','pointerdown'].forEach(evt=>document.addEventListener(evt,()=>{if(uaSessionValid())uaTouchSession()},{passive:true}));setInterval(()=>{if(uaSecurity().requireLogin&&!uaSessionValid())uaShowLogin()},30000);window.addEventListener('erp:access-registry-changed',()=>uaRenderRoles());uaPageRegistry();uaCheckLoginGate()}
+function uaInit(){mcSeedDefaultCompany();try{const users=uaUsers();let changed=false;users.forEach(u=>{if(u.role==='Super Administrator'&&!u.tenantId){u.tenantId=tenantCurrentId();changed=true}});if(changed)uaSaveUsers(users)}catch(e){}uaSaveRoles(uaRoles());uaUsers();uaClearForm();if(document.getElementById('panel-users')?.classList.contains('active'))uaRenderAll();$$('[data-ua-view]').forEach(b=>b.onclick=()=>{$$('[data-ua-view]').forEach(x=>x.classList.toggle('active',x===b));$$('.ua-view').forEach(v=>v.classList.toggle('active',v.id==='ua-view-'+b.dataset.uaView));if(b.dataset.uaView==='audit')auditRender()});$('#uaSetCurrentUser')?.addEventListener('click',()=>{if(uaSetActiveUser($('#uaCurrentUserSelect').value))toast('Current user changed')});$('#uaSaveUser')?.addEventListener('click',uaSaveUser);$('#uaClearUser')?.addEventListener('click',uaClearForm);$('#uaPhotoFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{uaEditingPicture=rd.result;$('#uaPhotoPreview').src=rd.result};rd.readAsDataURL(f)});$('#uaReplacePhoto')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{uaReplacementPicture=rd.result};rd.readAsDataURL(f)});$('#uaReplaceClose')?.addEventListener('click',uaCloseReplace);$('#uaReplaceCancel')?.addEventListener('click',uaCloseReplace);$('#uaReplaceConfirm')?.addEventListener('click',uaConfirmReplace);$('#uaReplaceModal')?.addEventListener('click',e=>{if(e.target===$('#uaReplaceModal'))uaCloseReplace()});$('#uaRolePicker')?.addEventListener('change',e=>{uaSelectedRole=e.target.value;uaRenderRoles()});$('#uaSaveRole')?.addEventListener('click',uaSaveRolePerms);$('#uaAddRole')?.addEventListener('click',uaAddRole);$('#uaDeleteRole')?.addEventListener('click',uaDeleteRole);$('#uaSelectAllPerms')?.addEventListener('click',()=>$$('[data-ua-perm-module],[data-ua-page]').forEach(x=>{if(!x.disabled)x.checked=true}));$('#uaClearAllPerms')?.addEventListener('click',()=>$$('[data-ua-perm-module],[data-ua-page]').forEach(x=>{if(!x.disabled)x.checked=false}));$('#uaSaveSecurity')?.addEventListener('click',uaSaveSecuritySettings);$('#uaSignOut')?.addEventListener('click',uaSignOut);$('#uaTestLogin')?.addEventListener('click',async()=>{const u=await uaAuthenticate($('#uaTestUsername').value,$('#uaTestPassword').value,false);toast(u?'Login successful: '+u.name:'Invalid username or password')});$('#erpLoginButton')?.addEventListener('click',async()=>{const u=await uaAuthenticate($('#erpLoginUsername').value,$('#erpLoginPassword').value,true);if(!u)$('#erpLoginError').classList.add('show')});$('#erpLoginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('#erpLoginButton')?.click()});['click','keydown','pointerdown'].forEach(evt=>document.addEventListener(evt,()=>{if(uaSessionValid())uaTouchSession()},{passive:true}));setInterval(()=>{if(uaSecurity().requireLogin&&!uaSessionValid())uaShowLogin()},30000);window.addEventListener('erp:access-registry-changed',()=>uaRenderRoles());uaPageRegistry();uaCheckLoginGate()}
 
 async function loadCustomFonts(){try{customFonts=await fontRecords();for(const f of customFonts)await activateFont(f);refreshFontOptions();renderFontLibrary()}catch(e){console.warn('Font library unavailable',e);customFonts=[];refreshFontOptions();renderFontLibrary()}}
 async function addCustomFont(){const inp=$('#customFontFile'),f=inp?.files?.[0];if(!f)return toast('Choose a font file');const ext=(f.name.split('.').pop()||'').toLowerCase();if(!['ttf','otf','woff','woff2'].includes(ext))return toast('Use TTF, OTF, WOFF or WOFF2');let name=safeFontName($('#customFontName')?.value)||safeFontName(f.name.replace(/\.[^.]+$/,''));if(!name)return toast('Enter a font name');const buffer=await f.arrayBuffer();try{const test=new FontFace(name,buffer.slice(0));await test.load()}catch(e){return toast('This font file could not be loaded')}const existing=customFonts.find(x=>x.name.toLowerCase()===name.toLowerCase());const rec={id:existing?.id||('font-'+Date.now()),name,fileName:f.name,type:f.type||ext,buffer,addedAt:new Date().toISOString()};await putFont(rec);$('#customFontName').value='';inp.value='';await loadCustomFonts();toast(name+' added to ERP font library')}
@@ -12554,7 +12554,7 @@ const sc=$('#sideClock');sc.style.display=c.show?'flex':'none';sc.style.color=c.
 const activeUser=(typeof uaActiveUser==='function'?uaActiveUser():null), avatar=(activeUser?.picture||p.picture||uaInitialsAvatar(activeUser?.name||p.name));const rad=p.pictureShape==='circle'?'50%':p.pictureShape==='square'?'0':p.pictureShape==='oval'?'50% / 38%':'12px';[$('#sideAvatar'),$('#profilePreviewImg')].forEach(img=>{if(!img)return;img.src=avatar;img.style.display=p.showPicture?'block':'none';img.style.width=p.pictureSize+'px';img.style.height=p.pictureSize+'px';img.style.borderWidth=p.pictureBorderWidth+'px';img.style.borderColor=p.pictureBorder;img.style.borderRadius=rad});
 const cRad=p.collapsedPictureShape==='circle'?'50%':p.collapsedPictureShape==='square'?'0':p.collapsedPictureShape==='oval'?'50% / 38%':'10px';r.setProperty('--collapsed-avatar-radius',cRad);const cpa=$('#collapsedPreviewAvatar');if(cpa){cpa.src=avatar;cpa.style.display=p.collapsedShow?'block':'none'}
 const profileName=activeUser?.name||p.name, profileRole=activeUser?.designation||activeUser?.role||p.role, profileStatus=(activeUser?.status==='disabled'?'Disabled':p.status);$('#sidePname').textContent=$('#profilePreviewName').textContent=profileName;$('#sideProle').textContent=$('#profilePreviewRole').textContent=profileRole;$('#sidePstatus').textContent=$('#profilePreviewStatus').textContent='● '+profileStatus;[$('#sideProle'),$('#profilePreviewRole')].forEach(e=>e.style.display=p.showRole?'block':'none');[$('#sidePstatus'),$('#profilePreviewStatus')].forEach(e=>e.style.display=p.showStatus?'block':'none');$$('.side-profile,.profile-card').forEach(x=>{x.style.background=p.cardBackground;x.style.borderColor=p.cardBorder;x.style.borderRadius=p.cardRadius+'px'});$('#sideProfile')?.classList.toggle('hide-collapsed-profile',!p.collapsedShow);$('#sidePname').style.cssText=$('#profilePreviewName').style.cssText=`font-family:${p.nameFont};font-size:${p.nameSize}px;color:${p.nameColor};font-weight:${p.nameWeight};font-style:${p.nameStyle};white-space:${p.nameWrap};text-align:${p.textAlign}`;$('#sideProle').style.color=$('#profilePreviewRole').style.color=p.roleColor;$('#sidePstatus').style.color=$('#profilePreviewStatus').style.color=p.statusColor;
-const pc=$('#collapsedPreviewClock');if(pc){pc.style.display=c.collapsedShow?'block':'none';$('#collapsedPreviewTime').style.display=c.collapsedShowTime?'block':'none';$('#collapsedPreviewDate').style.display=c.collapsedShowDate?'block':'none'}const pp=$('#collapsedPreviewProfile');if(pp)pp.style.display=p.collapsedShow?'grid':'none';if(co){const logoBox=$('#sideCompanyLogo'),prevLogo=$('#companyPreviewLogo');const logoRad=co.logoShape==='circle'?'50%':co.logoShape==='square'?'0':co.logoShape==='original'?'0':'10px';[logoBox,prevLogo].forEach(el=>{if(!el)return;el.style.width=co.logoSize+'px';el.style.height=co.logoSize+'px';el.style.borderRadius=logoRad;el.style.background=co.logoBackground;el.style.border=co.logoBorderWidth+'px solid '+co.logoBorder;if(co.logo){el.classList.add('has-company-logo');el.innerHTML=`<img src="${co.logo}" alt="Logo">`}else{el.classList.remove('has-company-logo');el.textContent=co.shortName||'ERP'}});const scn=$('#sideCompanyName'),spn=$('#sideProgramName');if(scn){scn.textContent=co.companyName||'';scn.style.fontFamily=co.companyFont;scn.style.fontSize=Math.min(co.companyFontSize,18)+'px';scn.style.fontWeight=co.companyFontWeight;scn.style.color=co.companyColor}if(spn){spn.textContent=co.programName||'';spn.style.fontFamily=co.programFont;spn.style.fontSize=Math.min(co.programFontSize,12)+'px';spn.style.color=co.programColor}const mode=co.sidebarBrandMode||'company-program';if(scn)scn.style.display=(mode==='company-program'||mode==='company')?'block':'none';if(spn)spn.style.display=(mode==='company-program'||mode==='program')?'block':'none';const pn=$('#companyPreviewName'),ppg=$('#companyPreviewProgram');if(pn){pn.textContent=co.companyName||'Company Name';pn.style.fontFamily=co.companyFont;pn.style.fontSize=co.companyFontSize+'px';pn.style.fontWeight=co.companyFontWeight;pn.style.color=co.companyColor}if(ppg){ppg.textContent=co.programName||'Program Name';ppg.style.fontFamily=co.programFont;ppg.style.fontSize=co.programFontSize+'px';ppg.style.color=co.programColor}if($('#companyPreviewTagline'))$('#companyPreviewTagline').textContent=co.tagline||'';if($('#companyPreviewAddress'))$('#companyPreviewAddress').textContent=co.address||'Address';if($('#companyPreviewPhone'))$('#companyPreviewPhone').textContent=[co.telephone,co.mobile].filter(Boolean).join(' • ')||'Telephone';if($('#companyPreviewEmail'))$('#companyPreviewEmail').textContent=[co.email,co.website].filter(Boolean).join(' • ')||'Email / Website'}renderThemes();updateClock();updateThemePreviews()}
+const pc=$('#collapsedPreviewClock');if(pc){pc.style.display=c.collapsedShow?'block':'none';$('#collapsedPreviewTime').style.display=c.collapsedShowTime?'block':'none';$('#collapsedPreviewDate').style.display=c.collapsedShowDate?'block':'none'}const pp=$('#collapsedPreviewProfile');if(pp)pp.style.display=p.collapsedShow?'grid':'none';if(co){const logoBox=$('#sideCompanyLogo'),prevLogo=$('#companyPreviewLogo');const logoRad=co.logoShape==='circle'?'50%':co.logoShape==='square'?'0':co.logoShape==='original'?'0':'10px';[logoBox,prevLogo].forEach(el=>{if(!el)return;el.style.width=co.logoSize+'px';el.style.height=co.logoSize+'px';el.style.borderRadius=logoRad;el.style.background=co.logoBackground;el.style.border=co.logoBorderWidth+'px solid '+co.logoBorder;if(co.logo){el.classList.add('has-company-logo');el.innerHTML=`<img src="${co.logo}" alt="Logo">`}else{el.classList.remove('has-company-logo');el.textContent=co.shortName||'ERP'}});const scn=$('#sideCompanyName'),spn=$('#sideProgramName');if(scn){scn.textContent=co.companyName||'';scn.style.fontFamily=co.companyFont;scn.style.fontSize=Math.min(co.companyFontSize,18)+'px';scn.style.fontWeight=co.companyFontWeight;scn.style.color=co.companyColor}if(spn){spn.textContent=co.programName||'';spn.style.fontFamily=co.programFont;spn.style.fontSize=Math.min(co.programFontSize,12)+'px';spn.style.color=co.programColor}const mode=co.sidebarBrandMode||'company-program';if(scn)scn.style.display=(mode==='company-program'||mode==='company')?'block':'none';if(spn)spn.style.display=(mode==='company-program'||mode==='program')?'block':'none';const pn=$('#companyPreviewName'),ppg=$('#companyPreviewProgram');if(pn){pn.textContent=co.companyName||'Company Name';pn.style.fontFamily=co.companyFont;pn.style.fontSize=co.companyFontSize+'px';pn.style.fontWeight=co.companyFontWeight;pn.style.color=co.companyColor}if(ppg){ppg.textContent=co.programName||'Program Name';ppg.style.fontFamily=co.programFont;ppg.style.fontSize=co.programFontSize+'px';ppg.style.color=co.programColor}if($('#companyPreviewTagline'))$('#companyPreviewTagline').textContent=co.tagline||'';if($('#companyPreviewAddress'))$('#companyPreviewAddress').textContent=co.address||'Address';if($('#companyPreviewPhone'))$('#companyPreviewPhone').textContent=[co.telephone,co.mobile].filter(Boolean).join(' • ')||'Telephone';if($('#companyPreviewEmail'))$('#companyPreviewEmail').textContent=[co.email,co.website].filter(Boolean).join(' • ')||'Email / Website'}if(!window.__erpShellOnlyV1666){renderThemes();updateThemePreviews()}updateClock()}
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state));localStorage.setItem(LEGACY_KEY,JSON.stringify(state));localStorage.setItem('erpThemeSettingsV1',JSON.stringify(state.theme));localStorage.setItem('erpSidebarSettingsV1',JSON.stringify(state.sidebar));localStorage.setItem('erpProfileSettingsV1',JSON.stringify(state.profile));localStorage.setItem('erpClockSettingsV1',JSON.stringify(state.clock));localStorage.setItem('erpCompanyIdentityV1',JSON.stringify(state.company));$('#saveStatus').textContent='Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});toast('Design saved & applied')}
 
@@ -12660,6 +12660,24 @@ function pdOpenView(v){$$('[data-print-view]').forEach(b=>b.classList.toggle('ac
 function pdInit(){pdDesign=pdDefault();pdPopulateSelectors();pdSyncForm();pdRenderThemes();pdRenderGallery();pdRenderAssignments();$$('[data-print-view]').forEach(b=>b.onclick=()=>pdOpenView(b.dataset.printView));const liveIds=['pdDesignName','pdDataSource','pdThemeSelect','pdFontFamily','pdPaper','pdOrientation','pdMargin','pdScale','pdShowLogo','pdShowCompany','pdShowAddress','pdShowDate','pdTitle','pdSubtitle','pdTitleAlign','pdTitleSize','pdHeaderBg','pdHeaderText','pdBorderColor','pdRowHeight','pdZebra','pdRepeatHeader','pdTableAlign','pdBodySize','pdShowTotals','pdPageNumbers','pdComputerGenerated','pdSignatures','pdFooterText','pdWatermark'];liveIds.forEach(id=>$('#'+id)?.addEventListener(['SELECT','INPUT'].includes($('#'+id)?.tagName)&&$('#'+id)?.type==='checkbox'?'change':'input',()=>{if(id==='pdDataSource'){const c=printContracts()[pdVal('pdDataSource')];pdDesign=pdCollect();pdDesign.contractId=c.id;pdDesign.title=c.title;pdDesign.subtitle=c.subtitle;pdDesign.fields=c.fields.map(f=>({key:f[0],heading:f[1],headerAlign:'Center',dataAlign:['qty','rate','amount','pending','returned'].includes(f[0])?'Right':'Left',wrap:'nowrap',width:12}));pdSyncForm();return}if(id==='pdThemeSelect'){pdApplyTheme(pdVal('pdThemeSelect'));return}pdDesign=pdCollect();pdRenderPreview()}));$('#pdAddField').onclick=()=>{if(pdListSide!=='available'||!pdSelectedField)return;const c=printContracts()[pdDesign.contractId],f=c.fields.find(x=>x[0]===pdSelectedField);if(f){pdDesign.fields.push({key:f[0],heading:f[1],headerAlign:'Center',dataAlign:'Left',wrap:'nowrap',width:12});pdListSide='selected';pdRenderFields();pdRenderPreview()}};$('#pdRemoveField').onclick=()=>{if(pdListSide!=='selected'||!pdSelectedField)return;pdDesign.fields=pdDesign.fields.filter(x=>x.key!==pdSelectedField);pdListSide='available';pdRenderFields();pdRenderPreview()};$('#pdMoveUp').onclick=()=>{let i=pdDesign.fields.findIndex(x=>x.key===pdSelectedField);if(i>0){[pdDesign.fields[i-1],pdDesign.fields[i]]=[pdDesign.fields[i],pdDesign.fields[i-1]];pdRenderFields();pdRenderPreview()}};$('#pdMoveDown').onclick=()=>{let i=pdDesign.fields.findIndex(x=>x.key===pdSelectedField);if(i>=0&&i<pdDesign.fields.length-1){[pdDesign.fields[i+1],pdDesign.fields[i]]=[pdDesign.fields[i],pdDesign.fields[i+1]];pdRenderFields();pdRenderPreview()}};['pdFieldHeading','pdFieldHeaderAlign','pdFieldDataAlign','pdFieldWrap','pdFieldWidth'].forEach(id=>$('#'+id).addEventListener(id==='pdFieldHeading'||id==='pdFieldWidth'?'input':'change',()=>{const f=pdDesign.fields.find(x=>x.key===pdSelectedField);if(!f)return;f.heading=$('#pdFieldHeading').value;f.headerAlign=$('#pdFieldHeaderAlign').value;f.dataAlign=$('#pdFieldDataAlign').value;f.wrap=$('#pdFieldWrap').value;f.width=+$('#pdFieldWidth').value||12;pdRenderFields();pdRenderPreview()}));$('#pdSaveDesign').onclick=()=>{pdDesign=pdCollect();const a=printGallery();if(!pdDesign.id)pdDesign.id='print-'+Date.now();const i=a.findIndex(x=>x.id===pdDesign.id);if(i>=0)a[i]=JSON.parse(JSON.stringify(pdDesign));else a.push(JSON.parse(JSON.stringify(pdDesign)));savePrintGallery(a);pdRenderGallery();pdRenderAssignments();toast(pdDesign.name+' saved to Print Gallery')};$('#pdNewDesign').onclick=()=>{pdDesign=pdDefault();pdSyncForm();toast('New print design')};$('#pdDuplicateDesign').onclick=()=>{pdDesign=pdCollect();pdDesign.id='';pdDesign.name=(pdDesign.name||'Print Design')+' Copy';pdSyncForm()};$('#pdPreviewPrint').onclick=()=>{const w=window.open('','_blank');if(!w)return toast('Allow pop-ups for print preview');w.document.write(`<html><head><title>${escHtml(pdDesign.name)}</title><style>body{margin:0;background:white}.pd-paper{box-shadow:none;margin:0 auto}.pd-footer{position:fixed}</style>${document.querySelector('style').outerHTML}</head><body>${$('#pdPaperPreview').outerHTML}</body></html>`);w.document.close();setTimeout(()=>w.print(),250)}}
 window.ERPPrintEngine={getContracts:printContracts,getGallery:printGallery,getAssignments:printAssignments,registerContract(contract){const x=JSON.parse(localStorage.getItem(PRINT_CONTRACT_KEY)||'{}');x[contract.id]=contract;localStorage.setItem(PRINT_CONTRACT_KEY,JSON.stringify(x));pdPopulateSelectors();pdRenderAssignments()},getDesignForPage(pageId){const id=printAssignments()[pageId];return printGallery().find(x=>x.id===id)||null}};
 
+
+
+/* V16.66 — fast startup mode for ordinary ERP business pages. */
+function erpIsDesignPanelV1666(panel){
+  return [
+    'theme','banner','sidebar','profile','company','print',
+    'design-studio-home','users','account','software-center',
+    'companies','company-control','master-control'
+  ].includes(String(panel||''));
+}
+function erpRenderShellOnlyV1666(){
+  window.__erpShellOnlyV1666=true;
+  try{render()}finally{window.__erpShellOnlyV1666=false}
+}
+function erpIdleV1666(fn,timeout=1400){
+  if('requestIdleCallback' in window)requestIdleCallback(()=>fn(),{timeout});
+  else setTimeout(fn,Math.min(timeout,900));
+}
 
 /* V16.65 — large-DOM panel registry.
    The ERP keeps its existing panels in the DOM, but navigation no longer scans
@@ -12866,17 +12884,26 @@ function erpSafeCall(name,fn){
 function erpStableStartup(){
   const routeFirstDashboard=window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard';
   erpSafeCall('applyThemeLinks',()=>applyThemeLinks());
-  erpSafeCall('sync',()=>sync());
   erpSafeCall('bind',()=>bind());
-  erpSafeCall('render',()=>render());
   const restoredPanel=erpSafeCall('restoreLastStudioPanel',()=>restoreLastStudioPanel())||'theme';
+  if(erpIsDesignPanelV1666(restoredPanel)){
+    erpSafeCall('design sync',()=>sync());
+    erpSafeCall('design render',()=>render());
+  }else{
+    erpSafeCall('shell render',()=>erpRenderShellOnlyV1666());
+  }
 
   if(routeFirstDashboard){
     // V16.53: dashboard may be the first visible page, but core/module bindings must still initialize.
     document.body.classList.add('erp-dashboard-mode');
   }
 
-  erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
+  const standardFontsV1667=new Set(['Segoe UI','Arial','Tahoma','Verdana','Trebuchet MS','Georgia']);
+  const selectedFontsV1667=[state.theme?.fontFamily,state.profile?.nameFont,state.company?.companyFont,state.company?.programFont].filter(Boolean);
+  const needsCustomFontV1667=selectedFontsV1667.some(f=>!standardFontsV1667.has(f));
+  if(erpIsDesignPanelV1666(restoredPanel)||needsCustomFontV1667){
+    erpSafeCall('loadCustomFonts',()=>loadCustomFonts());
+  }
   erpSafeCall('uaInit',()=>uaInit());
   erpSafeCall('maBind',()=>maBind());
   erpSafeCall('auditBind',()=>auditBind());
@@ -17153,15 +17180,7 @@ function invPatchExistingItems(){
   }catch(e){}
 }
 
-function invStartup(){
-  try{
-    invNav();
-    let last='';try{last=localStorage.getItem('erpStudioLastPanel')||localStorage.getItem(ACTIVE_STUDIO_PANEL_KEY)||''}catch(e){}
-    if(last==='inventory-dashboard'){invPatchExistingItems();invOpen()}
-  }catch(e){console.error('Inventory startup error',e)}
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',invStartup);
-else invStartup();
+/* V16.70: Inventory is opened by the unified navigation controller. */
 
 window.ERPInventory={open:invOpen,refresh:invRender,rows:invRows};
 })();
@@ -17354,7 +17373,7 @@ function costNav(){
   b.onclick=e=>{e.preventDefault();e.stopPropagation();costOpen()}
 }
 function costStartup(){
-  try{costNav();let last='';try{last=localStorage.getItem('erpStudioLastPanel')||''}catch(e){}if(last==='costing-analysis')costOpen()}catch(e){console.error('Costing startup error',e)}
+  try{costNav()}catch(e){console.error('Costing startup error',e)}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',costStartup);else costStartup();
 window.ERPCosting={open:costOpen,refresh:costRender};
@@ -18440,14 +18459,7 @@ function startup(){
   try{
     nav();
 
-    let last='',active='',pcPage='';
-    try{
-      last=localStorage.getItem('erpStudioLastPanel')||'';
-      active=localStorage.getItem(ACTIVE_STUDIO_PANEL_KEY)||'';
-      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||''
-    }catch(e){}
 
-    if(last==='formula-control-center'){open()}
   }catch(e){
     console.error('Formula Control startup error',e)
   }
@@ -19606,12 +19618,7 @@ function pcNav(){
 function pcStartup(){
   try{
     pcNav();
-    let last='',pcPage='';
-    try{
-      last=localStorage.getItem('erpStudioLastPanel')||'';
-      pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||''
-    }catch(e){}
-    if(last==='production-consumption' && pcPage!=='materials')pcOpen()
+
   }catch(e){console.error('Production & Consumption dashboard startup error',e)}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',pcStartup);
@@ -21297,13 +21304,7 @@ function init(){
   if('requestIdleCallback' in window)requestIdleCallback(ddeDeferred,{timeout:700});
   else setTimeout(ddeDeferred,60);
 }
-function ddeShouldBootImmediatelyV1572(){
-  return !(window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard');
-}
-if(ddeShouldBootImmediatelyV1572()){
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-  else init();
-}
+/* V16.70: Daily Data Entry initializes only when its page/API is opened. */
 
 window.addEventListener('erp-material-master-updated',()=>{
   if(!ddeInitializedV1572)return;
@@ -22017,15 +22018,17 @@ function open(){
   }catch(e){}
   build()
 }
+let mmInitV1670=false;
 function init(){
+  if(mmInitV1670)return;
+  mmInitV1670=true;
   $m('#mmBackBtn').onclick=()=>window.ERPProductionConsumption?.open();
-  try{
-    const last=localStorage.getItem('erpStudioLastPanel')||'',pcPage=localStorage.getItem('erpProductionConsumptionPageV1')||'';
-    if(last===MM_LAST||pcPage==='materials')open()
-  }catch(e){}
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-window.ERPMaterialMaster={open,render:renderList,save:()=>save(load())};
+window.ERPMaterialMaster={
+  open:function(){init();open()},
+  render:function(){init();renderList()},
+  save:()=>save(load())
+};
 })();
 </script>
 
@@ -24190,7 +24193,7 @@ function open(){
   render()
 }
 function addCard(){/* Intentionally disabled: report opens from Daily Consumption Report. */}
-window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash==='#panel-final-cost-report')open()};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,350));else setTimeout(boot,350);
+window.ERPFinalCostReport={open,render};
 })();
 </script>
 
@@ -25591,10 +25594,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     if(selecting)document.addEventListener('click',pick,true);else document.removeEventListener('click',pick,true)};
 
   // -------- Page isolation --------
-  // V16.64: one controller applies the active page profile after navigation.
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>loadPageExtras(getPageId()),{once:true});
-  else loadPageExtras(getPageId());
-
+  // V16.68: no global startup style calculation. Unified navigation applies saved profiles on demand.
   window.ERPPageControlExtras={applySaved:()=>loadPageExtras(getPageId()),loadDesigner};
 })();
 </script>
@@ -25786,7 +25786,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
   let lastId='';
 
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',()=>{lastId=pageId();applyCurrentDesign()},{once:true});
+    /* V16.70: initial per-page design application is owned by unified navigation. */
   }else{
     lastId=pageId();applyCurrentDesign()
   }
@@ -26400,9 +26400,7 @@ body.apd-selecting-element main.content *,body.apd-selecting-element header.top 
     },0)
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',reapply,{once:true});
-  else reapply();
-
+  // V16.68: saved column/summary design is applied by unified navigation only when a saved key exists.
   window.ERPColumnSummaryDesigner={capture,applySaved:rebuild,previewColumn,previewSummary};
 })();
 </script>
@@ -27097,20 +27095,21 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
     })
   }
 
+  let startedV1668=false;
   function startup(){
+    if(startedV1668)return;
+    startedV1668=true;
     bind();
     populateYears();
     syncPeriodControls();
     renderMaterialChoices();
-    if(location.hash==='#panel-material-balance-report'){
-      setTimeout(open,60)
-    }
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startup,{once:true});
-  else startup();
-
-  window.ERPMaterialBalanceReport={open,refresh:renderReport,print:printReport}
+  window.ERPMaterialBalanceReport={
+    open:function(){startup();open()},
+    refresh:function(){startup();renderReport()},
+    print:function(){startup();printReport()}
+  }
 })();
 </script>
 
@@ -27449,22 +27448,6 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
       if(p?.classList.contains('active'))ensure();
     },0);
   },true);
-
-  window.addEventListener('hashchange',function(){
-    if(location.hash==='#panel-month-summary')setTimeout(ensure,0);
-  });
-
-  window.addEventListener('popstate',function(){
-    if(location.hash==='#panel-month-summary')setTimeout(ensure,0);
-  });
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',function(){
-      setTimeout(ensure,0);
-    },{once:true});
-  }else{
-    setTimeout(ensure,0);
-  }
 
   window.ERPComparisonButtonFixV1520={ensure};
 })();
@@ -28167,7 +28150,8 @@ function init(){
     }
   },30000);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>erpIdleV1666(init,1200),{once:true});
+else erpIdleV1666(init,1200);
 window.ERPOnlineSync={syncNow,openSetup:openDialog,getStatus:()=>({mode:'offline-first',localPrimary:true,online:navigator.onLine,configured:configured(),pending:Object.keys(queue()).length,lastSync:localStorage.getItem(LAST)||null})};
 window.ERPOfflineFirst={enabled:true,localPrimary:true,autoSync:true,worksOffline:true};
 })();
@@ -28231,10 +28215,6 @@ window.ERPOfflineFirst={enabled:true,localPrimary:true,autoSync:true,worksOfflin
     scheduleDashClock();
     clearInterval(dashIdentityTimer);
     document.addEventListener('visibilitychange',function(){if(!document.hidden){setDashboardIdentity();scheduleDashClock();}});
-    window.addEventListener('hashchange',function(){
-      if(location.hash==='#panel-dashboard')return;
-      setTimeout(scheduleDashClock,0)
-    });
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initV1549);else initV1549();
 })();
@@ -29357,7 +29337,6 @@ function bind(){
 
   /* Theme Studio changes are inherited without polling the whole document.
      Re-render only when Banner Studio becomes active or a theme UI is used. */
-  window.addEventListener('hashchange',()=>{if(location.hash==='#panel-banner-studio')setTimeout(render,20)});
   document.addEventListener('click',e=>{
     if(e.target.closest('#panel-theme button,#panel-theme input,#panel-theme select'))setTimeout(render,40);
   });
@@ -29634,7 +29613,7 @@ document.addEventListener('visibilitychange',function(){
   }
 });
 window.addEventListener('pageshow',()=>queueMicrotask(sync));
-window.addEventListener('hashchange',()=>queueMicrotask(sync));
+
 
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',function(){
@@ -29780,9 +29759,6 @@ function routeInitV1578(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',routeInitV1578,{once:true});
 else routeInitV1578();
 
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-issue-entry')renderIssueHomeV1578();
-});
 
 window.ERPIssueManagementV1578={
   open:issueOpenHomeV1578,
@@ -29842,7 +29818,7 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('[data-pi-work-tab]');if(t){e.preventDefault();openWork(t.dataset.piWorkTab)}
 },true);
 if(location.hash==='#panel-purchase-indent-home')renderHome();
-window.addEventListener('hashchange',()=>{if(location.hash==='#panel-purchase-indent-home')renderHome()});
+
 window.ERPPurchaseIndentModuleV1580={open:function(){activate('purchase-indent-home');renderHome()}};
 })();
 </script>
@@ -29933,9 +29909,7 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('[data-local-work-tab]');if(t){e.preventDefault();openWork(t.dataset.localWorkTab)}
 },true);
 if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();
-if(location.hash==='#panel-local-purchase')setTimeout(localClearGhostSectionsV1582,120);
-window.addEventListener('hashchange',()=>{if(location.hash==='#panel-local-purchase-home')renderLocalHomeV1581();
-if(location.hash==='#panel-local-purchase')setTimeout(localClearGhostSectionsV1582,120);if(location.hash!=='#panel-purchase-history')document.getElementById('localHistoryContextNav')?.classList.remove('show')});
+
 window.ERPLocalPurchaseModuleV1581={open:function(){activateLocalPanelV1581('local-purchase-home');renderLocalHomeV1581()}};
 window.ERPLocalPurchaseModuleV1582={clearGhostSections:localClearGhostSectionsV1582};
 })();
@@ -30055,10 +30029,6 @@ document.addEventListener('click',e=>{
 },true);
 
 if(location.hash==='#panel-zafar-purchase-home')renderZafarHomeV1583();
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-zafar-purchase-home')renderZafarHomeV1583();
-  if(location.hash!=='#panel-purchase-history')document.getElementById('zafarHistoryContextNav')?.classList.remove('show');
-});
 
 window.ERPZafarPurchaseModuleV1583={
   open:function(){activateZafarPanelV1583('zafar-purchase-home');renderZafarHomeV1583()}
@@ -30182,10 +30152,6 @@ document.addEventListener('click',e=>{
 },true);
 
 if(location.hash==='#panel-board-purchase-home')renderBoardHomeV1584();
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-board-purchase-home')renderBoardHomeV1584();
-  if(location.hash!=='#panel-purchase-history')document.getElementById('boardHistoryContextNav')?.classList.remove('show');
-});
 
 window.ERPBoardPurchaseModuleV1584={
   open:function(){activateBoardPanelV1584('board-purchase-home');renderBoardHomeV1584()}
@@ -30309,12 +30275,6 @@ document.addEventListener('click',e=>{
 
 if(location.hash==='#panel-purchase-history-home')phRenderHome1585();
 
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-purchase-history-home')phRenderHome1585();
-  if(location.hash!=='#panel-purchase-history'){
-    document.getElementById('purchaseHistoryWorkNavV1585')?.classList.remove('show');
-  }
-});
 
 window.ERPPurchaseHistoryModuleV1585={
   open:function(){phActivate1585('purchase-history-home');phRenderHome1585()}
@@ -30477,9 +30437,6 @@ document.addEventListener('click',e=>{
 },true);
 
 if(location.hash==='#panel-rgp-management-home')renderHome1587();
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-rgp-management-home')renderHome1587();
-});
 
 window.ERPRGPManagementV1587={
   open:function(){activate1587('rgp-management-home');renderHome1587()}
@@ -30591,9 +30548,6 @@ document.addEventListener('click',e=>{
 },true);
 
 if(location.hash==='#panel-ogp-management-home')renderHome1589();
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-ogp-management-home')renderHome1589();
-});
 
 window.ERPOGPManagementV1589={
   open:function(){activate1589('ogp-management-home');renderHome1589()}
@@ -30825,14 +30779,6 @@ function patchContainerEntryActionsV1593(){
   });
 }
 function refreshV1593(){setTimeout(patchContainerEntryActionsV1593,80)}
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',refreshV1593,{once:true});
-}else{
-  refreshV1593();
-}
-window.addEventListener('hashchange',()=>{
-  if(location.hash==='#panel-container-entry-simple')refreshV1593();
-});
 window.ERPContainerEntrySafeV1593={refresh:refreshV1593};
 })();
 </script>
@@ -30903,8 +30849,6 @@ $('containerEntrySearchClearV1594')?.addEventListener('click',()=>{
   if($('containerEntrySearchV1594'))$('containerEntrySearchV1594').value='';
   filterTable();
 });
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,80),{once:true});else setTimeout(refresh,80);
-window.addEventListener('hashchange',()=>{if(location.hash==='#panel-container-entry-simple')setTimeout(refresh,80)});
 window.ERPContainerEntryPageOnlyV1594={refresh};
 })();
 </script>
@@ -30917,7 +30861,7 @@ function formatDate(){const i=$('simpleMovementDate');if(!i)return;const v=(i.va
 function patch(){const b=$('simpleMovementBody');if(!b)return;const rows=[...b.querySelectorAll('tr')];rows.forEach((tr,i)=>{if(tr.children.length===6){const n=document.createElement('td');n.textContent=String(i+1);tr.insertBefore(n,tr.firstChild)}});const data=[...b.querySelectorAll('tr')].filter(tr=>tr.children.length>=7&&!/no movements/i.test(tr.textContent||''));if(!data.length)b.innerHTML='<tr class="movement-empty-v1595"><td colspan="7">No movements recorded yet.</td></tr>';filter()}
 function filter(){const b=$('simpleMovementBody');if(!b)return;const q=String($('movementSearchV1595')?.value||'').toLowerCase(),t=String($('movementFilterV1595')?.value||'').toLowerCase();let n=0;[...b.querySelectorAll('tr')].forEach(tr=>{if(tr.classList.contains('movement-empty-v1595'))return;const s=(tr.textContent||'').toLowerCase(),ok=(!q||s.includes(q))&&(!t||s.includes(t));tr.style.display=ok?'':'none';if(ok)n++});if($('movementCountV1595'))$('movementCountV1595').textContent=`Showing ${n} entr${n===1?'y':'ies'}`}
 $('simpleMovementDate')?.addEventListener('blur',formatDate);$('movementSearchV1595')?.addEventListener('input',filter);$('movementFilterV1595')?.addEventListener('change',filter);$('movementSearchClearV1595')?.addEventListener('click',()=>{if($('movementSearchV1595'))$('movementSearchV1595').value='';if($('movementFilterV1595'))$('movementFilterV1595').value='';filter()});
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(patch,100),{once:true});else setTimeout(patch,100);window.addEventListener('hashchange',()=>{if(location.hash==='#panel-container-movement-simple')setTimeout(patch,100)});$('simpleMovementSaveBtn')?.addEventListener('click',()=>setTimeout(patch,120),true);window.ERPContainerMovementPolishV1595={refresh:patch};
+$('simpleMovementSaveBtn')?.addEventListener('click',()=>queueMicrotask(patch),true);window.ERPContainerMovementPolishV1595={refresh:patch};
 })();
 </script>
 
@@ -31866,7 +31810,8 @@ function openReportCenter(){
  if(R('workspaceSubtitle'))R('workspaceSubtitle').textContent='Universal ERP Reports • Excel-style Grid • Dynamic Filters • Print / Export';
  fillFilterOptions();generate();window.scrollTo({top:0,behavior:'smooth'})
 }
-function bind(){
+let rcBoundV1670=false;
+function bind(){if(rcBoundV1670)return;rcBoundV1670=true;
  document.querySelectorAll('[data-report-center-open]').forEach(b=>{if(b.dataset.rcBound)return;b.dataset.rcBound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openReportCenter()})});
  R('rcModule').onchange=updateReportTypes;
  R('rcReportType').onchange=()=>{fillFilterOptions();generate()};
@@ -31881,8 +31826,7 @@ function bind(){
  R('rcCopyTable').onclick=copyVisible;R('rcExcelCsv').onclick=exportCsv;R('rcPrint').onclick=printReport;
  updateReportTypes()
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
-window.ERPReportCenter={open:openReportCenter,generate};
+window.ERPReportCenter={open:function(){bind();openReportCenter()},generate:function(){bind();generate()}};
 })();
 </script>
 
@@ -31901,6 +31845,32 @@ window.ERPPrintRouting.saveDraft=function(d){
 };
 </script>
 
+
+
+<script id="erpLazyPanelRuntimeV1667">
+(function(){
+'use strict';
+if(window.ERPLazyPanelV1667)return;
+const waiting=new Map();
+function active(panel){
+  return !!document.getElementById('panel-'+panel)?.classList.contains('active');
+}
+function run(panel,fn){
+  if(typeof fn!=='function')return;
+  if(active(panel)){queueMicrotask(fn);return}
+  let list=waiting.get(panel);
+  if(!list){list=[];waiting.set(panel,list)}
+  list.push(fn);
+}
+function fire(panel){
+  const list=waiting.get(panel);
+  if(!list?.length)return;
+  waiting.delete(panel);
+  list.forEach(fn=>{try{queueMicrotask(fn)}catch(e){}});
+}
+window.ERPLazyPanelV1667={run,fire,active};
+})();
+</script>
 
 <script id="pdV1624StableEnhancement">
 (function(){
@@ -32038,7 +32008,7 @@ function bind(){
  document.querySelector('#panel-print')?.addEventListener('change',e=>{if(!String(e.target.id||'').startsWith('pdV1624'))setTimeout(decoratePreview,0)});
  document.addEventListener('erp:print-job-ready',()=>{updateJob();setTimeout(refreshPreview,50)});
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,150),{once:true});else setTimeout(bind,150);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32129,9 +32099,9 @@ function bind(){
  q('pdFieldWidth')?.addEventListener('input',()=>setTimeout(syncWidth,0));
  q('pdSelectedFields')?.addEventListener('click',()=>setTimeout(syncWidth,0));
  q('pdAvailableFields')?.addEventListener('click',()=>setTimeout(syncWidth,0));
- setTimeout(syncWidth,100);
+ queueMicrotask(syncWidth);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,180),{once:true});else setTimeout(bind,180);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32181,9 +32151,9 @@ function bind(){
  q('pdV1626Reset')?.addEventListener('click',()=>allWidth('reset'));
  q('pdSelectedFields')?.addEventListener('click',()=>setTimeout(sync,0));
  q('pdFieldWidth')?.addEventListener('input',()=>setTimeout(sync,0));
- setTimeout(sync,120)
+ queueMicrotask(sync)
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});else setTimeout(bind,220);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32288,9 +32258,9 @@ function applyJob(){
 function bind(){
  Q('pdV1627RefreshJob')?.addEventListener('click',()=>{applyJob();window.toast?.('Current report refreshed')});
  document.addEventListener('erp:print-job-ready',()=>setTimeout(applyJob,50));
- setTimeout(applyJob,180)
+ queueMicrotask(applyJob)
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});else setTimeout(bind,220);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32328,10 +32298,9 @@ function bind(){
  panel?.addEventListener('change',()=>setTimeout(fixSerialColumn,0));
  panel?.addEventListener('click',()=>setTimeout(fixSerialColumn,0));
  document.addEventListener('erp:print-job-ready',()=>setTimeout(fixSerialColumn,100));
- setTimeout(fixSerialColumn,200);
+ queueMicrotask(fixSerialColumn);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});
-else setTimeout(bind,220);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32396,10 +32365,9 @@ function bind(){
  document.addEventListener('erp:print-job-ready',()=>setTimeout(ensureLiveReportSerial,80));
 
  syncFromExisting();
- setTimeout(ensureLiveReportSerial,180);
+ queueMicrotask(ensureLiveReportSerial);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,220),{once:true});
-else setTimeout(bind,220);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32482,9 +32450,9 @@ function bind(){
  q('pdV1630SaveAs')?.addEventListener('click',()=>saveForReport(true));
  document.addEventListener('erp:print-job-ready',()=>setTimeout(loadSaved,120));
  q('pdV1627RefreshJob')?.addEventListener('click',()=>setTimeout(loadSaved,120));
- setTimeout(loadSaved,350)
+ queueMicrotask(loadSaved)
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,350),{once:true});else setTimeout(bind,350);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32499,7 +32467,10 @@ function enhance(){
   const d=document.createElement('div');d.className='pd-v1630-gallery-link';d.style.cssText='font-size:7px;color:var(--muted);margin-top:4px;font-weight:800';d.textContent='Linked to: '+x.reportKey;card.appendChild(d)
  })
 }
-document.addEventListener('click',e=>{if(e.target.closest('#printGalleryGrid,#pdV1630SaveCurrent,#pdV1630SaveForReport,#pdV1630SaveCopy,#pdV1630SaveAs'))setTimeout(enhance,80)});setTimeout(enhance,500);
+window.ERPLazyPanelV1667.run('print',()=>{
+ document.addEventListener('click',e=>{if(e.target.closest('#printGalleryGrid,#pdV1630SaveCurrent,#pdV1630SaveForReport,#pdV1630SaveCopy,#pdV1630SaveAs'))queueMicrotask(enhance)});
+ queueMicrotask(enhance)
+});
 })();
 </script>
 
@@ -32749,9 +32720,9 @@ function bind(){
  q('pd31ResetWidths').onclick=()=>{state.columns.forEach(c=>c.width=/item|description/i.test(c.key)?18:10);renderColumns();renderPreview()};
  q('pd31SaveReport').onclick=()=>saveDesign(false);q('pd31SaveAs').onclick=()=>saveDesign(true);q('pd31Print').onclick=printNow;q('pd31Pdf').onclick=printNow;q('pd31Excel').onclick=exportExcel;
  q('pd31Zoom').onchange=e=>{const v=e.target.value,p=q('pd31PaperPreview');if(v==='fit'){p.style.transform=`scale(${Math.min(1,900/p.offsetWidth||1)})`}else{p.style.transform=`scale(${Number(v)/100})`;p.style.transformOrigin='top center'}};
- document.addEventListener('erp:print-job-ready',()=>setTimeout(initFromJob,80));setTimeout(initFromJob,250)
+ document.addEventListener('erp:print-job-ready',()=>queueMicrotask(initFromJob));queueMicrotask(initFromJob)
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,250),{once:true});else setTimeout(bind,250);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32824,11 +32795,7 @@ function bind(){
 
   activateDesigner();
 }
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,250),{once:true});
-}else{
-  setTimeout(bind,250);
-}
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -32855,10 +32822,9 @@ function bind(){
   document.getElementById('pd31GalleryTab')?.addEventListener('click',()=>setTimeout(safeGallery,20));
   document.getElementById('pd31SaveReport')?.addEventListener('click',()=>setTimeout(safeGallery,80));
   document.getElementById('pd31SaveAs')?.addEventListener('click',()=>setTimeout(safeGallery,80));
-  setTimeout(safeGallery,400);
+  queueMicrotask(safeGallery);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,300),{once:true});
-else setTimeout(bind,300);
+window.ERPLazyPanelV1667.run('print',bind);
 })();
 </script>
 
@@ -33115,12 +33081,15 @@ function applyProtectedButtons(){
     if(el.closest('#sideMenu')||el.classList.contains('ds-management-card-v1597'))setHidden(el,!isSuper());
   });
 }
+let uaAccessActionVersionV1666=1;
+const uaAccessActionCacheV1666=new WeakMap();
 function applyVisiblePanelActions(){
   // Only inspect the currently visible/active panel instead of scanning the entire ERP.
   const panel=document.querySelector('.panel.active') || document.querySelector('.panel[style*="display: block"]');
   if(!panel)return;
   const mod=moduleFromPanel(panel);
   if(!mod)return;
+  if(uaAccessActionCacheV1666.get(panel)===uaAccessActionVersionV1666)return;
 
   panel.querySelectorAll('button').forEach(btn=>{
     if(btn.id==='uaSignOut'||btn.closest('#erpLoginOverlay'))return;
@@ -33131,8 +33100,10 @@ function applyVisiblePanelActions(){
     const action=actionFromButton(btn);
     if(action)setHidden(btn,!can(mod,action));
   });
+  uaAccessActionCacheV1666.set(panel,uaAccessActionVersionV1666);
 }
 function applyAccess(){
+  uaAccessActionVersionV1666++;
   applySidebar();
   applyProtectedButtons();
   applyVisiblePanelActions();
@@ -33411,7 +33382,7 @@ function bind(){
     open:openCenter,refresh:render
   };
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+window.ERPLazyPanelV1667.run('department-center',bind);
 })();
 </script>
 
@@ -33495,7 +33466,7 @@ function bind(){
   const d=$('#straw38cDate');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);
   render();
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 })();
 </script>
 
@@ -33545,7 +33516,7 @@ function bind(){
  $('#y39Save')?.addEventListener('click',()=>{const material=String($('#y39Material')?.value||'').trim(),input=num($('#y39Input')?.value),output=num($('#y39Output')?.value),c=calc();if(!material||!input){window.toast?.('Enter material and input quantity');return}if(!c.st){window.toast?.('Set this material standard yield first');return}const a=load(DATA_KEY);a.push({id:'yield-'+Date.now(),type:'yield',departmentName:'Straw Cell',date:$('#y39Date')?.value||'',material,purpose:$('#y39Purpose')?.value,inputQty:input,outputQty:output,lossQty:num($('#y39Loss')?.value),standardPct:c.standard,actualPct:c.actual,yieldPct:c.actual,variancePct:c.variance,status:c.status,shift:$('#y39Shift')?.value,batch:String($('#y39Batch')?.value||'').trim(),remarks:String($('#y39Remarks')?.value||'').trim(),createdAt:new Date().toISOString()});save(DATA_KEY,a);clearEntry();render();window.ERPStrawCell?.refresh?.();window.toast?.('Yield entry saved')});
  clearEntry();render()
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 })();
 </script><style id="strawMasterAutofillV1642Css">
 #deptViewStrawCell .purchase-auto-wrap{position:relative!important;width:100%!important}
@@ -33711,7 +33682,7 @@ function bind(){
  $('#r40AnaClear')?.addEventListener('click',()=>{['r40AnaProduct','r40AnaDate','r40AnaMonth','r40AnaSupplier','r40AnaVehicle'].forEach(id=>{if($('#'+id))$('#'+id).value=''});if($('#r40AnaPurpose'))$('#r40AnaPurpose').value='';renderAnalysis()});
  render()
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 window.ERPStrawReceivingV1640={refresh:render,analysis:renderAnalysis};
 })();
 </script>
@@ -33938,12 +33909,7 @@ function bind(){
   renderReceiving();
 }
 
-if(document.readyState==="loading"){
-  document.addEventListener("DOMContentLoaded",bind,{once:true});
-}else{
-  bind();
-}
-setTimeout(bind,250);
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 window.ERPStrawReceivingV1644={calculate,save:saveReceiving,render:renderReceiving};
 })();
 </script>
@@ -34035,8 +34001,7 @@ function bind(){
   render();
 }
 
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
-setTimeout(bind,250);
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 window.ERPStrawStockDetailV1645={render};
 })();
 </script>
@@ -34258,8 +34223,7 @@ function bind(){
   renderStock();renderConsumption();renderLedger();
 }
 
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
-setTimeout(bind,300);
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 window.ERPStrawStockV1646={renderStock,renderConsumption,renderLedger};
 })();
 </script>
@@ -34366,7 +34330,7 @@ function bind(){
   // Ensure existing ledger appears immediately when opening page.
   try{window.ERPStrawStockV1646?.renderLedger?.()}catch(e){}
 }
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 window.ERPStrawCostingV1647={render:renderCost};
 })();
 </script>
@@ -34838,8 +34802,7 @@ function bind(){
     $$("[data-m48-go]").forEach(b=>b.classList.toggle("active",b.dataset.m48Go===active));
   }
 }
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
-setTimeout(bind,300);
+window.ERPLazyPanelV1667.run('department-strawcell',bind);
 window.ERPStrawMobileV1648={renderStockCards:renderCards,open:mobileGo};
 })();
 </script>
@@ -35596,9 +35559,19 @@ function applySharedSystems(){
 
   /* Theme actions are very light. */
   try{window.ERPThemeActions?.sync?.()}catch(e){}
+  if(erpIsDesignPanelV1666(id) && !window.__erpFontsLoadedV1667){
+    window.__erpFontsLoadedV1667=true;
+    Promise.resolve().then(()=>loadCustomFonts()).catch(()=>{})
+  }
 
   /* Page shell/profile controls — one call only. */
-  try{window.ERPPageControlExtras?.applySaved?.()}catch(e){}
+  try{
+    const pcHas=
+      localStorage.getItem('erp:workspace-header-design:v3:'+id)!=null||
+      localStorage.getItem('erp:notice-bar-design:v2:'+id)!=null||
+      localStorage.getItem('erp:page-local-notice-design:v1:'+id)!=null;
+    if(pcHas)window.ERPPageControlExtras?.applySaved?.();
+  }catch(e){}
 
   /* Only run design engines when this page actually has saved design data. */
   const designKey='erp:advanced-page-design:v1:'+id;
@@ -35618,8 +35591,33 @@ function applySharedSystems(){
     try{window.ERPManagementDashboard?.render?.()}catch(e){}
     try{window.ERPDashboardBannerV1572?.sync?.()}catch(e){}
   }
+  if(id==='month-summary'){
+    try{window.ERPComparisonButtonFixV1520?.ensure?.()}catch(e){}
+  }
+  if(id==='banner-studio'){
+    try{window.ERPBannerStudioV1573?.render?.()}catch(e){}
+  }
+  if(id==='issue-entry'){
+    try{window.ERPIssueManagementV1578?.refresh?.()}catch(e){}
+  }
+  if(id==='local-purchase'){
+    try{window.ERPLocalPurchaseModuleV1582?.clearGhostSections?.()}catch(e){}
+  }
+  if(id!=='purchase-history'){
+    document.getElementById('localHistoryContextNav')?.classList.remove('show');
+    document.getElementById('zafarHistoryContextNav')?.classList.remove('show');
+    document.getElementById('boardHistoryContextNav')?.classList.remove('show');
+    document.getElementById('purchaseHistoryWorkNavV1585')?.classList.remove('show');
+  }
+  if(id==='container-entry-simple'){
+    try{window.ERPContainerEntrySafeV1593?.refresh?.()}catch(e){}
+    try{window.ERPContainerEntryPageOnlyV1594?.refresh?.()}catch(e){}
+  }
+  if(id==='container-movement-simple'){
+    try{window.ERPContainerMovementPolishV1595?.refresh?.()}catch(e){}
+  }
 
-  try{window.ERPDateTime?.refresh?.()}catch(e){}
+
 }
 
 function commitHistory(fromId,toId){
@@ -35653,10 +35651,27 @@ function finishNavigation(fromId,writeHistory=true){
       if(!toId)return;
       if(writeHistory)commitHistory(fromId,toId);
       applySharedSystems();
+      try{window.ERPLazyPanelV1667?.fire?.(toId.replace(/^panel-/,''))}catch(e){}
     }finally{
       committing=false;
     }
   });
+}
+
+
+function routeSpecialClickV1670(e){
+  const t=e.target.closest?.('[data-inventory-open],[data-report-center-open]');
+  if(!t)return false;
+  e.preventDefault();
+  if(t.hasAttribute('data-inventory-open')){
+    try{window.ERPInventory?.open?.()}catch(err){console.error(err)}
+    return true;
+  }
+  if(t.hasAttribute('data-report-center-open')){
+    try{window.ERPReportCenter?.open?.()}catch(err){console.error(err)}
+    return true;
+  }
+  return false;
 }
 
 /* Capture only records where we came from and closes hover expansion.
@@ -35671,6 +35686,7 @@ document.addEventListener('click',function(e){
 /* Bubble: native page/module handlers have already run. */
 document.addEventListener('click',function(e){
   if(!e.target.closest?.(NAV_SELECTOR))return;
+  routeSpecialClickV1670(e);
   finishNavigation(beforeId,true);
 },false);
 
@@ -35694,9 +35710,27 @@ window.addEventListener('popstate',function(e){
 function boot(){
   const id=activeId();
   if(id){
+    const short=id.replace(/^panel-/,'');
     historyReady=true;
     try{history.replaceState({erpPanel:id},'',canonicalHash(id))}catch(e){}
+
+    /* Custom modules used to restore themselves in separate DOMContentLoaded handlers.
+       V16.70 restores them once here instead. */
+    try{
+      if(short==='inventory-dashboard')window.ERPInventory?.open?.();
+      else if(short==='costing-analysis')window.ERPCosting?.open?.();
+      else if(short==='formula-control-center')window.ERPFormulaControl?.open?.();
+      else if(short==='production-consumption')window.ERPProductionConsumption?.open?.();
+      else if(short==='daily-data-entry')window.ERPDailyDataEntry?.open?.();
+      else if(short==='daily-consumption-history')window.ERPConsumptionHistory?.open?.();
+      else if(short==='material-master')window.ERPMaterialMaster?.open?.();
+      else if(short==='final-cost-report')window.ERPFinalCostReport?.open?.();
+      else if(short==='material-balance-report')window.ERPMaterialBalanceReport?.open?.();
+      else if(short==='report-center')window.ERPReportCenter?.open?.();
+    }catch(err){console.error('ERP custom route boot failed',err)}
+
     applySharedSystems();
+    try{window.ERPLazyPanelV1667?.fire?.(short)}catch(e){}
   }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
