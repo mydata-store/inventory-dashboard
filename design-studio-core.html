@@ -9628,7 +9628,21 @@ const MASTER_TYPES={
 let masterCurrent='items',masterEditingId='';
 
 function masterTenantId(){try{return window.ERPTenant?.currentId?.()||'local'}catch(e){return'local'}}
-function masterLoadAll(){try{const d=JSON.parse(localStorage.getItem(MASTER_DATA_KEY)||'{}');return d&&typeof d==='object'?d:{}}catch(e){return{}}}
+let masterRawCacheV1673=null,masterParsedCacheV1673={};
+function masterLoadAll(){
+  try{
+    const raw=localStorage.getItem(MASTER_DATA_KEY)||'{}';
+    if(raw===masterRawCacheV1673)return masterParsedCacheV1673;
+    const d=JSON.parse(raw);
+    masterRawCacheV1673=raw;
+    masterParsedCacheV1673=d&&typeof d==='object'?d:{};
+    return masterParsedCacheV1673
+  }catch(e){
+    masterRawCacheV1673='{}';
+    masterParsedCacheV1673={};
+    return masterParsedCacheV1673
+  }
+}
 function masterSaveAll(d){
   const payload=JSON.stringify(d);
   try{
@@ -9644,6 +9658,8 @@ function masterSaveAll(d){
     }else{
       localStorage.setItem(MASTER_DATA_KEY,payload)
     }
+    masterRawCacheV1673=payload;
+    masterParsedCacheV1673=d;
     try{window.ERPCore?.markPending?.(1)}catch(e){}
     return true
   }catch(e){
@@ -9709,8 +9725,12 @@ function masterControllerValues(){
   ];
   pairs.forEach(([a,b,suf])=>{const a1=$('#'+a),b1=$('#'+b);if(a1&&b1)b1.textContent=a1.value+suf});
 }
+let masterPageSettingsSignatureV1673='';
 function masterApplyPageSettings(){
   const x=masterPageSettings(),p=$('#panel-masters');
+  const sig=JSON.stringify(x);
+  if(sig===masterPageSettingsSignatureV1673)return;
+  masterPageSettingsSignatureV1673=sig;
   $('#masterPageSubtitle').style.display=x.subtitle?'':'none';
   $('#masterInstruction').style.display=x.instruction?'':'none';
   $('#masterSummary').style.display=x.summary?'':'none';
@@ -9766,9 +9786,19 @@ function masterApplyPageSettings(){
   $('#mpcDataItalic').checked=!!x.dataItalic;
   masterControllerValues();
 }
+let masterTabsBuiltV1673=false;
 function masterRenderTabs(){
-  $('#masterTabs').innerHTML=Object.entries(MASTER_TYPES).map(([id,x])=>`<button type="button" class="master-tab ${id===masterCurrent?'active':''}" data-master-type="${id}">${escHtml(x.name)}</button>`).join('');
-  $$('[data-master-type]').forEach(b=>b.onclick=()=>{masterCurrent=b.dataset.masterType;masterEditingId='';masterClearForm();masterRenderAll()});
+  if(!masterTabsBuiltV1673){
+    $('#masterTabs').innerHTML=Object.entries(MASTER_TYPES).map(([id,x])=>`<button type="button" class="master-tab ${id===masterCurrent?'active':''}" data-master-type="${id}">${escHtml(x.name)}</button>`).join('');
+    $('#masterTabs')?.querySelectorAll('[data-master-type]').forEach(b=>b.onclick=()=>{
+      if(masterCurrent===b.dataset.masterType)return;
+      masterCurrent=b.dataset.masterType;
+      masterEditingId='';
+      masterRenderAll()
+    });
+    masterTabsBuiltV1673=true;
+  }
+  $('#masterTabs')?.querySelectorAll('[data-master-type]').forEach(b=>b.classList.toggle('active',b.dataset.masterType===masterCurrent));
 }
 
 /* Linked master field map.
@@ -10080,7 +10110,11 @@ function masterBindTagField(key,mode){
   input.addEventListener('blur',()=>setTimeout(close,120))
 }
 
+let masterFormSignatureV1673='';
 function masterRenderForm(){
+  const sig=masterCurrent+'|'+String(masterEditingId||'');
+  if(sig===masterFormSignatureV1673 && $('#masterForm')?.children?.length)return;
+  masterFormSignatureV1673=sig;
   const cfg=MASTER_TYPES[masterCurrent];
   $('#masterFormTitle').textContent=(masterEditingId?'Edit ':'Add ')+cfg.singular;
   $('#masterForm').innerHTML=cfg.fields.map(([key,label,type,required,options])=>{
@@ -10109,7 +10143,7 @@ function masterRenderForm(){
     if(type==='tags-specialty'){masterTagSetValues(key,[]);masterBindTagField(key,'specialty')}
   });
 }
-function masterClearForm(){masterEditingId='';masterRenderForm()}
+function masterClearForm(){masterEditingId='';masterFormSignatureV1673='';masterRenderForm()}
 
 function masterSearchHaystack(record){
   const base=masterAutoSearchText(record);
@@ -10146,7 +10180,13 @@ function masterRenderSummary(){
   const cfg=MASTER_TYPES[masterCurrent],rows=masterBucket(),tenant=window.ERPTenant?.current?.();
   $('#masterKpiCurrent').textContent=cfg.name;$('#masterKpiRecords').textContent=rows.length;$('#masterKpiActive').textContent=rows.filter(x=>x.status!=='inactive').length;$('#masterKpiCompany').textContent=tenant?.shortCode||tenant?.name||'Local';
 }
-function masterRenderAll(){masterRenderTabs();masterRenderForm();masterRenderTable();masterRenderSummary();masterApplyPageSettings()}
+function masterRenderAll(){
+  masterRenderTabs();
+  masterRenderForm();
+  masterRenderTable();
+  masterRenderSummary();
+  masterApplyPageSettings()
+}
 
 function masterCommitPendingTagInput(key,type){
   const input=$(`[data-master-tag-input="${key}"]`);
@@ -10344,7 +10384,20 @@ const PURCHASE_PAGE_IDS=['purchase-entry','purchase-indent','local-purchase','za
 let purchasePcPage='';
 
 function purchaseTid(){return window.ERPTenant?.currentId?.()||'local'}
-function purchaseAll(){try{return JSON.parse(localStorage.getItem(PURCHASE_DATA_KEY)||'{}')||{}}catch(e){return{}}}
+let purchaseRawCacheV1673=null,purchaseParsedCacheV1673={};
+function purchaseAll(){
+  try{
+    const raw=localStorage.getItem(PURCHASE_DATA_KEY)||'{}';
+    if(raw===purchaseRawCacheV1673)return purchaseParsedCacheV1673;
+    purchaseRawCacheV1673=raw;
+    purchaseParsedCacheV1673=JSON.parse(raw)||{};
+    return purchaseParsedCacheV1673
+  }catch(e){
+    purchaseRawCacheV1673='{}';
+    purchaseParsedCacheV1673={};
+    return purchaseParsedCacheV1673
+  }
+}
 function purchaseRows(register){
   const d=purchaseAll(),t=purchaseTid();
   return Array.isArray(d[t]?.[register])?d[t][register]:[];
@@ -10365,6 +10418,8 @@ function purchaseWrite(register,rows){
     }else{
       localStorage.setItem(PURCHASE_DATA_KEY,payload)
     }
+    purchaseRawCacheV1673=payload;
+    purchaseParsedCacheV1673=d;
     window.ERPCore?.markPending?.(1);
     return true
   }catch(e){
@@ -10486,8 +10541,17 @@ function purchaseRecordBase(register){
 }
 function purchaseAudit(action,rec,before=null){window.ERPAudit?.log?.({module:'Purchase',page:rec.register==='local'?'Local Purchase':rec.register==='zafar'?'Zafar Purchase':'Board Purchase',action,recordId:rec.id,detail:`${rec.supplier||''} • ${rec.item||''} • ${rec.bill||''}`,before,after:action==='Delete'?null:rec})}
 function purchaseTotals(rows,qtyKey='qty',amountKey='amount'){return{qty:rows.reduce((a,r)=>a+purchaseNum(r[qtyKey]),0),amount:rows.reduce((a,r)=>a+purchaseNum(r[amountKey]),0)}}
+let purchaseAllRowsRawV1673=null,purchaseAllRowsTenantV1673='',purchaseAllRowsCacheV1673=[];
 function purchaseAllRows(){
-  return ['local','zafar','board'].flatMap(reg=>purchaseRows(reg).map(r=>({...r,register:reg}))).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))
+  const raw=localStorage.getItem(PURCHASE_DATA_KEY)||'{}',tenant=purchaseTid();
+  if(raw===purchaseAllRowsRawV1673 && tenant===purchaseAllRowsTenantV1673)return purchaseAllRowsCacheV1673;
+  const d=purchaseAll(),bucket=d[tenant]||{};
+  purchaseAllRowsCacheV1673=['local','zafar','board']
+    .flatMap(reg=>(Array.isArray(bucket[reg])?bucket[reg]:[]).map(r=>({...r,register:reg})))
+    .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  purchaseAllRowsRawV1673=raw;
+  purchaseAllRowsTenantV1673=tenant;
+  return purchaseAllRowsCacheV1673
 }
 function purchaseClearInputs(ids){ids.forEach(id=>{const e=$('#'+id);if(!e)return;if(e.tagName==='SELECT')e.selectedIndex=0;else e.value=''});purchaseBindAutos();purchaseBindTextRules()}
 
@@ -10920,8 +10984,22 @@ function purchaseRenderBoard(){if($('#boardEntryBody')&&!$('#boardEntryBody').ch
 const PI_KEY='erp_purchase_indents_v1',PI_ROWS=15;
 let piEditingId='',piAnchor=null,piFocus=null,piClipboard='',piUndo=[],piUndoing=false,piLastSnap='';
 function piTenant(){return typeof masterTenantId==='function'?masterTenantId():'default'}
-function piAll(){try{return JSON.parse(localStorage.getItem(PI_KEY)||'[]')||[]}catch(e){return[]}}
-function piWrite(a){localStorage.setItem(PI_KEY,JSON.stringify(a))}
+let piRawCacheV1673=null,piParsedCacheV1673=[];
+function piAll(){
+ try{
+   const raw=localStorage.getItem(PI_KEY)||'[]';
+   if(raw===piRawCacheV1673)return piParsedCacheV1673;
+   piRawCacheV1673=raw;
+   piParsedCacheV1673=JSON.parse(raw)||[];
+   return piParsedCacheV1673
+ }catch(e){piRawCacheV1673='[]';piParsedCacheV1673=[];return piParsedCacheV1673}
+}
+function piWrite(a){
+ const payload=JSON.stringify(a);
+ localStorage.setItem(PI_KEY,payload);
+ piRawCacheV1673=payload;
+ piParsedCacheV1673=a
+}
 function piRowsForTenant(){return piAll().filter(x=>(x.tenantId||'default')===piTenant())}
 function piNextNo(){const n=piRowsForTenant().reduce((m,x)=>Math.max(m,+(String(x.indentNo||'').match(/\d+/)?.[0]||0)),0)+1;return'PI-'+String(n).padStart(5,'0')}
 function piAutoCell(type,cls){return `<div class="purchase-auto-wrap"><input class="${cls}" autocomplete="off" data-purchase-auto="${type}"><div class="purchase-auto-list"></div></div>`}
@@ -11433,24 +11511,8 @@ let purchaseRouteTokenV1577=0;
 
 function purchaseOpenHomeV1577(){
   purchaseRouteTokenV1577++;
-
-  // Make Purchase Management the single source of truth immediately.
-  history.replaceState(null,'','#panel-purchase-entry');
-
-  document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-  const home=document.getElementById('panel-purchase-entry');
-  if(home)home.classList.add('active');
-
-  // Keep Purchase folders collapsed when returning home.
-  document.querySelectorAll('.purchase-folder-v1576').forEach(f=>f.classList.remove('open'));
-
-  // Refresh live Purchase KPIs without opening a child page.
-  try{ purchaseRenderEntry(); }catch(e){ console.warn('Purchase Home KPI refresh failed',e); }
-
-  // Update workspace heading if the shared shell exposes it.
-  const title=document.querySelector('header.top h1, .workspace-header h1, #workspaceTitle');
-  if(title)title.textContent='Purchase Management';
-
+  ERPPanelRegistryV1665.activate('purchase-entry');
+  document.querySelectorAll('.purchase-folder-v1576.open').forEach(f=>f.classList.remove('open'));
   return false;
 }
 
@@ -11463,7 +11525,7 @@ function purchaseToggleFolderV1576(name){
 function purchaseOpenIndentTabV1576(target){
   if(!target)return;
   const token=purchaseRouteTokenV1577;
-  setTimeout(()=>{
+  queueMicrotask(()=>{
     if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const map={
       entry:'[data-pi-tab="entry"],#piTabEntry,[data-pi-view="entry"]',
@@ -11472,12 +11534,12 @@ function purchaseOpenIndentTabV1576(target){
     };
     const el=document.querySelector(map[target]||'');
     if(el)el.click();
-  },60);
+  });
 }
 function purchaseApplyBoardRegisterV1576(register){
   if(!register)return;
   const token=purchaseRouteTokenV1577;
-  setTimeout(()=>{
+  queueMicrotask(()=>{
     if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const normalized=register==='board3'?'board3':register;
     const candidates=[
@@ -11487,12 +11549,12 @@ function purchaseApplyBoardRegisterV1576(register){
     ];
     const el=candidates.map(s=>document.querySelector(s)).find(Boolean);
     if(el)el.click();
-  },60);
+  });
 }
 function purchaseApplyLocalSectionV1576(section){
   if(!section)return;
   const token=purchaseRouteTokenV1577;
-  setTimeout(()=>{
+  queueMicrotask(()=>{
     if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const candidates=[
       `[data-local-section="${section}"]`,
@@ -11501,11 +11563,11 @@ function purchaseApplyLocalSectionV1576(section){
     ];
     const el=candidates.map(s=>document.querySelector(s)).find(Boolean);
     if(el)el.click();
-  },60);
+  });
 }
 function purchaseApplyHistoryViewV1576(view,source){
   const token=purchaseRouteTokenV1577;
-  setTimeout(()=>{
+  queueMicrotask(()=>{
     if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     if(source){
       const src=document.querySelector(`[data-history-source-filter="${source}"],[data-purchase-source="${source}"]`);
@@ -11515,16 +11577,16 @@ function purchaseApplyHistoryViewV1576(view,source){
       const el=document.querySelector(`[data-history-view="${view}"],[data-purchase-history-view="${view}"]`);
       if(el)el.click();
     }
-  },60);
+  });
 }
 function purchaseApplySupplierViewV1576(view){
   if(!view)return;
   const token=purchaseRouteTokenV1577;
-  setTimeout(()=>{
+  queueMicrotask(()=>{
     if(token!==purchaseRouteTokenV1577 || location.hash==='#panel-purchase-entry')return;
     const el=document.querySelector(`[data-supplier-analysis-view="${view}"],[data-supplier-view-target="${view}"]`);
     if(el)el.click();
-  },60);
+  });
 }
 
 
@@ -11534,8 +11596,6 @@ document.addEventListener('click',function(e){
 
   // Dedicated Purchase Home return: do not allow generic child routing/restorers to run.
   e.preventDefault();
-  e.stopPropagation();
-  e.stopImmediatePropagation();
   purchaseOpenHomeV1577();
 },true);
 
@@ -11562,9 +11622,7 @@ document.addEventListener('click',function(e){
       const nav=document.querySelector(`[data-panel="${panel}"]`);
       if(nav)nav.click();
       else{
-        document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-        document.getElementById('panel-'+panel)?.classList.add('active');
-        history.replaceState(null,'','#panel-'+panel);
+        ERPPanelRegistryV1665.activate(panel);
       }
     }
 
@@ -12617,7 +12675,7 @@ function bind(){
    toggleSideGroup('gatePassGroup');
    if(!wasOpen)setTimeout(()=>document.querySelector('[data-panel="gate-pass-dashboard"]')?.click(),0)
  });
- $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;erpEnsurePanelBindingsV1658(panel);const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','rgp-detail','ogp-dashboard','ogp-list','ogp-entry','ogp-detail','cgp-dashboard','cgp-list','cgp-entry','cgp-detail','container-ledger','container-party-detail'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');window.scrollTo(0,0);ERPPanelRegistryV1665.activate(panel,b);const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}queueMicrotask(()=>erpRenderIfNeededV1659(panel,()=>masterRenderAll()))}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Management','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):panel==='purchase-entry'?'Purchase Management • Planning • Entry • History • Analysis':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';queueMicrotask(()=>{if(panel==='purchase-entry')erpRenderIfNeededV1659(panel,()=>purchaseRenderEntry());else if(panel==='purchase-indent')erpRenderIfNeededV1659(panel,()=>purchaseRenderIndent());else if(panel==='local-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderLocal());else if(panel==='zafar-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderZafar());else if(panel==='board-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderBoard());else if(panel==='purchase-history')erpRenderIfNeededV1659(panel,()=>purchaseRenderHistory());else if(panel==='supplier-analysis')erpRenderIfNeededV1659(panel,()=>purchaseRenderSupplierAnalysis());try{purchaseApplyPc(panel)}catch(e){}})}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';queueMicrotask(()=>{if(panel==='issue-history')erpRenderIfNeededV1659(panel,()=>issueRenderHistory())})}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'||panel==='rgp-detail'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'CGP Management':panel==='container-ledger'?'Returnable Container Management':panel==='container-party-detail'?'Party Container Detail':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'RGP, OGP, CGP and Party Container control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'Cash Gate Pass dashboard, scrap sale and scrapper controls.':panel==='container-ledger'?'Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.':panel==='container-party-detail'?'Complete returnable-container detail for one party.':'Returnable Gate Pass dashboard and entry controls.';queueMicrotask(()=>{if(panel==='gate-pass-dashboard')erpRenderIfNeededV1659(panel,()=>gateDashboardRender());else if(panel==='rgp-dashboard')erpRenderIfNeededV1659(panel,()=>rgpDashboardRender());else if(panel==='rgp-list')erpRenderIfNeededV1659(panel,()=>rgpRenderList());else if(panel==='rgp-return')erpRenderIfNeededV1659(panel,()=>rgpRenderReturn());else if(panel==='rgp-detail'){erpRenderIfNeededV1659(panel,()=>rgpRenderDetail())}else if(panel==='ogp-dashboard')erpRenderIfNeededV1659(panel,()=>ogpDashboardRender());else if(panel==='ogp-list'){erpRenderIfNeededV1659(panel,()=>ogpRenderList())}else if(panel==='ogp-detail'){erpRenderIfNeededV1659(panel,()=>ogpRenderDetail())}else if(panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'){if(panel==='cgp-dashboard')erpRenderIfNeededV1659(panel,()=>cgpDashboardRender());if(panel==='cgp-list')erpRenderIfNeededV1659(panel,()=>cgpRenderList());if(panel==='cgp-detail')erpRenderIfNeededV1659(panel,()=>cgpRenderDetail())}else if(panel==='container-ledger'){erpRenderIfNeededV1659(panel,()=>containerRenderAll())}else if(panel==='container-party-detail'){erpRenderIfNeededV1659(panel,()=>containerRenderPartyDetail())}
+ $('#designStudioToggle')?.addEventListener('click',()=>toggleSideGroup('designStudioGroup')); $$('[data-key]').forEach(el=>el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{previous=clone(state);let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v);set(el.dataset.key,v);if(el.dataset.key.startsWith('theme.')||el.dataset.key==='clock.followTheme'||el.dataset.key==='profile.followTheme'||el.dataset.key==='profile.collapsedBorderFollowTheme'||el.dataset.key==='company.followTheme'||el.dataset.key==='company.logoFollowTheme'||el.dataset.key==='company.themeColorSource'){applyThemeLinks();if(el.dataset.key.startsWith('theme.')){localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)))}sync()}const out=el.parentElement?.querySelector('.value');if(out)out.textContent=v;render()})); $$('[data-panel]').forEach(b=>b.onclick=()=>{const panel=b.dataset.panel;erpEnsurePanelBindingsV1658(panel);const purchasePages=['purchase-entry','purchase-indent','local-purchase','zafar-purchase','board-purchase','purchase-history','supplier-analysis'];const issuePages=['issue-entry','issue-history'];const gatePages=['gate-pass-dashboard','rgp-dashboard','rgp-list','rgp-entry','rgp-return','rgp-detail','ogp-dashboard','ogp-list','ogp-entry','ogp-detail','cgp-dashboard','cgp-list','cgp-entry','cgp-detail','container-ledger','container-party-detail'];if(panel==='masters'&&window.ERPAccessControl&&!ERPAccessControl.canPage('all-masters','view'))return toast('Access denied');if(purchasePages.includes(panel)&&window.ERPAccessControl&&!ERPAccessControl.canPage(panel,'view'))return toast('Access denied');window.scrollTo(0,0);ERPPanelRegistryV1665.activate(panel,b);const designGroup=$('#designStudioGroup'),purchaseGroup=$('#purchaseGroup'),issueGroup=$('#issueGroup'),gatePassGroup=$('#gatePassGroup');if(panel==='masters'){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent='Masters';if($('#workspaceSubtitle')){$('#workspaceSubtitle').style.removeProperty('display');$('#workspaceSubtitle').textContent='Central master data for the complete ERP.';}erpRenderIfNeededV1659(panel,()=>masterRenderAll())}else if(purchasePages.includes(panel)){designGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');purchaseGroup?.classList.add('open');const nm={'purchase-entry':'Purchase Management','purchase-indent':'Purchase Indent','local-purchase':'Purchase Entry','zafar-purchase':'Purchase Entry','board-purchase':'Board Purchase','purchase-history':'Purchase History','supplier-analysis':'Supplier Analysis'}[panel];if($('#workspaceTitle'))$('#workspaceTitle').textContent=nm;if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='purchase-indent'?'Purchase Request & Approval':panel==='local-purchase'?'Local Purchase':panel==='zafar-purchase'?'Zafar Purchase':panel==='board-purchase'?('Board Purchase — '+boardRegisterType):panel==='purchase-entry'?'Purchase Management • Planning • Entry • History • Analysis':'Purchase module • Shared Masters • Access Control • Audit • Tenant-aware';if(panel==='purchase-entry')erpRenderIfNeededV1659(panel,()=>purchaseRenderEntry());else if(panel==='purchase-indent')erpRenderIfNeededV1659(panel,()=>purchaseRenderIndent());else if(panel==='local-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderLocal());else if(panel==='zafar-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderZafar());else if(panel==='board-purchase')erpRenderIfNeededV1659(panel,()=>purchaseRenderBoard());else if(panel==='purchase-history')erpRenderIfNeededV1659(panel,()=>purchaseRenderHistory());else if(panel==='supplier-analysis')erpRenderIfNeededV1659(panel,()=>purchaseRenderSupplierAnalysis());try{purchaseApplyPc(panel)}catch(e){}}else if(issuePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');issueGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='issue-entry'?'Issue Entry':'Issue History';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent='Store Issue / Consumption • Shared Masters • Integrated ERP Core';queueMicrotask(()=>{if(panel==='issue-history')erpRenderIfNeededV1659(panel,()=>issueRenderHistory())})}else if(gatePages.includes(panel)){designGroup?.classList.remove('open');purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='gate-pass-dashboard'?'Gate Pass Management':panel==='rgp-dashboard'||panel==='rgp-list'||panel==='rgp-entry'||panel==='rgp-return'||panel==='rgp-detail'?'RGP Management':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'OGP Management':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'CGP Management':panel==='container-ledger'?'Returnable Container Management':panel==='container-party-detail'?'Party Container Detail':'Gate Pass Management';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='gate-pass-dashboard'?'RGP, OGP, CGP and Party Container control center.':panel==='ogp-dashboard'||panel==='ogp-list'||panel==='ogp-entry'||panel==='ogp-detail'?'Out Gate Pass dashboard and permanent outward material controls.':panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'?'Cash Gate Pass dashboard, scrap sale and scrapper controls.':panel==='container-ledger'?'Automatic party-wise returnable cylinders, drums and container ledger from Purchase and OGP.':panel==='container-party-detail'?'Complete returnable-container detail for one party.':'Returnable Gate Pass dashboard and entry controls.';queueMicrotask(()=>{if(panel==='gate-pass-dashboard')erpRenderIfNeededV1659(panel,()=>gateDashboardRender());else if(panel==='rgp-dashboard')erpRenderIfNeededV1659(panel,()=>rgpDashboardRender());else if(panel==='rgp-list')erpRenderIfNeededV1659(panel,()=>rgpRenderList());else if(panel==='rgp-return')erpRenderIfNeededV1659(panel,()=>rgpRenderReturn());else if(panel==='rgp-detail'){erpRenderIfNeededV1659(panel,()=>rgpRenderDetail())}else if(panel==='ogp-dashboard')erpRenderIfNeededV1659(panel,()=>ogpDashboardRender());else if(panel==='ogp-list'){erpRenderIfNeededV1659(panel,()=>ogpRenderList())}else if(panel==='ogp-detail'){erpRenderIfNeededV1659(panel,()=>ogpRenderDetail())}else if(panel==='cgp-dashboard'||panel==='cgp-list'||panel==='cgp-entry'||panel==='cgp-detail'){if(panel==='cgp-dashboard')erpRenderIfNeededV1659(panel,()=>cgpDashboardRender());if(panel==='cgp-list')erpRenderIfNeededV1659(panel,()=>cgpRenderList());if(panel==='cgp-detail')erpRenderIfNeededV1659(panel,()=>cgpRenderDetail())}else if(panel==='container-ledger'){erpRenderIfNeededV1659(panel,()=>containerRenderAll())}else if(panel==='container-party-detail'){erpRenderIfNeededV1659(panel,()=>containerRenderPartyDetail())}
   if(panel==='ogp-entry'){ogpUpdateTotals()}else rgpUpdateTotal()},0)}else{purchaseGroup?.classList.remove('open');issueGroup?.classList.remove('open');gatePassGroup?.classList.remove('open');designGroup?.classList.add('open');if($('#workspaceTitle'))$('#workspaceTitle').textContent=panel==='design-studio-home'?'Design Studio Management':'Design Studio';if($('#workspaceSubtitle'))$('#workspaceSubtitle').textContent=panel==='design-studio-home'?'Appearance, identity, print and access controls from one management page.':'Theme Studio • Banner Studio • Sidebar Studio • Profile Card Designer • Company / Program Identity • Print Design Studio • Users & Access Control'}try{localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,panel)}catch(e){}}); $('#saveBtn').onclick=save;$('#undoBtn').onclick=()=>{state=clone(previous);sync();render();toast('Last change undone')};$('#restoreBtn').onclick=()=>{previous=clone(state);state=clone(defaults);sync();render();toast('Defaults restored')};$('#pictureInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.profile.picture=rd.result;render()};rd.readAsDataURL(f)}); $('#companyLogoInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{previous=clone(state);state.company.logo=rd.result;render()};rd.readAsDataURL(f)}); const themeExtra=['loginThemeBgStart','loginThemeBgEnd','loginThemeCard','loginThemePrimary','loginThemeAccent','loginThemeHeading','loginThemeText','loginThemeBorder','loginThemeRadius','loginThemeShadow','loginThemeLogoShape','loginThemeLayout','homeThemeWorkspace','homeThemeCard','homeThemePrimary','homeThemeAccent','homeThemeHeading','homeThemeText','homeThemeBorder','homeThemePositive','homeThemeRadius','homeThemeShadow','homeThemeChartStyle','homeThemeDensity']; themeExtra.forEach(id=>$('#'+id)?.addEventListener('input',()=>{const isHome=id.startsWith('home');const key=isHome?HOME_THEME_KEY:LOGIN_THEME_KEY;const base=isHome?linkedHome(state.theme):linkedLogin(state.theme);const obj=loadObj(key,base);const maps=isHome?{homeThemeWorkspace:'workspace',homeThemeCard:'card',homeThemePrimary:'primary',homeThemeAccent:'accent',homeThemeHeading:'heading',homeThemeText:'text',homeThemeBorder:'border',homeThemePositive:'positive',homeThemeRadius:'radius',homeThemeShadow:'shadow',homeThemeChartStyle:'chartStyle',homeThemeDensity:'density'}:{loginThemeBgStart:'bgStart',loginThemeBgEnd:'bgEnd',loginThemeCard:'card',loginThemePrimary:'primary',loginThemeAccent:'accent',loginThemeHeading:'heading',loginThemeText:'text',loginThemeBorder:'border',loginThemeRadius:'radius',loginThemeShadow:'shadow',loginThemeLogoShape:'logoShape',loginThemeLayout:'layout'};obj[maps[id]]=$('#'+id).type==='range'?Number($('#'+id).value):$('#'+id).value;localStorage.setItem(key,JSON.stringify(obj));updateThemePreviews()})); $('#resetLoginTheme')?.addEventListener('click',()=>{localStorage.setItem(LOGIN_THEME_KEY,JSON.stringify(linkedLogin(state.theme)));syncExtraThemeControls();toast('Login theme reset')});$('#resetHomeTheme')?.addEventListener('click',()=>{localStorage.setItem(HOME_THEME_KEY,JSON.stringify(linkedHome(state.theme)));syncExtraThemeControls();toast('Home theme reset')});$('#erpSaveCustomTheme')?.addEventListener('click',()=>{const name=prompt('Theme name');if(!name)return;themes[name]={...state.theme,name};state.theme.name=name;renderThemes();toast('Custom theme added')});$('#erpExportThemes')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({core:state,themes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='erp-design-themes.json';a.click();URL.revokeObjectURL(a.href)});$('#erpImportThemes')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.themes)Object.assign(themes,d.themes);if(d.core)state=merge(state,d.core);sync();render();toast('Themes imported')}catch(x){toast('Invalid theme file')}};rd.readAsText(f)}); $('#addCustomFont')?.addEventListener('click',()=>addCustomFont().catch(()=>toast('Font could not be saved')));$('#refreshFontLibrary')?.addEventListener('click',()=>loadCustomFonts()); }
 
 /* Shared Print Designer V1.0 */
