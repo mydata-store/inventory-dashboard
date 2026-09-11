@@ -29684,17 +29684,12 @@ function renderIssueHomeV1578(){
 
 function issueActivatePanelV1578(panel){
   issueRouteTokenV1578++;
-  history.replaceState(null,'','#panel-'+panel);
-  document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-  const target=document.getElementById('panel-'+panel);
-  if(target)target.classList.add('active');
+  ERPPanelRegistryV1665.activate(panel);
 }
 
 function issueOpenHomeV1578(){
   issueRouteTokenV1578++;
-  history.replaceState(null,'','#panel-issue-entry');
-  document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-issue-entry')?.classList.add('active');
+  ERPPanelRegistryV1665.activate('issue-entry');
   document.querySelectorAll('.issue-folder-v1578').forEach(f=>f.classList.remove('open'));
   renderIssueHomeV1578();
 }
@@ -29728,7 +29723,7 @@ function applyIssueHistoryViewV1578(view, token){
 document.addEventListener('click',e=>{
   const home=e.target.closest('[data-go-issue="issue-entry"]');
   if(home){
-    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    e.preventDefault();
     issueOpenHomeV1578();
     return;
   }
@@ -29752,12 +29747,7 @@ document.addEventListener('click',e=>{
   applyIssueHistoryViewV1578(sub.getAttribute('data-issue-view'),token);
 },true);
 
-function routeInitV1578(){
-  if(location.hash==='#panel-issue-entry')renderIssueHomeV1578();
-}
-
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',routeInitV1578,{once:true});
-else routeInitV1578();
+/* V16.71: Issue route restoration is owned by the unified startup/navigation controller. */
 
 
 window.ERPIssueManagementV1578={
@@ -35518,7 +35508,8 @@ const NAV_SELECTOR=[
   '[data-zafar-module-home]',
   '[data-board-module-home]',
   '[data-rgp-module-home]',
-  '[data-ogp-module-home]'
+  '[data-ogp-module-home]',
+  '[data-go-issue]'
 ].join(',');
 
 let beforeId='';
@@ -35553,6 +35544,10 @@ function applySharedSystems(){
   const id=shortId();
   if(!id)return;
 
+  /* The actual active panel is authoritative. Never let a previous Dashboard route
+     leave the sidebar hidden on a business page. */
+  document.body.classList.toggle('erp-dashboard-mode',id==='dashboard');
+
   /* Access and sidebar active identity. */
   try{window.ERPAccessNavigationV1664?.sync?.()}catch(e){}
   try{window.ERPSingleActiveSidebarV1599?.sync?.(id)}catch(e){}
@@ -35586,7 +35581,6 @@ function applySharedSystems(){
   }
 
   /* Dashboard-only work stays dashboard-only. */
-  document.body.classList.toggle('erp-dashboard-mode',id==='dashboard');
   if(id==='dashboard'){
     try{window.ERPManagementDashboard?.render?.()}catch(e){}
     try{window.ERPDashboardBannerV1572?.sync?.()}catch(e){}
