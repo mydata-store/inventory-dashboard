@@ -3696,6 +3696,20 @@ html.erp-route-first-dashboard-v1571 #dashboardBannerHostV1565{
 @media(max-width:750px){.straw38c-grid2{grid-template-columns:1fr}.straw38c-kpis,.straw38c-form{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.straw38c-kpis,.straw38c-form{grid-template-columns:1fr}.straw38c-form label.wide{grid-column:auto}}
 </style>
+
+<style id="erpStartupNoFlashV1676">
+html.erp-route-settling body{visibility:hidden!important}
+</style>
+<script id="erpStartupRouteAuthorityV1676">
+(()=>{
+  document.documentElement.classList.add('erp-route-settling');
+  const finish=()=>document.documentElement.classList.remove('erp-route-settling');
+  /* Hide only through the initial route-settle paint; avoids Theme/Design Studio flash. */
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(finish),{once:true});
+  }else requestAnimationFrame(finish);
+})();
+</script>
 </head><body>
 <div class="app layout-left collapsed" id="app">
 <aside class="studio-sidebar" id="studioSidebar">
@@ -19745,9 +19759,12 @@ function pcOpen(){
   if(!window.__pcIdlePrebuiltV1675){
     window.__pcIdlePrebuiltV1675=true;
     const warm=()=>{
+      const active=document.querySelector('section.panel.active')?.id?.replace(/^panel-/,'')||'production-consumption';
       try{pcSummaryBuild()}catch(e){}
       try{pcMonthBuild()}catch(e){}
       try{pcYearBuild()}catch(e){}
+      /* Warm-up must never change the user's visible page. */
+      window.ERPStrictPanelIsolationV1676?.isolate?.(active);
     };
     if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:900});
     else setTimeout(warm,500);
@@ -35955,6 +35972,79 @@ section.panel.active,.panel.active{content-visibility:visible}
 .layout-left.collapsed.peek{
   transition:grid-template-columns 70ms cubic-bezier(.2,.8,.2,1)!important;
 }
+</style>
+
+
+
+<script id="erpStrictPanelIsolationV1676">
+(()=>{
+'use strict';
+
+function panelIdFromHash(){
+  const h=String(location.hash||'').replace(/^#panel-/,'').trim();
+  return h || '';
+}
+function activePanels(){
+  return Array.from(document.querySelectorAll('section.panel.active'));
+}
+function isolate(id){
+  if(!id)return false;
+  const target=document.getElementById('panel-'+id);
+  if(!target)return false;
+
+  /* Critical stability rule: one workspace page only. */
+  document.querySelectorAll('section.panel.active').forEach(p=>{
+    if(p!==target)p.classList.remove('active');
+  });
+  if(!target.classList.contains('active'))target.classList.add('active');
+
+  /* Dashboard mode must follow the actual active page, never stale startup state. */
+  document.body.classList.toggle('erp-dashboard-mode',id==='dashboard');
+  return true;
+}
+
+function repair(){
+  let id=panelIdFromHash();
+  if(!document.getElementById('panel-'+id)){
+    const current=activePanels()[0];
+    id=current?.id?.replace(/^panel-/,'') || 'dashboard';
+  }
+  isolate(id);
+}
+
+/* Run after all legacy startup handlers have had their turn. */
+function settleStartup(){
+  requestAnimationFrame(()=>requestAnimationFrame(repair));
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',settleStartup,{once:true});
+}else settleStartup();
+
+/* Central navigation emits this after page activation. */
+document.addEventListener('erp:panel-open',e=>{
+  const id=e?.detail?.panel || e?.detail?.id || panelIdFromHash();
+  isolate(id);
+});
+
+/* Capture sidebar/dashboard navigation and repair immediately after the click stack.
+   This prevents any old module from leaving its page active under/inside dashboard. */
+document.addEventListener('click',e=>{
+  const a=e.target?.closest?.(
+    '[data-panel],[data-open-panel],[data-go-master],[data-go-purchase],[data-go-issue],'+
+    '[data-inventory-open],[data-costing-open],[data-production-consumption-open],'+
+    '[data-pc-page],[data-go-gate],[data-gate-panel],[data-report-center-open]'
+  );
+  if(!a)return;
+  queueMicrotask(repair);
+},true);
+
+window.ERPStrictPanelIsolationV1676={isolate,repair};
+})();
+</script>
+<style id="erpStrictPanelIsolationCssV1676">
+/* Even during a single browser paint, never visually stack two workspace pages. */
+section.panel{display:none!important}
+section.panel.active{display:block!important}
 </style>
 
 </body></html>
