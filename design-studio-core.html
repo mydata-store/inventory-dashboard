@@ -17028,6 +17028,7 @@ function invOpen(){
   invBuild();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   invPanel().classList.add('active');
+  try{history.replaceState(null,'','#panel-inventory-dashboard')}catch(e){}
   try{
     localStorage.setItem('erpStudioLastPanel','inventory-dashboard');
     localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'inventory-dashboard')
@@ -35358,7 +35359,7 @@ html,body{overflow-x:visible!important}
 section.panel:not(.active){display:none!important}
 
 /* Limit repaint propagation from the active business workspace. */
-.layout-left .content{contain:layout style paint}
+.layout-left .content{contain:none!important}
 </style>
 
 
@@ -35407,39 +35408,137 @@ window.ERPConsolidatedSmoothCoreV1658={sync:commit};
 
 
 
-<style id="erpCompositorSidebarV1659Style">
-/* V16.59 — collapsed hover expansion without full-page layout reflow. */
-.layout-left.collapsed{
-  grid-template-columns:var(--side-cw) minmax(0,1fr)!important;
+
+
+
+
+
+
+
+
+<style id="erpSidebarCoreV1661Style">
+/* V16.61 — sidebar has only two states: collapsed or expanded.
+   Hover no longer changes layout, eliminating accidental full-page reflow. */
+.layout-left{
+  transition:none!important;
+  overflow:visible!important;
+  align-items:start!important;
 }
+.layout-left.peek{
+  /* Ignore legacy peek state completely. */
+  grid-template-columns:inherit!important;
+}
+.layout-left.collapsed,
 .layout-left.collapsed.peek{
   grid-template-columns:var(--side-cw) minmax(0,1fr)!important;
 }
-.layout-left.collapsed.peek .studio-sidebar{
-  position:fixed!important;
+.layout-left:not(.collapsed){
+  grid-template-columns:var(--side-w) minmax(0,1fr)!important;
+}
+.layout-left .studio-sidebar{
+  position:sticky!important;
   top:0!important;
-  left:0!important;
-  width:var(--side-w)!important;
-  min-width:var(--side-w)!important;
-  max-width:var(--side-w)!important;
   height:100vh!important;
-  z-index:200!important;
-  box-shadow:10px 0 26px rgba(0,0,0,.15)!important;
+  min-height:100vh!important;
+  max-height:100vh!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  overflow:hidden!important;
+  transition:none!important;
+  transform:none!important;
+  box-shadow:none!important;
 }
-.layout-left.collapsed .page-shell{
-  transform:translate3d(0,0,0);
-  will-change:transform;
+.layout-left .page-shell{
+  min-width:0!important;
+  width:auto!important;
+  transform:none!important;
+  transition:none!important;
+  will-change:auto!important;
+  overflow:visible!important;
 }
-.layout-left.collapsed.peek .page-shell{
-  transform:translate3d(calc(var(--side-w) - var(--side-cw)),0,0)!important;
+.layout-left .content{contain:none!important}
+
+/* Explicit toggle control */
+.erp-sidebar-toggle-v1661{
+  position:absolute;
+  top:8px;
+  right:7px;
+  z-index:5;
+  width:28px;
+  height:28px;
+  border:1px solid color-mix(in srgb,var(--side-text) 28%,transparent);
+  border-radius:8px;
+  background:color-mix(in srgb,var(--side-bg) 82%,white 18%);
+  color:var(--side-text);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  font-size:12px;
+  line-height:1;
 }
-.layout-left.collapsed .page-shell{
-  transition:transform 90ms cubic-bezier(.2,.8,.2,1)!important;
+.layout-left.collapsed .erp-sidebar-toggle-v1661{
+  right:50%;
+  transform:translateX(50%);
+  top:58px;
 }
-@media(prefers-reduced-motion:reduce){
-  .layout-left.collapsed .page-shell{transition:none!important}
+.layout-left.collapsed .side-brand{
+  padding-bottom:45px!important;
 }
 </style>
+
+
+<script id="erpSidebarCoreV1661">
+(function(){
+'use strict';
+if(window.__erpSidebarCoreV1661)return;
+window.__erpSidebarCoreV1661=true;
+
+const app=document.getElementById('app');
+const side=document.getElementById('studioSidebar');
+if(!app||!side)return;
+
+/* Kill any legacy hover state. */
+app.classList.remove('peek');
+side.addEventListener('mouseenter',()=>app.classList.remove('peek'),{passive:true});
+side.addEventListener('mouseleave',()=>app.classList.remove('peek'),{passive:true});
+
+/* Create one explicit expand/collapse control. */
+let btn=side.querySelector('.erp-sidebar-toggle-v1661');
+if(!btn){
+  btn=document.createElement('button');
+  btn.type='button';
+  btn.className='erp-sidebar-toggle-v1661';
+  btn.setAttribute('aria-label','Expand or collapse sidebar');
+  side.appendChild(btn);
+}
+
+function syncButton(){
+  const collapsed=app.classList.contains('collapsed');
+  btn.textContent=collapsed?'▶':'◀';
+  btn.title=collapsed?'Expand sidebar':'Collapse sidebar';
+}
+function setCollapsed(collapsed){
+  app.classList.remove('peek');
+  app.classList.toggle('collapsed',!!collapsed);
+  syncButton();
+  try{
+    if(window.state?.sidebar){
+      window.state.sidebar.defaultState=collapsed?'collapsed':'expanded';
+      localStorage.setItem('erpSidebarSettingsV1',JSON.stringify(window.state.sidebar));
+    }
+  }catch(e){}
+}
+btn.addEventListener('click',function(e){
+  e.preventDefault();
+  e.stopPropagation();
+  setCollapsed(!app.classList.contains('collapsed'));
+});
+
+syncButton();
+window.ERPSidebarCoreV1661={collapse:()=>setCollapsed(true),expand:()=>setCollapsed(false),sync:syncButton};
+})();
+</script>
 
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
