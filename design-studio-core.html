@@ -35416,25 +35416,31 @@ window.ERPConsolidatedSmoothCoreV1658={sync:commit};
 
 
 
-<style id="erpSidebarCoreV1661Style">
-/* V16.61 — sidebar has only two states: collapsed or expanded.
-   Hover no longer changes layout, eliminating accidental full-page reflow. */
+
+
+
+
+
+<style id="erpSidebarHoverV1662Style">
+/* V16.62 — one sidebar behaviour only:
+   collapsed by default, hover expands, mouse-out collapses.
+   The page moves with the sidebar because the grid column itself changes. */
+
 .layout-left{
-  transition:none!important;
   overflow:visible!important;
   align-items:start!important;
+  transition:grid-template-columns 110ms cubic-bezier(.2,.8,.2,1)!important;
 }
-.layout-left.peek{
-  /* Ignore legacy peek state completely. */
-  grid-template-columns:inherit!important;
-}
-.layout-left.collapsed,
-.layout-left.collapsed.peek{
+
+.layout-left.collapsed{
   grid-template-columns:var(--side-cw) minmax(0,1fr)!important;
 }
+
+.layout-left.collapsed.peek,
 .layout-left:not(.collapsed){
   grid-template-columns:var(--side-w) minmax(0,1fr)!important;
 }
+
 .layout-left .studio-sidebar{
   position:sticky!important;
   top:0!important;
@@ -35445,98 +35451,97 @@ window.ERPConsolidatedSmoothCoreV1658={sync:commit};
   min-width:0!important;
   max-width:none!important;
   overflow:hidden!important;
-  transition:none!important;
   transform:none!important;
   box-shadow:none!important;
 }
+
 .layout-left .page-shell{
   min-width:0!important;
   width:auto!important;
   transform:none!important;
-  transition:none!important;
   will-change:auto!important;
   overflow:visible!important;
 }
-.layout-left .content{contain:none!important}
 
-/* Explicit toggle control */
+.layout-left .content{
+  contain:none!important;
+}
+
+/* Remove any explicit sidebar toggle left by earlier versions. */
 .erp-sidebar-toggle-v1661{
-  position:absolute;
-  top:8px;
-  right:7px;
-  z-index:5;
-  width:28px;
-  height:28px;
-  border:1px solid color-mix(in srgb,var(--side-text) 28%,transparent);
-  border-radius:8px;
-  background:color-mix(in srgb,var(--side-bg) 82%,white 18%);
-  color:var(--side-text);
-  display:grid;
-  place-items:center;
-  cursor:pointer;
-  font-size:12px;
-  line-height:1;
+  display:none!important;
 }
-.layout-left.collapsed .erp-sidebar-toggle-v1661{
-  right:50%;
-  transform:translateX(50%);
-  top:58px;
-}
-.layout-left.collapsed .side-brand{
-  padding-bottom:45px!important;
+
+/* Keep the sidebar internals responsive but do not animate the whole page twice. */
+.layout-left .studio-sidebar,
+.layout-left .side-item,
+.layout-left .side-group-toggle,
+.layout-left .side-subitem{
+  transition:none!important;
 }
 </style>
 
 
-<script id="erpSidebarCoreV1661">
+<script id="erpSidebarHoverV1662">
 (function(){
 'use strict';
-if(window.__erpSidebarCoreV1661)return;
-window.__erpSidebarCoreV1661=true;
+if(window.__erpSidebarHoverV1662)return;
+window.__erpSidebarHoverV1662=true;
 
 const app=document.getElementById('app');
 const side=document.getElementById('studioSidebar');
 if(!app||!side)return;
 
-/* Kill any legacy hover state. */
+/* Clear any state from older sidebar experiments. */
 app.classList.remove('peek');
-side.addEventListener('mouseenter',()=>app.classList.remove('peek'),{passive:true});
-side.addEventListener('mouseleave',()=>app.classList.remove('peek'),{passive:true});
+side.querySelectorAll('.erp-sidebar-toggle-v1661').forEach(x=>x.remove());
 
-/* Create one explicit expand/collapse control. */
-let btn=side.querySelector('.erp-sidebar-toggle-v1661');
-if(!btn){
-  btn=document.createElement('button');
-  btn.type='button';
-  btn.className='erp-sidebar-toggle-v1661';
-  btn.setAttribute('aria-label','Expand or collapse sidebar');
-  side.appendChild(btn);
-}
+let raf=0;
+let wanted=false;
 
-function syncButton(){
-  const collapsed=app.classList.contains('collapsed');
-  btn.textContent=collapsed?'▶':'◀';
-  btn.title=collapsed?'Expand sidebar':'Collapse sidebar';
-}
-function setCollapsed(collapsed){
-  app.classList.remove('peek');
-  app.classList.toggle('collapsed',!!collapsed);
-  syncButton();
+function hoverEnabled(){
   try{
     if(window.state?.sidebar){
-      window.state.sidebar.defaultState=collapsed?'collapsed':'expanded';
-      localStorage.setItem('erpSidebarSettingsV1',JSON.stringify(window.state.sidebar));
+      return window.state.sidebar.position==='left' &&
+             window.state.sidebar.expandHover!==false;
     }
   }catch(e){}
+  return true;
 }
-btn.addEventListener('click',function(e){
-  e.preventDefault();
-  e.stopPropagation();
-  setCollapsed(!app.classList.contains('collapsed'));
-});
 
-syncButton();
-window.ERPSidebarCoreV1661={collapse:()=>setCollapsed(true),expand:()=>setCollapsed(false),sync:syncButton};
+function apply(){
+  raf=0;
+  const shouldPeek =
+    wanted &&
+    hoverEnabled() &&
+    app.classList.contains('collapsed');
+
+  app.classList.toggle('peek',shouldPeek);
+}
+
+function schedule(on){
+  wanted=!!on;
+  if(raf)return;
+  raf=requestAnimationFrame(apply);
+}
+
+/* This is now the only hover controller. */
+side.addEventListener('mouseenter',()=>schedule(true),{passive:true});
+side.addEventListener('mouseleave',()=>schedule(false),{passive:true});
+
+/* If another page/navigation action changes layout, make sure peek is not left stuck. */
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-costing-open]')){
+    wanted=false;
+    if(raf){cancelAnimationFrame(raf);raf=0}
+    app.classList.remove('peek');
+  }
+},true);
+
+window.ERPSidebarHoverV1662={
+  expand:()=>schedule(true),
+  collapse:()=>schedule(false)
+};
 })();
 </script>
 
