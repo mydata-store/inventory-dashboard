@@ -252,7 +252,7 @@ window.ERPStorageHealthV1605={
 </script>
 
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V15.48</title>
+<title>ERP Design Studio Core V16.52b Safe Performance</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -11370,23 +11370,6 @@ function pphRenderPrintStudioHtml(contract,design){
     <div class="footer"><span>${escHtml(footer)}</span><span>${d.pageNumbers===false?'':'Page'}</span></div>
   </div><script>window.onload=()=>setTimeout(()=>window.print(),180)<\/script>
 
-<script id="erpStabilityCleanupV1651o">
-(function(){
-  function release(){
-    document.documentElement.classList.remove(
-      'erp-route-restoring-v1545',
-      'erp-route-first-dashboard-v1571'
-    );
-    window.__ERP_ROUTE_FIRST_DASHBOARD__=false;
-  }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',release,{once:true});
-  }else{
-    release();
-  }
-})();
-</script>
-
 </body></html>`
 }
 function pphPrintRows(rows,titleOverride){
@@ -12223,7 +12206,7 @@ async function scWriteFolderBackup(){if(!scIsSuper())return toast('Super Adminis
 function scRestoreFromObject(obj){if(!scIsSuper())return toast('Super Administrator access required');if(!obj||obj.format!=='ERP-SOFTWARE-BACKUP'||!obj.data||typeof obj.data!=='object')return toast('This is not a valid ERP backup file');const safety=coreCollectState();coreAddHistory('Pre-Restore Safety',safety);localStorage.setItem('erpCorePreRestoreSafety',JSON.stringify(safety));Object.keys(obj.data).forEach(k=>{try{localStorage.setItem(k,obj.data[k])}catch(e){}});coreAddHistory('Restore',obj,'Restored');localStorage.setItem('erpCoreLastBackupAt',new Date().toISOString());if(typeof auditLog==='function')auditLog({module:'Software Center',page:'Restore Center',action:'Restore Backup',detail:`Restored ${Object.keys(obj.data).length} configuration keys`});toast('Backup restored. Reloading ERP...');setTimeout(()=>location.reload(),600)}
 function scModuleRegistry(){const out=[{name:'Design Studio',id:'design-studio',theme:true,access:true,audit:true,print:false},{name:'Print Design Studio',id:'print-designer',theme:true,access:true,audit:true,print:true},{name:'Users & Access Control',id:'users-access',theme:true,access:true,audit:true,print:false},{name:'My Account',id:'my-account',theme:true,access:true,audit:true,print:false},{name:'Software Center',id:'software-center',theme:true,access:true,audit:true,print:false},{name:'Companies / Tenants',id:'companies-tenants',theme:true,access:true,audit:true,print:false},{name:'All Masters',id:'all-masters',theme:true,access:true,audit:true,print:false},{name:'Purchase Management',id:'purchase-entry',theme:true,access:true,audit:true,print:false},{name:'Purchase Indent',id:'purchase-indent',theme:true,access:true,audit:true,print:false},{name:'Local Purchase',id:'local-purchase',theme:true,access:true,audit:true,print:true},{name:'Zafar Purchase',id:'zafar-purchase',theme:true,access:true,audit:true,print:true},{name:'Board Purchase',id:'board-purchase',theme:true,access:true,audit:true,print:true},{name:'Purchase History',id:'purchase-history',theme:true,access:true,audit:true,print:true},{name:'Supplier Analysis',id:'supplier-analysis',theme:true,access:true,audit:true,print:true},{name:'Issue Entry',id:'issue-entry',theme:true,access:true,audit:true,print:false},{name:'Issue History',id:'issue-history',theme:true,access:true,audit:true,print:true}];try{if(typeof uaPageRegistry==='function')uaPageRegistry().forEach(p=>{if(!out.some(x=>x.id===p.id))out.push({name:p.name||p.title||p.id,id:p.id,theme:true,access:true,audit:true,print:!!p.printable})})}catch(e){}return out}
 function scRender(){if(!scIsSuper())return;const online=navigator.onLine;if($('#scConnection'))$('#scConnection').innerHTML=`<span class="sc-status ${online?'good':'warn'}">${online?'Online':'Offline'}</span>`;if($('#scConnectionNote'))$('#scConnectionNote').textContent=online?'Local work active; online sync can run when configured.':'Working locally; changes can wait for sync.';if($('#scFolderStatus'))$('#scFolderStatus').textContent=scFolderHandle?scFolderHandle.name:'Not selected';const last=localStorage.getItem('erpCoreLastBackupAt');if($('#scLastBackup'))$('#scLastBackup').textContent=last?new Date(last).toLocaleString():'—';if($('#scLastBackupNote'))$('#scLastBackupNote').textContent=last?'Latest manual/folder backup':'No manual backup yet';if($('#scPendingSync'))$('#scPendingSync').textContent=corePendingSync();const snap=localStorage.getItem('erpCoreLastSnapshotAt');if($('#scLastSnapshot'))$('#scLastSnapshot').textContent=snap?new Date(snap).toLocaleString():'—';if($('#scModuleList'))$('#scModuleList').innerHTML=scModuleRegistry().map(m=>`<div class="sc-row"><div><b>${escHtml(m.name)}</b><small class="sc-code">${escHtml(m.id)}</small></div><div style="text-align:right"><span class="sc-status good">Registered</span><small>${m.theme?'Theme ':''}${m.access?'Access ':''}${m.audit?'Audit ':''}${m.print?'Print':''}</small></div></div>`).join('');const hist=coreBackupHistory().sort((a,b)=>String(b.at).localeCompare(String(a.at)));if($('#scBackupRows'))$('#scBackupRows').innerHTML=hist.length?hist.map(x=>`<tr><td>${escHtml(new Date(x.at).toLocaleString())}</td><td>${escHtml(x.type)}</td><td>${escHtml(scPrettyBytes(x.size))}</td><td>${escHtml(x.keys)}</td><td>${escHtml(x.by)}</td><td><span class="sc-status good">${escHtml(x.status||'Saved')}</span></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:26px;color:var(--muted)">No backups recorded yet.</td></tr>'}
-function scBind(){$('#scChooseFolder')?.addEventListener('click',scChooseFolder);$('#scWriteFolderBackup')?.addEventListener('click',scWriteFolderBackup);$('#scFullBackup')?.addEventListener('click',()=>scManualBackup('Full Backup',true));$('#scKnownGood')?.addEventListener('click',()=>{scManualBackup('Known Good',true);toast('Current ERP state marked as Known Good')});$('#scRestoreBtn')?.addEventListener('click',()=>$('#scRestoreFile')?.click());$('#scRestoreFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{scRestoreFromObject(JSON.parse(r.result))}catch(err){toast('Backup file could not be read')}};r.readAsText(f);e.target.value=''});$('#scRefreshHistory')?.addEventListener('click',scRender);window.addEventListener('online',scRender);window.addEventListener('offline',scRender);window.addEventListener('erp:sync-status-change',scRender);setInterval(()=>{if(scIsSuper()){coreAutoSnapshot(false);scRender()}},30000);window.addEventListener('beforeunload',()=>{try{coreAutoSnapshot(false)}catch(e){}});scRender();scRestoreFolderHandle().then(()=>scRender()).catch(()=>scRender())}
+function scBind(){$('#scChooseFolder')?.addEventListener('click',scChooseFolder);$('#scWriteFolderBackup')?.addEventListener('click',scWriteFolderBackup);$('#scFullBackup')?.addEventListener('click',()=>scManualBackup('Full Backup',true));$('#scKnownGood')?.addEventListener('click',()=>{scManualBackup('Known Good',true);toast('Current ERP state marked as Known Good')});$('#scRestoreBtn')?.addEventListener('click',()=>$('#scRestoreFile')?.click());$('#scRestoreFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{scRestoreFromObject(JSON.parse(r.result))}catch(err){toast('Backup file could not be read')}};r.readAsText(f);e.target.value=''});$('#scRefreshHistory')?.addEventListener('click',scRender);window.addEventListener('online',scRender);window.addEventListener('offline',scRender);window.addEventListener('erp:sync-status-change',scRender);/* V16.52b: removed 30-second full auto snapshot/render loop; manual/change backups remain. */window.addEventListener('beforeunload',()=>{try{coreAutoSnapshot(false)}catch(e){}});scRender();scRestoreFolderHandle().then(()=>scRender()).catch(()=>scRender())}
 window.ERPSoftwareCenter={render:scRender,backup:scManualBackup,snapshot:coreAutoSnapshot,restore:scRestoreFromObject,modules:scModuleRegistry};
 
 
@@ -27386,7 +27369,7 @@ body.erp-dashboard-mode #dashboardBannerHostV1565::after{
       wasCollapsed=collapsed;
     }
 
-    document.addEventListener('click',()=>setTimeout(checkExpansion,0),true);
+    document.addEventListener('click',e=>{if(e.target.closest('#studioSidebar,[data-panel],#gatePassToggle,#designStudioToggle'))setTimeout(checkExpansion,0)},true);
 
     sidebar.addEventListener('mouseenter',()=>{
       setTimeout(()=>{
@@ -32473,7 +32456,7 @@ function enhance(){
   const d=document.createElement('div');d.className='pd-v1630-gallery-link';d.style.cssText='font-size:7px;color:var(--muted);margin-top:4px;font-weight:800';d.textContent='Linked to: '+x.reportKey;card.appendChild(d)
  })
 }
-document.addEventListener('click',()=>setTimeout(enhance,80));setTimeout(enhance,500);
+document.addEventListener('click',e=>{if(e.target.closest('#printGalleryGrid,#pdV1630SaveCurrent,#pdV1630SaveForReport,#pdV1630SaveCopy,#pdV1630SaveAs'))setTimeout(enhance,80)});setTimeout(enhance,500);
 })();
 </script>
 
@@ -34317,6 +34300,7 @@ function syncYieldMaterials(){
 }
 
 function bind(){
+  if(window.__erpStrawCostBindV1652b){renderCost();return}window.__erpStrawCostBindV1652b=true;
   if($("#c47CostDate")&&!$("#c47CostDate").value)$("#c47CostDate").value=today();
   if($("#c47CostMonth")&&!$("#c47CostMonth").value)$("#c47CostMonth").value=month();
 
@@ -34337,7 +34321,6 @@ function bind(){
   try{window.ERPStrawStockV1646?.renderLedger?.()}catch(e){}
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
-setTimeout(bind,350);
 window.ERPStrawCostingV1647={render:renderCost};
 })();
 </script>
@@ -35273,6 +35256,16 @@ function start(){stop();refresh();alignTimer=setTimeout(()=>{refresh();timer=set
 window.ERPDateTime={timeZone:TZ,now:model,refresh,start,stop,today:()=>model().date,monthKey:()=>model().monthKey,year:()=>model().year};
 document.addEventListener('visibilitychange',()=>document.hidden?stop():start());window.addEventListener('pageshow',()=>setTimeout(start,30));window.addEventListener('focus',()=>setTimeout(start,30));window.addEventListener('hashchange',()=>setTimeout(refresh,30));document.addEventListener('click',e=>{if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open]'))setTimeout(refresh,40)},false);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
+<script id="erpSafeReleaseV1652b">
+(function(){
+  function release(){
+    document.documentElement.classList.remove('erp-route-restoring-v1545','erp-route-first-dashboard-v1571');
+    window.__ERP_ROUTE_FIRST_DASHBOARD__=false;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',release,{once:true});else release();
+  window.ERPPerformanceV1652b={version:'16.52b-safe'};
 })();
 </script>
 </body></html>
