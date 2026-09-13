@@ -29811,7 +29811,12 @@ function clickExistingTab(tab){
 function openWork(tab){
   activate('purchase-indent');
   document.querySelectorAll('[data-pi-work-tab]').forEach(b=>b.classList.toggle('active',b.dataset.piWorkTab===tab));
-  if(['entry','list','approval'].includes(tab)) clickExistingTab(tab);
+  /* V16.52j: this module activates Purchase Indent directly, bypassing the core [data-panel]
+     navigation handler. Ensure its working grid/lists are initialized before switching views. */
+  if(['entry','list','approval'].includes(tab)){
+    try{ if(typeof window.purchaseRenderIndent==='function') window.purchaseRenderIndent(); else if(typeof purchaseRenderIndent==='function') purchaseRenderIndent(); }catch(e){}
+    clickExistingTab(tab);
+  }
   else if(tab==='reports' && typeof window.toast==='function') window.toast('Reports / Print page will be completed as a separate Purchase Indent page.');
   else if(tab==='excel' && typeof window.toast==='function') window.toast('Excel Register page will be completed as a separate Purchase Indent page.');
 }
@@ -35436,6 +35441,37 @@ html,body{overflow-x:hidden;}
       },0);
     });
   };
+})();
+</script>
+
+<style id="purchaseIndentV1652jFixStyle">
+/* V16.52j — Purchase Indent cleanup only. Keep one working tab row and one back route. */
+#panel-purchase-indent .purchase-page-head #piTabs{display:none!important}
+#panel-purchase-indent .purchase-page-head{justify-content:flex-end!important;margin-bottom:8px!important}
+#panel-purchase-indent .purchase-home-return-v1575 [data-go-purchase="purchase-entry"]{display:none!important}
+#panel-purchase-indent .pi-grid th,#panel-purchase-indent .pi-grid td{height:31px!important}
+#panel-purchase-indent .pi-grid-wrap{max-height:500px;overflow:auto}
+</style>
+<script id="purchaseIndentV1652jFixScript">
+(function(){
+  'use strict';
+  function ensureIndentReady(){
+    const panel=document.getElementById('panel-purchase-indent');
+    const body=document.getElementById('piGridBody');
+    if(!panel||!body||!panel.classList.contains('active'))return;
+    if(!body.children.length){
+      try{
+        if(typeof window.purchaseRenderIndent==='function')window.purchaseRenderIndent();
+        else if(typeof purchaseRenderIndent==='function')purchaseRenderIndent();
+      }catch(e){}
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureIndentReady,{once:true});
+  else ensureIndentReady();
+  window.addEventListener('hashchange',()=>{if(location.hash==='#panel-purchase-indent')setTimeout(ensureIndentReady,0)});
+  document.addEventListener('click',e=>{
+    if(e.target.closest('[data-pi-open-page],[data-pi-work-tab],[data-panel="purchase-indent"]'))setTimeout(ensureIndentReady,0);
+  },true);
 })();
 </script>
 </body></html>
