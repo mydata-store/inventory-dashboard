@@ -9,7 +9,7 @@
 (function(){
   var route='home';
   try{ route=localStorage.getItem('COREFLOW_ROUTE_V2')||'home'; }catch(e){}
-  if(route!=='gallery')route='home';
+  if(!['home','gallery','controller'].includes(route))route='home';
   document.documentElement.setAttribute('data-route',route);
 })();
 </script>
@@ -48,6 +48,7 @@ button,input,select{font:inherit} button{cursor:pointer}
 .page{display:none}
 html[data-route="home"] #homePage{display:block}
 html[data-route="gallery"] #galleryPage{display:block}
+html[data-route="controller"] #controllerPage{display:block}
 .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
 .page-head h2{font-size:var(--pageTitle);margin:0 0 5px} .page-head p{margin:0;color:var(--muted)}
 .head-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -102,6 +103,87 @@ html[data-cardmode="premium"] .btn.primary{background:linear-gradient(135deg,var
 @media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.studio-grid{grid-template-columns:repeat(2,1fr)}.gallery{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:820px){.app{grid-template-columns:72px 1fr}.brand-copy,.nav-item span:last-child,.nav-title,.system-box{display:none}.nav-item{justify-content:center}.kpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:620px){.content{padding:12px}.topbar{padding:0 10px}.user div,.top-actions .hide-sm{display:none}.page-head{flex-direction:column}.kpis,.studio-grid,.gallery{grid-template-columns:1fr}}
+
+/* ---------- Permanent Auto Responsive Engine ---------- */
+.mobile-menu-btn{display:none}
+.app-drawer-mask{display:none}
+.device-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface2);font-size:11px;font-weight:800;color:var(--muted)}
+@media(max-width:1024px){
+  .studio-grid{grid-template-columns:repeat(2,minmax(210px,1fr))}
+  .gallery{grid-template-columns:repeat(2,minmax(250px,1fr))}
+}
+@media(max-width:760px){
+  .app{display:block}
+  .sidebar{display:none}
+  .mobile-menu-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--border);border-radius:var(--buttonRadius);background:var(--surface);color:var(--text)}
+  .topbar{height:60px;padding:0 10px}
+  .topbar .search{display:none}
+  .app-drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.40);z-index:90}
+  .app-drawer-mask.open{display:block}
+  .app-drawer{width:min(82vw,300px);height:100%;background:var(--sidebar);color:var(--sidebarText);padding:16px 12px;overflow:auto;box-shadow:14px 0 36px rgba(0,0,0,.25)}
+  .page-head{flex-direction:column}
+  .head-actions{width:100%}
+  .head-actions .btn{flex:1}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .studio-grid,.gallery{grid-template-columns:1fr}
+}
+@media(max-width:460px){
+  .content{padding:10px}
+  .kpis{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi{padding:12px}
+  .kpi b{font-size:20px}
+  .page-head h2{font-size:23px}
+}
+
+/* ---------- Advanced Page Controller ---------- */
+.controller-shell{display:grid;grid-template-columns:minmax(330px,410px) minmax(0,1fr);gap:16px;align-items:start}
+.controller-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--cardRadius);box-shadow:var(--shadow);overflow:hidden}
+.controller-toolbar{padding:14px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.controller-toolbar label,.control-row label,.control-group>label{font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.controller-toolbar select,.control-row input,.control-row select,.control-row textarea{
+ width:100%;height:36px;border:1px solid var(--border);border-radius:var(--inputRadius);background:var(--surface2);color:var(--text);padding:0 9px
+}
+.control-row textarea{height:72px;padding:8px;resize:vertical}
+.ctrl-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.ctrl-tabs button{height:31px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:10px;font-weight:900;padding:0 10px}
+.ctrl-tabs button.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.ctrl-section{display:none;padding:14px;max-height:65vh;overflow:auto}
+.ctrl-section.active{display:block}
+.control-group{border:1px solid var(--border);border-radius:var(--cardRadius);padding:12px;margin-bottom:10px;background:var(--surface2)}
+.control-group h4{margin:0 0 10px;font-size:13px}
+.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.control-row{display:flex;flex-direction:column;gap:5px}
+.control-row.full{grid-column:1/-1}
+.toggle-line{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px}
+.toggle-line span{font-size:12px;font-weight:700}
+.switch{position:relative;width:42px;height:24px}
+.switch input{display:none}
+.switch i{position:absolute;inset:0;background:#a8b5c0;border-radius:999px;transition:.18s}
+.switch i:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:white;border-radius:50%;transition:.18s}
+.switch input:checked+i{background:var(--primary)}
+.switch input:checked+i:before{transform:translateX(18px)}
+.segmented{display:flex;gap:5px;flex-wrap:wrap}
+.segmented button{height:30px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);font-size:10px;font-weight:800;padding:0 8px}
+.segmented button.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.element-list{display:flex;flex-direction:column;gap:6px}
+.element-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--border);border-radius:9px;padding:8px;background:var(--surface)}
+.element-item strong{font-size:11px}.element-item small{display:block;color:var(--muted);font-size:9px;margin-top:2px}
+.element-item button{height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:10px;font-weight:800}
+.preview-dock{position:sticky;top:88px;min-height:680px}
+.preview-dock-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.preview-dock-head h3{margin:0;font-size:14px}.preview-dock-head small{color:var(--muted)}
+.controller-preview-stage{background:#ccd7df;padding:14px;min-height:620px;display:flex;justify-content:center}
+.controller-preview-wrap{width:100%;min-height:590px;background:white;border:5px solid #263544;border-radius:12px;overflow:hidden;transition:width .18s}
+.controller-preview-wrap.tablet{width:min(100%,760px)}
+.controller-preview-wrap.mobile{width:min(100%,390px)}
+.controller-preview-frame{width:100%;height:590px;border:0;background:white}
+.ctrl-footer{display:flex;gap:8px;flex-wrap:wrap;padding:12px;border-top:1px solid var(--border);background:var(--surface2)}
+.ctrl-footer button{height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:11px;font-weight:900;padding:0 12px}
+.ctrl-footer .save{background:var(--primary);border-color:var(--primary);color:#fff}
+.unsupported{opacity:.55;pointer-events:none}
+@media(max-width:1100px){.controller-shell{grid-template-columns:1fr}.preview-dock{position:relative;top:auto}}
+@media(max-width:620px){.control-grid{grid-template-columns:1fr}.controller-preview-stage{padding:8px}.controller-preview-frame{height:520px}.controller-preview-wrap{min-height:520px}}
+
 </style>
 </head>
 <body>
@@ -123,6 +205,7 @@ html[data-cardmode="premium"] .btn.primary{background:linear-gradient(135deg,var
 </aside>
 <main class="main">
   <div class="topbar">
+    <button class="mobile-menu-btn" onclick="openAppDrawer()">☰</button>
     <div class="search"><span class="ico">⌕</span><input placeholder="Search design tools, pages, modules..."></div>
     <div class="top-actions">
       <button class="btn soft hide-sm" onclick="previewActive()">Responsive Preview</button>
@@ -133,8 +216,8 @@ html[data-cardmode="premium"] .btn.primary{background:linear-gradient(135deg,var
   <div class="content">
     <section class="page" id="homePage">
       <div class="page-head">
-        <div><h2>Design Studio</h2><p>Central visual engine for the complete CoreFlow ERP system.</p></div>
-        <div class="head-actions"><button class="btn primary" onclick="previewActive()">Preview System</button></div>
+        <div><h2 data-page-title="home">Design Studio</h2><p data-page-subtitle="home">Central visual engine for the complete CoreFlow ERP system.</p></div>
+        <div class="head-actions"><button class="btn soft page-controller-launch" onclick="openPageController('home')">⚙ Page Controller</button></div>
       </div>
       <div class="kpis">
         <div class="kpi"><div class="kicon">▧</div><div><b>1</b><span>Active Page</span></div></div>
@@ -159,7 +242,7 @@ html[data-cardmode="premium"] .btn.primary{background:linear-gradient(135deg,var
             <div class="studio-card"><div class="sicon">▰</div><h4>Header & Banner Studio</h4><p>Page header, subtitle, breadcrumbs, info bars and page actions.</p><button onclick="notBuilt()">Build Later →</button></div>
             <div class="studio-card"><div class="sicon">▦</div><h4>Cards & Panels</h4><p>Content panels, summaries, warnings and information cards.</p><button onclick="notBuilt()">Build Later →</button></div>
             <div class="studio-card"><div class="sicon">A</div><h4>Typography Studio</h4><p>Fonts, title scales, labels, tables and readable hierarchy.</p><button onclick="notBuilt()">Build Later →</button></div>
-            <div class="studio-card"><div class="sicon">⚙</div><h4>Page Controller</h4><p>Pages explicitly register supported capabilities with the engine.</p><button onclick="notBuilt()">Build Later →</button></div>
+            <div class="studio-card"><div class="sicon">⚙</div><h4>Page Controller</h4><p>Auto-detect the current page, preview it live and fine-tune page-level presentation safely.</p><button onclick="openPageController()">Open Controller →</button></div>
           </div>
         </div>
       </div>
@@ -168,8 +251,8 @@ html[data-cardmode="premium"] .btn.primary{background:linear-gradient(135deg,var
     <section class="page" id="galleryPage">
       <div class="backline"><button class="btn" onclick="goPage('home')">← Back to Design Studio</button></div>
       <div class="page-head">
-        <div><h2>Design Gallery</h2><p>These are real system designs, not color-only themes or picture-only mockups.</p></div>
-        <div class="head-actions"><button class="btn soft" onclick="previewActive()">Responsive Preview</button></div>
+        <div><h2 data-page-title="gallery">Design Gallery</h2><p data-page-subtitle="gallery">These are real system designs, not color-only themes or picture-only mockups.</p></div>
+        <div class="head-actions"><button class="btn soft page-controller-launch" onclick="openPageController('gallery')">⚙ Page Controller</button><button class="btn soft" onclick="previewActive()">Responsive Preview</button></div>
       </div>
       <div class="gallery-note"><b>Preview</b> never changes the system. <b>Apply</b> changes the complete Central Design Engine: page styling, typography, cards, KPI, buttons, inputs, navigation, spacing, shadows, borders and responsive behavior.</div>
       <div class="panel">
@@ -177,8 +260,223 @@ html[data-cardmode="premium"] .btn.primary{background:linear-gradient(135deg,var
         <div class="panel-body"><div class="gallery" id="gallery"></div></div>
       </div>
     </section>
+
+    <section class="page" id="controllerPage">
+      <div class="backline"><button class="btn" onclick="returnFromController()">← Back to Page</button></div>
+      <div class="page-head">
+        <div><h2>Page Controller</h2><p>Advanced page-level design controls with auto detection, live preview and per-page saved settings.</p></div>
+        <div class="head-actions"><span class="device-chip" id="autoDeviceChip">Auto: Desktop</span></div>
+      </div>
+
+      <div class="controller-shell">
+        <div class="controller-panel">
+          <div class="controller-toolbar">
+            <div class="control-row">
+              <label>Selected Page</label>
+              <select id="pcPageSelect" onchange="pcSelectPage(this.value)"></select>
+            </div>
+            <button class="btn soft" onclick="pcDetectCurrent()">Auto Detect</button>
+          </div>
+
+          <div class="ctrl-tabs" id="pcTabs">
+            <button class="active" data-tab="general" onclick="pcTab('general',this)">General</button>
+            <button data-tab="header" onclick="pcTab('header',this)">Header</button>
+            <button data-tab="buttons" onclick="pcTab('buttons',this)">Buttons</button>
+            <button data-tab="table" onclick="pcTab('table',this)">Table</button>
+            <button data-tab="kpi" onclick="pcTab('kpi',this)">KPI</button>
+            <button data-tab="cards" onclick="pcTab('cards',this)">Cards</button>
+            <button data-tab="forms" onclick="pcTab('forms',this)">Forms</button>
+            <button data-tab="responsive" onclick="pcTab('responsive',this)">Responsive</button>
+          </div>
+
+          <div class="ctrl-section active" data-section="general">
+            <div class="control-group">
+              <h4>Page Layout</h4>
+              <div class="control-grid">
+                <div class="control-row"><label>Content Width</label><select data-pc="layout.width"><option value="full">Full Width</option><option value="normal">Normal</option><option value="compact">Compact</option></select></div>
+                <div class="control-row"><label>Density</label><select data-pc="layout.density"><option value="compact">Compact</option><option value="normal">Normal</option><option value="spacious">Spacious</option></select></div>
+                <div class="control-row"><label>Page Padding</label><input type="number" min="0" max="60" data-pc="layout.padding"></div>
+                <div class="control-row"><label>Section Gap</label><input type="number" min="0" max="60" data-pc="layout.gap"></div>
+              </div>
+            </div>
+            <div class="control-group">
+              <h4>Visibility</h4>
+              <div class="toggle-line"><span>Instruction / Message Boxes</span><label class="switch"><input type="checkbox" data-pc="visibility.instructions"><i></i></label></div>
+              <div class="toggle-line"><span>Search / Filters</span><label class="switch"><input type="checkbox" data-pc="visibility.search"><i></i></label></div>
+              <div class="toggle-line"><span>KPI Section</span><label class="switch"><input type="checkbox" data-pc="visibility.kpi"><i></i></label></div>
+              <div class="toggle-line"><span>Main Cards / Panels</span><label class="switch"><input type="checkbox" data-pc="visibility.cards"><i></i></label></div>
+            </div>
+          </div>
+
+          <div class="ctrl-section" data-section="header">
+            <div class="control-group">
+              <h4>Title & Subtitle</h4>
+              <div class="toggle-line"><span>Show Title</span><label class="switch"><input type="checkbox" data-pc="header.showTitle"><i></i></label></div>
+              <div class="toggle-line"><span>Show Subtitle</span><label class="switch"><input type="checkbox" data-pc="header.showSubtitle"><i></i></label></div>
+              <div class="control-grid">
+                <div class="control-row full"><label>Title Text</label><input type="text" data-pc="header.title"></div>
+                <div class="control-row full"><label>Subtitle Text</label><textarea data-pc="header.subtitle"></textarea></div>
+                <div class="control-row"><label>Title Font Size</label><input type="number" min="14" max="60" data-pc="header.titleSize"></div>
+                <div class="control-row"><label>Subtitle Font Size</label><input type="number" min="9" max="30" data-pc="header.subtitleSize"></div>
+                <div class="control-row"><label>Font Family</label><select data-pc="header.fontFamily"><option value="inherit">System / Design Font</option><option value="Arial, sans-serif">Arial</option><option value="Segoe UI, sans-serif">Segoe UI</option><option value="Georgia, serif">Georgia</option><option value="Trebuchet MS, sans-serif">Trebuchet</option></select></div>
+                <div class="control-row"><label>Alignment</label><select data-pc="header.align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+              </div>
+              <div class="toggle-line"><span>Title Bold</span><label class="switch"><input type="checkbox" data-pc="header.bold"><i></i></label></div>
+              <div class="toggle-line"><span>Title Italic</span><label class="switch"><input type="checkbox" data-pc="header.italic"><i></i></label></div>
+            </div>
+          </div>
+
+          <div class="ctrl-section" data-section="buttons">
+            <div class="control-group">
+              <h4>Detected Page Buttons</h4>
+              <div class="element-list" id="pcButtonList"></div>
+            </div>
+            <div class="control-group">
+              <h4>Selected Button</h4>
+              <div class="control-grid">
+                <div class="control-row full"><label>Button Text</label><input type="text" data-btnpc="text"></div>
+                <div class="control-row"><label>Width</label><input type="number" min="0" max="500" data-btnpc="width" placeholder="0 = auto"></div>
+                <div class="control-row"><label>Height</label><input type="number" min="26" max="90" data-btnpc="height"></div>
+                <div class="control-row"><label>Font Size</label><input type="number" min="8" max="30" data-btnpc="fontSize"></div>
+                <div class="control-row"><label>Radius</label><input type="number" min="0" max="40" data-btnpc="radius"></div>
+                <div class="control-row"><label>Alignment</label><select data-btnpc="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+                <div class="control-row"><label>Order</label><input type="number" min="0" max="99" data-btnpc="order"></div>
+              </div>
+              <div class="toggle-line"><span>Show Button</span><label class="switch"><input type="checkbox" data-btnpc="show"><i></i></label></div>
+              <div class="toggle-line"><span>Bold</span><label class="switch"><input type="checkbox" data-btnpc="bold"><i></i></label></div>
+              <div class="toggle-line"><span>Italic</span><label class="switch"><input type="checkbox" data-btnpc="italic"><i></i></label></div>
+              <div class="toggle-line"><span>Show Icon</span><label class="switch"><input type="checkbox" data-btnpc="showIcon"><i></i></label></div>
+            </div>
+          </div>
+
+          <div class="ctrl-section" data-section="table">
+            <div class="control-group">
+              <h4>Table & Header</h4>
+              <div class="toggle-line"><span>Show Table</span><label class="switch"><input type="checkbox" data-pc="table.show"><i></i></label></div>
+              <div class="control-grid">
+                <div class="control-row"><label>Table Width %</label><input type="number" min="40" max="100" data-pc="table.width"></div>
+                <div class="control-row"><label>Header Height</label><input type="number" min="24" max="100" data-pc="table.headerHeight"></div>
+                <div class="control-row"><label>Header Font Size</label><input type="number" min="8" max="30" data-pc="table.headerFontSize"></div>
+                <div class="control-row"><label>Body Font Size</label><input type="number" min="8" max="28" data-pc="table.bodyFontSize"></div>
+                <div class="control-row"><label>Row Height</label><input type="number" min="24" max="100" data-pc="table.rowHeight"></div>
+                <div class="control-row"><label>Text Alignment</label><select data-pc="table.align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+                <div class="control-row"><label>Vertical Align</label><select data-pc="table.vAlign"><option value="middle">Middle</option><option value="top">Top</option><option value="bottom">Bottom</option></select></div>
+                <div class="control-row"><label>Responsive</label><select data-pc="table.responsive"><option value="scroll">Horizontal Scroll</option><option value="fit">Fit Columns</option><option value="cards">Card Rows on Mobile</option></select></div>
+              </div>
+              <div class="toggle-line"><span>Header Bold</span><label class="switch"><input type="checkbox" data-pc="table.headerBold"><i></i></label></div>
+              <div class="toggle-line"><span>Header Italic</span><label class="switch"><input type="checkbox" data-pc="table.headerItalic"><i></i></label></div>
+              <div class="toggle-line"><span>Wrap Header Text</span><label class="switch"><input type="checkbox" data-pc="table.headerWrap"><i></i></label></div>
+              <div class="toggle-line"><span>Wrap Body Text</span><label class="switch"><input type="checkbox" data-pc="table.bodyWrap"><i></i></label></div>
+              <div class="toggle-line"><span>Sticky Header</span><label class="switch"><input type="checkbox" data-pc="table.sticky"><i></i></label></div>
+              <div class="toggle-line"><span>Zebra Rows</span><label class="switch"><input type="checkbox" data-pc="table.zebra"><i></i></label></div>
+            </div>
+            <div class="control-group">
+              <h4>Columns</h4>
+              <div class="element-list" id="pcColumnList"></div>
+            </div>
+          </div>
+
+          <div class="ctrl-section" data-section="kpi">
+            <div class="control-group">
+              <h4>KPI Cards</h4>
+              <div class="control-grid">
+                <div class="control-row"><label>Desktop Columns</label><input type="number" min="1" max="8" data-pc="kpi.columns"></div>
+                <div class="control-row"><label>Card Height</label><input type="number" min="60" max="220" data-pc="kpi.height"></div>
+                <div class="control-row"><label>Value Font Size</label><input type="number" min="14" max="60" data-pc="kpi.valueSize"></div>
+                <div class="control-row"><label>Label Font Size</label><input type="number" min="8" max="24" data-pc="kpi.labelSize"></div>
+                <div class="control-row"><label>Icon Size</label><input type="number" min="20" max="90" data-pc="kpi.iconSize"></div>
+                <div class="control-row"><label>Radius</label><input type="number" min="0" max="50" data-pc="kpi.radius"></div>
+                <div class="control-row"><label>Gap</label><input type="number" min="0" max="40" data-pc="kpi.gap"></div>
+                <div class="control-row"><label>Alignment</label><select data-pc="kpi.align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl-section" data-section="cards">
+            <div class="control-group">
+              <h4>Cards & Panels</h4>
+              <div class="control-grid">
+                <div class="control-row"><label>Radius</label><input type="number" min="0" max="50" data-pc="cards.radius"></div>
+                <div class="control-row"><label>Padding</label><input type="number" min="0" max="60" data-pc="cards.padding"></div>
+                <div class="control-row"><label>Gap</label><input type="number" min="0" max="50" data-pc="cards.gap"></div>
+                <div class="control-row"><label>Title Size</label><input type="number" min="10" max="36" data-pc="cards.titleSize"></div>
+              </div>
+              <div class="toggle-line"><span>Show Shadows</span><label class="switch"><input type="checkbox" data-pc="cards.shadow"><i></i></label></div>
+            </div>
+          </div>
+
+          <div class="ctrl-section" data-section="forms">
+            <div class="control-group">
+              <h4>Forms, Inputs & Filters</h4>
+              <div class="control-grid">
+                <div class="control-row"><label>Input Height</label><input type="number" min="28" max="80" data-pc="forms.inputHeight"></div>
+                <div class="control-row"><label>Label Font Size</label><input type="number" min="8" max="24" data-pc="forms.labelSize"></div>
+                <div class="control-row"><label>Input Font Size</label><input type="number" min="8" max="24" data-pc="forms.inputSize"></div>
+                <div class="control-row"><label>Field Gap</label><input type="number" min="0" max="40" data-pc="forms.gap"></div>
+                <div class="control-row"><label>Columns</label><input type="number" min="1" max="6" data-pc="forms.columns"></div>
+                <div class="control-row"><label>Input Radius</label><input type="number" min="0" max="30" data-pc="forms.radius"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl-section" data-section="responsive">
+            <div class="control-group">
+              <h4>Automatic Responsive Behavior</h4>
+              <div class="toggle-line"><span>Auto Device Detection</span><label class="switch"><input type="checkbox" data-pc="responsive.auto"><i></i></label></div>
+              <div class="toggle-line"><span>Mobile Drawer Navigation</span><label class="switch"><input type="checkbox" data-pc="responsive.mobileDrawer"><i></i></label></div>
+              <div class="toggle-line"><span>Stack Forms on Mobile</span><label class="switch"><input type="checkbox" data-pc="responsive.stackForms"><i></i></label></div>
+              <div class="toggle-line"><span>Stack Cards on Mobile</span><label class="switch"><input type="checkbox" data-pc="responsive.stackCards"><i></i></label></div>
+              <div class="control-grid">
+                <div class="control-row"><label>Tablet Breakpoint</label><input type="number" min="600" max="1200" data-pc="responsive.tabletBreakpoint"></div>
+                <div class="control-row"><label>Mobile Breakpoint</label><input type="number" min="320" max="800" data-pc="responsive.mobileBreakpoint"></div>
+              </div>
+              <p style="font-size:11px;color:var(--muted);line-height:1.5;margin:10px 0 0">Actual ERP automatically adapts to the available browser width. Preview device buttons below are only for testing.</p>
+            </div>
+          </div>
+
+          <div class="ctrl-footer">
+            <button class="save" onclick="pcSave()">Save Page Settings</button>
+            <button onclick="pcResetSection()">Reset Current Section</button>
+            <button onclick="pcResetPage()">Reset Full Page</button>
+          </div>
+        </div>
+
+        <div class="controller-panel preview-dock">
+          <div class="preview-dock-head">
+            <div><h3>Live Page Preview</h3><small id="pcPreviewName">Current Page</small></div>
+            <div class="device-tabs">
+              <button class="active" onclick="pcPreviewDevice('desktop',this)">Desktop</button>
+              <button onclick="pcPreviewDevice('tablet',this)">Tablet</button>
+              <button onclick="pcPreviewDevice('mobile',this)">Mobile</button>
+            </div>
+          </div>
+          <div class="controller-preview-stage">
+            <div class="controller-preview-wrap" id="pcPreviewWrap">
+              <iframe class="controller-preview-frame" id="pcPreviewFrame"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </main>
+</div>
+
+
+<div class="app-drawer-mask" id="appDrawerMask" onclick="if(event.target===this)closeAppDrawer()">
+  <div class="app-drawer">
+    <div class="brand"><div class="logo">CF</div><div class="brand-copy"><h1>CoreFlow ERP</h1><small>Auto Responsive</small></div></div>
+    <div class="nav-title">Workspace</div>
+    <button class="nav-item active" onclick="closeAppDrawer();goPage('home')"><span>⌂</span><span>Design Studio</span></button>
+    <div class="nav-title">Future Modules</div>
+    <button class="nav-item future"><span>▦</span><span>Masters</span></button>
+    <button class="nav-item future"><span>🛒</span><span>Purchase</span></button>
+    <button class="nav-item future"><span>⇢</span><span>Issue</span></button>
+    <button class="nav-item future"><span>◫</span><span>Inventory</span></button>
+    <button class="nav-item future"><span>₨</span><span>Costing</span></button>
+    <button class="nav-item future"><span>⚒</span><span>Production</span></button>
+    <button class="nav-item future"><span>▤</span><span>Reports</span></button>
+  </div>
 </div>
 
 <div class="preview-modal" id="previewModal">
@@ -215,11 +513,13 @@ if(!Number.isInteger(activeDesign)||activeDesign<0||activeDesign>=PRESETS.length
 let previewIndex=activeDesign;
 
 function goPage(route){
-  if(route!=='gallery')route='home';
+  if(!['home','gallery','controller'].includes(route))route='home';
   try{localStorage.setItem(ROUTE_KEY,route)}catch(e){}
   document.documentElement.setAttribute('data-route',route);
   window.scrollTo({top:0,behavior:'auto'});
   if(route==='gallery')renderGallery();
+  if(route==='controller')pcRender();
+  updateAutoDevice();
 }
 function cssVar(name,val){document.documentElement.style.setProperty(name,val)}
 function applyDesign(index,save=true){
@@ -301,9 +601,246 @@ function notBuilt(){toast('This Design Studio page will be built next, page by p
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.__tt);window.__tt=setTimeout(()=>t.classList.remove('show'),1800)}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 
-/* Apply the saved design before normal interaction and keep current route exactly as saved. */
+
+/* ---------- Permanent automatic responsive detection ---------- */
+function currentDeviceMode(){
+  const w=window.innerWidth;
+  if(w<=760)return 'Mobile';
+  if(w<=1100)return 'Tablet';
+  if(w<=1500)return 'Laptop';
+  return 'Desktop';
+}
+function updateAutoDevice(){
+  const mode=currentDeviceMode();
+  document.documentElement.setAttribute('data-device',mode.toLowerCase());
+  const chip=document.getElementById('autoDeviceChip');
+  if(chip)chip.textContent='Auto: '+mode;
+}
+function openAppDrawer(){document.getElementById('appDrawerMask')?.classList.add('open')}
+function closeAppDrawer(){document.getElementById('appDrawerMask')?.classList.remove('open')}
+window.addEventListener('resize',()=>{updateAutoDevice(); if(document.documentElement.getAttribute('data-route')==='controller')pcBuildPreview();});
+
+/* ---------- Page registration + advanced Page Controller ---------- */
+const PC_KEY='COREFLOW_PAGE_CONTROLLER_V1';
+const PAGE_REGISTRY={
+  home:{
+    name:'Design Studio',
+    title:'Design Studio',
+    subtitle:'Central visual engine for the complete CoreFlow ERP system.',
+    buttons:[
+      {id:'pageController',label:'⚙ Page Controller',icon:true},
+      {id:'galleryOpen',label:'Open Gallery →',icon:false}
+    ],
+    columns:[
+      {id:'date',label:'Date'},{id:'reference',label:'Reference'},{id:'item',label:'Item'},{id:'qty',label:'Qty'},{id:'status',label:'Status'}
+    ]
+  },
+  gallery:{
+    name:'Design Gallery',
+    title:'Design Gallery',
+    subtitle:'These are real system designs, not color-only themes or picture-only mockups.',
+    buttons:[
+      {id:'pageController',label:'⚙ Page Controller',icon:true},
+      {id:'responsivePreview',label:'Responsive Preview',icon:false},
+      {id:'previewDesign',label:'Preview',icon:false},
+      {id:'applyDesign',label:'Apply',icon:false}
+    ],
+    columns:[
+      {id:'design',label:'Design'},{id:'type',label:'Type'},{id:'status',label:'Status'},{id:'action',label:'Action'}
+    ]
+  }
+};
+const PC_DEFAULT={
+  layout:{width:'full',density:'normal',padding:20,gap:14},
+  visibility:{instructions:true,search:true,kpi:true,cards:true},
+  header:{showTitle:true,showSubtitle:true,title:'',subtitle:'',titleSize:28,subtitleSize:13,fontFamily:'inherit',align:'left',bold:true,italic:false},
+  table:{show:true,width:100,headerHeight:38,headerFontSize:12,bodyFontSize:12,rowHeight:38,align:'left',vAlign:'middle',responsive:'scroll',headerBold:true,headerItalic:false,headerWrap:true,bodyWrap:false,sticky:true,zebra:true},
+  kpi:{columns:4,height:88,valueSize:24,labelSize:11,iconSize:42,radius:14,gap:12,align:'left'},
+  cards:{radius:14,padding:16,gap:14,titleSize:16,shadow:true},
+  forms:{inputHeight:38,labelSize:10,inputSize:12,gap:10,columns:2,radius:9},
+  responsive:{auto:true,mobileDrawer:true,stackForms:true,stackCards:true,tabletBreakpoint:1100,mobileBreakpoint:760},
+  buttons:{},
+  columns:{}
+};
+let pcState={};
+let pcSelectedPage='home';
+let pcReturnRoute='home';
+let pcSelectedButton='';
+
+function deepClone(v){return JSON.parse(JSON.stringify(v))}
+function deepMerge(base,extra){
+  const out=deepClone(base);
+  const merge=(a,b)=>{Object.keys(b||{}).forEach(k=>{if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])){a[k]=a[k]||{};merge(a[k],b[k])}else a[k]=b[k]})};
+  merge(out,extra||{}); return out;
+}
+function pcLoad(){
+  try{pcState=JSON.parse(localStorage.getItem(PC_KEY)||'{}')}catch(e){pcState={}}
+}
+function pcPageState(page){
+  const reg=PAGE_REGISTRY[page]||PAGE_REGISTRY.home;
+  const s=deepMerge(PC_DEFAULT,pcState[page]||{});
+  if(!s.header.title)s.header.title=reg.title;
+  if(!s.header.subtitle)s.header.subtitle=reg.subtitle;
+  reg.buttons.forEach((b,i)=>{if(!s.buttons[b.id])s.buttons[b.id]={text:b.label,show:true,width:0,height:38,fontSize:12,radius:9,align:'center',order:i,bold:true,italic:false,showIcon:b.icon}});
+  reg.columns.forEach(c=>{if(!s.columns[c.id])s.columns[c.id]={show:true,width:0,align:'left',wrap:false}});
+  return s;
+}
+function getByPath(obj,path){return path.split('.').reduce((a,k)=>a?.[k],obj)}
+function setByPath(obj,path,val){const p=path.split('.');let a=obj;for(let i=0;i<p.length-1;i++){a[p[i]]=a[p[i]]||{};a=a[p[i]]}a[p.at(-1)]=val}
+function openPageController(page){
+  const current=document.documentElement.getAttribute('data-route')||'home';
+  pcReturnRoute=current==='controller'?pcReturnRoute:current;
+  pcSelectedPage=(page&&PAGE_REGISTRY[page])?page:(PAGE_REGISTRY[current]?current:'home');
+  try{sessionStorage.setItem('COREFLOW_PC_RETURN',pcReturnRoute)}catch(e){}
+  goPage('controller');
+}
+function returnFromController(){
+  let r=pcReturnRoute;
+  try{r=sessionStorage.getItem('COREFLOW_PC_RETURN')||r}catch(e){}
+  goPage(PAGE_REGISTRY[r]?r:'home');
+}
+function pcDetectCurrent(){
+  let r=pcReturnRoute;
+  try{r=sessionStorage.getItem('COREFLOW_PC_RETURN')||r}catch(e){}
+  pcSelectedPage=PAGE_REGISTRY[r]?r:'home';
+  pcRender();
+  toast('Current page detected: '+PAGE_REGISTRY[pcSelectedPage].name);
+}
+function pcSelectPage(page){if(PAGE_REGISTRY[page]){pcSelectedPage=page;pcSelectedButton='';pcRender()}}
+function pcTab(name,btn){
+  document.querySelectorAll('.ctrl-section').forEach(s=>s.classList.toggle('active',s.dataset.section===name));
+  document.querySelectorAll('#pcTabs button').forEach(b=>b.classList.toggle('active',b===btn));
+}
+function pcBindInputs(){
+  const s=pcPageState(pcSelectedPage);
+  document.querySelectorAll('[data-pc]').forEach(el=>{
+    const path=el.dataset.pc; const v=getByPath(s,path);
+    if(el.type==='checkbox')el.checked=!!v; else el.value=v??'';
+    el.oninput=el.onchange=()=>{
+      let value=el.type==='checkbox'?el.checked:el.value;
+      if(el.type==='number')value=Number(value);
+      const st=pcPageState(pcSelectedPage); setByPath(st,path,value); pcState[pcSelectedPage]=st; pcBuildPreview();
+    };
+  });
+}
+function pcRenderButtons(){
+  const reg=PAGE_REGISTRY[pcSelectedPage]; const s=pcPageState(pcSelectedPage);
+  const list=document.getElementById('pcButtonList'); if(!list)return;
+  if(!pcSelectedButton)pcSelectedButton=reg.buttons[0]?.id||'';
+  list.innerHTML='';
+  reg.buttons.forEach(b=>{
+    const c=s.buttons[b.id];
+    const item=document.createElement('div'); item.className='element-item';
+    item.innerHTML=`<div><strong>${escapeHtml(c.text||b.label)}</strong><small>${escapeHtml(b.id)}</small></div><button>${b.id===pcSelectedButton?'Selected':'Edit'}</button>`;
+    item.querySelector('button').onclick=()=>{pcSelectedButton=b.id;pcRenderButtons();pcBindButtonInputs();pcBuildPreview()};
+    list.appendChild(item);
+  });
+}
+function pcBindButtonInputs(){
+  const s=pcPageState(pcSelectedPage); const b=s.buttons[pcSelectedButton];
+  document.querySelectorAll('[data-btnpc]').forEach(el=>{
+    if(!b){el.disabled=true;return} el.disabled=false;
+    const key=el.dataset.btnpc; const v=b[key];
+    if(el.type==='checkbox')el.checked=!!v; else el.value=v??'';
+    el.oninput=el.onchange=()=>{
+      let value=el.type==='checkbox'?el.checked:el.value;
+      if(el.type==='number')value=Number(value);
+      const st=pcPageState(pcSelectedPage); st.buttons[pcSelectedButton][key]=value; pcState[pcSelectedPage]=st;
+      pcRenderButtons(); pcBuildPreview();
+    };
+  });
+}
+function pcRenderColumns(){
+  const reg=PAGE_REGISTRY[pcSelectedPage]; const s=pcPageState(pcSelectedPage);
+  const list=document.getElementById('pcColumnList'); if(!list)return;
+  list.innerHTML='';
+  reg.columns.forEach(c=>{
+    const cfg=s.columns[c.id];
+    const item=document.createElement('div'); item.className='element-item';
+    item.innerHTML=`<div><strong>${escapeHtml(c.label)}</strong><small>${cfg.show?'Visible':'Hidden'} · ${cfg.width?cfg.width+'px':'Auto'} · ${escapeHtml(cfg.align)}</small></div><button>${cfg.show?'Hide':'Show'}</button>`;
+    item.querySelector('button').onclick=()=>{const st=pcPageState(pcSelectedPage);st.columns[c.id].show=!st.columns[c.id].show;pcState[pcSelectedPage]=st;pcRenderColumns();pcBuildPreview()};
+    item.ondblclick=()=>{const w=prompt('Column width in px (0 = auto):',cfg.width||0);if(w!==null){const st=pcPageState(pcSelectedPage);st.columns[c.id].width=Math.max(0,Number(w)||0);pcState[pcSelectedPage]=st;pcRenderColumns();pcBuildPreview()}};
+    list.appendChild(item);
+  });
+}
+function pcRender(){
+  pcLoad();
+  const select=document.getElementById('pcPageSelect');
+  if(!select)return;
+  select.innerHTML=Object.entries(PAGE_REGISTRY).map(([id,p])=>`<option value="${id}">${escapeHtml(p.name)}</option>`).join('');
+  select.value=pcSelectedPage;
+  pcBindInputs(); pcRenderButtons(); pcBindButtonInputs(); pcRenderColumns(); pcBuildPreview(); updateAutoDevice();
+}
+function pcSave(){
+  const st=pcPageState(pcSelectedPage); pcState[pcSelectedPage]=st;
+  try{localStorage.setItem(PC_KEY,JSON.stringify(pcState))}catch(e){}
+  pcApplyToRegisteredPage(pcSelectedPage,st);
+  toast(PAGE_REGISTRY[pcSelectedPage].name+' page settings saved');
+}
+function pcResetSection(){
+  const active=document.querySelector('.ctrl-section.active')?.dataset.section||'general';
+  const st=pcPageState(pcSelectedPage);
+  if(active==='general'){st.layout=deepClone(PC_DEFAULT.layout);st.visibility=deepClone(PC_DEFAULT.visibility)}
+  else if(active==='buttons'){st.buttons={}}
+  else if(active==='table'){st.table=deepClone(PC_DEFAULT.table);st.columns={}}
+  else if(PC_DEFAULT[active])st[active]=deepClone(PC_DEFAULT[active]);
+  pcState[pcSelectedPage]=st;pcRender();toast('Current controller section reset');
+}
+function pcResetPage(){
+  if(!confirm('Reset all Page Controller settings for '+PAGE_REGISTRY[pcSelectedPage].name+'?'))return;
+  delete pcState[pcSelectedPage];try{localStorage.setItem(PC_KEY,JSON.stringify(pcState))}catch(e){}
+  pcRender();toast('Selected page reset');
+}
+function pcPreviewDevice(kind,btn){
+  const wrap=document.getElementById('pcPreviewWrap');wrap.className='controller-preview-wrap'+(kind==='desktop'?'':' '+kind);
+  document.querySelectorAll('.preview-dock .device-tabs button').forEach(b=>b.classList.toggle('active',b===btn));
+}
+function pcBuildPreview(){
+  const frame=document.getElementById('pcPreviewFrame'); if(!frame)return;
+  const p=PRESETS[activeDesign], reg=PAGE_REGISTRY[pcSelectedPage], s=pcPageState(pcSelectedPage);
+  document.getElementById('pcPreviewName').textContent=reg.name+' · live unsaved preview';
+  const visibleCols=reg.columns.filter(c=>s.columns[c.id]?.show!==false);
+  const btns=reg.buttons.map(b=>({id:b.id,...s.buttons[b.id]})).filter(b=>b.show!==false).sort((a,b)=>(a.order||0)-(b.order||0));
+  const width=s.layout.width==='compact'?'900px':s.layout.width==='normal'?'1180px':'100%';
+  const pad=s.layout.density==='compact'?Math.max(8,s.layout.padding-5):s.layout.density==='spacious'?s.layout.padding+8:s.layout.padding;
+  const shadow=s.cards.shadow?p.shadow:'none';
+  const tableWrap=s.table.headerWrap?'normal':'nowrap', bodyWrap=s.table.bodyWrap?'normal':'nowrap';
+  const src=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+  :root{--bg:${p.bg};--surface:${p.surface};--surface2:${p.surface2};--text:${p.text};--muted:${p.muted};--primary:${p.primary};--accent:${p.accent};--border:${p.border};--sidebar:${p.sidebar};--sidebarText:${p.sidebarText};--sidebarActive:${p.sidebarActive};--font:${p.font}}
+  *{box-sizing:border-box}html,body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text)}body{min-height:100vh}.shell{display:grid;grid-template-columns:${p.sidebarWidth} minmax(0,1fr);min-height:100vh}.side{background:var(--sidebar);color:var(--sidebarText);padding:12px}.logo{font-weight:900;padding:10px 8px 18px}.nav{padding:10px;border-radius:${p.buttonRadius};margin:3px 0}.nav.active{background:var(--sidebarActive)}.main{min-width:0}.top{height:${p.topbarHeight};background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px}.hamb{display:none}.search{height:${s.forms.inputHeight}px;border:1px solid var(--border);border-radius:${s.forms.radius}px;background:var(--surface2);padding:0 10px;color:var(--text);width:340px}.content{max-width:${width};margin:auto;padding:${pad}px}.pagehead{text-align:${s.header.align};margin-bottom:${s.layout.gap}px}.pagehead h1{display:${s.header.showTitle?'block':'none'};font-family:${s.header.fontFamily};font-size:${s.header.titleSize}px;font-weight:${s.header.bold?800:400};font-style:${s.header.italic?'italic':'normal'};margin:0 0 5px}.pagehead p{display:${s.header.showSubtitle?'block':'none'};font-size:${s.header.subtitleSize}px;color:var(--muted);margin:0}.actions{display:flex;gap:7px;justify-content:${s.header.align==='right'?'flex-end':s.header.align==='center'?'center':'flex-start'};flex-wrap:wrap;margin-top:10px}.actions button{background:var(--primary);color:white;border:0}
+  .kpis{display:${s.visibility.kpi?'grid':'none'};grid-template-columns:repeat(${s.kpi.columns},minmax(0,1fr));gap:${s.kpi.gap}px;margin-bottom:${s.layout.gap}px}.kpi{min-height:${s.kpi.height}px;background:var(--surface);border:1px solid var(--border);border-radius:${s.kpi.radius}px;padding:12px;box-shadow:${shadow};text-align:${s.kpi.align}}.kpi b{font-size:${s.kpi.valueSize}px;display:block}.kpi small{font-size:${s.kpi.labelSize}px;color:var(--muted)}
+  .message{display:${s.visibility.instructions?'block':'none'};padding:10px 12px;border:1px solid var(--border);border-radius:${s.cards.radius}px;background:var(--surface2);margin-bottom:${s.layout.gap}px;font-size:11px}.cards{display:${s.visibility.cards?'grid':'none'};grid-template-columns:1.2fr .8fr;gap:${s.cards.gap}px}.card{background:var(--surface);border:1px solid var(--border);border-radius:${s.cards.radius}px;padding:${s.cards.padding}px;box-shadow:${shadow};overflow:auto}.card h3{font-size:${s.cards.titleSize}px;margin:0 0 10px}.form{display:grid;grid-template-columns:repeat(${s.forms.columns},minmax(0,1fr));gap:${s.forms.gap}px}.field label{display:block;font-size:${s.forms.labelSize}px;color:var(--muted);margin-bottom:4px}.field input{width:100%;height:${s.forms.inputHeight}px;border:1px solid var(--border);border-radius:${s.forms.radius}px;background:var(--surface2);color:var(--text);padding:0 8px;font-size:${s.forms.inputSize}px}
+  .tablewrap{display:${s.table.show?'block':'none'};width:${s.table.width}%;max-width:100%;overflow-x:${s.table.responsive==='fit'?'hidden':'auto'}}table{width:100%;border-collapse:collapse;font-size:${s.table.bodyFontSize}px}th,td{border-bottom:1px solid var(--border);text-align:${s.table.align};vertical-align:${s.table.vAlign};padding:6px 8px;height:${s.table.rowHeight}px;white-space:${bodyWrap}}th{height:${s.table.headerHeight}px;font-size:${s.table.headerFontSize}px;font-weight:${s.table.headerBold?800:400};font-style:${s.table.headerItalic?'italic':'normal'};white-space:${tableWrap};background:${p.tableHead};${s.table.sticky?'position:sticky;top:0;':''}}${s.table.zebra?'tbody tr:nth-child(even){background:var(--surface2)}':''}
+  @media(max-width:${s.responsive.tabletBreakpoint}px){.kpis{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}}
+  @media(max-width:${s.responsive.mobileBreakpoint}px){.shell{display:block}.side{display:none}.top{height:58px}.hamb{display:${s.responsive.mobileDrawer?'inline-block':'none'};margin-right:8px}.search{display:none}.content{padding:10px}.kpis{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:${s.responsive.stackCards?'1fr':'repeat(2,1fr)'}.form{grid-template-columns:${s.responsive.stackForms?'1fr':'repeat(2,1fr)'}.pagehead{text-align:left}.actions{justify-content:flex-start}.tablewrap{width:100%}}
+  </style></head><body><div class="shell"><aside class="side"><div class="logo">CoreFlow ERP</div><div class="nav active">${escapeHtml(reg.name)}</div><div class="nav">Purchase</div><div class="nav">Issue</div><div class="nav">Inventory</div><div class="nav">Reports</div></aside><main class="main"><div class="top"><button class="hamb">☰</button>${s.visibility.search?'<input class="search" placeholder="Search / Filter...">':''}</div><div class="content"><div class="pagehead"><h1>${escapeHtml(s.header.title)}</h1><p>${escapeHtml(s.header.subtitle)}</p><div class="actions">${btns.map(b=>`<button style="width:${b.width?b.width+'px':'auto'};height:${b.height}px;border-radius:${b.radius}px;font-size:${b.fontSize}px;font-weight:${b.bold?800:400};font-style:${b.italic?'italic':'normal'}">${escapeHtml(b.showIcon?'⚙ '+b.text.replace(/^⚙\s*/,''):b.text.replace(/^⚙\s*/,''))}</button>`).join('')}</div></div><div class="kpis"><div class="kpi"><b>842</b><small>Inventory Items</small></div><div class="kpi"><b>128</b><small>Purchases</small></div><div class="kpi"><b>64</b><small>Suppliers</small></div><div class="kpi"><b>18</b><small>Departments</small></div></div><div class="message">Instruction / message area controlled independently by Page Controller.</div><div class="cards"><div class="card"><h3>Table Preview</h3><div class="tablewrap"><table><thead><tr>${visibleCols.map(c=>`<th style="${s.columns[c.id].width?'width:'+s.columns[c.id].width+'px;':''}text-align:${s.columns[c.id].align}">${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>${[1,2,3].map((r)=>`<tr>${visibleCols.map(c=>`<td style="${s.columns[c.id].width?'width:'+s.columns[c.id].width+'px;':''}text-align:${s.columns[c.id].align};white-space:${s.columns[c.id].wrap?'normal':'nowrap'}">${escapeHtml(c.id==='date'?'13-Sep-26':c.id==='qty'?String(r*10):c.label+' '+r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div><div class="card"><h3>Form Preview</h3><div class="form"><div class="field"><label>Date</label><input value="13-Sep-26"></div><div class="field"><label>Reference</label><input value="IR-00042"></div><div class="field"><label>Item</label><input value="MS Nut Bolt"></div><div class="field"><label>Quantity</label><input value="10"></div></div></div></div></div></main></div></body></html>`;
+  frame.srcdoc=src;
+}
+function pcApplyToRegisteredPage(page,s){
+  if(page==='home'){
+    const h=document.querySelector('[data-page-title="home"]'), sub=document.querySelector('[data-page-subtitle="home"]');
+    if(h){h.textContent=s.header.title;h.style.display=s.header.showTitle?'':'none';h.style.fontSize=s.header.titleSize+'px';h.style.textAlign=s.header.align;h.style.fontStyle=s.header.italic?'italic':'normal';h.style.fontWeight=s.header.bold?'800':'400'}
+    if(sub){sub.textContent=s.header.subtitle;sub.style.display=s.header.showSubtitle?'':'none';sub.style.fontSize=s.header.subtitleSize+'px';sub.style.textAlign=s.header.align}
+  }
+  if(page==='gallery'){
+    const h=document.querySelector('[data-page-title="gallery"]'), sub=document.querySelector('[data-page-subtitle="gallery"]');
+    if(h){h.textContent=s.header.title;h.style.display=s.header.showTitle?'':'none';h.style.fontSize=s.header.titleSize+'px';h.style.textAlign=s.header.align;h.style.fontStyle=s.header.italic?'italic':'normal';h.style.fontWeight=s.header.bold?'800':'400'}
+    if(sub){sub.textContent=s.header.subtitle;sub.style.display=s.header.showSubtitle?'':'none';sub.style.fontSize=s.header.subtitleSize+'px';sub.style.textAlign=s.header.align}
+  }
+}
+function pcApplySaved(){
+  pcLoad();
+  Object.keys(PAGE_REGISTRY).forEach(p=>pcApplyToRegisteredPage(p,pcPageState(p)));
+}
+pcLoad();
+updateAutoDevice();
+
+/* Apply saved central design + page-level settings before normal interaction. */
 applyDesign(activeDesign,false);
 renderGallery();
+pcApplySaved();
+updateAutoDevice();
+if(document.documentElement.getAttribute('data-route')==='controller')pcRender();
 </script>
 </body>
 </html>
