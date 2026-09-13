@@ -16222,7 +16222,12 @@ function invOgpOutMap(){
   return m
 }
 
+let invRowsCache=null, invRowsDirty=true, invViewRendered=false, invViewDirty=true;
+function invMarkDirty(){invRowsDirty=true;invViewDirty=true}
+function invRefreshNow(){invMarkDirty();return invRender()}
+
 function invRows(){
+  if(!invRowsDirty && Array.isArray(invRowsCache))return invRowsCache;
   const all=new Map(),open=invOpeningMap(),adj=invAdjustmentMap(),issues=invIssueMap(),rgp=invRgpOutsideMap(),ogp=invOgpOutMap();
 
   invItems().forEach(i=>{
@@ -16246,7 +16251,7 @@ function invRows(){
     if(d>=x.lastDate){x.lastDate=d;x.lastRate=rate||x.lastRate}
   });
 
-  return [...all.values()].map(x=>{
+  invRowsCache=[...all.values()].map(x=>{
     const k=invKey(x.item,x.size),rule=invRule(x.master);
     const opening=open[k]||0,adjustment=adj[k]||0,issue=issues[k]||0,outside=rgp[k]||0,ogpOut=ogp[k]||0;
     let companyQty=0,store=0;
@@ -16558,6 +16563,8 @@ function invShow(tab){
   if(tab==='ledger')invLedger()
 
   if(tab==='use-location'){invUseFillSelectors();invUseRender()}
+  invRowsDirty=false;
+  return invRowsCache;
 }
 
 function invMonthlyRows(month,group){
@@ -16657,6 +16664,8 @@ function invRender(){
   document.querySelectorAll('[data-ledger]').forEach(b=>b.onclick=()=>{
     inv$('#invLedgerItem').value=b.dataset.ledger;invShow('ledger');invLedger()
   })
+  invViewRendered=true;
+  invViewDirty=false;
 }
 
 function invLedger(){
@@ -16850,7 +16859,7 @@ function invUseRender(){
 }
 function invBind(){
   document.querySelectorAll('.inv-tab').forEach(b=>b.onclick=()=>invShow(b.dataset.invtab));
-  inv$('#invRefresh').onclick=invRender;
+  inv$('#invRefresh').onclick=invRefreshNow;
   inv$('#invSearch').oninput=invRender;
   inv$('#invCategory').onchange=invRender;
   inv$('#invStatus').onchange=invRender;
@@ -16889,7 +16898,7 @@ function invBind(){
       const rows=invLoad(INV_ADJ_KEY);
       rows.push({id:'ADJ-'+Date.now(),item:r.item,size:r.size,qty,type,date,remarks});invSave(INV_ADJ_KEY,rows)
     }
-    inv$('#invAdjQty').value='';inv$('#invAdjReason').value='';invRender();
+    inv$('#invAdjQty').value='';inv$('#invAdjReason').value='';invMarkDirty();invRender();
     toast(type==='OPENING'?'Opening stock saved':'Inventory adjustment saved')
   };
 
@@ -16902,7 +16911,6 @@ function invBind(){
   }
   monthEl.innerHTML=months.map(m=>`<option>${m}</option>`).join('');
   monthEl.value=invCurrentMonth();
-  invRender()
 }
 
 function invOpen(){
@@ -16918,7 +16926,7 @@ function invOpen(){
   ['purchaseGroup','issueGroup','gatePassGroup','designStudioGroup'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(inv$('#workspaceTitle'))inv$('#workspaceTitle').textContent='Inventory Management';
   if(inv$('#workspaceSubtitle'))inv$('#workspaceSubtitle').textContent='Store Inventory • Monthly / Department Stock • Direct Consumption';
-  invRender()
+  if(!invViewRendered || invViewDirty)invRender()
 }
 
 function invNav(){
@@ -16967,7 +16975,7 @@ function invStartup(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',invStartup);
 else invStartup();
 
-window.ERPInventory={open:invOpen,refresh:invRender,rows:invRows};
+window.ERPInventory={open:invOpen,refresh:invRefreshNow,rows:invRows,markDirty:invMarkDirty};
 })();
 </script>
 
@@ -17032,28 +17040,38 @@ function costMonth(d){
   if(z){const a=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return a[Math.max(0,Math.min(11,+z[2]-1))]+'-'+String(z[3]).slice(-2)}
   return ''
 }
+let costDataDirty=true, costPurchaseCache=null, costIssueCache=null, costWeightedCache=null, costRowsCache=Object.create(null), costViewRendered=false, costViewDirty=true;
+function costMarkDirty(){
+  costDataDirty=true;costPurchaseCache=null;costIssueCache=null;costWeightedCache=null;costRowsCache=Object.create(null);costViewDirty=true
+}
 function costPurchaseRows(){
-  return costPurchases().map(r=>{
+  if(Array.isArray(costPurchaseCache))return costPurchaseCache;
+  costPurchaseCache=costPurchases().map(r=>{
     const p=costPItem(r),rule=costRule(p.master);
     return {date:costDate(r),month:costMonth(costDate(r)),item:p.name,size:p.size,unit:p.unit,
       supplier:ct(r.supplier||r.supplierName||r.party),qty:costPQty(r),rate:costPRate(r),value:costPVal(r),
       group:rule.group,control:rule.control,ref:ct(r.billNo||r.bill||r.grn||r.igp||r.id),source:ct(r.purchaseType||r.registerType||'Purchase')}
   }).filter(x=>x.item)
+  return costPurchaseCache;
 }
 function costIssueRows(){
-  return costIssues().map(r=>{
+  if(Array.isArray(costIssueCache))return costIssueCache;
+  costIssueCache=costIssues().map(r=>{
     const m=costFindItem(r.item||r.itemName,r.size),rule=costRule(m);
     return {date:costDate(r),month:costMonth(costDate(r)),item:m?.name||ct(r.item||r.itemName),size:m?.size||ct(r.size),
       unit:m?.unit||ct(r.unit),department:ct(r.department||r.issuedTo),qty:cn(r.qty||r.quantity),
       rate:cn(r.rate||r.costRate),value:cn(r.value||r.amount),group:rule.group,ref:ct(r.irNo||r.issueNo||r.id)}
   }).filter(x=>x.item)
+  return costIssueCache;
 }
 function costWeighted(){
+  if(costWeightedCache)return costWeightedCache;
   const m={};
   costPurchaseRows().forEach(r=>{const k=cl(r.item)+'|'+cl(r.size),x=m[k]||(m[k]={q:0,v:0});x.q+=r.qty;x.v+=r.value});
-  return m
+  costWeightedCache=m;
+  return costWeightedCache
 }
-function costRows(tab){
+function costRowsCompute(tab){
   const p=costPurchaseRows(),iss=costIssueRows(),w=costWeighted();
   if(tab==='item'){
     const m={};
@@ -17074,8 +17092,15 @@ function costRows(tab){
     const m={};p.forEach(r=>{const k=r.month||'Unknown',x=m[k]||(m[k]={month:k,store:0,raw:0,mess:0,cattle:0,direct:0,total:0});const z=r.group==='Raw Material'?'raw':r.group==='Mess'?'mess':r.group==='Cattle Farm'?'cattle':r.control==='Direct Consumption'?'direct':'store';x[z]+=r.value;x.total+=r.value});return Object.values(m)
   }
   if(tab==='ledger')return [...p.map(x=>({...x,type:'Purchase',party:x.supplier})),...iss.map(x=>({...x,type:'Issue',party:x.department}))].sort((a,b)=>ct(b.date).localeCompare(ct(a.date)));
-  return costRows('monthly')
+  return costRowsCompute('monthly')
 }
+function costRows(tab){
+  if(Object.prototype.hasOwnProperty.call(costRowsCache,tab))return costRowsCache[tab];
+  const rows=costRowsCompute(tab);
+  costRowsCache[tab]=rows;
+  return rows
+}
+
 function costFilter(rows){
   const q=cl(C$('#costSearch')?.value),mo=ct(C$('#costMonth')?.value),gp=ct(C$('#costGroup')?.value);
   return rows.filter(r=>(!q||cl(Object.values(r).join(' ')).includes(q))&&(!mo||r.month===mo)&&(!gp||r.group===gp))
@@ -17112,6 +17137,9 @@ function costRender(){
   const months=[...new Set(p.map(x=>x.month).filter(Boolean))].sort().reverse(),groups=[...new Set(p.map(x=>x.group).filter(Boolean))].sort();
   const me=C$('#costMonth'),mv=me.value;me.innerHTML='<option value="">All Months</option>'+months.map(x=>'<option>'+x+'</option>').join('');me.value=months.includes(mv)?mv:'';
   const ge=C$('#costGroup'),gv=ge.value;ge.innerHTML='<option value="">All Groups</option>'+groups.map(x=>'<option>'+x+'</option>').join('');ge.value=groups.includes(gv)?gv:''
+  costDataDirty=false;
+  costViewRendered=true;
+  costViewDirty=false;
 }
 function costBuild(){
   if(C$('#panel-costing-analysis'))return;
@@ -17144,7 +17172,7 @@ function costOpen(){
   if(C$('#workspaceTitle'))C$('#workspaceTitle').textContent='Costing & Analysis';
   if(C$('#workspaceSubtitle'))C$('#workspaceSubtitle').textContent='Item Costing • Department Costing • Raw Material • Mess • Cattle Farm • RGP / Repair';
   try{localStorage.setItem('erpStudioLastPanel','costing-analysis');localStorage.setItem(ACTIVE_STUDIO_PANEL_KEY,'costing-analysis')}catch(e){}
-  costRender()
+  if(!costViewRendered || costViewDirty)costRender()
 }
 function costNav(){
   const menu=document.getElementById('sideMenu')||document.querySelector('.side-menu');if(!menu)return;
@@ -17161,7 +17189,7 @@ function costStartup(){
   try{costNav();let last='';try{last=localStorage.getItem('erpStudioLastPanel')||''}catch(e){}if(last==='costing-analysis')costOpen()}catch(e){console.error('Costing startup error',e)}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',costStartup);else costStartup();
-window.ERPCosting={open:costOpen,refresh:costRender};
+window.ERPCosting={open:costOpen,refresh:()=>{costMarkDirty();return costRender()},markDirty:costMarkDirty};
 })();
 </script>
 
@@ -35316,6 +35344,26 @@ html,body{overflow-x:hidden;}
     else if(e.key==='erpIssueRecordsV1')api.mark('issue-history');
     else if(e.key==='erpRgpRecordsV1')api.mark('rgp-list');
     else if(e.key==='erpOgpRecordsV1')api.mark('ogp-list')
+  });
+})();
+</script>
+
+
+<!-- V16.52e Inventory + Costing performance cache invalidation bridge -->
+<script id="erpInvCostPerformanceV1652eScript">
+(function(){
+  'use strict';
+  function dirtyInvCost(){try{window.ERPInventory?.markDirty?.()}catch(e){}try{window.ERPCosting?.markDirty?.()}catch(e){}}
+  function wrap(name){
+    const original=window[name];
+    if(typeof original!=='function' || original.__erpInvCostV1652e)return;
+    const wrapped=function(){const r=original.apply(this,arguments);if(r!==false)dirtyInvCost();return r};
+    wrapped.__erpInvCostV1652e=true;window[name]=wrapped
+  }
+  ['masterSaveAll','purchaseWrite','issueStore','rgpStore','ogpStore'].forEach(wrap);
+  window.addEventListener('storage',function(e){
+    const k=String(e.key||'');
+    if(['erpMasterDataV1','erpPurchaseDataV1','erpIssueRecordsV1','erpRgpRecordsV1','erpOgpRecordsV1','erpInventoryOpeningV2','erpInventoryAdjustmentsV2'].includes(k))dirtyInvCost()
   });
 })();
 </script>
