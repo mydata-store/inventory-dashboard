@@ -1,5 +1,28 @@
 <!doctype html>
 <html lang="en"><head>
+<style id="erpRefreshRouteLockV1652hStyle">
+/* V16.52h: refresh-only visual lock. Keep the old/default page from flashing
+   while the saved/hash route and sidebar state are restored. Normal navigation
+   is untouched once startup completes. */
+html.erp-refresh-route-lock-v1652h .page-shell > header.top,
+html.erp-refresh-route-lock-v1652h main.content > .notice,
+html.erp-refresh-route-lock-v1652h main.content section.panel{visibility:hidden!important}
+html.erp-refresh-route-lock-v1652h .layout-left,
+html.erp-refresh-route-lock-v1652h .studio-sidebar,
+html.erp-refresh-route-lock-v1652h .side-group,
+html.erp-refresh-route-lock-v1652h .side-submenu{transition:none!important}
+</style>
+<script id="erpRefreshRouteLockV1652hEarly">
+(function(){
+  'use strict';
+  try{
+    const hash=String(location.hash||'').replace(/^#panel-/,'').trim();
+    const last=localStorage.getItem('erpStudioLastPanel')||localStorage.getItem('erpDesignStudioActivePanelV1')||localStorage.getItem('erpActiveStudioPanel')||'';
+    if(hash||last)document.documentElement.classList.add('erp-refresh-route-lock-v1652h');
+  }catch(e){}
+})();
+</script>
+
 <script id="erpStorageQuotaGuardV1603">
 (function(){
 'use strict';
@@ -12667,6 +12690,11 @@ function erpStableStartup(){
   erpSafeCall('bind',()=>bind());
   erpSafeCall('render',()=>render());
   const restoredPanel=erpSafeCall('restoreLastStudioPanel',()=>restoreLastStudioPanel())||'theme';
+
+  /* V16.52h: at this point the correct route and sidebar group are already
+     selected. Release the refresh-only visual lock before deferred module
+     rendering begins, so the first visible ERP frame is the correct page. */
+  document.documentElement.classList.remove('erp-refresh-route-lock-v1652h');
 
   if(routeFirstDashboard){
     // V16.53: dashboard may be the first visible page, but core/module bindings must still initialize.
