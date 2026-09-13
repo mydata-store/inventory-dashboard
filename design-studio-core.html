@@ -35903,6 +35903,98 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
 </script>
+
+<style id="erpCleanButtonLayoutV1652v">
+/* V16.52v — visual cleanup only: legacy Page Controller buttons hidden, button-only rows stay clean and single-line. */
+button[data-erp-legacy-page-controller="1"],
+a[data-erp-legacy-page-controller="1"],
+.btn[data-erp-legacy-page-controller="1"]{display:none!important}
+
+section.panel [data-erp-clean-button-row="1"]{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:6px!important;
+  min-width:0!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:2px;
+}
+section.panel [data-erp-clean-button-row="1"] > button,
+section.panel [data-erp-clean-button-row="1"] > .btn,
+section.panel [data-erp-clean-button-row="1"] > a.btn,
+section.panel [data-erp-clean-button-row="1"] > [role="button"]{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+  min-height:30px;
+  line-height:1.15;
+}
+section.panel [data-erp-clean-button-row="1"]::-webkit-scrollbar{height:5px}
+section.panel [data-erp-clean-button-row="1"]::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--primary) 28%,transparent);border-radius:999px}
+
+/* Keep navigation/action bars visually tidy without changing their existing colors or click logic. */
+section.panel [data-erp-clean-button-row="1"] > button:not(.primary):not(.danger),
+section.panel [data-erp-clean-button-row="1"] > .btn:not(.primary):not(.danger){
+  border-radius:8px;
+}
+</style>
+<script id="erpCleanButtonLayoutV1652vScript">
+(()=>{
+  'use strict';
+  const buttonSelector='button,.btn,a.btn,[role="button"],input[type="button"],input[type="submit"],input[type="reset"]';
+  function textOf(el){return String(el?.value||el?.textContent||el?.getAttribute?.('aria-label')||'').replace(/⚙/g,'').replace(/\s+/g,' ').trim()}
+  function hideLegacyControllers(root=document){
+    root.querySelectorAll?.(buttonSelector).forEach(el=>{
+      if(/^page controller$/i.test(textOf(el))){
+        el.dataset.erpLegacyPageController='1';
+        el.setAttribute('aria-hidden','true');
+        el.tabIndex=-1;
+      }
+    });
+  }
+  function eligibleRow(parent){
+    if(!parent||!parent.children||parent.closest('#spcOverlay,#erpLoginOverlay,.modal,.master-modal,.purchase-pc-overlay'))return false;
+    if(parent.matches('form,table,thead,tbody,tr,td,th,ul,ol,select'))return false;
+    const kids=[...parent.children].filter(el=>getComputedStyle(el).display!=='none');
+    if(kids.length<2||kids.length>18)return false;
+    const controls=kids.filter(el=>el.matches(buttonSelector));
+    if(controls.length<2)return false;
+    if(controls.length/kids.length<0.7)return false;
+    if(kids.some(el=>el.matches('input:not([type="button"]):not([type="submit"]):not([type="reset"]),select,textarea')))return false;
+    return true;
+  }
+  function cleanRows(root){
+    if(!root)return;
+    const controls=[...root.querySelectorAll(buttonSelector)].filter(el=>!el.closest('#spcOverlay,#erpLoginOverlay,.modal,.master-modal,.purchase-pc-overlay'));
+    const parents=new Set(controls.map(el=>el.parentElement).filter(Boolean));
+    parents.forEach(parent=>{
+      if(eligibleRow(parent))parent.dataset.erpCleanButtonRow='1';
+    });
+  }
+  function apply(){
+    hideLegacyControllers(document);
+    const active=document.querySelector('section.panel.active')||document.querySelector('.panel.active');
+    cleanRows(active);
+  }
+  let timer=0;
+  function schedule(){
+    clearTimeout(timer);
+    requestAnimationFrame(apply);
+    timer=setTimeout(apply,100);
+    setTimeout(apply,320);
+  }
+  document.addEventListener('click',e=>{
+    if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-go-purchase]'))schedule();
+  },false);
+  window.addEventListener('hashchange',schedule);
+  window.addEventListener('pageshow',schedule);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
+  window.ERPCleanButtonLayout={refresh:schedule};
+})();
+</script>
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
