@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow ERP v1.2 — Visual Design Gallery</title>
+<title>CoreFlow ERP v1.3 — Preview & Refresh Fixed</title>
 <style>
 :root{
   --bg:#eef5fb;--surface:#ffffff;--surface-2:#f7fbff;--text:#16324f;--muted:#6f859b;
@@ -131,6 +131,32 @@ button{cursor:pointer}
 .gallery-page-intro h2{margin:0 0 5px;font-size:28px}
 .gallery-page-intro p{margin:0;color:var(--muted)}
 
+
+.selected-design-preview{min-height:100%;background:var(--bg);padding:12px}
+.selected-design-info{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:10px 12px;margin-bottom:10px;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface)
+}
+.selected-design-info strong{display:block;font-size:15px}
+.selected-design-info span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.preview-note{
+  max-width:420px;padding:7px 9px;border-radius:8px;
+  background:color-mix(in srgb,var(--warning) 13%,var(--surface));
+  color:var(--text)!important;font-weight:700;text-align:right
+}
+.selected-design-canvas{
+  width:100%;height:calc(100% - 66px);min-height:430px;
+  display:flex;align-items:flex-start;justify-content:center;
+  overflow:auto;border:1px solid var(--border);border-radius:10px;background:#dfe8ef;padding:10px
+}
+.selected-design-canvas img{
+  width:100%;height:auto;display:block;object-fit:contain;
+  border-radius:8px;box-shadow:0 8px 24px rgba(18,48,74,.18)
+}
+.device.tablet .selected-design-canvas img,
+.device.mobile .selected-design-canvas img{min-width:100%}
+
 .toast{position:fixed;right:22px;bottom:22px;background:#16324f;color:#fff;padding:11px 14px;border-radius:10px;z-index:100;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}
 @media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.gallery,.studio-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:850px){.app{grid-template-columns:72px 1fr}.brand-copy,.nav-item span:last-child,.nav-title,.system-box{display:none}.nav-item{justify-content:center}.nav-sub{padding-left:0}.kpis{grid-template-columns:repeat(2,1fr)}}
@@ -142,7 +168,7 @@ button{cursor:pointer}
   <aside class="sidebar">
     <div class="brand">
       <div class="logo">CF</div>
-      <div class="brand-copy"><h1>CoreFlow ERP</h1><small>Central Engine v1.2</small></div>
+      <div class="brand-copy"><h1>CoreFlow ERP</h1><small>Central Engine v1.3</small></div>
     </div>
     <div class="nav-section">
       <div class="nav-title">Workspace</div>
@@ -168,7 +194,7 @@ button{cursor:pointer}
       <div class="top-actions">
         <button class="icon-btn hide-sm" title="Undo" onclick="undoTheme()">↶</button>
         <button class="icon-btn hide-sm" title="Redo" onclick="redoTheme()">↷</button>
-        <button class="btn soft hide-sm" onclick="openPreview()">Responsive Preview</button>
+        <button class="btn soft hide-sm" onclick="openPreview(state.active)">Responsive Preview</button>
         <div class="user"><div class="avatar">MW</div><div><strong>Muhammad Waqas</strong><small>Administrator</small></div></div>
       </div>
     </div>
@@ -228,7 +254,7 @@ button{cursor:pointer}
           </div>
           <div class="head-actions">
             <button class="btn soft" onclick="duplicateActive()">+ Create Custom Design</button>
-            <button class="btn primary" onclick="openPreview()">Responsive Preview</button>
+            <button class="btn primary" onclick="openPreview(state.active)">Responsive Preview</button>
           </div>
         </div>
 
@@ -265,14 +291,22 @@ button{cursor:pointer}
     </div>
     <div class="preview-stage">
       <div class="device" id="device">
-        <div class="demo-page">
-          <div class="demo-head"><div class="demo-title">Purchase Dashboard</div><button class="btn primary">+ Add Purchase</button></div>
-          <div class="demo-kpis"><div class="demo-kpi"><b>128</b><br><small>Purchases</small></div><div class="demo-kpi"><b>64</b><br><small>Suppliers</small></div><div class="demo-kpi"><b>842</b><br><small>Items</small></div><div class="demo-kpi"><b>PKR</b><br><small>Central Format</small></div></div>
-          <div class="demo-card"><b>Navigation Cards</b><p style="color:var(--muted)">These remain separate from normal buttons and inherit only the Navigation Card Studio rules.</p></div>
-          <div class="demo-card"><b>Central Table Style</b><p style="color:var(--muted)">All future modules will receive common typography, spacing, button, table and form tokens from CoreFlow Engine.</p></div>
+        <div class="selected-design-preview">
+          <div class="selected-design-info">
+            <div>
+              <strong id="selectedDesignTitle">Selected Design</strong>
+              <span id="selectedDesignDesc">Visual system preview</span>
+            </div>
+            <span class="preview-note">Preview only — nothing is applied until you press Apply in the gallery.</span>
+          </div>
+          <div class="selected-design-canvas">
+            <img id="selectedDesignVisual" alt="Selected design preview">
+          </div>
         </div>
       </div>
     </div>
+  </div>
+</div>
   </div>
 </div>
 
@@ -360,7 +394,12 @@ function pushHistory(){state.history.push(state.active); if(state.history.length
 function applyPreset(i){
  pushHistory(); state.active=i; const p=themeOf(i); applyTheme(p); persist(); renderGallery(); toast('Design applied to Central Engine');
 }
-function previewPreset(i){applyTheme(themeOf(i)); openPreview()}
+let previewIndex=null;
+
+function previewPreset(i){
+  previewIndex=i;
+  openPreview(i);
+}
 function favorite(i){state.favorites=state.favorites.includes(i)?state.favorites.filter(x=>x!==i):[...state.favorites,i];persist();renderGallery()}
 function applyTheme(p){
  const r=document.documentElement.style;
@@ -374,9 +413,38 @@ function saveDesign(){persist();toast('CoreFlow design saved locally')}
 function persist(){localStorage.setItem(CORE_KEY,JSON.stringify(state))}
 function undoTheme(){if(!state.history.length)return toast('No earlier design'); state.future.push(state.active);state.active=state.history.pop();applyTheme(themeOf(state.active));persist();renderGallery();toast('Previous design restored')}
 function redoTheme(){if(!state.future.length)return toast('Nothing to redo'); state.history.push(state.active);state.active=state.future.pop();applyTheme(themeOf(state.active));persist();renderGallery();toast('Design redone')}
-function openPreview(){document.getElementById('previewModal').classList.add('open')}
-function closePreview(){document.getElementById('previewModal').classList.remove('open')}
-function setDevice(kind,btn){document.getElementById('device').className='device'+(kind==='desktop'?'':' '+kind);document.querySelectorAll('.device-tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
+function openPreview(i){
+  if(Number.isInteger(i))previewIndex=i;
+  if(previewIndex===null)previewIndex=state.active;
+  renderSelectedPreview(previewIndex);
+  document.getElementById('previewModal').classList.add('open');
+}
+function closePreview(){
+  document.getElementById('previewModal').classList.remove('open');
+  previewIndex=null;
+}
+function setDevice(kind,btn){
+  const frame=document.getElementById('device');
+  frame.className='device'+(kind==='desktop'?'':' '+kind);
+  document.querySelectorAll('.device-tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function renderSelectedPreview(i){
+  const visual=document.getElementById('selectedDesignVisual');
+  const title=document.getElementById('selectedDesignTitle');
+  const sub=document.getElementById('selectedDesignDesc');
+  const all=[...presets,...state.custom];
+  const p=all[i]||all[0]||presets[0];
+  const img=galleryImages[i % galleryImages.length];
+  const nm=i<11?galleryNames[i]:(p.name||('Custom Design '+(i-10)));
+  const ds=i<11?galleryDescriptions[i]:(p.desc||'Custom CoreFlow design');
+  if(title)title.textContent=nm;
+  if(sub)sub.textContent=ds;
+  if(visual){
+    visual.src=img;
+    visual.alt=nm;
+  }
+}
 function studioComingSoon(e){
   if(e)e.preventDefault();
   toast('Studio page will be activated when we build that page.');
@@ -418,16 +486,27 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 
 
-function setDesignPage(page){
+const PAGE_KEY='COREFLOW_ACTIVE_DESIGN_PAGE_V1';
+
+function setDesignPage(page, opts={}){
   document.querySelectorAll('.design-page').forEach(p=>p.classList.remove('active'));
   const target=document.getElementById(page);
-  if(target)target.classList.add('active');
-  window.scrollTo({top:0,behavior:'smooth'});
+  const safePage=target?page:'designStudioHomePage';
+  const safeTarget=document.getElementById(safePage);
+  if(safeTarget)safeTarget.classList.add('active');
+  try{localStorage.setItem(PAGE_KEY,safePage)}catch(e){}
+  if(!opts.keepScroll)window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
 }
 function showDesignStudioHome(){setDesignPage('designStudioHomePage')}
 function showDesignGallery(){setDesignPage('designGalleryPage');renderGallery()}
+function restoreDesignPage(){
+  let saved='designStudioHomePage';
+  try{saved=localStorage.getItem(PAGE_KEY)||saved}catch(e){}
+  if(!document.getElementById(saved))saved='designStudioHomePage';
+  setDesignPage(saved,{instant:true,keepScroll:true});
+}
 
-applyTheme(themeOf(state.active));renderGallery();
+applyTheme(themeOf(state.active));renderGallery();restoreDesignPage();
 </script>
 </body>
 </html>
