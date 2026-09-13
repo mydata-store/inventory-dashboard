@@ -12841,8 +12841,8 @@ function gateDashboardRender(){
   /* V16.11 — refresh each operational list first, then trust the list's
      final KPI values. This guarantees Gate Pass Management cannot show
      a record that its own RGP/OGP/CGP List reports as zero. */
-  try{typeof rgpRenderList==='function'&&rgpRenderList()}catch(e){}
-  try{typeof ogpRenderList==='function'&&ogpRenderList()}catch(e){}
+  try{if(typeof rgpRenderList==='function'){window.ERPNavDataCacheV1652d?.render('rgp-list',rgpRenderList)??rgpRenderList()}}catch(e){}
+  try{if(typeof ogpRenderList==='function'){window.ERPNavDataCacheV1652d?.render('ogp-list',ogpRenderList)??ogpRenderList()}}catch(e){}
   try{typeof cgpRenderList==='function'&&cgpRenderList()}catch(e){}
 
   const num=id=>{
@@ -16064,7 +16064,7 @@ function issuePrint(){
   </tr></thead><tbody>${rows}</tbody></table><script>onload=()=>print()<\/script></body></html>`);
   w.document.close();
 }
-document.addEventListener('DOMContentLoaded' ,()=>{issueEnhanceItemDropdowns();issueInputs().forEach(row=>row.forEach((x,i)=>{x.addEventListener('blur',()=>{if(i===0)x.value=issueDate(x.value);if(i===1)x.value=issueIr(x.value);if(i===9){x.value=purchaseFormatText(x.value,'employee','Employee');issueAutoSaveEmployeeName(x.value)}});x.addEventListener('input',issueUpdateTotal)}));issueExcelBind();$('#issueSaveBtn')?.addEventListener('click',issueSave);$('#issueClearBtn')?.addEventListener('click',issueClear);$('#issueHistSearch')?.addEventListener('input',issueRenderHistory);$('#issueHistClear')?.addEventListener('click',()=>{$('#issueHistSearch').value='';$('#issueHistFrom').value='';$('#issueHistTo').value='';issueRenderHistory()});$('#issuePrintBtn')?.addEventListener('click',issuePrint);issueRenderHistory()});
+document.addEventListener('DOMContentLoaded' ,()=>{issueEnhanceItemDropdowns();issueInputs().forEach(row=>row.forEach((x,i)=>{x.addEventListener('blur',()=>{if(i===0)x.value=issueDate(x.value);if(i===1)x.value=issueIr(x.value);if(i===9){x.value=purchaseFormatText(x.value,'employee','Employee');issueAutoSaveEmployeeName(x.value)}});x.addEventListener('input',issueUpdateTotal)}));issueExcelBind();$('#issueSaveBtn')?.addEventListener('click',issueSave);$('#issueClearBtn')?.addEventListener('click',issueClear);$('#issueHistSearch')?.addEventListener('input',issueRenderHistory);$('#issueHistClear')?.addEventListener('click',()=>{$('#issueHistSearch').value='';$('#issueHistFrom').value='';$('#issueHistTo').value='';issueRenderHistory()});$('#issuePrintBtn')?.addEventListener('click',issuePrint);let issueHistoryCurrent=false;try{issueHistoryCurrent=document.querySelector('#panel-issue-history')?.classList.contains('active')||location.hash==='#panel-issue-history'||localStorage.getItem('erpStudioLastPanel')==='issue-history'}catch(e){}if(issueHistoryCurrent)issueRenderHistory()});
 </script>
 <style id="inventoryV1461Style">
 /* ===== V14.70 Inventory Management ===== */
@@ -21138,9 +21138,19 @@ function init(){
 function ddeShouldBootImmediatelyV1572(){
   return !(window.__ERP_ROUTE_FIRST_DASHBOARD__===true || location.hash==='#panel-dashboard');
 }
+function ddeBootV1652g(){
+  let current=false;
+  try{
+    const last=localStorage.getItem('erpStudioLastPanel')||'';
+    current=last==='daily-data-entry'||last==='daily-consumption-history'||location.hash==='#panel-daily-data-entry'||location.hash==='#panel-daily-consumption-history';
+  }catch(e){}
+  if(current){init();return}
+  const run=()=>{if(!ddeInitializedV1572)init()};
+  if(window.ERPStartupIdleV1652g)window.ERPStartupIdleV1652g(run,1600);else setTimeout(run,900)
+}
 if(ddeShouldBootImmediatelyV1572()){
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-  else init();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ddeBootV1652g);
+  else ddeBootV1652g();
 }
 
 window.addEventListener('erp-material-master-updated',()=>{
@@ -21162,9 +21172,9 @@ window.ERPDailyDataEntry={
   refresh:()=>{init();refreshMasterControlledDailySections();feedDashboard()}
 };
 window.ERPConsumptionHistory={
-  open:openHistoryPage,
-  openMaterial:openMaterialHistory,
-  refresh:renderDailyConsumptionHistory
+  open:()=>{init();openHistoryPage()},
+  openMaterial:(material,group='')=>{init();openMaterialHistory(material,group)},
+  refresh:()=>{init();renderDailyConsumptionHistory()}
 };
 })();
 </script>
@@ -24069,7 +24079,7 @@ function open(){
   render()
 }
 function addCard(){/* Intentionally disabled: report opens from Daily Consumption Report. */}
-window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash==='#panel-final-cost-report')open()};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,350));else setTimeout(boot,350);
+window.ERPFinalCostReport={open,render};const boot=()=>{let current=location.hash==='#panel-final-cost-report';try{current=current||localStorage.getItem('erpStudioLastPanel')==='final-cost-report'}catch(e){}if(current)open()};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
 
@@ -35276,6 +35286,20 @@ html,body{overflow-x:hidden;}
 
 <!-- V16.53 Smooth Core: startup/navigation/sidebar/dashboard consolidation -->
 
+
+<!-- V16.52g Lazy Startup: postpone non-current heavy module initialization until browser idle -->
+<script id="erpLazyStartupV1652gScript">
+(function(){
+  'use strict';
+  window.ERPStartupIdleV1652g=function(fn,timeout){
+    if(typeof fn!=='function')return;
+    let done=false;
+    const run=()=>{if(done)return;done=true;try{fn()}catch(e){console.error('ERP lazy startup failed',e)}};
+    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:Number(timeout)||1400});
+    else setTimeout(run,Math.min(Number(timeout)||700,900));
+  };
+})();
+</script>
 
 <!-- V16.52d Safe Data Render Cache: navigation-only reuse for heavy list pages -->
 <script id="erpNavDataCacheV1652dScript">
