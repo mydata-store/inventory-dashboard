@@ -6916,7 +6916,7 @@ body.erp-dashboard-mode .studio-sidebar{
     </div>
     <div class="pcc-info"><b>Central Controller Rule:</b> Every page controller reads its available modules and controller behavior from this section. Future controller features can be added to the central engine once and then become available to all pages that contain the matching element.</div>
     <div class="pcc-overview">
-      <div class="pcc-stat"><b id="pccModuleCount">7</b><span>CONTROLLER MODULES</span></div>
+      <div class="pcc-stat"><b id="pccModuleCount">10</b><span>CONTROLLER MODULES</span></div>
       <div class="pcc-stat"><b>Central</b><span>SHARED ENGINE</span></div>
       <div class="pcc-stat"><b>Per Page</b><span>DESIGN SETTINGS STAY SEPARATE</span></div>
     </div>
@@ -35591,17 +35591,19 @@ html,body{overflow-x:hidden;}
 #spcFoot{display:flex;align-items:center;gap:7px;padding:10px 12px;background:#fff;border-top:1px solid #cbe2ef;position:sticky;bottom:0;z-index:2}#spcFoot .spacer{flex:1}#spcStatus{font-size:10px;color:#5d7a89;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){#spcPanel{width:100vw}.spc-grid{grid-template-columns:1fr}.spc-col{grid-template-columns:minmax(100px,1fr) 60px 75px 70px}.spc-col .spc-col-extra{display:none}}
 </style>
-<script id="spcSmartAdaptiveV1652r">
+<script id="spcSmartAdaptiveV1652s">
 (()=>{
 'use strict';
 const PREFIX='erpSmartPageController:v1:';
 const GLOBAL_KEY='erpSmartPageController:global:v1';
 const MODULES=[
   {id:'page_fonts',title:'Page & Fonts',description:'Page font size, section spacing and section-header presentation.'},
+  {id:'workspace_header',title:'Workspace Header',description:'Shared top workspace title/subtitle for the active page, such as Design Studio Home.'},
   {id:'title_subtitle',title:'Title / Subtitle',description:'Page title and subtitle text, typography, alignment and visibility.'},
+  {id:'labels_eyebrows',title:'Labels / Eyebrows',description:'Small section labels and overline text such as ERP DESIGN CONTROL CENTER.'},
   {id:'top_information_bar',title:'Top Information Bar',description:'Shared top information bar text, colors, typography and visibility.'},
   {id:'information_bars',title:'Information Bars',description:'Page-specific notice/help/information bars detected inside the active page.'},
-  {id:'summary_kpi',title:'Summary / KPI',description:'Detected summary and KPI blocks, spacing, sizing and visibility.'},
+  {id:'summary_kpi',title:'Summary / KPI',description:'Smart-detected KPI cards and summary blocks, including overview card groups.'},
   {id:'tables_columns',title:'Tables & Columns',description:'Table size, headers, rows, columns, alignment, wrapping and visibility.'},
   {id:'forms_inputs',title:'Forms & Inputs',description:'Input, select, textarea and label presentation controls.'},
   {id:'buttons',title:'Buttons',description:'Button size, typography, alignment, colors, shape, spacing and individual visual placement.'}
@@ -35627,6 +35629,37 @@ function originalText(el){if(!el)return'';if(el.dataset.spcOriginalText===undefi
 function rgbToHex(v){const m=String(v||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);if(!m)return'#ffffff';return'#'+[m[1],m[2],m[3]].map(x=>(+x).toString(16).padStart(2,'0')).join('')}
 function firstHeading(root){return root.querySelector(':scope > .card .purchase-page-head h2,:scope > .inv-page-head h2,:scope > .cost-page-head h2,:scope h1,:scope h2')||root.querySelector('h1,h2')}
 function subtitleFor(title,root){if(title?.parentElement){const p=title.parentElement.querySelector(':scope > p');if(p)return p}return root.querySelector('.page-subtitle,.subtitle,[class*="subtitle"]')}
+function sharedWorkspaceHeader(root){
+  const title=document.getElementById('workspaceTitle')||document.querySelector('header.top h1,.workspace-header h1');
+  const subtitle=document.getElementById('workspaceSubtitle')||document.querySelector('header.top .title p,.workspace-header p');
+  if(title&&!root?.contains(title)){title.dataset.spcWorkspaceTitle='1';originalText(title)}
+  if(subtitle&&!root?.contains(subtitle)){subtitle.dataset.spcWorkspaceSubtitle='1';originalText(subtitle)}
+  return{title:title&&!root?.contains(title)?title:null,subtitle:subtitle&&!root?.contains(subtitle)?subtitle:null};
+}
+function eyebrowCandidates(root){
+  const arr=[...root.querySelectorAll('[class*="eyebrow"],[class*="overline"],[class*="kicker"],[class*="section-label"],[data-eyebrow]')]
+    .filter(el=>!el.closest('#spcOverlay,table,.master-modal,.purchase-pc-overlay')&&(el.textContent||'').trim().length>0);
+  return topLevelCandidates(arr).slice(0,24);
+}
+function smartSummaryCandidates(root){
+  const explicit=[...root.querySelectorAll('[class*="summary"],[class*="kpi"],[class*="metric"],[class*="stat-"],[class*="overview"]')]
+    .filter(el=>!el.closest('table,#spcOverlay,.master-modal,.purchase-pc-overlay')&&(el.textContent||'').trim().length>0);
+  const generated=[];
+  explicit.forEach(el=>{
+    const cls=String(el.className||'').toLowerCase();
+    const kids=[...el.children].filter(k=>(k.textContent||'').trim().length>0&&!k.matches('script,style'));
+    const display=getComputedStyle(el).display;
+    if(/overview|summary|kpi|metric/.test(cls)&&kids.length>=2&&kids.length<=12&&(display==='grid'||display==='flex')){
+      kids.forEach(k=>{
+        const txt=(k.textContent||'').trim();
+        if(txt.length<=300&&k.children.length<=12)generated.push(k);
+      });
+    }
+  });
+  let candidates=[...new Set([...explicit,...generated])];
+  candidates=candidates.filter(el=>!candidates.some(other=>other!==el&&el.contains(other)&&generated.includes(other)));
+  return candidates.slice(0,24);
+}
 function sharedTopInfoBar(root){
   const candidates=[
     document.querySelector('.page-shell > .notice'),
@@ -35652,10 +35685,12 @@ function tableName(t,i){const cap=t.querySelector('caption')?.textContent.trim()
 function scan(root=activePanel()){
   if(!root)return null;
   const id=pageId(root);root.dataset.spcPageRoot=id;
-  const title=firstHeading(root),subtitle=subtitleFor(title,root),topInfo=sharedTopInfoBar(root);
+  const workspace=sharedWorkspaceHeader(root),title=firstHeading(root),subtitle=subtitleFor(title,root),topInfo=sharedTopInfoBar(root);
+  if(workspace.title)workspace.title.dataset.spcWorkspaceActive=id;if(workspace.subtitle)workspace.subtitle.dataset.spcWorkspaceActive=id;
   if(title){title.dataset.spcTitle='1';originalText(title)} if(subtitle){subtitle.dataset.spcSubtitle='1';originalText(subtitle)}
+  const eyebrows=eyebrowCandidates(root);eyebrows.forEach((el,i)=>{el.dataset.spcEyebrowKey='eyebrow'+i;originalText(el)});
   let infos=[...root.querySelectorAll('div,p,aside')].filter(isInfoBar);infos=topLevelCandidates(infos).slice(0,20);infos.forEach((el,i)=>{el.dataset.spcInfoKey='info'+i;originalText(el)});
-  let sums=[...root.querySelectorAll('[class*="summary"],[class*="kpi"],[class*="metric"],[class*="stat-"]')].filter(el=>!el.closest('table,#spcOverlay')&&(el.textContent||'').trim().length>0);sums=topLevelCandidates(sums).slice(0,16);sums.forEach((el,i)=>el.dataset.spcSummaryKey='summary'+i);
+  let sums=smartSummaryCandidates(root);sums.forEach((el,i)=>el.dataset.spcSummaryKey='summary'+i);
   const tables=[...root.querySelectorAll('table')].filter(t=>!t.closest('#spcOverlay,.master-modal,.purchase-pc-overlay'));
   const tInfo=tables.map((t,i)=>{
     const key=t.id?('id_'+t.id):('table'+i);t.dataset.spcTableKey=key;
@@ -35670,7 +35705,7 @@ function scan(root=activePanel()){
   const parentMap=new Map();buttons.forEach(b=>{const p=b.el.parentElement;if(!p||p===root)return;const a=parentMap.get(p)||[];a.push(b);parentMap.set(p,a)});
   const buttonGroups=[...parentMap.entries()].filter(([,a])=>a.length>1).slice(0,24).map(([el,a],i)=>{const key='group'+i;el.dataset.spcButtonGroupKey=key;return{el,key,buttons:a,label:`Button Group ${i+1}`}});
   const sectionHeaders=[...root.querySelectorAll('h3,h4')].filter(x=>!x.closest('table,#spcOverlay,.master-modal,.purchase-pc-overlay'));
-  return{id,root,title,subtitle,topInfo,infos,summaries:sums,tables:tInfo,forms,formControls,buttons,buttonGroups,sectionHeaders};
+  return{id,root,workspaceTitle:workspace.title,workspaceSubtitle:workspace.subtitle,title,subtitle,eyebrows,topInfo,infos,summaries:sums,tables:tInfo,forms,formControls,buttons,buttonGroups,sectionHeaders};
 }
 function restoreTableOrder(t){[...t.querySelectorAll('tr')].forEach(r=>{const cells=[...r.children];cells.sort((a,b)=>num(a.dataset.spcOriginalIndex,999)-num(b.dataset.spcOriginalIndex,999)).forEach(c=>r.appendChild(c))})}
 function reorderTable(info,order){if(info.interactive||!Array.isArray(order)||!order.length)return;const rank=new Map(order.map((k,i)=>[k,i]));[...info.el.querySelectorAll('tr')].forEach(r=>{const cells=[...r.children];cells.sort((a,b)=>(rank.get(a.dataset.spcColKey)??999)-(rank.get(b.dataset.spcColKey)??999)).forEach(c=>r.appendChild(c))})}
@@ -35679,15 +35714,23 @@ function rule(sel,props){const a=Object.entries(props).filter(([,v])=>v!==undefi
 function applyState(ctx,state){
   if(!ctx)return;ctx=scan(ctx.root)||ctx;const root=ctx.root,id=ctx.id,scope=`[data-spc-page-root="${CSS.escape(id)}"]`;
   root.querySelectorAll('table[data-spc-table-key]').forEach(restoreTableOrder);
+  if(ctx.workspaceTitle){ctx.workspaceTitle.textContent=originalText(ctx.workspaceTitle);ctx.workspaceTitle.dataset.spcWorkspaceActive=id;if(state.workspaceTitle?.text!==undefined)ctx.workspaceTitle.textContent=state.workspaceTitle.text}
+  if(ctx.workspaceSubtitle){ctx.workspaceSubtitle.textContent=originalText(ctx.workspaceSubtitle);ctx.workspaceSubtitle.dataset.spcWorkspaceActive=id;if(state.workspaceSubtitle?.text!==undefined)ctx.workspaceSubtitle.textContent=state.workspaceSubtitle.text}
   if(ctx.title){ctx.title.textContent=originalText(ctx.title);if(state.title?.text!==undefined)ctx.title.textContent=state.title.text}
   if(ctx.subtitle){ctx.subtitle.textContent=originalText(ctx.subtitle);if(state.subtitle?.text!==undefined)ctx.subtitle.textContent=state.subtitle.text}
+  ctx.eyebrows.forEach((el,i)=>{el.textContent=originalText(el);const es=state.eyebrows?.['eyebrow'+i];if(es?.text!==undefined)el.textContent=es.text});
   if(ctx.topInfo){ctx.topInfo.textContent=originalText(ctx.topInfo);ctx.topInfo.dataset.spcTopInfoActive=id;if(state.topInfo?.text!==undefined)ctx.topInfo.textContent=state.topInfo.text}
   ctx.infos.forEach((el,i)=>{el.textContent=originalText(el);const s=state.infos?.['info'+i];if(s?.text!==undefined)el.textContent=s.text});
   const css=[];const p=state.page||{};
   css.push(rule(scope,{'font-size':cssProp(p.fontSize,'px')}));
   if(p.sectionGap!==undefined)css.push(`${scope} .card,${scope} section,${scope} [class*="section"]{margin-bottom:${p.sectionGap}px!important}`);
+  const WT=state.workspaceTitle||{},WS=state.workspaceSubtitle||{};
+  const wtsel=`[data-spc-workspace-title="1"][data-spc-workspace-active="${CSS.escape(id)}"]`,wssel=`[data-spc-workspace-subtitle="1"][data-spc-workspace-active="${CSS.escape(id)}"]`;
+  css.push(rule(wtsel,{display:WT.show===false?'none':undefined,'font-size':cssProp(WT.fontSize,'px'),'font-weight':WT.weight,'font-style':WT.italic?'italic':WT.italic===false?'normal':undefined,'text-align':WT.align,color:WT.color}));
+  css.push(rule(wssel,{display:WS.show===false?'none':undefined,'font-size':cssProp(WS.fontSize,'px'),'font-weight':WS.weight,'font-style':WS.italic?'italic':WS.italic===false?'normal':undefined,'text-align':WS.align,color:WS.color}));
   const T=state.title||{};css.push(rule(`${scope} [data-spc-title="1"]`,{display:T.show===false?'none':undefined,'font-size':cssProp(T.fontSize,'px'),'font-weight':T.weight,'font-style':T.italic?'italic':T.italic===false?'normal':undefined,'text-align':T.align,color:T.color,'line-height':T.lineHeight}));
   const S=state.subtitle||{};css.push(rule(`${scope} [data-spc-subtitle="1"]`,{display:S.show===false?'none':undefined,'font-size':cssProp(S.fontSize,'px'),'font-weight':S.weight,'font-style':S.italic?'italic':S.italic===false?'normal':undefined,'text-align':S.align,color:S.color,'line-height':S.lineHeight}));
+  Object.entries(state.eyebrows||{}).forEach(([k,e])=>css.push(rule(`${scope} [data-spc-eyebrow-key="${CSS.escape(k)}"]`,{display:e.show===false?'none':undefined,'font-size':cssProp(e.fontSize,'px'),'font-weight':e.weight,'font-style':e.italic?'italic':e.italic===false?'normal':undefined,'text-align':e.align,color:e.color,'letter-spacing':cssProp(e.letterSpacing,'px'),'text-transform':e.transform||undefined})));
   const TI=state.topInfo||{};if(ctx.topInfo){const tis=`[data-spc-top-info-active="${CSS.escape(id)}"]`;css.push(rule(tis,{display:TI.show===false?'none':undefined,'font-size':cssProp(TI.fontSize,'px'),'font-weight':TI.weight,'font-style':TI.italic?'italic':TI.italic===false?'normal':undefined,'text-align':TI.align,color:TI.color,'background-color':TI.background,'border-color':TI.borderColor,'border-width':cssProp(TI.borderWidth,'px'),'border-style':TI.borderWidth!==undefined?'solid':undefined,'border-radius':cssProp(TI.radius,'px'),padding:cssProp(TI.padding,'px'),'white-space':TI.wrap===false?'nowrap':TI.wrap===true?'normal':undefined,'overflow':TI.wrap===false?'hidden':undefined,'text-overflow':TI.wrap===false?'ellipsis':undefined}));}
   const H=state.sectionHeaders||{};css.push(rule(`${scope} h3,${scope} h4`,{'font-size':cssProp(H.fontSize,'px'),'font-weight':H.weight,'font-style':H.italic?'italic':H.italic===false?'normal':undefined,'text-align':H.align,color:H.color}));
   Object.entries(state.infos||{}).forEach(([k,s])=>css.push(rule(`${scope} [data-spc-info-key="${CSS.escape(k)}"]`,{display:s.show===false?'none':undefined,'font-size':cssProp(s.fontSize,'px'),'font-weight':s.weight,'font-style':s.italic?'italic':s.italic===false?'normal':undefined,'text-align':s.align,color:s.color,'background-color':s.background,'border-color':s.borderColor,'border-width':cssProp(s.borderWidth,'px'),'border-style':s.borderWidth!==undefined?'solid':undefined,'border-radius':cssProp(s.radius,'px'),padding:cssProp(s.padding,'px'),'white-space':s.wrap===false?'nowrap':s.wrap===true?'normal':undefined,'overflow':s.wrap===false?'hidden':undefined,'text-overflow':s.wrap===false?'ellipsis':undefined})));
@@ -35716,9 +35759,11 @@ function section(title,count,html,open=false){const key=safe(title.toLowerCase()
 function renderUI(){
   current=scan();if(!current)return;const c=current;
   const pageFont=num(v('page.fontSize',num(getComputedStyle(c.root).fontSize,12)),8,24,.5);
-  let html=`<div class="spc-detected"><b>Smart inspection:</b> ${c.topInfo?'1 top information bar • ':''}${c.infos.length} page information bar(s) • ${c.summaries.length} summary/KPI block(s) • ${c.tables.length} table(s) • ${c.formControls.length} form field(s) • ${c.buttons.length} button(s) • ${c.sectionHeaders.length} section header(s). Only this page is affected.</div>`;
+  let html=`<div class="spc-detected"><b>Smart inspection:</b> ${(c.workspaceTitle||c.workspaceSubtitle)?'workspace header • ':''}${c.eyebrows.length?c.eyebrows.length+' label/eyebrow(s) • ':''}${c.topInfo?'1 top information bar • ':''}${c.infos.length} page information bar(s) • ${c.summaries.length} summary/KPI block(s) • ${c.tables.length} table(s) • ${c.formControls.length} form field(s) • ${c.buttons.length} button(s) • ${c.sectionHeaders.length} section header(s). Only this page is affected.</div>`;
   if(moduleEnabled('page_fonts'))html+=section('Page & Fonts',undefined,`<div class="spc-grid">${pageFont}${numField('Section spacing','page.sectionGap',v('page.sectionGap',''),0,60,1)}${numField('Section header font','sectionHeaders.fontSize',v('sectionHeaders.fontSize',c.sectionHeaders[0]?num(getComputedStyle(c.sectionHeaders[0]).fontSize,12):''),8,40,.5)}${selectField('Section header weight','sectionHeaders.weight',v('sectionHeaders.weight',''),['','400','500','600','700','800'])}${selectField('Section header align','sectionHeaders.align',v('sectionHeaders.align',''),['','left','center','right'])}${colorField('Section header color','sectionHeaders.color',v('sectionHeaders.color',c.sectionHeaders[0]?colorValue(c.sectionHeaders[0],'color'):'#063e62'))}</div>`,true);
+  if(moduleEnabled('workspace_header')&&(c.workspaceTitle||c.workspaceSubtitle)){let x='';if(c.workspaceTitle){const cs=getComputedStyle(c.workspaceTitle);x+=`<div class="spc-subcard"><div class="spc-subhead"><strong>Workspace Title</strong><small>${esc(originalText(c.workspaceTitle))}</small></div><div class="spc-grid">${textField('Title text','workspaceTitle.text',v('workspaceTitle.text',originalText(c.workspaceTitle)))}${numField('Font size','workspaceTitle.fontSize',v('workspaceTitle.fontSize',num(cs.fontSize,20)),8,60,.5)}${selectField('Weight','workspaceTitle.weight',v('workspaceTitle.weight',''),['','400','500','600','700','800','900'])}${selectField('Alignment','workspaceTitle.align',v('workspaceTitle.align',''),['','left','center','right'])}${colorField('Color','workspaceTitle.color',v('workspaceTitle.color',rgbToHex(cs.color)))}${checkField('Show title','workspaceTitle.show',v('workspaceTitle.show',true))}${checkField('Italic','workspaceTitle.italic',v('workspaceTitle.italic',false))}</div></div>`}if(c.workspaceSubtitle){const cs=getComputedStyle(c.workspaceSubtitle);x+=`<div class="spc-subcard"><div class="spc-subhead"><strong>Workspace Subtitle</strong><small>${esc(originalText(c.workspaceSubtitle))}</small></div><div class="spc-grid">${textField('Subtitle text','workspaceSubtitle.text',v('workspaceSubtitle.text',originalText(c.workspaceSubtitle)),true)}${numField('Font size','workspaceSubtitle.fontSize',v('workspaceSubtitle.fontSize',num(cs.fontSize,11)),8,36,.5)}${selectField('Weight','workspaceSubtitle.weight',v('workspaceSubtitle.weight',''),['','400','500','600','700','800'])}${selectField('Alignment','workspaceSubtitle.align',v('workspaceSubtitle.align',''),['','left','center','right'])}${colorField('Color','workspaceSubtitle.color',v('workspaceSubtitle.color',rgbToHex(cs.color)))}${checkField('Show subtitle','workspaceSubtitle.show',v('workspaceSubtitle.show',true))}${checkField('Italic','workspaceSubtitle.italic',v('workspaceSubtitle.italic',false))}</div></div>`}html+=section('Workspace Header',(c.workspaceTitle?1:0)+(c.workspaceSubtitle?1:0),x)}
   if(moduleEnabled('title_subtitle')&&(c.title||c.subtitle)){let x='';if(c.title){const cs=getComputedStyle(c.title);x+=`<div class="spc-subcard"><div class="spc-subhead"><strong>Page Title</strong><small>${esc(originalText(c.title))}</small></div><div class="spc-grid">${textField('Title text','title.text',v('title.text',originalText(c.title)))}${numField('Font size','title.fontSize',v('title.fontSize',num(cs.fontSize,18)),8,60,.5)}${selectField('Weight','title.weight',v('title.weight',''),['','400','500','600','700','800','900'])}${selectField('Alignment','title.align',v('title.align',''),['','left','center','right'])}${colorField('Color','title.color',v('title.color',rgbToHex(cs.color)))}${checkField('Show title','title.show',v('title.show',true))}${checkField('Italic','title.italic',v('title.italic',false))}</div></div>`}if(c.subtitle){const cs=getComputedStyle(c.subtitle);x+=`<div class="spc-subcard"><div class="spc-subhead"><strong>Subtitle</strong><small>${esc(originalText(c.subtitle))}</small></div><div class="spc-grid">${textField('Subtitle text','subtitle.text',v('subtitle.text',originalText(c.subtitle)),true)}${numField('Font size','subtitle.fontSize',v('subtitle.fontSize',num(cs.fontSize,11)),8,36,.5)}${selectField('Weight','subtitle.weight',v('subtitle.weight',''),['','400','500','600','700','800'])}${selectField('Alignment','subtitle.align',v('subtitle.align',''),['','left','center','right'])}${colorField('Color','subtitle.color',v('subtitle.color',rgbToHex(cs.color)))}${checkField('Show subtitle','subtitle.show',v('subtitle.show',true))}${checkField('Italic','subtitle.italic',v('subtitle.italic',false))}</div></div>`}html+=section('Title / Subtitle',(c.title?1:0)+(c.subtitle?1:0),x)}
+  if(moduleEnabled('labels_eyebrows')&&c.eyebrows.length){let x=c.eyebrows.map((el,i)=>{const k='eyebrow'+i,cs=getComputedStyle(el);return`<div class="spc-subcard"><div class="spc-subhead"><strong>Label / Eyebrow ${i+1}</strong><small>${esc(originalText(el))}</small></div><div class="spc-grid">${textField('Text',`eyebrows.${k}.text`,v(`eyebrows.${k}.text`,originalText(el)))}${numField('Font size',`eyebrows.${k}.fontSize`,v(`eyebrows.${k}.fontSize`,num(cs.fontSize,10)),7,30,.5)}${selectField('Weight',`eyebrows.${k}.weight`,v(`eyebrows.${k}.weight`,''),['','400','500','600','700','800','900'])}${selectField('Alignment',`eyebrows.${k}.align`,v(`eyebrows.${k}.align`,''),['','left','center','right'])}${colorField('Color',`eyebrows.${k}.color`,v(`eyebrows.${k}.color`,rgbToHex(cs.color)))}${numField('Letter spacing',`eyebrows.${k}.letterSpacing`,v(`eyebrows.${k}.letterSpacing`,''),0,12,.1)}${selectField('Text case',`eyebrows.${k}.transform`,v(`eyebrows.${k}.transform`,''),['','none','uppercase','lowercase','capitalize'])}${checkField('Show label',`eyebrows.${k}.show`,v(`eyebrows.${k}.show`,true))}${checkField('Italic',`eyebrows.${k}.italic`,v(`eyebrows.${k}.italic`,false))}</div></div>`}).join('');html+=section('Labels / Eyebrows',c.eyebrows.length,x)}
   if(moduleEnabled('top_information_bar')&&c.topInfo){const el=c.topInfo,cs=getComputedStyle(el);html+=section('Top Information Bar',1,`<div class="spc-subcard"><div class="spc-subhead"><strong>Shared Top Information Bar</strong><small>${esc(originalText(el))}</small></div><div class="spc-grid">${textField('Text','topInfo.text',v('topInfo.text',originalText(el)),true)}${numField('Font size','topInfo.fontSize',v('topInfo.fontSize',num(cs.fontSize,11)),8,30,.5)}${selectField('Weight','topInfo.weight',v('topInfo.weight',''),['','400','500','600','700','800'])}${selectField('Alignment','topInfo.align',v('topInfo.align',''),['','left','center','right'])}${colorField('Text color','topInfo.color',v('topInfo.color',rgbToHex(cs.color)))}${colorField('Background','topInfo.background',v('topInfo.background',rgbToHex(cs.backgroundColor)))}${colorField('Border color','topInfo.borderColor',v('topInfo.borderColor',rgbToHex(cs.borderTopColor)))}${numField('Border width','topInfo.borderWidth',v('topInfo.borderWidth',num(cs.borderTopWidth,1)),0,8,1)}${numField('Radius','topInfo.radius',v('topInfo.radius',num(cs.borderRadius,6)),0,30,1)}${numField('Padding','topInfo.padding',v('topInfo.padding',num(cs.paddingTop,8)),0,30,1)}${checkField('Show bar','topInfo.show',v('topInfo.show',true))}${checkField('Wrap text','topInfo.wrap',v('topInfo.wrap',true))}${checkField('Italic','topInfo.italic',v('topInfo.italic',false))}</div><div class="spc-note">These settings are saved only for this page. Other pages keep their own top information-bar settings.</div></div>`,true)}
   if(moduleEnabled('information_bars')&&c.infos.length){let x=c.infos.map((el,i)=>{const k='info'+i,cs=getComputedStyle(el);return`<div class="spc-subcard"><div class="spc-subhead"><strong>Information Bar ${i+1}</strong><small>${esc(originalText(el))}</small></div><div class="spc-grid">${textField('Text',`infos.${k}.text`,v(`infos.${k}.text`,originalText(el)),true)}${numField('Font size',`infos.${k}.fontSize`,v(`infos.${k}.fontSize`,num(cs.fontSize,11)),8,30,.5)}${selectField('Weight',`infos.${k}.weight`,v(`infos.${k}.weight`,''),['','400','500','600','700','800'])}${selectField('Alignment',`infos.${k}.align`,v(`infos.${k}.align`,''),['','left','center','right'])}${colorField('Text color',`infos.${k}.color`,v(`infos.${k}.color`,rgbToHex(cs.color)))}${colorField('Background',`infos.${k}.background`,v(`infos.${k}.background`,rgbToHex(cs.backgroundColor)))}${colorField('Border color',`infos.${k}.borderColor`,v(`infos.${k}.borderColor`,rgbToHex(cs.borderTopColor)))}${numField('Border width',`infos.${k}.borderWidth`,v(`infos.${k}.borderWidth`,num(cs.borderTopWidth,1)),0,8,1)}${numField('Radius',`infos.${k}.radius`,v(`infos.${k}.radius`,num(cs.borderRadius,6)),0,30,1)}${numField('Padding',`infos.${k}.padding`,v(`infos.${k}.padding`,num(cs.paddingTop,8)),0,30,1)}${checkField('Show bar',`infos.${k}.show`,v(`infos.${k}.show`,true))}${checkField('Wrap text',`infos.${k}.wrap`,v(`infos.${k}.wrap`,true))}${checkField('Italic',`infos.${k}.italic`,v(`infos.${k}.italic`,false))}</div></div>`}).join('');html+=section('Information Bars',c.infos.length,x,true)}
   if(moduleEnabled('summary_kpi')&&c.summaries.length){let x=c.summaries.map((el,i)=>{const k='summary'+i,cs=getComputedStyle(el);return`<div class="spc-subcard"><div class="spc-subhead"><strong>Summary / KPI ${i+1}</strong><small>${esc((el.textContent||'').trim().slice(0,90))}</small></div><div class="spc-grid">${numField('Font size',`summaries.${k}.fontSize`,v(`summaries.${k}.fontSize`,num(cs.fontSize,11)),8,28,.5)}${numField('Value size',`summaries.${k}.valueSize`,v(`summaries.${k}.valueSize`,''),8,40,.5)}${selectField('Alignment',`summaries.${k}.align`,v(`summaries.${k}.align`,''),['','left','center','right'])}${numField('Gap',`summaries.${k}.gap`,v(`summaries.${k}.gap`,num(cs.gap,8)),0,40,1)}${numField('Padding',`summaries.${k}.padding`,v(`summaries.${k}.padding`,num(cs.paddingTop,8)),0,30,1)}${numField('Min height',`summaries.${k}.height`,v(`summaries.${k}.height`,''),0,300,1)}${numField('Grid columns (0=keep)',`summaries.${k}.columns`,v(`summaries.${k}.columns`,0),0,8,1)}${checkField('Show summary',`summaries.${k}.show`,v(`summaries.${k}.show`,true))}</div></div>`}).join('');html+=section('Summary / KPI',c.summaries.length,x)}
@@ -35751,9 +35796,13 @@ function openOnlySection(key){
 function sectionForPageTarget(target){
   if(!current||!target||target.closest?.('#spcPanel'))return null;
   const enabled=k=>moduleEnabled(k)?k:null;
+  if(current.workspaceTitle&&(target===current.workspaceTitle||current.workspaceTitle.contains(target)))return enabled('workspace_header');
+  if(current.workspaceSubtitle&&(target===current.workspaceSubtitle||current.workspaceSubtitle.contains(target)))return enabled('workspace_header');
   if(current.topInfo&&(target===current.topInfo||current.topInfo.contains(target)))return enabled('top_information_bar');
   if(current.title&&(target===current.title||current.title.contains(target)))return enabled('title_subtitle');
   if(current.subtitle&&(target===current.subtitle||current.subtitle.contains(target)))return enabled('title_subtitle');
+  const eyebrow=target.closest?.('[data-spc-eyebrow-key]');
+  if(eyebrow&&current.root.contains(eyebrow))return enabled('labels_eyebrows');
   const info=target.closest?.('[data-spc-info-key]');
   if(info&&current.root.contains(info))return enabled('information_bars');
   const summary=target.closest?.('[data-spc-summary-key]');
