@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoreFlow ERP v1.0 — Design Studio</title>
+<style>
+:root{
+  --bg:#eef5fb;--surface:#ffffff;--surface-2:#f7fbff;--text:#16324f;--muted:#6f859b;
+  --primary:#0d67b5;--secondary:#164c7f;--accent:#20b7a5;--border:#d8e5ef;
+  --success:#25a55f;--warning:#f2a51a;--danger:#e74d58;--info:#2c8ee8;
+  --sidebar:#0c3f68;--sidebarText:#eef8ff;--sidebarActive:#1177c7;
+  --radius:14px;--shadow:0 10px 28px rgba(30,72,108,.10);--gap:14px;
+  --font:"Segoe UI",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;display:grid;grid-template-columns:245px minmax(0,1fr)}
+.sidebar{
+  background:linear-gradient(180deg,var(--sidebar),color-mix(in srgb,var(--sidebar) 84%,#000 16%));
+  color:var(--sidebarText);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto
+}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px}
+.logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#2ba8ff,#8bd5ff);display:grid;place-items:center;color:#07365d;font-weight:900;font-size:20px}
+.brand h1{font-size:18px;margin:0}.brand small{opacity:.72}
+.nav-section{margin-top:12px}
+.nav-title{font-size:10px;text-transform:uppercase;letter-spacing:.12em;opacity:.55;padding:6px 10px}
+.nav-item{width:100%;border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:10px;text-align:left;margin:3px 0}
+.nav-item:hover{background:rgba(255,255,255,.09)}
+.nav-item.active{background:var(--sidebarActive);box-shadow:inset 3px 0 0 #8bd5ff}
+.nav-item span:first-child{width:20px;text-align:center}
+.nav-sub{padding-left:18px}
+.system-box{margin-top:18px;padding:12px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(0,0,0,.08)}
+.system-box b{display:block;color:#63e6a3}.system-box small{opacity:.8}
+.main{min-width:0}
+.topbar{height:72px;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 20px;position:sticky;top:0;z-index:20}
+.search{flex:1;max-width:520px;position:relative}.search input{width:100%;height:42px;border:1px solid var(--border);border-radius:11px;padding:0 14px 0 38px;background:var(--surface-2);color:var(--text)}
+.search .ico{position:absolute;left:13px;top:11px;color:var(--muted)}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn,.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;height:38px;padding:0 13px;font-weight:700}
+.icon-btn{width:38px;padding:0;display:grid;place-items:center}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.soft{background:color-mix(in srgb,var(--primary) 8%,#fff 92%);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 24%,var(--border))}
+.btn.danger{color:var(--danger)}
+.user{display:flex;align-items:center;gap:9px;padding-left:8px}.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#e8eef3,#c8d8e6);display:grid;place-items:center;font-weight:900;color:#294d6a}.user strong{display:block;font-size:13px}.user small{display:block;color:var(--muted)}
+.content{padding:20px}
+.page-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+.page-head h2{font-size:28px;margin:0 0 5px}.page-head p{margin:0;color:var(--muted)}
+.head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.kpi .kicon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:white;font-size:19px;font-weight:900}
+.kpi:nth-child(1) .kicon{background:#2f8ff3}.kpi:nth-child(2) .kicon{background:#28b98a}.kpi:nth-child(3) .kicon{background:#ff8c40}.kpi:nth-child(4) .kicon{background:#8264e8}.kpi:nth-child(5) .kicon{background:#ea5365}.kpi:nth-child(6) .kicon{background:#1ab8c8}
+.kpi b{display:block;font-size:23px}.kpi span{font-size:11px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid var(--border)}
+.panel-head h3{margin:0;font-size:16px}.panel-head p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.panel-body{padding:16px}
+.gallery{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:14px}
+.preset{border:1px solid var(--border);border-radius:14px;background:var(--surface-2);overflow:hidden;transition:.18s;position:relative}
+.preset:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(34,72,100,.11)}
+.preset.favorite:after{content:"★";position:absolute;right:10px;top:8px;color:#f5a400;font-size:18px}
+.preview{height:145px;padding:10px;background:var(--p-bg,#edf5fb);display:grid;grid-template-columns:36px 1fr;gap:7px}
+.preview .mini-side{border-radius:7px;background:var(--p-side,#174a74)}
+.preview .mini-main{display:grid;grid-template-rows:22px 36px 1fr;gap:7px}
+.preview .mini-top,.preview .mini-kpis i,.preview .mini-card{background:var(--p-surface,#fff);border:1px solid rgba(0,0,0,.06);border-radius:7px}
+.preview .mini-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.preview .mini-kpis i:nth-child(1){background:var(--p-a,#dcecff)}.preview .mini-kpis i:nth-child(2){background:var(--p-b,#dff7ec)}.preview .mini-kpis i:nth-child(3){background:var(--p-c,#fff0dd)}.preview .mini-kpis i:nth-child(4){background:var(--p-d,#efe7ff)}
+.preview .mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.preview .mini-card:nth-child(odd){background:color-mix(in srgb,var(--p-surface,#fff) 82%,var(--p-a,#dcecff) 18%)}
+.preset-meta{padding:12px}.preset-meta strong{display:block}.preset-meta small{display:block;color:var(--muted);margin-top:3px}
+.preset-actions{display:flex;gap:6px;padding:0 12px 12px}.preset-actions button{flex:1;height:31px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:11px;font-weight:700}
+.preset-actions .apply{background:var(--primary);border-color:var(--primary);color:white}
+.studio-grid{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:14px}
+.studio-card{border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,var(--surface),var(--surface-2));padding:14px;min-height:126px;display:flex;flex-direction:column}
+.studio-card .sicon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:#fff;font-size:18px;margin-bottom:12px}
+.studio-card:nth-child(4n+1) .sicon{background:#6657e8}.studio-card:nth-child(4n+2) .sicon{background:#14b8a6}.studio-card:nth-child(4n+3) .sicon{background:#f97316}.studio-card:nth-child(4n+4) .sicon{background:#0f8ee8}
+.studio-card h4{margin:0 0 4px}.studio-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.4}.studio-card button{margin-top:auto;align-self:flex-start;border:0;background:transparent;color:var(--primary);font-weight:800;padding:10px 0 0}
+.drawer{position:fixed;right:0;top:0;width:min(430px,96vw);height:100vh;background:var(--surface);border-left:1px solid var(--border);box-shadow:-18px 0 40px rgba(21,49,72,.15);z-index:60;transform:translateX(105%);transition:.22s;display:flex;flex-direction:column}
+.drawer.open{transform:none}.drawer-head{padding:18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}.drawer-head h3{margin:0}.drawer-body{padding:18px;overflow:auto}
+.field{margin-bottom:13px}.field label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}.field input,.field select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 10px;background:var(--surface);color:var(--text)}
+.field input[type=color]{padding:4px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drawer-actions{margin-top:auto;border-top:1px solid var(--border);padding:14px;display:flex;gap:8px;justify-content:flex-end}
+.modal{position:fixed;inset:0;background:rgba(7,28,45,.5);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}.modal.open{display:flex}
+.modal-box{width:min(1100px,96vw);max-height:92vh;background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.24)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)}
+.device-tabs{display:flex;gap:7px}.device-tabs button{border:1px solid var(--border);background:var(--surface);border-radius:8px;height:34px;padding:0 12px}.device-tabs button.active{background:var(--primary);color:white;border-color:var(--primary)}
+.preview-stage{padding:18px;background:#d9e4ed;display:grid;place-items:center;min-height:600px}.device{width:100%;height:560px;background:var(--bg);border-radius:14px;border:7px solid #263544;overflow:auto;transition:.2s}
+.device.laptop{width:88%}.device.tablet{width:720px;max-width:100%}.device.mobile{width:390px;max-width:100%}
+.demo-page{min-height:100%;padding:14px}.demo-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.demo-title{font-size:20px;font-weight:900}.demo-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.demo-kpi,.demo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px}.demo-card{margin-top:10px}
+.toast{position:fixed;right:22px;bottom:22px;background:#16324f;color:#fff;padding:11px 14px;border-radius:10px;z-index:100;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}
+@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.gallery,.studio-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:850px){.app{grid-template-columns:72px 1fr}.brand-copy,.nav-item span:last-child,.nav-title,.system-box{display:none}.nav-item{justify-content:center}.nav-sub{padding-left:0}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.content{padding:12px}.topbar{padding:0 10px}.user div,.top-actions .hide-sm{display:none}.page-head{flex-direction:column}.kpis,.gallery,.studio-grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">CF</div>
+      <div class="brand-copy"><h1>CoreFlow ERP</h1><small>Central Engine v1.0</small></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-title">Workspace</div>
+      <button class="nav-item active"><span>⌂</span><span>Design Studio</span></button>
+      <div class="nav-sub">
+        <button class="nav-item"><span>◉</span><span>Theme Studio</span></button>
+        <button class="nav-item"><span>▧</span><span>Navigation Studio</span></button>
+        <button class="nav-item"><span>▣</span><span>Button Studio</span></button>
+        <button class="nav-item"><span>◆</span><span>KPI Studio</span></button>
+        <button class="nav-item"><span>▤</span><span>Table Studio</span></button>
+        <button class="nav-item"><span>✎</span><span>Forms & Inputs</span></button>
+        <button class="nav-item"><span>▱</span><span>Banner Studio</span></button>
+        <button class="nav-item"><span>A</span><span>Typography</span></button>
+        <button class="nav-item"><span>◎</span><span>Identity</span></button>
+        <button class="nav-item"><span>⚙</span><span>Page Controller</span></button>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-title">Future Modules</div>
+      <button class="nav-item"><span>▦</span><span>Masters</span></button>
+      <button class="nav-item"><span>🛒</span><span>Purchase</span></button>
+      <button class="nav-item"><span>⇢</span><span>Issue</span></button>
+      <button class="nav-item"><span>◫</span><span>Inventory</span></button>
+      <button class="nav-item"><span>₨</span><span>Costing</span></button>
+      <button class="nav-item"><span>⚒</span><span>Production</span></button>
+      <button class="nav-item"><span>▥</span><span>Departments</span></button>
+      <button class="nav-item"><span>▤</span><span>Reports</span></button>
+    </div>
+    <div class="system-box"><b>● Core Online</b><small>Design engine operational</small></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="search"><span class="ico">⌕</span><input placeholder="Search design tools, pages, modules..."></div>
+      <div class="top-actions">
+        <button class="icon-btn hide-sm" title="Undo" onclick="undoTheme()">↶</button>
+        <button class="icon-btn hide-sm" title="Redo" onclick="redoTheme()">↷</button>
+        <button class="btn soft hide-sm" onclick="openPreview()">Responsive Preview</button>
+        <div class="user"><div class="avatar">MW</div><div><strong>Muhammad Waqas</strong><small>Administrator</small></div></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-head">
+        <div><h2>Design Studio</h2><p>Central visual engine for the complete CoreFlow ERP system.</p></div>
+        <div class="head-actions">
+          <button class="btn" onclick="saveDesign()">Save Design</button>
+          <button class="btn soft" onclick="duplicateActive()">Save as New</button>
+          <button class="btn primary" onclick="openPreview()">Preview System</button>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="kicon">▧</div><div><b>1</b><span>Active Page</span></div></div>
+        <div class="kpi"><div class="kicon">◫</div><div><b>1</b><span>Core Module</span></div></div>
+        <div class="kpi"><div class="kicon">◆</div><div><b>11</b><span>Design Presets</span></div></div>
+        <div class="kpi"><div class="kicon">⚙</div><div><b>12</b><span>Studio Controls</span></div></div>
+        <div class="kpi"><div class="kicon">✓</div><div><b>100%</b><span>Central Tokens</span></div></div>
+        <div class="kpi"><div class="kicon">DB</div><div><b>Local</b><span>Offline Storage</span></div></div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div><h3>11 Design Gallery</h3><p>Preview or apply a complete visual preset. Every module will inherit the active central design.</p></div>
+          <button class="btn soft" onclick="duplicateActive()">+ Create Custom Design</button>
+        </div>
+        <div class="panel-body"><div class="gallery" id="gallery"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div><h3>Design Studio Pages</h3><p>Each tool controls one part of the central engine. Module-specific business logic remains separate.</p></div>
+        </div>
+        <div class="panel-body">
+          <div class="studio-grid">
+            <div class="studio-card"><div class="sicon">◉</div><h4>Theme Studio</h4><p>Global color tokens, light/dark appearance, surfaces, borders and system status colors.</p><button onclick="openTool('Theme Studio','theme')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">▧</div><h4>Navigation Studio</h4><p>Sidebar, collapsed mode, top/bottom navigation, menus, icons, hover and active states.</p><button onclick="openTool('Navigation Studio','navigation')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">▣</div><h4>Button Studio</h4><p>Central button styles. Navigation cards stay separate and can never be mistaken for buttons.</p><button onclick="openTool('Button Studio','buttons')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">◆</div><h4>KPI Studio</h4><p>KPI cards, values, icons, progress, comparisons and compact/comfortable layouts.</p><button onclick="openTool('KPI Studio','kpi')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">▱</div><h4>Navigation Card Studio</h4><p>Dedicated page/module cards with icon, title, description, arrow and column layouts.</p><button onclick="openTool('Navigation Card Studio','navcards')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">▤</div><h4>Table Studio</h4><p>Header, row height, alignment, borders, selected rows, totals and action columns.</p><button onclick="openTool('Table Studio','tables')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">✎</div><h4>Forms & Inputs</h4><p>Text, number, date, searchable dropdown, textarea, checkbox, toggle and autocomplete.</p><button onclick="openTool('Forms & Inputs','forms')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">▰</div><h4>Header & Banner Studio</h4><p>Page title, subtitle, breadcrumbs, company banner, info bars, profile and actions.</p><button onclick="openTool('Header & Banner Studio','banner')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">▦</div><h4>Cards & Panels</h4><p>Information cards, form panels, status cards, warnings and summary panels.</p><button onclick="openTool('Cards & Panels','cards')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">A</div><h4>Typography Studio</h4><p>System font, headings, labels, table text, KPI values and button typography.</p><button onclick="openTool('Typography Studio','type')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">◎</div><h4>Profile & Identity</h4><p>Company name, program name, logo, user identity, role and address.</p><button onclick="openTool('Profile & Identity','identity')">Open Studio →</button></div>
+            <div class="studio-card"><div class="sicon">⚙</div><h4>Page Controller</h4><p>Pages explicitly register their capabilities. No guessing by generic selectors.</p><button onclick="openTool('Page Controller','page')">Open Studio →</button></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-head"><div><h3 id="drawerTitle">Studio</h3><small style="color:var(--muted)">Central Engine Control</small></div><button class="icon-btn" onclick="closeDrawer()">✕</button></div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-actions"><button class="btn" onclick="closeDrawer()">Cancel</button><button class="btn primary" onclick="applyDrawer()">Apply to Core</button></div>
+</div>
+
+<div class="modal" id="previewModal">
+  <div class="modal-box">
+    <div class="modal-head"><div><strong>Responsive System Preview</strong><div style="font-size:12px;color:var(--muted)">Active central design</div></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="device-tabs">
+          <button class="active" onclick="setDevice('desktop',this)">Desktop</button>
+          <button onclick="setDevice('laptop',this)">Laptop</button>
+          <button onclick="setDevice('tablet',this)">Tablet</button>
+          <button onclick="setDevice('mobile',this)">Mobile</button>
+        </div>
+        <button class="icon-btn" onclick="closePreview()">✕</button>
+      </div>
+    </div>
+    <div class="preview-stage">
+      <div class="device" id="device">
+        <div class="demo-page">
+          <div class="demo-head"><div class="demo-title">Purchase Dashboard</div><button class="btn primary">+ Add Purchase</button></div>
+          <div class="demo-kpis"><div class="demo-kpi"><b>128</b><br><small>Purchases</small></div><div class="demo-kpi"><b>64</b><br><small>Suppliers</small></div><div class="demo-kpi"><b>842</b><br><small>Items</small></div><div class="demo-kpi"><b>PKR</b><br><small>Central Format</small></div></div>
+          <div class="demo-card"><b>Navigation Cards</b><p style="color:var(--muted)">These remain separate from normal buttons and inherit only the Navigation Card Studio rules.</p></div>
+          <div class="demo-card"><b>Central Table Style</b><p style="color:var(--muted)">All future modules will receive common typography, spacing, button, table and form tokens from CoreFlow Engine.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CORE_KEY='COREFLOW_DESIGN_ENGINE_V1';
+const presets=[
+ {name:'Classic Light',desc:'Clean enterprise light',bg:'#eef5fb',surface:'#ffffff',text:'#16324f',muted:'#6f859b',primary:'#0d67b5',accent:'#20b7a5',border:'#d8e5ef',sidebar:'#0c3f68',sidebarText:'#eef8ff',sidebarActive:'#1177c7'},
+ {name:'Midnight Pro',desc:'Dark professional workspace',bg:'#0b1723',surface:'#122536',text:'#eaf4ff',muted:'#9eb1c1',primary:'#4778ff',accent:'#20d0a7',border:'#274052',sidebar:'#07131d',sidebarText:'#eaf4ff',sidebarActive:'#274d9b'},
+ {name:'Soft Pastel',desc:'Friendly pastel workspace',bg:'#f5f7ff',surface:'#ffffff',text:'#263754',muted:'#7b8498',primary:'#7467e8',accent:'#54c9b5',border:'#e0e4f0',sidebar:'#eef0ff',sidebarText:'#334066',sidebarActive:'#d9ddff'},
+ {name:'Analytics Blue',desc:'Compact data-first layout',bg:'#edf5fb',surface:'#ffffff',text:'#16324f',muted:'#6c8194',primary:'#1679d3',accent:'#16b8a6',border:'#d6e6f1',sidebar:'#0c527e',sidebarText:'#eff8ff',sidebarActive:'#0e79bb'},
+ {name:'Slate Executive',desc:'Neutral executive theme',bg:'#eef1f4',surface:'#ffffff',text:'#202b36',muted:'#74808d',primary:'#355c7d',accent:'#58a6a6',border:'#d7dee5',sidebar:'#263847',sidebarText:'#f1f5f8',sidebarActive:'#415b6f'},
+ {name:'Nature Green',desc:'Calm green operations theme',bg:'#eef7f2',surface:'#ffffff',text:'#173a2e',muted:'#6a8278',primary:'#19885f',accent:'#e2a72e',border:'#d3e7dc',sidebar:'#0f5c43',sidebarText:'#eefcf6',sidebarActive:'#17825e'},
+ {name:'Orange Industrial',desc:'Bold factory operations theme',bg:'#f8f2ec',surface:'#ffffff',text:'#3e2c20',muted:'#8b7564',primary:'#c96624',accent:'#2e77a7',border:'#eadacb',sidebar:'#5a3821',sidebarText:'#fff6ee',sidebarActive:'#a65422'},
+ {name:'Royal Violet',desc:'Modern premium interface',bg:'#f4f0fb',surface:'#ffffff',text:'#33234b',muted:'#7d7091',primary:'#6d43c5',accent:'#26b4ad',border:'#e1d8ef',sidebar:'#39245e',sidebarText:'#faf7ff',sidebarActive:'#6540a8'},
+ {name:'Graphite Dark',desc:'Dark neutral high contrast',bg:'#111418',surface:'#1b2026',text:'#f2f5f7',muted:'#a5afb8',primary:'#2d94df',accent:'#f2a33a',border:'#303840',sidebar:'#0b0e11',sidebarText:'#edf4f7',sidebarActive:'#263f52'},
+ {name:'Sky Glass',desc:'Bright glass-style workspace',bg:'#e8f5ff',surface:'#ffffff',text:'#17324d',muted:'#71879a',primary:'#2586d8',accent:'#34b7a7',border:'#d1e5f4',sidebar:'#1b5d89',sidebarText:'#f4fbff',sidebarActive:'#2b89c6'},
+ {name:'Minimal Mono',desc:'Simple minimal business UI',bg:'#f4f5f6',surface:'#ffffff',text:'#202428',muted:'#7b8288',primary:'#2f353b',accent:'#7d8a96',border:'#dfe3e6',sidebar:'#252a2f',sidebarText:'#f7f7f7',sidebarActive:'#454c53'}
+];
+let state=JSON.parse(localStorage.getItem(CORE_KEY)||'null')||{active:0,favorites:[],custom:[],history:[],future:[],identity:{program:'CoreFlow ERP',company:'Your Company'}};
+let drawerType='';
+
+function renderGallery(){
+ const g=document.getElementById('gallery'); g.innerHTML='';
+ [...presets,...state.custom].forEach((p,i)=>{
+   const el=document.createElement('div'); el.className='preset'+(state.favorites.includes(i)?' favorite':'');
+   el.innerHTML=`<div class="preview" style="--p-bg:${p.bg};--p-side:${p.sidebar};--p-surface:${p.surface};--p-a:${p.primary}22;--p-b:${p.accent}22;--p-c:#ff9a3d22;--p-d:#8b5cf622">
+     <div class="mini-side"></div><div class="mini-main"><div class="mini-top"></div><div class="mini-kpis"><i></i><i></i><i></i><i></i></div><div class="mini-grid"><div class="mini-card"></div><div class="mini-card"></div><div class="mini-card"></div><div class="mini-card"></div></div></div>
+   </div>
+   <div class="preset-meta"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.desc||'Custom design')}</small></div>
+   <div class="preset-actions"><button onclick="favorite(${i})">★</button><button onclick="previewPreset(${i})">Preview</button><button class="apply" onclick="applyPreset(${i})">${state.active===i?'Active':'Apply'}</button></div>`;
+   g.appendChild(el);
+ });
+}
+function themeOf(i){return [...presets,...state.custom][i]||presets[0]}
+function pushHistory(){state.history.push(state.active); if(state.history.length>25)state.history.shift(); state.future=[]}
+function applyPreset(i){
+ pushHistory(); state.active=i; const p=themeOf(i); applyTheme(p); persist(); renderGallery(); toast('Design applied to Central Engine');
+}
+function previewPreset(i){applyTheme(themeOf(i)); openPreview()}
+function favorite(i){state.favorites=state.favorites.includes(i)?state.favorites.filter(x=>x!==i):[...state.favorites,i];persist();renderGallery()}
+function applyTheme(p){
+ const r=document.documentElement.style;
+ ['bg','surface','text','muted','primary','accent','border','sidebar','sidebarText','sidebarActive'].forEach(k=>p[k]&&r.setProperty('--'+k,p[k]));
+}
+function duplicateActive(){
+ const base={...themeOf(state.active)}; const name=prompt('New design name:',base.name+' Copy'); if(!name)return;
+ base.name=name;base.desc='Custom CoreFlow design';state.custom.push(base);state.active=presets.length+state.custom.length-1;persist();renderGallery();toast('Custom design created');
+}
+function saveDesign(){persist();toast('CoreFlow design saved locally')}
+function persist(){localStorage.setItem(CORE_KEY,JSON.stringify(state))}
+function undoTheme(){if(!state.history.length)return toast('No earlier design'); state.future.push(state.active);state.active=state.history.pop();applyTheme(themeOf(state.active));persist();renderGallery();toast('Previous design restored')}
+function redoTheme(){if(!state.future.length)return toast('Nothing to redo'); state.history.push(state.active);state.active=state.future.pop();applyTheme(themeOf(state.active));persist();renderGallery();toast('Design redone')}
+function openPreview(){document.getElementById('previewModal').classList.add('open')}
+function closePreview(){document.getElementById('previewModal').classList.remove('open')}
+function setDevice(kind,btn){document.getElementById('device').className='device'+(kind==='desktop'?'':' '+kind);document.querySelectorAll('.device-tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
+function openTool(title,type){drawerType=type;document.getElementById('drawerTitle').textContent=title;document.getElementById('drawerBody').innerHTML=toolForm(type);document.getElementById('drawer').classList.add('open')}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open')}
+function toolForm(type){
+ const p=themeOf(state.active);
+ if(type==='theme')return `<div class="two">${color('Primary','primary',p.primary)}${color('Accent','accent',p.accent)}${color('Background','bg',p.bg)}${color('Surface','surface',p.surface)}${color('Text','text',p.text)}${color('Border','border',p.border)}${color('Sidebar','sidebar',p.sidebar)}${color('Sidebar Active','sidebarActive',p.sidebarActive)}</div>`;
+ if(type==='navigation')return fields([['Sidebar Width','number','245'],['Collapsed Width','number','72'],['Menu Height','number','42'],['Icon Size','number','16'],['Mode','select','Left Sidebar|Top Navigation|Bottom Taskbar']]);
+ if(type==='buttons')return fields([['Button Height','number','38'],['Radius','number','10'],['Font Weight','select','600|700|800'],['Icon Gap','number','8'],['Hover Effect','select','Brightness|Lift|Glow|None']]);
+ if(type==='kpi')return fields([['Card Height','number','82'],['Value Size','number','23'],['Columns','select','2|3|4|5|6'],['Style','select','Number + Icon|Number Only|Progress|Comparison|Mini Chart']]);
+ if(type==='navcards')return fields([['Columns','select','1|2|3|4'],['Card Height','number','110'],['Show Description','select','Yes|No'],['Show Arrow','select','Yes|No'],['Hover','select','Lift|Border|Glow|None']]);
+ if(type==='tables')return fields([['Row Height','number','42'],['Header Height','number','42'],['Header Style','select','Solid|Soft|Outline'],['Freeze Header','select','Yes|No'],['Alternate Rows','select','Yes|No']]);
+ if(type==='forms')return fields([['Input Height','number','40'],['Radius','number','9'],['Label Style','select','Uppercase|Normal|Floating'],['Searchable Dropdown','select','Enabled|Disabled'],['Date Format','select','25-Jun-26|25/06/2026|2026-06-25']]);
+ if(type==='banner')return fields([['Header Height','number','72'],['Breadcrumbs','select','Show|Hide'],['Subtitle','select','Show|Hide'],['Info Bar','select','Show|Hide'],['User Profile','select','Show|Hide']]);
+ if(type==='cards')return fields([['Radius','number','14'],['Shadow','select','None|Soft|Medium'],['Padding','number','16'],['Border','select','Show|Hide']]);
+ if(type==='type')return fields([['Font Family','select','Segoe UI|Arial|Roboto|Inter'],['Page Title','number','28'],['Section Title','number','16'],['Body Text','number','14'],['Table Text','number','12']]);
+ if(type==='identity')return fields([['Program Name','text',state.identity.program],['Company Name','text',state.identity.company],['Administrator','text','Muhammad Waqas'],['Role','text','Administrator']]);
+ if(type==='page')return `<div style="padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);margin-bottom:12px"><b>Registered Capabilities</b><p style="color:var(--muted);font-size:12px">Future pages will explicitly register supported design modules. The controller will never guess by generic CSS selectors.</p></div>`+fields([['Header','select','Enabled|Disabled'],['Buttons','select','Enabled|Disabled'],['Tables','select','Enabled|Disabled'],['Forms','select','Enabled|Disabled'],['KPI','select','Enabled|Disabled'],['Navigation Cards','select','Enabled|Disabled']]);
+ return '';
+}
+function fields(arr){return arr.map(([label,type,value])=>{if(type==='select'){const opts=value.split('|').map(v=>`<option>${v}</option>`).join('');return `<div class="field"><label>${label}</label><select>${opts}</select></div>`}return `<div class="field"><label>${label}</label><input type="${type}" value="${value}"></div>`}).join('')}
+function color(label,key,value){return `<div class="field"><label>${label}</label><input data-color="${key}" type="color" value="${value}"></div>`}
+function applyDrawer(){
+ if(drawerType==='theme'){
+   const base={...themeOf(state.active)};
+   document.querySelectorAll('[data-color]').forEach(el=>base[el.dataset.color]=el.value);
+   if(state.active<presets.length){base.name=presets[state.active].name+' Custom';base.desc='Customized from preset';state.custom.push(base);state.active=presets.length+state.custom.length-1}
+   else state.custom[state.active-presets.length]=base;
+   applyTheme(base);persist();renderGallery();
+ }
+ if(drawerType==='identity'){
+   const ins=document.querySelectorAll('#drawerBody input'); if(ins.length>=2){state.identity.program=ins[0].value;state.identity.company=ins[1].value;persist()}
+ }
+ closeDrawer();toast('Central Engine updated');
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+applyTheme(themeOf(state.active));renderGallery();
+</script>
+</body>
+</html>
