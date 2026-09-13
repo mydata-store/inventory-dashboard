@@ -275,7 +275,7 @@ window.ERPStorageHealthV1605={
 </script>
 
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP Design Studio Core V17.0a Department Control Foundation</title>
+<title>ERP Design Studio Core V17.0b Navigation Card Restore</title>
 <script>
 (function(){
   const root=document.documentElement;
@@ -36112,10 +36112,24 @@ section.panel [data-erp-safe-button-row="1"]::-webkit-scrollbar{height:5px}
       }
     });
   }
+  function isNavigationCardArea(parent){
+    if(!parent)return false;
+    /* V17.0b: protect module/navigation/subpage/KPI cards from toolbar styling. */
+    if(parent.closest([
+      '.issue-folders-v1578','.issue-folder-v1578','.issue-folder-pages-v1578',
+      '.purchase-folders-v1576','.purchase-folder-v1576','.purchase-entry-grid',
+      '.issue-home-kpis-v1578','.purchase-home-kpis-v1575',
+      '[class*="module-launch-card"]','[class*="folder-pages"]','[class*="home-kpi"]',
+      '[class*="subpage"]','[class*="module-card"]','[class*="nav-card"]'
+    ].join(',')))return true;
+    const controls=[...parent.children].filter(el=>el.matches?.(CONTROL_SEL));
+    return controls.some(el=>el.querySelector?.('small,p,h1,h2,h3,h4,h5,h6,.issue-home-card-copy-v1578,.purchase-home-card-copy-v1575'));
+  }
   function buttonOnlyRow(parent){
     if(!parent||!parent.children)return false;
     if(parent.closest('#spcOverlay,#erpLoginOverlay,.modal,.master-modal,.purchase-pc-overlay'))return false;
     if(parent.matches('form,table,thead,tbody,tr,td,th,ul,ol,select,label'))return false;
+    if(isNavigationCardArea(parent))return false;
     const kids=[...parent.children].filter(el=>getComputedStyle(el).display!=='none');
     if(kids.length<2||kids.length>16)return false;
     if(kids.some(el=>el.matches('input:not([type="button"]):not([type="submit"]):not([type="reset"]),select,textarea')) )return false;
@@ -36124,13 +36138,18 @@ section.panel [data-erp-safe-button-row="1"]::-webkit-scrollbar{height:5px}
   }
   function cleanButtonRows(active){
     if(!active)return;
+    /* Always clear an older broad classification first, then mark only true small toolbars. */
+    active.querySelectorAll('[data-erp-safe-button-row="1"]').forEach(parent=>{
+      delete parent.dataset.erpSafeButtonRow;
+      parent.querySelectorAll('[data-erp-right-action="1"]').forEach(el=>delete el.dataset.erpRightAction);
+    });
     const parents=new Set([...active.querySelectorAll(CONTROL_SEL)].map(x=>x.parentElement).filter(Boolean));
     parents.forEach(parent=>{
       if(!buttonOnlyRow(parent))return;
       parent.dataset.erpSafeButtonRow='1';
       const kids=[...parent.children].filter(el=>el.matches(CONTROL_SEL) && getComputedStyle(el).display!=='none');
       kids.forEach(el=>delete el.dataset.erpRightAction);
-      // Back/Home/Management navigation belongs on the far right of a button-only toolbar.
+      // Back/Home/Management navigation belongs on the far right of a small button toolbar only.
       const back=kids.find(el=>/^(←|back\b)|\b(home|management)\b/i.test(txt(el)));
       if(back && kids.length>2)back.dataset.erpRightAction='1';
     });
@@ -36252,3 +36271,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
 <!-- V16.38d: removed misplaced Straw Cell script/style blocks that caused raw ERP code to render on screen. -->
+
+<!-- V17.0b: Restored original Module/Navigation/Subpage card layouts on all pages. Top small-button toolbar cleanup remains isolated. -->
