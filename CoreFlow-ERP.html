@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow ERP v1.8 — Theme Studio & Navigation Fix</title>
+<title>CoreFlow ERP v1.8.1 — Theme Init & Page Controller Fix</title>
 <script>
 /* Early route restore: runs before first paint, so the wrong page never flashes. */
 (function(){
@@ -250,7 +250,7 @@ html[data-cardmode="classic"] .system-box{border-color:rgba(95,225,238,.42);back
 <body>
 <div class="app">
 <aside class="sidebar">
-  <div class="brand"><div class="logo">CF</div><div class="brand-copy"><h1>CoreFlow ERP</h1><small>Central Engine v1.8</small></div></div>
+  <div class="brand"><div class="logo">CF</div><div class="brand-copy"><h1>CoreFlow ERP</h1><small>Central Engine v1.8.1</small></div></div>
   <div class="nav-title">Workspace</div>
   <button class="nav-item active" onclick="goPage('home')"><span>⌂</span><span>Design Studio</span></button>
   <div class="nav-title">Future Modules</div>
@@ -727,10 +727,10 @@ function showRoute(route,opts={}){
   try{localStorage.setItem(ROUTE_KEY,route)}catch(e){}
   document.documentElement.setAttribute('data-route',route);
   if(!opts.keepScroll)window.scrollTo({top:0,behavior:'auto'});
-  if(route==='gallery')renderGallery();
-  if(route==='theme')themeInit();
-  if(route==='controller')pcRender();
-  updateAutoDevice();
+  if(route==='gallery' && typeof renderGallery==='function')renderGallery();
+  if(route==='theme' && typeof themeInit==='function')themeInit();
+  if(route==='controller' && typeof pcRender==='function')pcRender();
+  if(typeof updateAutoDevice==='function')updateAutoDevice();
 }
 function goPage(route){
   const current=document.documentElement.getAttribute('data-route')||'home';
@@ -747,13 +747,13 @@ window.addEventListener('popstate',e=>{
   const route=e.state?.route || (location.hash.match(/page=([a-z]+)/i)?.[1]) || 'home';
   showRoute(route);
 });
-(function initHistoryRouter(){
+function initHistoryRouterDeferred(){
   const route=document.documentElement.getAttribute('data-route')||'home';
   const hashRoute=location.hash.match(/page=([a-z]+)/i)?.[1];
   const start=['home','gallery','theme','controller'].includes(hashRoute)?hashRoute:route;
   history.replaceState({coreflow:true,route:start},'', '#page='+start);
   showRoute(start,{keepScroll:true});
-})();
+}
 function cssVar(name,val){document.documentElement.style.setProperty(name,val)}
 function applyDesign(index,save=true){
   const p=PRESETS[index]||PRESETS[0];
@@ -889,12 +889,14 @@ function themeWithBase(t){
   return {...b,...deepClone(t)};
 }
 function themeInit(){
-  themeRenderGallery();
+  if(!document.getElementById('themeGallery'))return;
   if(!themeDraft){
     let saved=null;try{saved=JSON.parse(localStorage.getItem(THEME_CUSTOM_KEY)||'null')}catch(e){}
     themeDraft=saved?themeWithBase(saved):themeWithBase(BUILTIN_THEMES[0]);
   }
-  themeBindControls();themeBuildPreview();
+  themeRenderGallery();
+  themeBindControls();
+  themeBuildPreview();
 }
 function openThemeStudio(){goPage('theme')}
 function themeRenderGallery(){
@@ -1116,6 +1118,7 @@ function openPageController(page){
   pcSelectedPage=(page&&PAGE_REGISTRY[page])?page:(PAGE_REGISTRY[current]?current:'home');
   try{sessionStorage.setItem('COREFLOW_PC_RETURN',pcReturnRoute)}catch(e){}
   goPage('controller');
+  setTimeout(()=>{ if(typeof pcRender==='function')pcRender(); },0);
 }
 function returnFromController(){
   if(history.state?.coreflow){history.back();return}
@@ -1379,8 +1382,8 @@ applySavedTheme();
 renderGallery();
 pcApplySaved();
 updateAutoDevice();
-if(document.documentElement.getAttribute('data-route')==='theme')themeInit();
-if(document.documentElement.getAttribute('data-route')==='controller')pcRender();
+/* Important: activate the saved/hash route only after Theme Studio + Page Controller engines are defined. */
+initHistoryRouterDeferred();
 </script>
 </body>
 </html>
