@@ -36129,6 +36129,196 @@ section.panel .purchase-page-head > :last-child{
   window.ERPUniversalPageDesignFallback={refresh:schedule};
 })();
 </script>
+
+<style id="erpAllPagesCleanControlsV1652x">
+/* V16.52x — universal cleanup: hide every legacy Page Controller access point and standardize page button rows. */
+.purchase-controller-btn,
+.master-controller-btn,
+.issue-controller-btn-v1578,
+.erp-analysis-controller-btn,
+#fccPageController,
+button[data-purchase-controller],
+button[data-erp-legacy-page-controller="1"],
+a[data-erp-legacy-page-controller="1"],
+.btn[data-erp-legacy-page-controller="1"]{display:none!important}
+
+/* Empty wrappers left behind by legacy controller buttons must not reserve space. */
+section.panel .erp-empty-control-wrap-v1652x{display:none!important}
+
+/* Common navigation/action rows across ERP pages. */
+section.panel [data-erp-button-row-v1652x="1"]{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-width:0!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+  padding-block:1px 3px;
+}
+section.panel [data-erp-button-row-v1652x="1"] > button,
+section.panel [data-erp-button-row-v1652x="1"] > .btn,
+section.panel [data-erp-button-row-v1652x="1"] > a.btn,
+section.panel [data-erp-button-row-v1652x="1"] > [role="button"],
+section.panel [data-erp-button-row-v1652x="1"] > input[type="button"],
+section.panel [data-erp-button-row-v1652x="1"] > input[type="submit"]{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+  min-height:30px;
+  line-height:1.15;
+}
+section.panel [data-erp-button-row-v1652x="1"]::-webkit-scrollbar{height:5px}
+section.panel [data-erp-button-row-v1652x="1"]::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--primary) 28%,transparent);border-radius:999px}
+
+/* Page heads: title left, actions right. */
+section.panel [data-erp-page-head-v1652x="1"]{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  min-width:0!important;
+}
+section.panel [data-erp-page-head-v1652x="1"] > :first-child{min-width:0;flex:1 1 auto}
+section.panel [data-erp-page-head-v1652x="1"] > [data-erp-head-actions-v1652x="1"]{
+  margin-left:auto!important;
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:7px!important;
+  flex:0 0 auto!important;
+}
+
+/* Navigation/tabs stay on the left; back/parent actions stay on the right when they share a row. */
+section.panel [data-erp-split-row-v1652x="1"]{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:8px!important;
+  min-width:0!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+}
+section.panel [data-erp-split-row-v1652x="1"] > [data-erp-right-actions-v1652x="1"]{margin-left:auto!important;flex:0 0 auto!important}
+
+/* Page Design fallback: consistent with existing ERP buttons. */
+.erp-page-design-fallback-v1652x{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+  min-height:34px!important;
+  padding:0 14px!important;
+  border-radius:8px!important;
+}
+</style>
+<script id="erpAllPagesCleanControlsV1652xScript">
+(()=>{
+  'use strict';
+  const BTN='button,.btn,a.btn,[role="button"],input[type="button"],input[type="submit"],input[type="reset"]';
+  const LEGACY='.purchase-controller-btn,.master-controller-btn,.issue-controller-btn-v1578,.erp-analysis-controller-btn,#fccPageController,button[data-purchase-controller],[data-erp-legacy-page-controller="1"]';
+  const NAV='[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-go-purchase],[data-pc-page],[data-local-work-tab],[data-zafar-work-tab],[data-board-work-tab],[data-purchase-history-work]';
+  function txt(el){return String(el?.value||el?.textContent||el?.getAttribute?.('aria-label')||'').replace(/⚙/g,'').replace(/\s+/g,' ').trim()}
+  function shown(el){if(!el||!el.isConnected)return false;const st=getComputedStyle(el);if(st.display==='none'||st.visibility==='hidden')return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0}
+  function isLegacy(el){return !!(el?.matches?.(LEGACY)||/^page controller$/i.test(txt(el)))}
+  function hideLegacy(root=document){
+    root.querySelectorAll?.(BTN).forEach(el=>{
+      if(isLegacy(el)){
+        el.dataset.erpLegacyPageController='1';
+        el.style.setProperty('display','none','important');
+        el.setAttribute('aria-hidden','true');
+        el.tabIndex=-1;
+      }
+    });
+    root.querySelectorAll?.(LEGACY).forEach(el=>{
+      el.dataset.erpLegacyPageController='1';
+      el.style.setProperty('display','none','important');
+    });
+    // Hide wrappers that became empty after removing the old controller.
+    root.querySelectorAll?.('.purchase-home-return-v1575,.purchase-page-head,.inv-page-head,.cvr-head-actions').forEach(w=>{
+      const useful=[...w.children].some(c=>shown(c)&&!isLegacy(c)&&txt(c));
+      if(!useful && !w.querySelector('h1,h2,h3,p'))w.classList.add('erp-empty-control-wrap-v1652x');
+      else w.classList.remove('erp-empty-control-wrap-v1652x');
+    });
+  }
+  function directControls(parent){return [...parent.children].filter(el=>shown(el)&&el.matches(BTN)&&!isLegacy(el))}
+  function markButtonRows(panel){
+    const candidates=new Set();
+    panel.querySelectorAll(BTN).forEach(el=>{
+      if(!shown(el)||isLegacy(el)||el.closest('#spcOverlay,#erpLoginOverlay,.modal,.master-modal,.purchase-pc-overlay'))return;
+      let p=el.parentElement;
+      for(let i=0;i<3&&p&&p!==panel;i++,p=p.parentElement){candidates.add(p)}
+    });
+    candidates.forEach(p=>{
+      if(!p||p.matches('form,table,thead,tbody,tr,td,th,ul,ol,select')||p.closest('#spcOverlay,#erpLoginOverlay,.modal,.master-modal,.purchase-pc-overlay'))return;
+      const visible=[...p.children].filter(shown);
+      const controls=directControls(p);
+      if(controls.length>=2 && visible.length<=24 && controls.length/Math.max(1,visible.length)>=0.55){
+        p.dataset.erpButtonRowV1652x='1';
+      }
+      // Rows that contain button clusters inside wrappers also get split alignment.
+      const childGroups=visible.filter(c=>c.querySelectorAll?.(BTN).length>=1 && !c.matches(BTN));
+      const totalNested=childGroups.reduce((n,c)=>n+[...c.querySelectorAll(BTN)].filter(x=>shown(x)&&!isLegacy(x)).length,0);
+      if(childGroups.length>=2 && totalNested>=2 && visible.length<=10){
+        p.dataset.erpSplitRowV1652x='1';
+        // Parent/back action is usually the last compact button group.
+        const last=childGroups[childGroups.length-1];
+        if(last && [...last.querySelectorAll(BTN)].some(x=>/^(←|back|purchase management|purchase home|management|home)/i.test(txt(x)))) last.dataset.erpRightActionsV1652x='1';
+      }
+    });
+  }
+  function markPageHeads(panel){
+    const heads=[...panel.querySelectorAll('.inv-page-head,.purchase-page-head,.page-head,.fcc-topbar,.cvr-head')];
+    heads.forEach(head=>{
+      if(!shown(head))return;
+      head.dataset.erpPageHeadV1652x='1';
+      const kids=[...head.children].filter(shown);
+      let actions=kids.find((c,i)=>i>0 && (c.matches(BTN)||c.querySelectorAll?.(BTN).length));
+      if(actions){
+        if(actions.matches(BTN)){
+          let wrap=head.querySelector(':scope > .erp-head-actions-wrap-v1652x');
+          if(!wrap){wrap=document.createElement('div');wrap.className='erp-head-actions-wrap-v1652x';head.insertBefore(wrap,actions)}
+          wrap.appendChild(actions);actions=wrap;
+        }
+        actions.dataset.erpHeadActionsV1652x='1';
+      }
+    });
+  }
+  function openDesigner(){window.ERPSmartPageController?.open?.()}
+  function ensurePageDesign(panel){
+    const global=document.getElementById('universalPageDesignBtn');
+    if(shown(global)){
+      panel.querySelectorAll('.erp-page-design-fallback-v1652x').forEach(x=>x.remove());
+      return;
+    }
+    if(panel.querySelector('.erp-page-design-fallback-v1652x'))return;
+    let head=panel.querySelector('.inv-page-head,.purchase-page-head,.page-head,.fcc-topbar,.cvr-head');
+    if(!head){
+      const title=[...panel.querySelectorAll('h1,h2,h3')].find(shown);
+      if(title)head=title.parentElement;
+    }
+    if(!head)return;
+    head.dataset.erpPageHeadV1652x='1';
+    let actions=head.querySelector(':scope > [data-erp-head-actions-v1652x="1"],:scope > .erp-head-actions-wrap-v1652x');
+    if(!actions){actions=document.createElement('div');actions.className='erp-head-actions-wrap-v1652x';actions.dataset.erpHeadActionsV1652x='1';head.appendChild(actions)}
+    const b=document.createElement('button');b.type='button';b.className='btn erp-page-design-fallback-v1652x';b.textContent='Page Design';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openDesigner()});actions.appendChild(b);
+  }
+  function apply(){
+    hideLegacy(document);
+    const panel=document.querySelector('section.panel.active,.panel.active');
+    if(!panel)return;
+    markPageHeads(panel);markButtonRows(panel);ensurePageDesign(panel);
+  }
+  let t=0;
+  function schedule(){clearTimeout(t);requestAnimationFrame(apply);t=setTimeout(apply,90);setTimeout(apply,280)}
+  document.addEventListener('click',e=>{if(e.target.closest(NAV))schedule()},false);
+  window.addEventListener('hashchange',schedule);window.addEventListener('pageshow',schedule);
+  const mo=new MutationObserver(m=>{if(m.some(x=>x.addedNodes.length))schedule()});
+  function start(){schedule();const app=document.querySelector('#app,.app,main');if(app)mo.observe(app,{childList:true,subtree:true})}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+  window.ERPAllPagesCleanControls={refresh:schedule};
+})();
+</script>
 </body></html>
 <!-- V16.38c: Straw Cell is now embedded inside Department Center. -->
 
