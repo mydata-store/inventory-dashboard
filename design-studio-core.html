@@ -35539,11 +35539,11 @@ html,body{overflow-x:hidden;}
 })();
 </script>
 
-<!-- V16.52n Smart Adaptive Page Controller — Top Information Bar Control -->
-<style id="spcUiStyleV1652n">
-#spcOverlay{position:fixed;inset:0;z-index:2147482500;background:rgba(8,24,39,.34);display:none;align-items:stretch;justify-content:flex-end;font-family:inherit}
+<!-- V16.52o Smart Adaptive Page Controller — Accordion + Page Inspect -->
+<style id="spcUiStyleV1652o">
+#spcOverlay{position:fixed;inset:0;z-index:2147482500;background:rgba(8,24,39,.34);display:none;align-items:stretch;justify-content:flex-end;font-family:inherit;pointer-events:none}
 #spcOverlay.open{display:flex}
-#spcPanel{width:min(560px,96vw);height:100vh;background:#f8fbfd;border-left:1px solid #b8d7ea;box-shadow:-18px 0 45px rgba(0,0,0,.18);display:flex;flex-direction:column;color:#10354b}
+#spcPanel{width:min(560px,96vw);height:100vh;background:#f8fbfd;border-left:1px solid #b8d7ea;box-shadow:-18px 0 45px rgba(0,0,0,.18);display:flex;flex-direction:column;color:#10354b;pointer-events:auto}
 #spcHead{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;border-bottom:1px solid #cbe2ef;position:sticky;top:0;z-index:2}
 #spcHead .spc-titlebox{min-width:0;flex:1}#spcHead h2{margin:0;font-size:16px;color:#063e62}#spcHead p{margin:2px 0 0;font-size:11px;color:#5d7888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #spcHead button,#spcFoot button,.spc-btn{border:1px solid #a9d5ee;background:#fff;border-radius:8px;padding:7px 10px;font:inherit;font-size:12px;cursor:pointer;color:#073c5f;font-weight:700}
@@ -35554,7 +35554,7 @@ html,body{overflow-x:hidden;}
 #spcFoot{display:flex;align-items:center;gap:7px;padding:10px 12px;background:#fff;border-top:1px solid #cbe2ef;position:sticky;bottom:0;z-index:2}#spcFoot .spacer{flex:1}#spcStatus{font-size:10px;color:#5d7a89;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){#spcPanel{width:100vw}.spc-grid{grid-template-columns:1fr}.spc-col{grid-template-columns:minmax(100px,1fr) 60px 75px 70px}.spc-col .spc-col-extra{display:none}}
 </style>
-<script id="spcSmartAdaptiveV1652n">
+<script id="spcSmartAdaptiveV1652o">
 (()=>{
 'use strict';
 const PREFIX='erpSmartPageController:v1:';
@@ -35653,7 +35653,7 @@ function numField(label,path,value,min=0,max=100,step=1){return`<div class="spc-
 function colorField(label,path,value){return`<div class="spc-field"><label>${esc(label)}</label><input type="color" data-spc-path="${esc(path)}" data-spc-type="text" value="${esc(value||'#ffffff')}"></div>`}
 function selectField(label,path,value,opts){return`<div class="spc-field"><label>${esc(label)}</label><select data-spc-path="${esc(path)}" data-spc-type="text">${selectOpts(opts,value)}</select></div>`}
 function checkField(label,path,value){return`<label class="spc-check"><input type="checkbox" data-spc-path="${esc(path)}" data-spc-type="bool" ${value!==false?'checked':''}>${esc(label)}</label>`}
-function section(title,count,html,open=false){return`<details class="spc-section" ${open?'open':''}><summary><span>${esc(title)}</span>${count!==undefined?`<span class="count">${count}</span>`:''}</summary><div class="spc-content">${html}</div></details>`}
+function section(title,count,html,open=false){const key=safe(title.toLowerCase().replace(/\s*&\s*/g,'_').replace(/\s*\/\s*/g,'_').replace(/\s+/g,'_'));return`<details class="spc-section" data-spc-section="${esc(key)}"><summary><span>${esc(title)}</span>${count!==undefined?`<span class="count">${count}</span>`:''}</summary><div class="spc-content">${html}</div></details>`}
 function renderUI(){
   current=scan();if(!current)return;const c=current;
   const pageFont=num(v('page.fontSize',num(getComputedStyle(c.root).fontSize,12)),8,24,.5);
@@ -35665,16 +35665,67 @@ function renderUI(){
   if(c.summaries.length){let x=c.summaries.map((el,i)=>{const k='summary'+i,cs=getComputedStyle(el);return`<div class="spc-subcard"><div class="spc-subhead"><strong>Summary / KPI ${i+1}</strong><small>${esc((el.textContent||'').trim().slice(0,90))}</small></div><div class="spc-grid">${numField('Font size',`summaries.${k}.fontSize`,v(`summaries.${k}.fontSize`,num(cs.fontSize,11)),8,28,.5)}${numField('Value size',`summaries.${k}.valueSize`,v(`summaries.${k}.valueSize`,''),8,40,.5)}${selectField('Alignment',`summaries.${k}.align`,v(`summaries.${k}.align`,''),['','left','center','right'])}${numField('Gap',`summaries.${k}.gap`,v(`summaries.${k}.gap`,num(cs.gap,8)),0,40,1)}${numField('Padding',`summaries.${k}.padding`,v(`summaries.${k}.padding`,num(cs.paddingTop,8)),0,30,1)}${numField('Min height',`summaries.${k}.height`,v(`summaries.${k}.height`,''),0,300,1)}${numField('Grid columns (0=keep)',`summaries.${k}.columns`,v(`summaries.${k}.columns`,0),0,8,1)}${checkField('Show summary',`summaries.${k}.show`,v(`summaries.${k}.show`,true))}</div></div>`}).join('');html+=section('Summary / KPI',c.summaries.length,x)}
   if(c.tables.length){let x=c.tables.map((t,ti)=>{const cs=getComputedStyle(t.el),s=draft.tables?.[t.key]||{};const order=s.order||t.headers.map(h=>h.key);const cols=t.headers.map((h,ci)=>{const cp=`tables.${t.key}.columns.${h.key}`,hc=getComputedStyle(h.el);return`<div class="spc-col"><div class="name" title="${esc(h.name)}">${esc(h.name)}</div><input type="number" min="30" max="700" placeholder="Width" data-spc-path="${esc(cp+'.width')}" data-spc-type="number" value="${esc(v(cp+'.width',''))}"><select data-spc-path="${esc(cp+'.align')}" data-spc-type="text">${selectOpts(['','left','center','right'],v(cp+'.align',''))}</select><select data-spc-path="${esc(cp+'.weight')}" data-spc-type="text">${selectOpts(['','400','500','600','700','800'],v(cp+'.weight',''))}</select><label style="font-size:9px"><input type="checkbox" data-spc-path="${esc(cp+'.show')}" data-spc-type="bool" ${v(cp+'.show',true)!==false?'checked':''}> Show</label><span class="spc-mini-actions"><button type="button" data-spc-move="-1" data-table="${esc(t.key)}" data-col="${esc(h.key)}" ${t.interactive||ci===0?'disabled':''}>←</button><button type="button" data-spc-move="1" data-table="${esc(t.key)}" data-col="${esc(h.key)}" ${t.interactive||ci===t.headers.length-1?'disabled':''}>→</button></span><div class="spc-col-extra" style="grid-column:2/-1;display:flex;gap:10px;font-size:9px"><label><input type="checkbox" data-spc-path="${esc(cp+'.wrap')}" data-spc-type="bool" ${v(cp+'.wrap',true)!==false?'checked':''}> Wrap</label><label><input type="checkbox" data-spc-path="${esc(cp+'.italic')}" data-spc-type="bool" ${v(cp+'.italic',false)?'checked':''}> Italic</label></div></div>`}).join('');return`<div class="spc-subcard"><div class="spc-subhead"><strong>${esc(t.name)}</strong><small>${t.headers.length} columns${t.interactive?' • entry table (order locked)':' • report table'}</small></div><div class="spc-grid">${numField('Table width %',`tables.${t.key}.width`,v(`tables.${t.key}.width`,100),30,100,1)}${numField('Font size',`tables.${t.key}.fontSize`,v(`tables.${t.key}.fontSize`,num(cs.fontSize,11)),7,24,.5)}${numField('Row height',`tables.${t.key}.rowHeight`,v(`tables.${t.key}.rowHeight`,''),18,100,1)}${numField('Header height',`tables.${t.key}.headerHeight`,v(`tables.${t.key}.headerHeight`,''),18,100,1)}${numField('Header font',`tables.${t.key}.headerFontSize`,v(`tables.${t.key}.headerFontSize`,''),7,24,.5)}${selectField('Header align',`tables.${t.key}.headerAlign`,v(`tables.${t.key}.headerAlign`,''),['','left','center','right'])}${selectField('Cell align',`tables.${t.key}.cellAlign`,v(`tables.${t.key}.cellAlign`,''),['','left','center','right'])}${selectField('Header weight',`tables.${t.key}.headerWeight`,v(`tables.${t.key}.headerWeight`,''),['','400','500','600','700','800','900'])}${selectField('Cell weight',`tables.${t.key}.cellWeight`,v(`tables.${t.key}.cellWeight`,''),['','400','500','600','700'])}${checkField('Show table',`tables.${t.key}.show`,v(`tables.${t.key}.show`,true))}${checkField('Header wrap',`tables.${t.key}.headerWrap`,v(`tables.${t.key}.headerWrap`,true))}${checkField('Cell wrap',`tables.${t.key}.cellWrap`,v(`tables.${t.key}.cellWrap`,true))}${checkField('Sticky header',`tables.${t.key}.stickyHeader`,v(`tables.${t.key}.stickyHeader`,false))}${checkField('Fixed table layout',`tables.${t.key}.fixed`,v(`tables.${t.key}.fixed`,false))}${checkField('Header italic',`tables.${t.key}.headerItalic`,v(`tables.${t.key}.headerItalic`,false))}${checkField('Cell italic',`tables.${t.key}.cellItalic`,v(`tables.${t.key}.cellItalic`,false))}</div><div class="spc-columns">${cols}</div>${t.interactive?'<div class="spc-note">Column move is locked on entry/edit tables to protect save/calculation mapping. Width, visibility, alignment, wrap and font controls remain available.</div>':''}</div>`}).join('');html+=section('Tables & Columns',c.tables.length,x)}
   if(c.formControls.length){const e=c.formControls[0],cs=getComputedStyle(e);html+=section('Forms & Inputs',c.formControls.length,`<div class="spc-grid">${numField('Input font size','form.fontSize',v('form.fontSize',num(cs.fontSize,11)),8,24,.5)}${numField('Input height','form.inputHeight',v('form.inputHeight',num(cs.minHeight,31)),22,70,1)}${numField('Label font size','form.labelSize',v('form.labelSize',''),8,24,.5)}${selectField('Label weight','form.labelWeight',v('form.labelWeight',''),['','400','500','600','700','800'])}${numField('Input radius','form.radius',v('form.radius',num(cs.borderRadius,6)),0,30,1)}</div>`)}
-  body.innerHTML=html;bindControls();statusEl.textContent=dirty?'Preview changes not saved':'Live preview • page-specific';
+  body.innerHTML=html;bindControls();bindAccordion();statusEl.textContent=dirty?'Preview changes not saved':'Live preview • click any page element to inspect';
 }
 function beforeChange(){lastDraft=clone(draft);dirty=true}
+function bindAccordion(){
+  const sections=[...body.querySelectorAll('.spc-section')];
+  sections.forEach(sec=>{
+    sec.open=false;
+    sec.addEventListener('toggle',()=>{
+      if(!sec.open)return;
+      sections.forEach(other=>{if(other!==sec&&other.open)other.open=false});
+    });
+  });
+}
+function openOnlySection(key){
+  if(!body||!key)return false;
+  const sections=[...body.querySelectorAll('.spc-section')];
+  const wanted=sections.find(x=>x.dataset.spcSection===key);
+  if(!wanted)return false;
+  sections.forEach(x=>x.open=(x===wanted));
+  requestAnimationFrame(()=>wanted.scrollIntoView({block:'nearest',behavior:'smooth'}));
+  return true;
+}
+function sectionForPageTarget(target){
+  if(!current||!target||target.closest?.('#spcPanel'))return null;
+  if(current.topInfo&&(target===current.topInfo||current.topInfo.contains(target)))return'top_information_bar';
+  if(current.title&&(target===current.title||current.title.contains(target)))return'title_subtitle';
+  if(current.subtitle&&(target===current.subtitle||current.subtitle.contains(target)))return'title_subtitle';
+  const info=target.closest?.('[data-spc-info-key]');
+  if(info&&current.root.contains(info))return'information_bars';
+  const summary=target.closest?.('[data-spc-summary-key]');
+  if(summary&&current.root.contains(summary))return'summary_kpi';
+  const table=target.closest?.('table[data-spc-table-key]');
+  if(table&&current.root.contains(table))return'tables_columns';
+  const formEl=target.closest?.('input,select,textarea,label,form');
+  if(formEl&&current.root.contains(formEl)&&!formEl.closest('table'))return'forms_inputs';
+  const sectionHead=target.closest?.('h3,h4');
+  if(sectionHead&&current.root.contains(sectionHead))return'page_fonts';
+  if(current.root.contains(target))return'page_fonts';
+  return null;
+}
+function inspectPageClick(e){
+  if(!overlay?.classList.contains('open')||e.target.closest?.('#spcPanel'))return false;
+  const key=sectionForPageTarget(e.target);
+  e.preventDefault();
+  e.stopPropagation();
+  if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+  if(key){
+    openOnlySection(key);
+    statusEl.textContent='Selected from page • controls opened';
+  }else{
+    statusEl.textContent='This area is not controlled by this page controller';
+  }
+  return true;
+}
 function bindControls(){body.querySelectorAll('[data-spc-path]').forEach(el=>{const evt=el.tagName==='TEXTAREA'||el.type==='text'||el.type==='number'||el.type==='color'||el.tagName==='SELECT'?'input':'change';el.addEventListener(evt,()=>{beforeChange();let val=el.dataset.spcType==='bool'?el.checked:el.dataset.spcType==='number'?(el.value===''?'':Number(el.value)):el.value;deepSet(draft,el.dataset.spcPath,val);applyState(current,draft);statusEl.textContent='Preview changes not saved'});if(evt==='input'&&el.tagName==='SELECT')el.addEventListener('change',()=>{})});body.querySelectorAll('[data-spc-move]').forEach(b=>b.addEventListener('click',()=>{const t=current.tables.find(x=>x.key===b.dataset.table);if(!t||t.interactive)return;beforeChange();const path=`tables.${t.key}.order`;let order=clone(deepGet(draft,path)||t.headers.map(h=>h.key));const i=order.indexOf(b.dataset.col),j=i+Number(b.dataset.spcMove);if(i<0||j<0||j>=order.length)return;[order[i],order[j]]=[order[j],order[i]];deepSet(draft,path,order);applyState(current,draft);renderUI()}))}
-function ensureUI(){if(overlay)return;overlay=document.createElement('div');overlay.id='spcOverlay';overlay.innerHTML=`<aside id="spcPanel"><div id="spcHead"><div class="spc-titlebox"><h2>Smart Adaptive Page Controller</h2><p id="spcPageName"></p></div><button type="button" id="spcUndo">Undo</button><button type="button" id="spcClose">Close</button></div><div id="spcBody"></div><div id="spcFoot"><span id="spcStatus"></span><span class="spacer"></span><button type="button" id="spcReset" class="spc-danger">Reset This Page</button><button type="button" id="spcSave" class="spc-primary">Save Page Design</button></div></aside>`;document.body.appendChild(overlay);panel=overlay.querySelector('#spcPanel');body=overlay.querySelector('#spcBody');statusEl=overlay.querySelector('#spcStatus');overlay.addEventListener('mousedown',e=>{if(e.target===overlay)close(false)});overlay.querySelector('#spcClose').onclick=()=>close(false);overlay.querySelector('#spcUndo').onclick=()=>{if(!lastDraft)return;draft=clone(lastDraft);lastDraft=null;dirty=true;applyState(current,draft);renderUI()};overlay.querySelector('#spcSave').onclick=()=>{if(!current)return;save(current.id,draft);saved=clone(draft);dirty=false;lastDraft=null;applyState(current,saved);statusEl.textContent='Saved for this page';setTimeout(()=>close(true),250)};overlay.querySelector('#spcReset').onclick=()=>{if(!current||!confirm('Reset only Smart Page Controller settings for this page? Existing ERP/Page Designer settings will stay unchanged.'))return;localStorage.removeItem(PREFIX+current.id);draft={};saved={};lastDraft=null;dirty=false;applyState(current,{});renderUI();statusEl.textContent='Smart settings reset for this page'};document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))close(false)})}
-function open(){ensureUI();current=scan();if(!current)return;saved=load(current.id);draft=clone(saved);lastDraft=null;dirty=false;applyState(current,draft);overlay.querySelector('#spcPageName').textContent=(current.title?.textContent.trim()||current.id)+' • '+current.id;renderUI();overlay.classList.add('open')}
-function close(keep){if(!overlay)return;if(!keep&&current){draft=clone(saved);applyState(current,saved)}overlay.classList.remove('open');dirty=false}
+function ensureUI(){if(overlay)return;overlay=document.createElement('div');overlay.id='spcOverlay';overlay.innerHTML=`<aside id="spcPanel"><div id="spcHead"><div class="spc-titlebox"><h2>Smart Adaptive Page Controller</h2><p id="spcPageName"></p></div><button type="button" id="spcUndo">Undo</button><button type="button" id="spcClose">Close</button></div><div id="spcBody"></div><div id="spcFoot"><span id="spcStatus"></span><span class="spacer"></span><button type="button" id="spcReset" class="spc-danger">Reset This Page</button><button type="button" id="spcSave" class="spc-primary">Save Page Design</button></div></aside>`;document.body.appendChild(overlay);panel=overlay.querySelector('#spcPanel');body=overlay.querySelector('#spcBody');statusEl=overlay.querySelector('#spcStatus');overlay.querySelector('#spcClose').onclick=()=>close(false);overlay.querySelector('#spcUndo').onclick=()=>{if(!lastDraft)return;draft=clone(lastDraft);lastDraft=null;dirty=true;applyState(current,draft);renderUI()};overlay.querySelector('#spcSave').onclick=()=>{if(!current)return;save(current.id,draft);saved=clone(draft);dirty=false;lastDraft=null;applyState(current,saved);statusEl.textContent='Saved for this page';setTimeout(()=>close(true),250)};overlay.querySelector('#spcReset').onclick=()=>{if(!current||!confirm('Reset only Smart Page Controller settings for this page? Existing ERP/Page Designer settings will stay unchanged.'))return;localStorage.removeItem(PREFIX+current.id);draft={};saved={};lastDraft=null;dirty=false;applyState(current,{});renderUI();statusEl.textContent='Smart settings reset for this page'};document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))close(false)})}
+function open(){ensureUI();current=scan();if(!current)return;saved=load(current.id);draft=clone(saved);lastDraft=null;dirty=false;applyState(current,draft);overlay.querySelector('#spcPageName').textContent=(current.title?.textContent.trim()||current.id)+' • '+current.id;renderUI();overlay.classList.add('open');document.body.classList.add('spc-inspect-active')}
+function close(keep){if(!overlay)return;if(!keep&&current){draft=clone(saved);applyState(current,saved)}overlay.classList.remove('open');document.body.classList.remove('spc-inspect-active');dirty=false}
 function applyForActive(){const c=scan();if(c)applyState(c,load(c.id))}
 function scheduleApply(){requestAnimationFrame(()=>{applyForActive();setTimeout(applyForActive,90);setTimeout(applyForActive,260)})}
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&/page\s*controller/i.test((b.textContent||'').replace(/⚙/g,''))){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();open();return}if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-go-purchase]'))scheduleApply()},true);
+document.addEventListener('click',e=>{if(inspectPageClick(e))return;const b=e.target.closest('button');if(b&&/page\s*controller/i.test((b.textContent||'').replace(/⚙/g,''))){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();open();return}if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-go-purchase]'))scheduleApply()},true);
 window.addEventListener('hashchange',scheduleApply);window.addEventListener('pageshow',scheduleApply);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleApply,{once:true});else scheduleApply();
 window.ERPSmartPageController={open,refresh:applyForActive,scan:()=>scan(),resetPage:(id=pageId())=>{localStorage.removeItem(PREFIX+id);applyForActive()}};
 })();
