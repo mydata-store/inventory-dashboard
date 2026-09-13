@@ -22357,6 +22357,35 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 </style>
 
+<script id="erpNavigationSettleCoordinatorV1654">
+(function(){
+'use strict';
+if(window.ERPNavigationSettleV1654)return;
+let tasks=new Map();
+let timer=0,raf=0;
+function flush(){
+  raf=0;
+  const jobs=[...tasks.values()].sort((a,b)=>(a.priority||0)-(b.priority||0));
+  tasks.clear();
+  for(const job of jobs){try{job.fn()}catch(e){console.warn('ERP navigation settle task failed:',job.key,e)}}
+}
+function arm(){
+  if(timer||raf)return;
+  // Let the page's own zero-delay renderer run first, then settle shared navigation work once.
+  timer=setTimeout(()=>{
+    timer=0;
+    raf=requestAnimationFrame(flush);
+  },0);
+}
+function schedule(key,fn,priority=50){
+  if(typeof fn!=='function')return;
+  tasks.set(String(key||'task'),{key:String(key||'task'),fn,priority:Number(priority)||50});
+  arm();
+}
+window.ERPNavigationSettleV1654={schedule,flushNow:flush};
+})();
+</script>
+
 <script id="erpBrowserHistoryNavigationV1535">
 (function(){
   let restoring=false;
@@ -22439,7 +22468,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     seed();
     document.addEventListener('click',function(e){
       if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open],[data-go-purchase]')){
-        setTimeout(pushIfChanged,40);
+        if(window.ERPNavigationSettleV1654)ERPNavigationSettleV1654.schedule('history',pushIfChanged,20);
+        else setTimeout(pushIfChanged,0);
       }
     },false);
     /* V16.51o: native ERP hash navigation is authoritative; no duplicate hashchange history pass. */
@@ -25096,18 +25126,23 @@ window.ERPFinalCostReport={open,render};const boot=()=>{build();if(location.hash
       $('#purchasePcModal')?.classList.remove('open');open(p)
     });
 
-    // Lightweight persistence: reapply only on real navigation.
+    // Lightweight persistence: navigation events share one settle cycle so click + hash
+    // do not repaint the same page design several times at staggered delays.
     let applyTimer=null;
-    const scheduleApply=(delay=20)=>{
+    const scheduleApply=(delay=20,navigation=false)=>{
+      if(navigation && window.ERPNavigationSettleV1654){
+        ERPNavigationSettleV1654.schedule('page-design',applySavedToActive,10);
+        return;
+      }
       clearTimeout(applyTimer);
       applyTimer=setTimeout(applySavedToActive,delay)
     };
-    window.addEventListener('hashchange',()=>scheduleApply(20));
-    window.addEventListener('popstate',()=>scheduleApply(20));
+    window.addEventListener('hashchange',()=>scheduleApply(0,true));
+    window.addEventListener('popstate',()=>scheduleApply(0,true));
     window.addEventListener('load',()=>scheduleApply(30),{once:true});
     document.addEventListener('click',e=>{
       if(e.target.closest('[data-panel],[data-dashboard-open],[data-inventory-open],[data-report-center-open],[data-formula-control-open]')){
-        scheduleApply(30)
+        scheduleApply(0,true)
       }
     },false);
     scheduleApply(80)
@@ -33065,14 +33100,27 @@ function bind(){
   // One lightweight capture guard; no MutationObserver and no continuous scanning.
   document.addEventListener('click',clickGuard,true);
 
-  // Re-apply after ordinary navigation/user/role actions only.
+  // Navigation already passes through clickGuard synchronously. During page-to-page movement
+  // only the route needs a post-navigation check; rebuilding all access visibility on every
+  // page click caused a second UI settle. Full access repaint is kept for user/role/security changes.
+  const scheduleRouteCheck=()=>{
+    if(window.ERPNavigationSettleV1654)ERPNavigationSettleV1654.schedule('access-route',routeGuard,30);
+    else setTimeout(routeGuard,0);
+  };
+  const scheduleFullAccess=()=>{
+    const run=()=>{applyAccess();routeGuard()};
+    if(window.ERPNavigationSettleV1654)ERPNavigationSettleV1654.schedule('access-full',run,30);
+    else setTimeout(run,0);
+  };
   document.addEventListener('click',e=>{
-    if(e.target.closest?.('#sideMenu .side-item,[data-panel],#erpLoginSubmit,#uaSetCurrentUser,#uaSaveRole,#uaSaveUser,#uaSaveSecurity,#uaSignOut,.ua-tab')){
-      setTimeout(()=>{applyAccess();routeGuard()},60);
+    if(e.target.closest?.('#erpLoginSubmit,#uaSetCurrentUser,#uaSaveRole,#uaSaveUser,#uaSaveSecurity,#uaSignOut,.ua-tab')){
+      scheduleFullAccess();
+      return;
     }
+    if(e.target.closest?.('#sideMenu .side-item,[data-panel]'))scheduleRouteCheck();
   });
 
-  window.addEventListener('hashchange',()=>setTimeout(()=>{applyAccess();routeGuard()},20));
+  window.addEventListener('hashchange',scheduleRouteCheck);
   applyAccess();
   routeGuard();
 }
