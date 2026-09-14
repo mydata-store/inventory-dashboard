@@ -2008,6 +2008,59 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
   }
   dtApplyDesign(dtSettings.target||'expanded');
 
+  /* v3.8.6 HARD PERSISTENCE LAYER
+     Positions and display-location switches are saved independently from the
+     design payload. They are never reset by style, opacity, theme, save, or
+     sidebar re-render operations. */
+  const DT_HARD_POSITION_KEY='coreflow.timeDateStudio.sidebarPositions.v2';
+  const DT_HARD_LOCATION_KEY='coreflow.timeDateStudio.locations.v2';
+  function dtHardReadJson(key){
+    try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch(e){return null;}
+  }
+  function dtHardWriteJson(key,value){
+    try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){console.warn('Time & Date hard state save failed',key,e);return false;}
+  }
+  function dtHardLoad(){
+    const hp=dtHardReadJson(DT_HARD_POSITION_KEY);
+    if(hp && typeof hp==='object'){
+      ['expanded','collapsed'].forEach(k=>{
+        if(['top','middle','bottom'].includes(hp[k])){
+          dtSidebarPositions[k]=hp[k];
+          if(dtDesigns[k])dtDesigns[k].vPos=hp[k];
+        }
+      });
+    }else{
+      // First run only: seed the hard store from the best currently loaded values.
+      ['expanded','collapsed'].forEach(k=>{
+        const p=(dtSidebarPositions[k]||dtDesigns[k]?.vPos||'top');
+        dtSidebarPositions[k]=['top','middle','bottom'].includes(p)?p:'top';
+        if(dtDesigns[k])dtDesigns[k].vPos=dtSidebarPositions[k];
+      });
+      dtHardWriteJson(DT_HARD_POSITION_KEY,{expanded:dtSidebarPositions.expanded,collapsed:dtSidebarPositions.collapsed});
+    }
+    const hl=dtHardReadJson(DT_HARD_LOCATION_KEY);
+    if(hl && typeof hl==='object'){
+      if(typeof hl.sidebar==='boolean')dtSettings.locSidebar=hl.sidebar;
+      if(typeof hl.dashboard==='boolean')dtSettings.locDashboard=hl.dashboard;
+      if(typeof hl.topbar==='boolean')dtSettings.locTopbar=hl.topbar;
+    }else{
+      dtHardWriteJson(DT_HARD_LOCATION_KEY,{sidebar:!!dtSettings.locSidebar,dashboard:!!dtSettings.locDashboard,topbar:!!dtSettings.locTopbar});
+    }
+    if((dtSettings.target==='expanded'||dtSettings.target==='collapsed') && ['top','middle','bottom'].includes(dtSidebarPositions[dtSettings.target])){
+      dtSettings.vPos=dtSidebarPositions[dtSettings.target];
+    }
+  }
+  function dtHardSavePosition(target,pos){
+    if(!['expanded','collapsed'].includes(target) || !['top','middle','bottom'].includes(pos))return true;
+    dtSidebarPositions[target]=pos;
+    if(dtDesigns[target])dtDesigns[target].vPos=pos;
+    return dtHardWriteJson(DT_HARD_POSITION_KEY,{expanded:dtSidebarPositions.expanded,collapsed:dtSidebarPositions.collapsed});
+  }
+  function dtHardSaveLocations(){
+    return dtHardWriteJson(DT_HARD_LOCATION_KEY,{sidebar:!!dtSettings.locSidebar,dashboard:!!dtSettings.locDashboard,topbar:!!dtSettings.locTopbar});
+  }
+  dtHardLoad();
+
   const dtById=id=>document.getElementById(id);
   const dtPad=n=>String(n).padStart(2,'0');
   const dtMonths=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -2255,7 +2308,9 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     if(dtSettings.target==='expanded'||dtSettings.target==='collapsed'){
       dtSidebarPositions[dtSettings.target]=dtSettings.vPos;
       dtStorePositions();
+      dtHardSavePosition(dtSettings.target,dtSettings.vPos);
     }
+    dtHardSaveLocations();
     dtCaptureDesign(dtSettings.target);
   }
 
@@ -2277,7 +2332,9 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     if(id==='dtVPos' && (dtSettings.target==='expanded'||dtSettings.target==='collapsed') && ['top','middle','bottom'].includes(dtSettings.vPos)){
       dtSidebarPositions[dtSettings.target]=dtSettings.vPos;
       dtStorePositions();
+      dtHardSavePosition(dtSettings.target,dtSettings.vPos);
     }
+    if(id==='dtLocSidebar'||id==='dtLocDashboard'||id==='dtLocTopbar')dtHardSaveLocations();
 
     if(DT_DESIGN_KEYS.includes(bools[id]) || DT_DESIGN_KEYS.includes(vals[id]) || DT_DESIGN_KEYS.includes(nums[id]) || id==='dtClockStyle'){
       dtCaptureDesign(dtSettings.target);
@@ -2308,6 +2365,10 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     const next=btn.dataset.dtTarget||btn.dataset.dtDesign||'expanded';
     dtSettings.target=next;
     dtApplyDesign(next);
+    if((next==='expanded'||next==='collapsed') && ['top','middle','bottom'].includes(dtSidebarPositions[next])){
+      dtSettings.vPos=dtSidebarPositions[next];
+      if(dtDesigns[next])dtDesigns[next].vPos=dtSidebarPositions[next];
+    }
     dtStore();
     const st=dtById('datetimeSaveState');if(st){st.textContent='Saved';st.style.color='#16834f'}
     setDtControls();
@@ -2316,7 +2377,8 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
   dtById('dtSaveBtn')?.addEventListener('click',()=>{
     // Read the visible controls first. Save never turns any location or design tab off.
     dtReadControlsAuthoritatively();
-    const ok=dtStore() && dtStorePositions();
+    const ok=dtStore() && dtStorePositions() && dtHardSaveLocations() &&
+      dtHardWriteJson(DT_HARD_POSITION_KEY,{expanded:dtSidebarPositions.expanded,collapsed:dtSidebarPositions.collapsed});
     // Keep all target selectors explicitly enabled after saving.
     document.querySelectorAll('[data-dt-target],[data-dt-design],#dtLocSidebar,#dtLocDashboard,#dtLocTopbar').forEach(el=>{el.disabled=false;el.removeAttribute('disabled');el.removeAttribute('aria-disabled');});
     renderDtSidebar(); renderDtTopbar(); renderDtPreview();
@@ -2327,6 +2389,8 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     dtSettings={...DT_DEFAULTS};
     dtDesigns={expanded:dtDesignDefaults(),collapsed:dtDesignDefaults(),dashboard:dtDesignDefaults(),topbar:dtDesignDefaults()};
     dtSidebarPositions={expanded:'top',collapsed:'top'}; dtStorePositions();
+    dtHardWriteJson(DT_HARD_POSITION_KEY,{expanded:'top',collapsed:'top'});
+    dtHardWriteJson(DT_HARD_LOCATION_KEY,{sidebar:true,dashboard:true,topbar:true});
     dtSettings.target='expanded'; dtApplyDesign('expanded'); dtStore();
     setDtControls(); renderDtSidebar(); renderDtTopbar();
     const s=dtById('datetimeSaveState');if(s){s.textContent='Defaults Restored';s.style.color='#16834f';}
@@ -2404,10 +2468,13 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     if(inPreview || !desktopSidebar) return;
     const host=dtEnsureSidebarHost();
     if(!host) return;
+    const collapsed=dtSidebarIsCollapsed();
+    const liveTarget=collapsed?'collapsed':'expanded';
+    const savedPos=dtSidebarPositions[liveTarget];
+    dtApplySidebarPosition(host,['top','middle','bottom'].includes(savedPos)?savedPos:'top',collapsed);
     host.style.display=dtSettings.locSidebar?'flex':'none';
     if(!dtSettings.locSidebar) return;
 
-    const collapsed=dtSidebarIsCollapsed();
     const d=dtNow();
     const card=host.querySelector('.cf-dt-sidebar-card');
     const icon=host.querySelector('.cf-dt-sidebar-icon');
@@ -2416,9 +2483,6 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     const day=host.querySelector('.cf-dt-sidebar-day');
     if(!card||!icon||!time||!date||!day) return;
 
-    const liveTarget=collapsed?'collapsed':'expanded';
-    const savedPos=dtSidebarPositions[liveTarget];
-    dtApplySidebarPosition(host,['top','middle','bottom'].includes(savedPos)?savedPos:dtSettings.vPos,collapsed);
     time.textContent=collapsed?dtSidebarCompactTime(d):dtFormatTime(d);
     date.textContent=dtFormatDate(d);
     day.textContent=dtFormatDay(d);
