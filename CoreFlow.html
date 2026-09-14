@@ -949,9 +949,9 @@ body.cf-sidebar-autohide.cf-sidebar-expanded .sidebar .cf-menu-label{
   position:absolute;left:8px;right:8px;z-index:6;display:flex;justify-content:center;
   pointer-events:none;transition:opacity .18s ease,transform .18s ease;
 }
-.cf-dt-sidebar-host[data-pos="top"]{top:112px}
-.cf-dt-sidebar-host[data-pos="middle"]{top:50%;transform:translateY(-50%)}
-.cf-dt-sidebar-host[data-pos="bottom"]{bottom:12px}
+.cf-dt-sidebar-host[data-pos="top"]{top:112px;bottom:auto;transform:none}
+.cf-dt-sidebar-host[data-pos="middle"]{top:50%;bottom:auto;transform:translateY(-50%)}
+.cf-dt-sidebar-host[data-pos="bottom"]{top:auto;bottom:12px;transform:none}
 .cf-dt-sidebar-card{
   width:100%;max-width:100%;min-width:0;display:flex;align-items:center;justify-content:center;gap:9px;
   overflow:hidden;line-height:1.12;pointer-events:none;
@@ -1895,19 +1895,53 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     width:220,height:110,radius:12,shadow:'medium',timeSize:32,dateSize:16,daySize:14,textColor:'#18324c'
   };
   const DT_DESIGN_KEYS=['style','layout','clockStyle','align','vPos','appearanceMode','cardStyle','bg','borderStyle','borderColor','borderWidth','bgOpacity','borderOpacity','textOpacity','blur','width','height','radius','shadow','timeSize','dateSize','daySize','textColor'];
+  const DT_GLOBAL_KEYS=['showTime','showDate','showDay','showSeconds','showAmPm','timeFormat','dateFormat','dayFormat','timeSep','dateSep','timeSource','timeZone','blink','locSidebar','locDashboard','locTopbar'];
+  const DT_STORAGE_KEY='coreflow.timeDateStudio.base';
   const dtDesignDefaults=()=>Object.fromEntries(DT_DESIGN_KEYS.map(k=>[k,DT_DEFAULTS[k]]));
   let dtSettings={...DT_DEFAULTS};
   let dtDesigns={expanded:dtDesignDefaults(),collapsed:dtDesignDefaults(),dashboard:dtDesignDefaults(),topbar:dtDesignDefaults()};
+
+  // v4 persistence: global switches and each location design are saved separately.
+  // This prevents changing border/opacity/position on one location from resetting another.
   try{
-    const saved=JSON.parse(localStorage.getItem('coreflow.timeDateStudio.base')||'{}');
-    dtSettings={...DT_DEFAULTS,...saved};
-    if(saved.designs){ Object.keys(dtDesigns).forEach(k=>dtDesigns[k]={...dtDesignDefaults(),...(saved.designs[k]||{})}); }
-    else { const migrated=Object.fromEntries(DT_DESIGN_KEYS.map(k=>[k,dtSettings[k]])); Object.keys(dtDesigns).forEach(k=>dtDesigns[k]={...dtDesignDefaults(),...migrated}); }
-  }catch(e){}
-  function dtStore(){ localStorage.setItem('coreflow.timeDateStudio.base',JSON.stringify({...dtSettings,designs:dtDesigns})); }
-  function dtCaptureDesign(target=dtSettings.target){ if(!dtDesigns[target])return; DT_DESIGN_KEYS.forEach(k=>dtDesigns[target][k]=dtSettings[k]); }
-  function dtApplyDesign(target=dtSettings.target){ const d=dtDesigns[target]||dtDesigns.expanded; DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=d[k]); }
-  function dtWithDesign(target,fn){ const snapshot={}; DT_DESIGN_KEYS.forEach(k=>snapshot[k]=dtSettings[k]); const d=dtDesigns[target]||dtDesigns.expanded; DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=d[k]); try{return fn();}finally{DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=snapshot[k]);} }
+    const saved=JSON.parse(localStorage.getItem(DT_STORAGE_KEY)||'{}');
+    if(saved && saved.version>=4 && saved.global && saved.designs){
+      DT_GLOBAL_KEYS.forEach(k=>{ if(Object.prototype.hasOwnProperty.call(saved.global,k)) dtSettings[k]=saved.global[k]; });
+      dtSettings.target=['expanded','collapsed','dashboard','topbar'].includes(saved.target)?saved.target:'expanded';
+      Object.keys(dtDesigns).forEach(k=>dtDesigns[k]={...dtDesignDefaults(),...(saved.designs[k]||{})});
+    }else{
+      // Safe migration from earlier CoreFlow Time & Date files.
+      dtSettings={...DT_DEFAULTS,...saved};
+      if(saved && saved.designs){
+        Object.keys(dtDesigns).forEach(k=>dtDesigns[k]={...dtDesignDefaults(),...(saved.designs[k]||{})});
+      }else{
+        const migrated=Object.fromEntries(DT_DESIGN_KEYS.map(k=>[k,dtSettings[k]]));
+        Object.keys(dtDesigns).forEach(k=>dtDesigns[k]={...dtDesignDefaults(),...migrated});
+      }
+      if(!['expanded','collapsed','dashboard','topbar'].includes(dtSettings.target))dtSettings.target='expanded';
+    }
+  }catch(e){ dtSettings={...DT_DEFAULTS}; }
+
+  function dtStore(){
+    const global={}; DT_GLOBAL_KEYS.forEach(k=>global[k]=dtSettings[k]);
+    const payload={version:4,target:dtSettings.target,global,designs:dtDesigns};
+    try{ localStorage.setItem(DT_STORAGE_KEY,JSON.stringify(payload)); return true; }
+    catch(e){ console.warn('Time & Date settings could not be saved',e); return false; }
+  }
+  function dtCaptureDesign(target=dtSettings.target){
+    if(!dtDesigns[target])return;
+    DT_DESIGN_KEYS.forEach(k=>dtDesigns[target][k]=dtSettings[k]);
+  }
+  function dtApplyDesign(target=dtSettings.target){
+    const d=dtDesigns[target]||dtDesigns.expanded;
+    DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=d[k]);
+  }
+  function dtWithDesign(target,fn){
+    const snapshot={}; DT_DESIGN_KEYS.forEach(k=>snapshot[k]=dtSettings[k]);
+    const d=dtDesigns[target]||dtDesigns.expanded;
+    DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=d[k]);
+    try{return fn();}finally{DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=snapshot[k]);}
+  }
   dtApplyDesign(dtSettings.target||'expanded');
 
   const dtById=id=>document.getElementById(id);
@@ -2146,30 +2180,33 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
   }
 
   function readDtControls(ev){
-    const changedId=ev?.target?.id||'';
+    const el=ev?.target;
+    if(!el || !el.id)return;
+    const id=el.id;
     const bools={dtShowTime:'showTime',dtShowDate:'showDate',dtShowDay:'showDay',dtShowSeconds:'showSeconds',dtShowAmPm:'showAmPm',dtLocSidebar:'locSidebar',dtLocDashboard:'locDashboard',dtLocTopbar:'locTopbar'};
-    Object.entries(bools).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=!!e.checked});
     const vals={dtTimeFormat:'timeFormat',dtDateFormat:'dateFormat',dtDayFormat:'dayFormat',dtTimeSep:'timeSep',dtDateSep:'dateSep',dtTimeSource:'timeSource',dtTimeZone:'timeZone',dtBlink:'blink',dtLayout:'layout',dtAlign:'align',dtVPos:'vPos',dtAppearanceMode:'appearanceMode',dtCardStyle:'cardStyle',dtBg:'bg',dtBorderStyle:'borderStyle',dtBorderColor:'borderColor',dtShadow:'shadow',dtTextColor:'textColor'};
-    Object.entries(vals).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=e.value});
     const nums={dtWidth:'width',dtHeight:'height',dtRadius:'radius',dtTimeSize:'timeSize',dtDateSize:'dateSize',dtDaySize:'daySize',dtBorderWidth:'borderWidth',dtBgOpacity:'bgOpacity',dtBorderOpacity:'borderOpacity',dtTextOpacity:'textOpacity',dtBlur:'blur'};
-    Object.entries(nums).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=Number(e.value)});
-    // Only the Clock Style dropdown is allowed to change the selected clock style.
-    // Other controls (border/background/opacity/position) must never reset an analog/glass/gallery selection.
-    if(changedId==='dtClockStyle'){
-      const e=dtById('dtClockStyle');
-      if(e && e.value){dtSettings.clockStyle=e.value;dtSettings.style=e.value;}
-    }else{
-      dtSettings.clockStyle=dtSettings.style;
+
+    // Update ONLY the control that actually changed. Never reread unrelated switches.
+    if(bools[id]) dtSettings[bools[id]]=!!el.checked;
+    else if(vals[id]) dtSettings[vals[id]]=el.value;
+    else if(nums[id]) dtSettings[nums[id]]=Number(el.value);
+    else if(id==='dtClockStyle' && el.value){ dtSettings.clockStyle=el.value; dtSettings.style=el.value; }
+
+    if(DT_DESIGN_KEYS.includes(bools[id]) || DT_DESIGN_KEYS.includes(vals[id]) || DT_DESIGN_KEYS.includes(nums[id]) || id==='dtClockStyle'){
+      dtCaptureDesign(dtSettings.target);
     }
-    dtCaptureDesign(dtSettings.target); dtStore();
+    const ok=dtStore();
     renderDtSidebar(); renderDtTopbar(); renderDtPreview();
-    const state=dtById('datetimeSaveState');if(state){state.textContent='Saved';state.style.color='#16834f'}
+    const state=dtById('datetimeSaveState');if(state){state.textContent=ok?'Saved':'Save failed';state.style.color=ok?'#16834f':'#c0392b';}
+    // Update labels/active cards, but never modify unrelated saved values.
     setDtControls();
   }
 
   ['dtShowTime','dtShowDate','dtShowDay','dtShowSeconds','dtShowAmPm','dtLocSidebar','dtLocDashboard','dtLocTopbar','dtTimeFormat','dtDateFormat','dtDayFormat','dtTimeSep','dtDateSep','dtTimeSource','dtTimeZone','dtBlink','dtLayout','dtClockStyle','dtAlign','dtVPos','dtAppearanceMode','dtCardStyle','dtBg','dtBorderStyle','dtBorderColor','dtBorderWidth','dtBgOpacity','dtBorderOpacity','dtTextOpacity','dtBlur','dtWidth','dtHeight','dtRadius','dtShadow','dtTimeSize','dtDateSize','dtDaySize','dtTextColor'].forEach(id=>{
-    dtById(id)?.addEventListener('input',readDtControls);
-    dtById(id)?.addEventListener('change',readDtControls);
+    const el=dtById(id); if(!el)return;
+    const evt=(el.type==='range'||el.type==='color')?'input':'change';
+    el.addEventListener(evt,readDtControls);
   });
 
   document.querySelectorAll('[data-dt-style]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -2189,18 +2226,18 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
   }));
 
   dtById('dtSaveBtn')?.addEventListener('click',()=>{
-    dtCaptureDesign(); dtStore();
-    renderDtSidebar();
-    renderDtTopbar();
-    const s=dtById('datetimeSaveState');if(s){s.textContent='Saved';s.style.color='#16834f'}
+    // Save is deliberately non-destructive: it never toggles display locations or target tabs.
+    dtCaptureDesign(dtSettings.target);
+    const ok=dtStore();
+    renderDtSidebar(); renderDtTopbar(); renderDtPreview();
+    const s=dtById('datetimeSaveState');if(s){s.textContent=ok?'Saved Permanently':'Save failed';s.style.color=ok?'#16834f':'#c0392b';}
   });
   dtById('dtResetBtn')?.addEventListener('click',()=>{
     dtSettings={...DT_DEFAULTS};
-    dtDesigns={expanded:dtDesignDefaults(),collapsed:dtDesignDefaults(),dashboard:dtDesignDefaults(),topbar:dtDesignDefaults()}; dtApplyDesign('expanded'); dtStore();
-    setDtControls();
-    renderDtSidebar();
-    renderDtTopbar();
-    const s=dtById('datetimeSaveState');if(s){s.textContent='Defaults Restored';s.style.color='#16834f'}
+    dtDesigns={expanded:dtDesignDefaults(),collapsed:dtDesignDefaults(),dashboard:dtDesignDefaults(),topbar:dtDesignDefaults()};
+    dtSettings.target='expanded'; dtApplyDesign('expanded'); dtStore();
+    setDtControls(); renderDtSidebar(); renderDtTopbar();
+    const s=dtById('datetimeSaveState');if(s){s.textContent='Defaults Restored';s.style.color='#16834f';}
   });
 
   // Keep the Clock Style dropdown synchronized with every gallery card, including analog and glass styles.
@@ -2216,6 +2253,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     });
   }
 
+  document.querySelectorAll('[data-dt-target],[data-dt-design],#dtLocSidebar,#dtLocDashboard,#dtLocTopbar').forEach(el=>{el.disabled=false;el.removeAttribute('aria-disabled');});
   setDtControls();
   dtUpdateGallerySamples();
   setInterval(()=>{renderDtPreview();dtUpdateGallerySamples();},1000);
