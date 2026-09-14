@@ -962,8 +962,11 @@ body.cf-sidebar-autohide.cf-sidebar-expanded .sidebar .cf-menu-label{
 .cf-dt-sidebar-time{font-weight:850;letter-spacing:-.02em}
 .cf-dt-sidebar-date,.cf-dt-sidebar-day{font-weight:650;opacity:.8}
 body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-host{
-  left:4px;right:4px;bottom:8px!important;top:auto!important;transform:none!important;
+  left:4px;right:4px;
 }
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-host[data-pos="top"]{top:72px!important;bottom:auto!important;transform:none!important}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-host[data-pos="middle"]{top:50%!important;bottom:auto!important;transform:translateY(-50%)!important}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-host[data-pos="bottom"]{top:auto!important;bottom:8px!important;transform:none!important}
 body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-card{
   min-height:54px!important;width:100%!important;padding:5px 2px!important;gap:2px!important;
   flex-direction:column!important;border-radius:8px!important;
@@ -1953,11 +1956,23 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     const n=parseInt(full,16); if(Number.isNaN(n))return `rgba(255,255,255,${opacity})`; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${opacity})`;
   }
   function dtApplyVisualStrength(card){
-    if(!card)return; const bgO=Math.max(0,Math.min(100,Number(dtSettings.bgOpacity??100)))/100; const borderO=Math.max(0,Math.min(100,Number(dtSettings.borderOpacity??100)))/100; const textO=Math.max(.2,Math.min(1,Number(dtSettings.textOpacity??100)/100));
-    if(dtSettings.appearanceMode==='custom' && dtSettings.cardStyle!=='none')card.style.background=dtHexToRgba(dtSettings.bg,bgO);
-    if(dtSettings.borderStyle!=='none'){card.style.borderWidth=Math.max(0,Number(dtSettings.borderWidth??1))+'px';card.style.borderColor=dtHexToRgba(dtSettings.borderColor,borderO);}
-    card.querySelectorAll('.cf-dt-sidebar-time,.cf-dt-sidebar-date,.cf-dt-sidebar-day,.cf-dt-topbar-time,.cf-dt-topbar-date,.cf-dt-topbar-day,.dt-live-time,.dt-live-date,.dt-live-day').forEach(x=>x.style.opacity=String(textO));
-    const blur=Math.max(0,Number(dtSettings.blur??14)); card.style.backdropFilter=blur?`blur(${blur}px) saturate(135%)`:'none'; card.style.webkitBackdropFilter=card.style.backdropFilter;
+    if(!card)return;
+    const bgO=Math.max(0,Math.min(100,Number(dtSettings.bgOpacity??100)))/100;
+    const borderO=Math.max(0,Math.min(100,Number(dtSettings.borderOpacity??100)))/100;
+    const textO=Math.max(.05,Math.min(1,Number(dtSettings.textOpacity??100)/100));
+    if(dtSettings.appearanceMode==='custom' && dtSettings.cardStyle!=='none'){
+      card.style.setProperty('background',dtHexToRgba(dtSettings.bg,bgO),'important');
+    }
+    if(dtSettings.borderStyle!=='none'){
+      card.style.setProperty('border-width',Math.max(0,Number(dtSettings.borderWidth??1))+'px','important');
+      if(dtSettings.appearanceMode==='custom')card.style.setProperty('border-color',dtHexToRgba(dtSettings.borderColor,borderO),'important');
+    }else card.style.setProperty('border-width','0','important');
+    card.querySelectorAll('.cf-dt-sidebar-time,.cf-dt-sidebar-date,.cf-dt-sidebar-day,.cf-dt-topbar-time,.cf-dt-topbar-date,.cf-dt-topbar-day,.dt-live-time,.dt-live-date,.dt-live-day,.cf-dt-sidebar-icon,.cf-dt-topbar-icon,.dt-live-icon').forEach(x=>x.style.opacity=String(textO));
+    const blur=Math.max(0,Number(dtSettings.blur??14));
+    if(dtSettings.appearanceMode==='custom'){
+      card.style.setProperty('backdrop-filter',blur?`blur(${blur}px) saturate(135%)`:'none','important');
+      card.style.setProperty('-webkit-backdrop-filter',blur?`blur(${blur}px) saturate(135%)`:'none','important');
+    }
   }
   function dtSetAnalog(el,d,variant){
     if(!el)return;
@@ -1995,22 +2010,30 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     if(!card)return;
     const mode=dtSettings.appearanceMode||'theme';
     card.dataset.dtAppearance=mode;
-    if(mode==='custom')return;
-    const p=dtThemePalette();
-    let bg=p.surface, text=p.text, border=p.border, shadow=`0 8px 22px ${dtRgba(p.primary,.16)}`;
-    if(mode==='design' && document.body.classList.contains('design-analytics-blue')){
-      bg=`linear-gradient(135deg,${dtRgba(p.primary,.92)},${dtRgba(p.primary,.62)})`; text='#ffffff'; border=dtRgba('#ffffff',.62); shadow=`0 8px 24px ${dtRgba(p.primary,.28)}`;
+    const bgO=Math.max(0,Math.min(100,Number(dtSettings.bgOpacity??100)))/100;
+    const borderO=Math.max(0,Math.min(100,Number(dtSettings.borderOpacity??100)))/100;
+    const blur=Math.max(0,Number(dtSettings.blur??14));
+    if(mode==='custom'){
+      card.style.removeProperty('backdrop-filter');card.style.removeProperty('-webkit-backdrop-filter');
+      return;
     }
-    if(['modern-glass','frosted-glass','theme-glass','dark-glass','aurora-glass','sunset-glass'].includes(dtSettings.style)){
-      if(dtSettings.style==='modern-glass'||dtSettings.style==='theme-glass') bg=`linear-gradient(135deg,${dtRgba(p.primary,.72)},${dtRgba(p.primary,.38)},rgba(255,255,255,.16))`;
-      else if(dtSettings.style==='dark-glass') bg=`linear-gradient(135deg,rgba(13,26,42,.88),${dtRgba(p.primary,.24)})`;
-      else if(dtSettings.style==='aurora-glass') bg=`radial-gradient(circle at 18% 20%,${dtRgba(p.primary,.58)},transparent 30%),radial-gradient(circle at 82% 75%,rgba(142,90,255,.62),transparent 34%),linear-gradient(135deg,#123a55,#17365b 56%,#2a315e)`;
-      else if(dtSettings.style==='sunset-glass') bg=`linear-gradient(135deg,#ffb36b,#ee6f78 48%,${dtRgba(p.primary,.74)})`;
-      else bg=`linear-gradient(135deg,rgba(255,255,255,.46),${dtRgba(p.primary,.18)})`;
+    const p=dtThemePalette();
+    let bg=dtRgba(p.surface,bgO), text=p.text, border=dtRgba(p.border,borderO), shadow=`0 8px 22px ${dtRgba(p.primary,.16)}`;
+    if(mode==='design' && document.body.classList.contains('design-analytics-blue')){
+      bg=`linear-gradient(135deg,${dtRgba(p.primary,.92*bgO)},${dtRgba(p.primary,.62*bgO)})`;
+      text='#ffffff'; border=dtRgba('#ffffff',.62*borderO); shadow=`0 8px 24px ${dtRgba(p.primary,.28)}`;
+    }
+    if(['modern-glass','frosted-glass','theme-glass','dark-glass','aurora-glass','sunset-glass','analog-glass'].includes(dtSettings.style)){
+      if(dtSettings.style==='modern-glass'||dtSettings.style==='theme-glass') bg=`linear-gradient(135deg,${dtRgba(p.primary,.72*bgO)},${dtRgba(p.primary,.38*bgO)},rgba(255,255,255,${.16*bgO}))`;
+      else if(dtSettings.style==='dark-glass') bg=`linear-gradient(135deg,rgba(13,26,42,${.88*bgO}),${dtRgba(p.primary,.24*bgO)})`;
+      else if(dtSettings.style==='aurora-glass') bg=`radial-gradient(circle at 18% 20%,${dtRgba(p.primary,.58*bgO)},transparent 30%),radial-gradient(circle at 82% 75%,rgba(142,90,255,${.62*bgO}),transparent 34%),linear-gradient(135deg,rgba(18,58,85,${bgO}),rgba(23,54,91,${bgO}) 56%,rgba(42,49,94,${bgO}))`;
+      else if(dtSettings.style==='sunset-glass') bg=`linear-gradient(135deg,rgba(255,179,107,${bgO}),rgba(238,111,120,${bgO}) 48%,${dtRgba(p.primary,.74*bgO)})`;
+      else if(dtSettings.style==='analog-glass') bg=`linear-gradient(135deg,rgba(255,255,255,${.56*bgO}),${dtRgba(p.primary,.16*bgO)})`;
+      else bg=`linear-gradient(135deg,rgba(255,255,255,${.46*bgO}),${dtRgba(p.primary,.18*bgO)})`;
       text=(['modern-glass','theme-glass','dark-glass','aurora-glass','sunset-glass'].includes(dtSettings.style)||document.body.classList.contains('design-analytics-blue'))?'#ffffff':p.text;
-      border='rgba(255,255,255,.58)'; shadow=`0 10px 30px ${dtRgba(p.primary,.22)}, inset 0 1px 0 rgba(255,255,255,.55)`;
-      card.style.setProperty('backdrop-filter','blur(16px) saturate(145%)','important');
-      card.style.setProperty('-webkit-backdrop-filter','blur(16px) saturate(145%)','important');
+      border=`rgba(255,255,255,${.58*borderO})`; shadow=`0 10px 30px ${dtRgba(p.primary,.22)}, inset 0 1px 0 rgba(255,255,255,.55)`;
+      card.style.setProperty('backdrop-filter',blur?`blur(${blur}px) saturate(145%)`:'none','important');
+      card.style.setProperty('-webkit-backdrop-filter',blur?`blur(${blur}px) saturate(145%)`:'none','important');
     }else{
       card.style.removeProperty('backdrop-filter');card.style.removeProperty('-webkit-backdrop-filter');
     }
@@ -2122,16 +2145,25 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     renderDtPreview();
   }
 
-  function readDtControls(){
+  function readDtControls(ev){
+    const changedId=ev?.target?.id||'';
     const bools={dtShowTime:'showTime',dtShowDate:'showDate',dtShowDay:'showDay',dtShowSeconds:'showSeconds',dtShowAmPm:'showAmPm',dtLocSidebar:'locSidebar',dtLocDashboard:'locDashboard',dtLocTopbar:'locTopbar'};
     Object.entries(bools).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=!!e.checked});
-    const vals={dtTimeFormat:'timeFormat',dtDateFormat:'dateFormat',dtDayFormat:'dayFormat',dtTimeSep:'timeSep',dtDateSep:'dateSep',dtTimeSource:'timeSource',dtTimeZone:'timeZone',dtBlink:'blink',dtLayout:'layout',dtClockStyle:'clockStyle',dtAlign:'align',dtVPos:'vPos',dtAppearanceMode:'appearanceMode',dtCardStyle:'cardStyle',dtBg:'bg',dtBorderStyle:'borderStyle',dtBorderColor:'borderColor',dtShadow:'shadow',dtTextColor:'textColor'};
+    const vals={dtTimeFormat:'timeFormat',dtDateFormat:'dateFormat',dtDayFormat:'dayFormat',dtTimeSep:'timeSep',dtDateSep:'dateSep',dtTimeSource:'timeSource',dtTimeZone:'timeZone',dtBlink:'blink',dtLayout:'layout',dtAlign:'align',dtVPos:'vPos',dtAppearanceMode:'appearanceMode',dtCardStyle:'cardStyle',dtBg:'bg',dtBorderStyle:'borderStyle',dtBorderColor:'borderColor',dtShadow:'shadow',dtTextColor:'textColor'};
     Object.entries(vals).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=e.value});
     const nums={dtWidth:'width',dtHeight:'height',dtRadius:'radius',dtTimeSize:'timeSize',dtDateSize:'dateSize',dtDaySize:'daySize',dtBorderWidth:'borderWidth',dtBgOpacity:'bgOpacity',dtBorderOpacity:'borderOpacity',dtTextOpacity:'textOpacity',dtBlur:'blur'};
     Object.entries(nums).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=Number(e.value)});
-    dtSettings.style=dtSettings.clockStyle||dtSettings.style;
-    dtCaptureDesign(); dtStore();
-    const s=dtById('datetimeSaveState');if(s){s.textContent='Saved';s.style.color='#16834f'}
+    // Only the Clock Style dropdown is allowed to change the selected clock style.
+    // Other controls (border/background/opacity/position) must never reset an analog/glass/gallery selection.
+    if(changedId==='dtClockStyle'){
+      const e=dtById('dtClockStyle');
+      if(e && e.value){dtSettings.clockStyle=e.value;dtSettings.style=e.value;}
+    }else{
+      dtSettings.clockStyle=dtSettings.style;
+    }
+    dtCaptureDesign(dtSettings.target); dtStore();
+    renderDtSidebar(); renderDtTopbar(); renderDtPreview();
+    const state=dtById('datetimeSaveState');if(state){state.textContent='Saved';state.style.color='#16834f'}
     setDtControls();
   }
 
@@ -2170,6 +2202,19 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     renderDtTopbar();
     const s=dtById('datetimeSaveState');if(s){s.textContent='Defaults Restored';s.style.color='#16834f'}
   });
+
+  // Keep the Clock Style dropdown synchronized with every gallery card, including analog and glass styles.
+  const dtClockSelect=dtById('dtClockStyle');
+  if(dtClockSelect){
+    document.querySelectorAll('[data-dt-style]').forEach(card=>{
+      const value=card.dataset.dtStyle;
+      if(value && ![...dtClockSelect.options].some(o=>o.value===value)){
+        const opt=document.createElement('option');opt.value=value;
+        opt.textContent=(card.querySelector('.name')?.textContent||value).trim();
+        dtClockSelect.appendChild(opt);
+      }
+    });
+  }
 
   setDtControls();
   dtUpdateGallerySamples();
@@ -2222,7 +2267,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     const day=host.querySelector('.cf-dt-sidebar-day');
     if(!card||!icon||!time||!date||!day) return;
 
-    host.dataset.pos=collapsed?'bottom':(dtSettings.vPos||'top');
+    host.dataset.pos=(dtSettings.vPos||'top');
     time.textContent=collapsed?dtSidebarCompactTime(d):dtFormatTime(d);
     date.textContent=dtFormatDate(d);
     day.textContent=dtFormatDay(d);
@@ -2240,7 +2285,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     card.style.color=dtSettings.textColor;
     card.style.borderColor=dtSettings.borderColor;
     card.style.borderStyle=dtSettings.borderStyle;
-    card.style.borderWidth=dtSettings.borderStyle==='none'?'0':'1px';
+    card.style.borderWidth=dtSettings.borderStyle==='none'?'0':Math.max(0,Number(dtSettings.borderWidth??1))+'px';
     card.style.borderRadius=(dtSettings.cardStyle==='square'?0:dtSettings.cardStyle==='pill'?30:dtSettings.cardStyle==='none'?0:dtSettings.radius)+'px';
     card.style.boxShadow=dtSettings.cardStyle==='none'?'none':dtShadowValue();
     card.style.justifyContent=dtSettings.align==='left'?'flex-start':dtSettings.align==='right'?'flex-end':'center';
@@ -2320,7 +2365,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     card.style.color=dtSettings.textColor;
     card.style.borderColor=dtSettings.borderColor;
     card.style.borderStyle=dtSettings.borderStyle;
-    card.style.borderWidth=dtSettings.borderStyle==='none'?'0':'1px';
+    card.style.borderWidth=dtSettings.borderStyle==='none'?'0':Math.max(0,Number(dtSettings.borderWidth??1))+'px';
     card.style.borderRadius=(dtSettings.cardStyle==='square'?0:dtSettings.cardStyle==='pill'?24:dtSettings.cardStyle==='none'?0:Math.min(18,Number(dtSettings.radius)||12))+'px';
     card.style.boxShadow=dtSettings.cardStyle==='none'?'none':dtShadowValue();
     card.style.justifyContent=dtSettings.align==='left'?'flex-start':dtSettings.align==='right'?'flex-end':'center';
