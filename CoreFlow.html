@@ -132,7 +132,7 @@ body{min-height:100vh}
   <aside class="sidebar">
     <div class="brand">
       <div class="logo">CF</div>
-      <div><h1>CoreFlow Design Studio</h1><p>Fresh Build v1.8</p></div>
+      <div><h1>CoreFlow Design Studio</h1><p>Fresh Build v1.9</p></div>
     </div>
     <div class="nav-title">Design</div>
     <a class="nav-item active workspace-nav" href="#gallery" data-workspace="design"><span class="nav-dot"></span>Design Gallery</a>
@@ -324,7 +324,7 @@ body{min-height:100vh}
   <aside class="mobile-drawer">
     <div class="brand">
       <div class="logo">CF</div>
-      <div><h1>CoreFlow Design Studio</h1><p>Fresh Build v1.8</p></div>
+      <div><h1>CoreFlow Design Studio</h1><p>Fresh Build v1.9</p></div>
     </div>
     <div class="nav-title">Design</div>
     <a class="nav-item active workspace-nav" href="#gallery" data-workspace="design"><span class="nav-dot"></span>Design Gallery</a>
@@ -484,8 +484,45 @@ body{min-height:100vh}
   workspaceLinks.forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showWorkspace(a.dataset.workspace)}));
   if(!inPreview && location.hash==='#themes') showWorkspace('theme');
 
+  function applyThemeToStudioShell(t){
+    if(!t)return;
+    const r=document.documentElement.style;
+    r.setProperty('--bg',t.bg);
+    r.setProperty('--surface',t.surface);
+    r.setProperty('--surface-soft',t.soft);
+    r.setProperty('--text',t.text);
+    r.setProperty('--muted',t.muted);
+    r.setProperty('--border',t.border);
+    r.setProperty('--primary',t.primary);
+    r.setProperty('--primary-soft',t.primarySoft);
+    r.setProperty('--sidebar',t.sidebar);
+    r.setProperty('--radius',(t.radius??11)+'px');
+    r.setProperty('--shadow',shadowValue(t.shadow||'soft'));
+    document.body.style.fontFamily=t.font||'Inter,Segoe UI,Arial,sans-serif';
+    document.body.style.fontSize=((t.fontScale||1)*100)+'%';
+
+    /* The Theme Studio itself is the live host for the selected ERP theme. */
+    document.querySelectorAll('.sidebar').forEach(el=>{
+      el.style.background=t.sidebar;
+      el.style.color='#fff';
+      el.style.borderColor=t.border;
+    });
+    document.querySelectorAll('.sidebar .brand h1,.sidebar .brand p,.sidebar .nav-title,.sidebar .nav-item').forEach(el=>el.style.color='rgba(255,255,255,.86)');
+    document.querySelectorAll('.sidebar .nav-item.active').forEach(el=>{
+      el.style.background=t.primary;
+      el.style.color='#fff';
+    });
+    document.querySelectorAll('.logo').forEach(el=>{el.style.background=t.primary;el.style.color='#fff'});
+    document.querySelectorAll('.topbar,.hero,.section,.theme-studio-toolbar,.theme-link-box,.theme-custom-panel,.theme-live-panel').forEach(el=>{
+      el.style.background=t.surface;
+      el.style.borderColor=t.border;
+    });
+    document.querySelectorAll('.search').forEach(el=>{el.style.background=t.soft;el.style.borderColor=t.border;el.style.color=t.text});
+  }
+
   function refreshThemeUI(){
     const t=THEMES[currentThemeId];
+    applyThemeToStudioShell(t);
     document.getElementById('activeThemeHeroBadge').textContent='Active: '+t.name;
     document.getElementById('design01ThemeMeta').textContent='Theme: '+t.name;
     document.querySelectorAll('[data-theme-card]').forEach(c=>c.classList.toggle('active-theme',c.dataset.themeCard===currentThemeId));
