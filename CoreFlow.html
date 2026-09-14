@@ -568,7 +568,7 @@ body.design-analytics-blue .sp-item.active{background:#35679a}
 
 
 <style id="v33-time-date-studio">
-/* v3.8 — Standalone Time & Date Studio base. Preview/configuration only; no live system binding. */
+/* v3.8 — Time & Date Studio. Sidebar-only live binding; Dashboard and Top Bar remain preview-only. */
 #timeDateStudioWorkspace{--dt-blue:#1689e8;--dt-soft:#eef8ff;--dt-line:#d7e8f4;--dt-card:#fff;--dt-ink:#173653;--dt-muted:#6f8498}
 .dt-page-shell{display:flex;flex-direction:column;gap:10px}
 .dt-page-head{min-height:70px;display:flex;align-items:center;gap:14px;padding:13px 16px;background:linear-gradient(90deg,#f8fcff,#eaf6ff);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
@@ -858,6 +858,41 @@ body.cf-sidebar-autohide.cf-sidebar-expanded .sidebar .cf-menu-label{
 .sidebar-preview-shell.cf-preview-auto.cf-preview-expanded .sp-item:before{
   margin-right:6px;
 }
+</style>
+
+
+<style id="v38-datetime-sidebar-binding">
+/* v3.8 — Safe sidebar-only Time & Date binding. Does not alter navigation or page routing. */
+.app > .sidebar{position:sticky}
+.cf-dt-sidebar-host{
+  position:absolute;left:8px;right:8px;z-index:6;display:flex;justify-content:center;
+  pointer-events:none;transition:opacity .18s ease,transform .18s ease;
+}
+.cf-dt-sidebar-host[data-pos="top"]{top:112px}
+.cf-dt-sidebar-host[data-pos="middle"]{top:50%;transform:translateY(-50%)}
+.cf-dt-sidebar-host[data-pos="bottom"]{bottom:12px}
+.cf-dt-sidebar-card{
+  width:100%;max-width:100%;min-width:0;display:flex;align-items:center;justify-content:center;gap:9px;
+  overflow:hidden;line-height:1.12;pointer-events:none;
+}
+.cf-dt-sidebar-icon{flex:0 0 auto;display:grid;place-items:center;font-style:normal;line-height:1}
+.cf-dt-sidebar-copy{min-width:0;display:flex;flex-direction:column;justify-content:center}
+.cf-dt-sidebar-time,.cf-dt-sidebar-date,.cf-dt-sidebar-day{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-dt-sidebar-time{font-weight:850;letter-spacing:-.02em}
+.cf-dt-sidebar-date,.cf-dt-sidebar-day{font-weight:650;opacity:.8}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-host{
+  left:4px;right:4px;bottom:8px!important;top:auto!important;transform:none!important;
+}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-card{
+  min-height:54px!important;width:100%!important;padding:5px 2px!important;gap:2px!important;
+  flex-direction:column!important;border-radius:8px!important;
+}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-icon{font-size:13px!important}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-copy{align-items:center!important;text-align:center!important;width:100%}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-time{font-size:9px!important;max-width:48px}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-date{font-size:7px!important;max-width:48px}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .cf-dt-sidebar-day{display:none!important}
+@media(max-width:760px){.cf-dt-sidebar-host{display:none!important}}
 </style>
 
 </head>
@@ -1276,7 +1311,7 @@ body.cf-sidebar-autohide.cf-sidebar-expanded .sidebar .cf-menu-label{
               <div class="dt-title-icon">◷</div>
               <div class="dt-title-copy">
                 <div class="dt-title-row"><h2>Time &amp; Date Studio</h2><span class="dt-version">v3.8</span></div>
-                <p>Design, customize and control clock, time and date for Sidebar, Dashboard and Top Bar. Base studio only — nothing is attached to the live system yet.</p>
+                <p>Design and customize clock, time and date. Sidebar is live; Dashboard and Top Bar remain preview-only for now.</p>
               </div>
               <div class="dt-head-actions">
                 <button class="dt-btn" id="dtResetBtn" type="button">Restore Defaults</button>
@@ -1845,17 +1880,125 @@ body.cf-sidebar-autohide.cf-sidebar-expanded .sidebar .cf-menu-label{
 
   dtById('dtSaveBtn')?.addEventListener('click',()=>{
     localStorage.setItem('coreflow.timeDateStudio.base',JSON.stringify(dtSettings));
+    renderDtSidebar();
     const s=dtById('datetimeSaveState');if(s){s.textContent='Saved';s.style.color='#16834f'}
   });
   dtById('dtResetBtn')?.addEventListener('click',()=>{
     dtSettings={...DT_DEFAULTS};
     localStorage.setItem('coreflow.timeDateStudio.base',JSON.stringify(dtSettings));
     setDtControls();
+    renderDtSidebar();
     const s=dtById('datetimeSaveState');if(s){s.textContent='Defaults Restored';s.style.color='#16834f'}
   });
 
   setDtControls();
   setInterval(renderDtPreview,1000);
+
+  /* Sidebar-only live Time & Date binding.
+     This is intentionally independent from sidebar navigation/render functions.
+     If the sidebar is rebuilt, a MutationObserver remounts only this display block. */
+  function dtSidebarIsCollapsed(){
+    return document.body.classList.contains('cf-sidebar-autohide') &&
+           !document.body.classList.contains('cf-sidebar-expanded');
+  }
+  function dtSidebarHost(){
+    return document.querySelector('.app > .sidebar .cf-dt-sidebar-host');
+  }
+  function dtEnsureSidebarHost(){
+    if(!desktopSidebar || inPreview) return null;
+    let host=dtSidebarHost();
+    if(!host){
+      host=document.createElement('div');
+      host.className='cf-dt-sidebar-host';
+      host.setAttribute('aria-label','Sidebar time and date');
+      host.innerHTML='<div class="cf-dt-sidebar-card"><i class="cf-dt-sidebar-icon">◷</i><div class="cf-dt-sidebar-copy"><div class="cf-dt-sidebar-time"></div><div class="cf-dt-sidebar-date"></div><div class="cf-dt-sidebar-day"></div></div></div>';
+      desktopSidebar.appendChild(host);
+    }
+    return host;
+  }
+  function dtSidebarCompactTime(d){
+    let h=d.getHours(),suffix='';
+    if(dtSettings.timeFormat==='12'){
+      suffix=dtSettings.showAmPm?(h>=12?'P':'A'):'';
+      h=h%12||12;
+    }
+    const sep=dtSettings.timeSep||':';
+    return `${dtPad(h)}${sep}${dtPad(d.getMinutes())}${suffix}`;
+  }
+  function renderDtSidebar(){
+    if(inPreview || !desktopSidebar) return;
+    const host=dtEnsureSidebarHost();
+    if(!host) return;
+    host.style.display=dtSettings.locSidebar?'flex':'none';
+    if(!dtSettings.locSidebar) return;
+
+    const collapsed=dtSidebarIsCollapsed();
+    const d=dtNow();
+    const card=host.querySelector('.cf-dt-sidebar-card');
+    const icon=host.querySelector('.cf-dt-sidebar-icon');
+    const time=host.querySelector('.cf-dt-sidebar-time');
+    const date=host.querySelector('.cf-dt-sidebar-date');
+    const day=host.querySelector('.cf-dt-sidebar-day');
+    if(!card||!icon||!time||!date||!day) return;
+
+    host.dataset.pos=collapsed?'bottom':(dtSettings.vPos||'top');
+    time.textContent=collapsed?dtSidebarCompactTime(d):dtFormatTime(d);
+    date.textContent=dtFormatDate(d);
+    day.textContent=dtFormatDay(d);
+    time.style.display=dtSettings.showTime?'':'none';
+    date.style.display=dtSettings.showDate?'':'none';
+    day.style.display=dtSettings.showDay?'':'none';
+
+    const sidebarWidth=Math.max(44,desktopSidebar.getBoundingClientRect().width-16);
+    const desiredWidth=collapsed?sidebarWidth:Math.min(sidebarWidth,Math.max(120,Number(dtSettings.width)||220));
+    const desiredHeight=collapsed?54:Math.max(54,Math.min(150,Number(dtSettings.height)||110));
+    card.style.width=desiredWidth+'px';
+    card.style.minHeight=desiredHeight+'px';
+    card.style.padding=collapsed?'5px 2px':'9px 10px';
+    card.style.background=dtSettings.bg;
+    card.style.color=dtSettings.textColor;
+    card.style.borderColor=dtSettings.borderColor;
+    card.style.borderStyle=dtSettings.borderStyle;
+    card.style.borderWidth=dtSettings.borderStyle==='none'?'0':'1px';
+    card.style.borderRadius=(dtSettings.cardStyle==='square'?0:dtSettings.cardStyle==='pill'?30:dtSettings.cardStyle==='none'?0:dtSettings.radius)+'px';
+    card.style.boxShadow=dtSettings.cardStyle==='none'?'none':dtShadowValue();
+    card.style.justifyContent=dtSettings.align==='left'?'flex-start':dtSettings.align==='right'?'flex-end':'center';
+    card.style.textAlign=dtSettings.align||'center';
+
+    let inverse=false;
+    if(dtSettings.style==='dark'||dtSettings.style==='compact'){
+      card.style.background='#172536';card.style.color='#fff';inverse=true;
+    }else if(dtSettings.style==='glass'){
+      card.style.background='linear-gradient(135deg,#5ebcf3,#764ee9)';card.style.color='#fff';card.style.borderColor='rgba(255,255,255,.65)';inverse=true;
+    }else if(dtSettings.style==='minimal'||dtSettings.cardStyle==='none'){
+      card.style.background='transparent';card.style.border='0';card.style.boxShadow='none';
+    }
+
+    icon.textContent=dtSettings.style.startsWith('analog')?'◴':'◷';
+    icon.style.display=(dtSettings.style==='minimal'||dtSettings.style==='calendar'||dtSettings.style==='vertical')?'none':'grid';
+    icon.style.color=inverse?'currentColor':dtSettings.borderColor;
+    icon.style.fontSize=collapsed?'13px':Math.max(15,Math.min(28,Math.round((Number(dtSettings.timeSize)||32)*.7)))+'px';
+    time.style.fontSize=collapsed?'9px':Math.max(12,Math.min(30,Number(dtSettings.timeSize)||32))+'px';
+    date.style.fontSize=collapsed?'7px':Math.max(8,Math.min(18,Number(dtSettings.dateSize)||16))+'px';
+    day.style.fontSize=Math.max(8,Math.min(16,Number(dtSettings.daySize)||14))+'px';
+    const copy=host.querySelector('.cf-dt-sidebar-copy');
+    if(copy){
+      copy.style.alignItems=dtSettings.align==='left'?'flex-start':dtSettings.align==='right'?'flex-end':'center';
+      copy.style.textAlign=dtSettings.align||'center';
+    }
+  }
+
+  if(!inPreview && desktopSidebar){
+    renderDtSidebar();
+    const dtSidebarObserver=new MutationObserver(()=>{
+      if(!dtSidebarHost()) renderDtSidebar();
+    });
+    dtSidebarObserver.observe(desktopSidebar,{childList:true});
+    const dtBodyObserver=new MutationObserver(renderDtSidebar);
+    dtBodyObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
+    setInterval(renderDtSidebar,1000);
+  }
+
   if(!inPreview && location.hash==='#time-date-studio')showTimeDateStudio();
 
   document.querySelectorAll('[data-studio-open]').forEach(card=>{
