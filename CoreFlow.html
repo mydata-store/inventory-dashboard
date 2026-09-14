@@ -1887,7 +1887,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     showTime:true,showDate:true,showDay:true,showSeconds:false,showAmPm:true,
     timeFormat:'12',dateFormat:'dd-mmm-yy',dayFormat:'long',timeSep:':',dateSep:'-',
     timeSource:'system',timeZone:'local',blink:'off',
-    locSidebar:true,locDashboard:true,locTopbar:true,
+    locSidebar:false,locDashboard:false,locTopbar:false,
     style:'digital-card',target:'expanded',appearanceMode:'theme',
     layout:'time-date',clockStyle:'digital-card',align:'center',vPos:'top',
     cardStyle:'rounded',bg:'#ffffff',borderStyle:'solid',borderColor:'#1689e8',
@@ -1896,7 +1896,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
   };
   const DT_DESIGN_KEYS=['style','layout','clockStyle','align','vPos','appearanceMode','cardStyle','bg','borderStyle','borderColor','borderWidth','bgOpacity','borderOpacity','textOpacity','blur','width','height','radius','shadow','timeSize','dateSize','daySize','textColor'];
   const DT_GLOBAL_KEYS=['showTime','showDate','showDay','showSeconds','showAmPm','timeFormat','dateFormat','dayFormat','timeSep','dateSep','timeSource','timeZone','blink','locSidebar','locDashboard','locTopbar'];
-  const DT_STORAGE_KEY='coreflow.timeDateStudio.v5';
+  const DT_STORAGE_KEY='coreflow.timeDateStudio.v6';
   const DT_LEGACY_STORAGE_KEY='coreflow.timeDateStudio.base';
   // Dedicated position store: visibility toggles and design saves must never erase sidebar placement.
   const DT_POSITION_KEY='coreflow.timeDateStudio.sidebarPositions.v1';
@@ -1940,12 +1940,18 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
       if(!raw) return;
       const saved=JSON.parse(raw);
       if(saved && saved.global && saved.designs){
-        DT_GLOBAL_KEYS.forEach(k=>{ if(Object.prototype.hasOwnProperty.call(saved.global,k)) dtSettings[k]=saved.global[k]; });
+        DT_GLOBAL_KEYS.forEach(k=>{
+          if(['locSidebar','locDashboard','locTopbar'].includes(k)) return;
+          if(Object.prototype.hasOwnProperty.call(saved.global,k)) dtSettings[k]=saved.global[k];
+        });
         dtSettings.target=['expanded','collapsed','dashboard','topbar'].includes(saved.target)?saved.target:'expanded';
         Object.keys(dtDesigns).forEach(k=>dtDesigns[k]=dtSanitizeDesign(saved.designs[k]));
       }else if(saved && typeof saved==='object'){
-        // one-time migration from pre-v4 flat settings
-        DT_GLOBAL_KEYS.forEach(k=>{ if(Object.prototype.hasOwnProperty.call(saved,k)) dtSettings[k]=saved[k]; });
+        // Migrate old formatting/design only. Old display-location values are intentionally ignored.
+        DT_GLOBAL_KEYS.forEach(k=>{
+          if(['locSidebar','locDashboard','locTopbar'].includes(k)) return;
+          if(Object.prototype.hasOwnProperty.call(saved,k)) dtSettings[k]=saved[k];
+        });
         dtSettings.target=['expanded','collapsed','dashboard','topbar'].includes(saved.target)?saved.target:'expanded';
         const migrated={}; DT_DESIGN_KEYS.forEach(k=>{ if(Object.prototype.hasOwnProperty.call(saved,k)) migrated[k]=saved[k]; });
         Object.keys(dtDesigns).forEach(k=>dtDesigns[k]=dtSanitizeDesign(saved.designs?.[k]||migrated));
@@ -2013,7 +2019,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
      design payload. They are never reset by style, opacity, theme, save, or
      sidebar re-render operations. */
   const DT_HARD_POSITION_KEY='coreflow.timeDateStudio.sidebarPositions.v2';
-  const DT_HARD_LOCATION_KEY='coreflow.timeDateStudio.locations.v2';
+  const DT_HARD_LOCATION_KEY='coreflow.timeDateStudio.locations.v3';
   function dtHardReadJson(key){
     try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch(e){return null;}
   }
