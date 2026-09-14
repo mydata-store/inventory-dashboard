@@ -1564,6 +1564,11 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
                 <div class="dt-control"><label>Background</label><input id="dtBg" type="color" value="#ffffff"></div>
                 <div class="dt-control"><label>Border</label><select id="dtBorderStyle"><option value="solid">Solid</option><option value="none">None</option><option value="dashed">Dashed</option></select></div>
                 <div class="dt-control"><label>Border Color</label><input id="dtBorderColor" type="color" value="#1689e8"></div>
+                <div class="dt-control"><label>Border Thickness <span class="dt-range-value" id="dtBorderWidthValue">1 px</span></label><input id="dtBorderWidth" type="range" min="0" max="6" step="1" value="1"></div>
+                <div class="dt-control"><label>Background Visibility <span class="dt-range-value" id="dtBgOpacityValue">100%</span></label><input id="dtBgOpacity" type="range" min="0" max="100" step="5" value="100"></div>
+                <div class="dt-control"><label>Border Visibility <span class="dt-range-value" id="dtBorderOpacityValue">100%</span></label><input id="dtBorderOpacity" type="range" min="0" max="100" step="5" value="100"></div>
+                <div class="dt-control"><label>Text Visibility <span class="dt-range-value" id="dtTextOpacityValue">100%</span></label><input id="dtTextOpacity" type="range" min="20" max="100" step="5" value="100"></div>
+                <div class="dt-control"><label>Glass Blur <span class="dt-range-value" id="dtBlurValue">14 px</span></label><input id="dtBlur" type="range" min="0" max="30" step="1" value="14"></div>
                 <div class="dt-control"><label>Card Width <span class="dt-range-value" id="dtWidthValue">220 px</span></label><input id="dtWidth" type="range" min="120" max="360" value="220"></div>
                 <div class="dt-control"><label>Card Height <span class="dt-range-value" id="dtHeightValue">110 px</span></label><input id="dtHeight" type="range" min="55" max="180" value="110"></div>
                 <div class="dt-control"><label>Corner Radius <span class="dt-range-value" id="dtRadiusValue">12 px</span></label><input id="dtRadius" type="range" min="0" max="30" value="12"></div>
@@ -1574,7 +1579,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
                 <div class="dt-control"><label>Text Color</label><input id="dtTextColor" type="color" value="#18324c"></div>
               </div>
             </section>
-            <div class="dt-status-line"><span><b>Standalone base:</b> all changes on this page affect preview only.</span><span id="datetimeSaveState">Ready</span></div>
+            <div class="dt-status-line"><span><b>Independent designs:</b> Sidebar and Top Bar keep their own saved style, position and visibility settings.</span><span id="datetimeSaveState">Ready</span></div>
           </div>
         </div>
 
@@ -1883,10 +1888,24 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     style:'digital-card',target:'expanded',appearanceMode:'theme',
     layout:'time-date',clockStyle:'digital-card',align:'center',vPos:'top',
     cardStyle:'rounded',bg:'#ffffff',borderStyle:'solid',borderColor:'#1689e8',
+    borderWidth:1,bgOpacity:100,borderOpacity:100,textOpacity:100,blur:14,
     width:220,height:110,radius:12,shadow:'medium',timeSize:32,dateSize:16,daySize:14,textColor:'#18324c'
   };
+  const DT_DESIGN_KEYS=['style','layout','clockStyle','align','vPos','appearanceMode','cardStyle','bg','borderStyle','borderColor','borderWidth','bgOpacity','borderOpacity','textOpacity','blur','width','height','radius','shadow','timeSize','dateSize','daySize','textColor'];
+  const dtDesignDefaults=()=>Object.fromEntries(DT_DESIGN_KEYS.map(k=>[k,DT_DEFAULTS[k]]));
   let dtSettings={...DT_DEFAULTS};
-  try{dtSettings={...DT_DEFAULTS,...JSON.parse(localStorage.getItem('coreflow.timeDateStudio.base')||'{}')}}catch(e){}
+  let dtDesigns={expanded:dtDesignDefaults(),collapsed:dtDesignDefaults(),dashboard:dtDesignDefaults(),topbar:dtDesignDefaults()};
+  try{
+    const saved=JSON.parse(localStorage.getItem('coreflow.timeDateStudio.base')||'{}');
+    dtSettings={...DT_DEFAULTS,...saved};
+    if(saved.designs){ Object.keys(dtDesigns).forEach(k=>dtDesigns[k]={...dtDesignDefaults(),...(saved.designs[k]||{})}); }
+    else { const migrated=Object.fromEntries(DT_DESIGN_KEYS.map(k=>[k,dtSettings[k]])); Object.keys(dtDesigns).forEach(k=>dtDesigns[k]={...dtDesignDefaults(),...migrated}); }
+  }catch(e){}
+  function dtStore(){ localStorage.setItem('coreflow.timeDateStudio.base',JSON.stringify({...dtSettings,designs:dtDesigns})); }
+  function dtCaptureDesign(target=dtSettings.target){ if(!dtDesigns[target])return; DT_DESIGN_KEYS.forEach(k=>dtDesigns[target][k]=dtSettings[k]); }
+  function dtApplyDesign(target=dtSettings.target){ const d=dtDesigns[target]||dtDesigns.expanded; DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=d[k]); }
+  function dtWithDesign(target,fn){ const snapshot={}; DT_DESIGN_KEYS.forEach(k=>snapshot[k]=dtSettings[k]); const d=dtDesigns[target]||dtDesigns.expanded; DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=d[k]); try{return fn();}finally{DT_DESIGN_KEYS.forEach(k=>dtSettings[k]=snapshot[k]);} }
+  dtApplyDesign(dtSettings.target||'expanded');
 
   const dtById=id=>document.getElementById(id);
   const dtPad=n=>String(n).padStart(2,'0');
@@ -1928,6 +1947,17 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     if(dtSettings.shadow==='soft')return '0 4px 12px rgba(23,92,145,.08)';
     if(dtSettings.shadow==='strong')return '0 10px 28px rgba(23,92,145,.22)';
     return '0 6px 18px rgba(23,92,145,.14)';
+  }
+  function dtHexToRgba(hex,opacity){
+    const v=String(hex||'#ffffff').replace('#',''); const full=v.length===3?v.split('').map(x=>x+x).join(''):v.padEnd(6,'f').slice(0,6);
+    const n=parseInt(full,16); if(Number.isNaN(n))return `rgba(255,255,255,${opacity})`; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${opacity})`;
+  }
+  function dtApplyVisualStrength(card){
+    if(!card)return; const bgO=Math.max(0,Math.min(100,Number(dtSettings.bgOpacity??100)))/100; const borderO=Math.max(0,Math.min(100,Number(dtSettings.borderOpacity??100)))/100; const textO=Math.max(.2,Math.min(1,Number(dtSettings.textOpacity??100)/100));
+    if(dtSettings.appearanceMode==='custom' && dtSettings.cardStyle!=='none')card.style.background=dtHexToRgba(dtSettings.bg,bgO);
+    if(dtSettings.borderStyle!=='none'){card.style.borderWidth=Math.max(0,Number(dtSettings.borderWidth??1))+'px';card.style.borderColor=dtHexToRgba(dtSettings.borderColor,borderO);}
+    card.querySelectorAll('.cf-dt-sidebar-time,.cf-dt-sidebar-date,.cf-dt-sidebar-day,.cf-dt-topbar-time,.cf-dt-topbar-date,.cf-dt-topbar-day,.dt-live-time,.dt-live-date,.dt-live-day').forEach(x=>x.style.opacity=String(textO));
+    const blur=Math.max(0,Number(dtSettings.blur??14)); card.style.backdropFilter=blur?`blur(${blur}px) saturate(135%)`:'none'; card.style.webkitBackdropFilter=card.style.backdropFilter;
   }
   function dtSetAnalog(el,d,variant){
     if(!el)return;
@@ -2064,6 +2094,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
       if(dtSettings.cardStyle==='none'){card.style.background='transparent';card.style.border='0';card.style.boxShadow='none'}
       dtApplyStyle(card,icon,time,date,day,d,false);
       dtApplyLinkedAppearance(card);
+      dtApplyVisualStrength(card);
     }
     if(stage){
       stage.style.alignItems=dtSettings.vPos==='middle'?'center':dtSettings.vPos==='bottom'?'flex-end':'flex-start';
@@ -2077,9 +2108,10 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
   function setDtControls(){
     const bools={dtShowTime:'showTime',dtShowDate:'showDate',dtShowDay:'showDay',dtShowSeconds:'showSeconds',dtShowAmPm:'showAmPm',dtLocSidebar:'locSidebar',dtLocDashboard:'locDashboard',dtLocTopbar:'locTopbar'};
     Object.entries(bools).forEach(([id,key])=>{const e=dtById(id);if(e)e.checked=!!dtSettings[key]});
-    const vals={dtTimeFormat:'timeFormat',dtDateFormat:'dateFormat',dtDayFormat:'dayFormat',dtTimeSep:'timeSep',dtDateSep:'dateSep',dtTimeSource:'timeSource',dtTimeZone:'timeZone',dtBlink:'blink',dtLayout:'layout',dtClockStyle:'clockStyle',dtAlign:'align',dtVPos:'vPos',dtAppearanceMode:'appearanceMode',dtCardStyle:'cardStyle',dtBg:'bg',dtBorderStyle:'borderStyle',dtBorderColor:'borderColor',dtWidth:'width',dtHeight:'height',dtRadius:'radius',dtShadow:'shadow',dtTimeSize:'timeSize',dtDateSize:'dateSize',dtDaySize:'daySize',dtTextColor:'textColor'};
+    const vals={dtTimeFormat:'timeFormat',dtDateFormat:'dateFormat',dtDayFormat:'dayFormat',dtTimeSep:'timeSep',dtDateSep:'dateSep',dtTimeSource:'timeSource',dtTimeZone:'timeZone',dtBlink:'blink',dtLayout:'layout',dtClockStyle:'clockStyle',dtAlign:'align',dtVPos:'vPos',dtAppearanceMode:'appearanceMode',dtCardStyle:'cardStyle',dtBg:'bg',dtBorderStyle:'borderStyle',dtBorderColor:'borderColor',dtWidth:'width',dtHeight:'height',dtRadius:'radius',dtShadow:'shadow',dtTimeSize:'timeSize',dtDateSize:'dateSize',dtDaySize:'daySize',dtTextColor:'textColor',dtBorderWidth:'borderWidth',dtBgOpacity:'bgOpacity',dtBorderOpacity:'borderOpacity',dtTextOpacity:'textOpacity',dtBlur:'blur'};
     Object.entries(vals).forEach(([id,key])=>{const e=dtById(id);if(e)e.value=dtSettings[key]});
-    [['dtWidthValue','width'],['dtHeightValue','height'],['dtRadiusValue','radius'],['dtTimeSizeValue','timeSize'],['dtDateSizeValue','dateSize'],['dtDaySizeValue','daySize']].forEach(([id,key])=>{const e=dtById(id);if(e)e.textContent=dtSettings[key]+' px'});
+    [['dtWidthValue','width'],['dtHeightValue','height'],['dtRadiusValue','radius'],['dtTimeSizeValue','timeSize'],['dtDateSizeValue','dateSize'],['dtDaySizeValue','daySize'],['dtBorderWidthValue','borderWidth'],['dtBlurValue','blur']].forEach(([id,key])=>{const e=dtById(id);if(e)e.textContent=dtSettings[key]+' px'});
+    [['dtBgOpacityValue','bgOpacity'],['dtBorderOpacityValue','borderOpacity'],['dtTextOpacityValue','textOpacity']].forEach(([id,key])=>{const e=dtById(id);if(e)e.textContent=dtSettings[key]+'%'});
     document.querySelectorAll('[data-dt-style]').forEach(b=>b.classList.toggle('active',b.dataset.dtStyle===dtSettings.style));
     document.querySelectorAll('[data-dt-target]').forEach(b=>b.classList.toggle('active',b.dataset.dtTarget===dtSettings.target));
     document.querySelectorAll('[data-dt-design]').forEach(b=>b.classList.toggle('active',b.dataset.dtDesign===dtSettings.target));
@@ -2095,14 +2127,15 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     Object.entries(bools).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=!!e.checked});
     const vals={dtTimeFormat:'timeFormat',dtDateFormat:'dateFormat',dtDayFormat:'dayFormat',dtTimeSep:'timeSep',dtDateSep:'dateSep',dtTimeSource:'timeSource',dtTimeZone:'timeZone',dtBlink:'blink',dtLayout:'layout',dtClockStyle:'clockStyle',dtAlign:'align',dtVPos:'vPos',dtAppearanceMode:'appearanceMode',dtCardStyle:'cardStyle',dtBg:'bg',dtBorderStyle:'borderStyle',dtBorderColor:'borderColor',dtShadow:'shadow',dtTextColor:'textColor'};
     Object.entries(vals).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=e.value});
-    const nums={dtWidth:'width',dtHeight:'height',dtRadius:'radius',dtTimeSize:'timeSize',dtDateSize:'dateSize',dtDaySize:'daySize'};
+    const nums={dtWidth:'width',dtHeight:'height',dtRadius:'radius',dtTimeSize:'timeSize',dtDateSize:'dateSize',dtDaySize:'daySize',dtBorderWidth:'borderWidth',dtBgOpacity:'bgOpacity',dtBorderOpacity:'borderOpacity',dtTextOpacity:'textOpacity',dtBlur:'blur'};
     Object.entries(nums).forEach(([id,key])=>{const e=dtById(id);if(e)dtSettings[key]=Number(e.value)});
     dtSettings.style=dtSettings.clockStyle||dtSettings.style;
-    const s=dtById('datetimeSaveState');if(s){s.textContent='Unsaved';s.style.color='#9a6812'}
+    dtCaptureDesign(); dtStore();
+    const s=dtById('datetimeSaveState');if(s){s.textContent='Saved';s.style.color='#16834f'}
     setDtControls();
   }
 
-  ['dtShowTime','dtShowDate','dtShowDay','dtShowSeconds','dtShowAmPm','dtLocSidebar','dtLocDashboard','dtLocTopbar','dtTimeFormat','dtDateFormat','dtDayFormat','dtTimeSep','dtDateSep','dtTimeSource','dtTimeZone','dtBlink','dtLayout','dtClockStyle','dtAlign','dtVPos','dtAppearanceMode','dtCardStyle','dtBg','dtBorderStyle','dtBorderColor','dtWidth','dtHeight','dtRadius','dtShadow','dtTimeSize','dtDateSize','dtDaySize','dtTextColor'].forEach(id=>{
+  ['dtShowTime','dtShowDate','dtShowDay','dtShowSeconds','dtShowAmPm','dtLocSidebar','dtLocDashboard','dtLocTopbar','dtTimeFormat','dtDateFormat','dtDayFormat','dtTimeSep','dtDateSep','dtTimeSource','dtTimeZone','dtBlink','dtLayout','dtClockStyle','dtAlign','dtVPos','dtAppearanceMode','dtCardStyle','dtBg','dtBorderStyle','dtBorderColor','dtBorderWidth','dtBgOpacity','dtBorderOpacity','dtTextOpacity','dtBlur','dtWidth','dtHeight','dtRadius','dtShadow','dtTimeSize','dtDateSize','dtDaySize','dtTextColor'].forEach(id=>{
     dtById(id)?.addEventListener('input',readDtControls);
     dtById(id)?.addEventListener('change',readDtControls);
   });
@@ -2110,25 +2143,28 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
   document.querySelectorAll('[data-dt-style]').forEach(btn=>btn.addEventListener('click',()=>{
     dtSettings.style=btn.dataset.dtStyle||'digital-card';
     dtSettings.clockStyle=dtSettings.style;
+    dtCaptureDesign(); dtStore();
     const sel=dtById('dtClockStyle');if(sel && [...sel.options].some(o=>o.value===dtSettings.style))sel.value=dtSettings.style;
-    const s=dtById('datetimeSaveState');if(s){s.textContent='Unsaved';s.style.color='#9a6812'}
+    const s=dtById('datetimeSaveState');if(s){s.textContent='Saved';s.style.color='#16834f'}
     setDtControls();
   }));
   document.querySelectorAll('[data-dt-target],[data-dt-design]').forEach(btn=>btn.addEventListener('click',()=>{
+    dtCaptureDesign(dtSettings.target);
     dtSettings.target=btn.dataset.dtTarget||btn.dataset.dtDesign||'expanded';
-    const s=dtById('datetimeSaveState');if(s){s.textContent='Unsaved';s.style.color='#9a6812'}
+    dtApplyDesign(dtSettings.target); dtStore();
+    const s=dtById('datetimeSaveState');if(s){s.textContent='Saved';s.style.color='#16834f'}
     setDtControls();
   }));
 
   dtById('dtSaveBtn')?.addEventListener('click',()=>{
-    localStorage.setItem('coreflow.timeDateStudio.base',JSON.stringify(dtSettings));
+    dtCaptureDesign(); dtStore();
     renderDtSidebar();
     renderDtTopbar();
     const s=dtById('datetimeSaveState');if(s){s.textContent='Saved';s.style.color='#16834f'}
   });
   dtById('dtResetBtn')?.addEventListener('click',()=>{
     dtSettings={...DT_DEFAULTS};
-    localStorage.setItem('coreflow.timeDateStudio.base',JSON.stringify(dtSettings));
+    dtDesigns={expanded:dtDesignDefaults(),collapsed:dtDesignDefaults(),dashboard:dtDesignDefaults(),topbar:dtDesignDefaults()}; dtApplyDesign('expanded'); dtStore();
     setDtControls();
     renderDtSidebar();
     renderDtTopbar();
@@ -2170,7 +2206,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     const sep=dtSettings.timeSep||':';
     return `${dtPad(h)}${sep}${dtPad(d.getMinutes())}${suffix}`;
   }
-  function renderDtSidebar(){
+  function renderDtSidebarCore(){
     if(inPreview || !desktopSidebar) return;
     const host=dtEnsureSidebarHost();
     if(!host) return;
@@ -2213,6 +2249,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     if(dtSettings.cardStyle==='none'){card.style.background='transparent';card.style.border='0';card.style.boxShadow='none';}
     dtApplyStyle(card,icon,time,date,day,d,collapsed);
     dtApplyLinkedAppearance(card);
+    dtApplyVisualStrength(card);
     icon.style.fontSize=collapsed?'13px':Math.max(15,Math.min(28,Math.round((Number(dtSettings.timeSize)||32)*.7)))+'px';
     time.style.fontSize=collapsed?'9px':Math.max(12,Math.min(30,Number(dtSettings.timeSize)||32))+'px';
     date.style.fontSize=collapsed?'7px':Math.max(8,Math.min(18,Number(dtSettings.dateSize)||16))+'px';
@@ -2223,6 +2260,8 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
       copy.style.textAlign=dtSettings.align||'center';
     }
   }
+
+  function renderDtSidebar(){ const target=dtSidebarIsCollapsed()?'collapsed':'expanded'; return dtWithDesign(target,renderDtSidebarCore); }
 
   if(!inPreview && desktopSidebar){
     renderDtSidebar();
@@ -2256,7 +2295,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     }
     return host;
   }
-  function renderDtTopbar(){
+  function renderDtTopbarCore(){
     if(inPreview) return;
     const host=dtEnsureTopbarHost();
     if(!host) return;
@@ -2290,6 +2329,7 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
 
     dtApplyStyle(card,icon,time,date,day,d,true);
     dtApplyLinkedAppearance(card);
+    dtApplyVisualStrength(card);
     icon.style.fontSize='16px';
     time.style.fontSize=Math.max(10,Math.min(16,Math.round((Number(dtSettings.timeSize)||32)*.46)))+'px';
     date.style.fontSize=Math.max(7,Math.min(11,Math.round((Number(dtSettings.dateSize)||16)*.60)))+'px';
@@ -2297,6 +2337,8 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     const copy=host.querySelector('.cf-dt-topbar-copy');
     if(copy){copy.style.alignItems=dtSettings.align==='left'?'flex-start':dtSettings.align==='right'?'flex-end':'center';copy.style.textAlign=dtSettings.align||'center';}
   }
+
+  function renderDtTopbar(){ return dtWithDesign('topbar',renderDtTopbarCore); }
 
   if(!inPreview){
     renderDtTopbar();
