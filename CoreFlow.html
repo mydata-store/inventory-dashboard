@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CoreFlow Design Studio v3.4 — Correct Main Dashboard</title>
+<title>CoreFlow Design Studio v3.5 — Optional Sidebar Auto Hide</title>
 <style>
 :root{
   --bg:#f3f7fb;
@@ -637,13 +637,49 @@ body.design-analytics-blue .global-datetime{color:inherit}
 @media(max-width:760px){.ds-main-art{display:none}.ds-main-actions{position:static;margin-left:auto}.ds-main-hero{align-items:flex-start;gap:12px}.ds-kpis{grid-template-columns:1fr 1fr}.ds-pages-grid{grid-template-columns:1fr}.ds-quick-grid{grid-template-columns:1fr 1fr}.ds-main-note{align-items:flex-start;flex-direction:column}}
 </style>
 
+
+<style id="v35-sidebar-autohide">
+/* Shared optional Sidebar Auto Hide */
+#sidebarAutoHide{height:32px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);font-size:9px;padding:0 8px;min-width:170px}
+body.cf-sidebar-autohide .sidebar{
+  width:58px !important;
+  transition:width .22s ease,box-shadow .22s ease !important;
+  overflow-x:hidden;
+  z-index:80;
+}
+body.cf-sidebar-autohide .sidebar:hover{width:var(--studio-sidebar-w,205px) !important;box-shadow:10px 0 28px rgba(32,75,112,.13)}
+body.cf-sidebar-autohide .main{margin-left:58px !important;transition:margin-left .22s ease}
+body.cf-sidebar-autohide .sidebar .brand-copy,
+body.cf-sidebar-autohide .sidebar .section-title,
+body.cf-sidebar-autohide .sidebar .nav-label,
+body.cf-sidebar-autohide .sidebar .menu-text,
+body.cf-sidebar-autohide .sidebar .global-datetime{
+  opacity:0;visibility:hidden;white-space:nowrap;transition:opacity .12s ease;
+}
+body.cf-sidebar-autohide .sidebar:hover .brand-copy,
+body.cf-sidebar-autohide .sidebar:hover .section-title,
+body.cf-sidebar-autohide .sidebar:hover .nav-label,
+body.cf-sidebar-autohide .sidebar:hover .menu-text,
+body.cf-sidebar-autohide .sidebar:hover .global-datetime{
+  opacity:1;visibility:visible;transition-delay:.08s;
+}
+body.cf-sidebar-autohide .sidebar .nav-item,
+body.cf-sidebar-autohide .sidebar a{white-space:nowrap}
+body.cf-sidebar-autohide .sidebar:hover .nav-item,
+body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
+@media(max-width:760px){
+  body.cf-sidebar-autohide .sidebar{width:var(--studio-sidebar-w,205px)!important}
+  body.cf-sidebar-autohide .main{margin-left:0!important}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
       <div class="logo">CF</div>
-      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.4</p></div>
+      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.5</p></div>
     </div>
     <div class="nav-title">Design Studio</div>
     <a class="nav-item workspace-home active" href="#studio" data-shared-page="home"><span class="nav-dot"></span>Design Studio</a>
@@ -905,6 +941,13 @@ body.design-analytics-blue .global-datetime{color:inherit}
                     <option value="center">Center</option>
                   </select>
                 </label>
+                <label class="sidebar-control">
+                  <span><b>Auto Hide Sidebar</b><small id="sidebarAutoHideValue">Off</small></span>
+                  <select id="sidebarAutoHide">
+                    <option value="off">Off — Keep Expanded</option>
+                    <option value="on">On — Expand on Hover</option>
+                  </select>
+                </label>
               </div>
 
               <div class="sidebar-studio-actions">
@@ -1062,7 +1105,7 @@ body.design-analytics-blue .global-datetime{color:inherit}
   <aside class="mobile-drawer">
     <div class="brand">
       <div class="logo">CF</div>
-      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.4</p></div>
+      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.5</p></div>
     </div>
     <div class="nav-title">Design Studio</div>
     <a class="nav-item workspace-home active" href="#studio" data-shared-page="home"><span class="nav-dot"></span>Design Studio</a>
@@ -2048,6 +2091,38 @@ body.design-analytics-blue.design-default-original .analytics-nav-item.active{
       }
     }
   });
+})();
+</script>
+
+
+<script id="v35-sidebar-autohide-js">
+(function(){
+  const KEY='coreflow.sidebarStudio';
+  const select=document.getElementById('sidebarAutoHide');
+  const state=document.getElementById('sidebarAutoHideValue');
+
+  function load(){
+    let saved={};
+    try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+    const value=saved.autoHide==='on'?'on':'off';
+    if(select) select.value=value;
+    apply(value,false);
+  }
+  function apply(value,save){
+    const on=value==='on';
+    document.body.classList.toggle('cf-sidebar-autohide',on);
+    if(state) state.textContent=on?'On':'Off';
+    if(save){
+      let saved={};
+      try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+      saved.autoHide=value;
+      localStorage.setItem(KEY,JSON.stringify(saved));
+      const saveState=document.querySelector('#sidebarStudioWorkspace .studio-save-state');
+      if(saveState){saveState.textContent='Saved';saveState.style.color='#16834f'}
+    }
+  }
+  select?.addEventListener('change',()=>apply(select.value,true));
+  load();
 })();
 </script>
 
