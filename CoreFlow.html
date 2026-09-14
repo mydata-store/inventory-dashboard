@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CoreFlow Design Studio v3.5 — Optional Sidebar Auto Hide</title>
+<title>CoreFlow Design Studio v3.7 — Stable Complete Sidebar Studio</title>
 <style>
 :root{
   --bg:#f3f7fb;
@@ -638,38 +638,132 @@ body.design-analytics-blue .global-datetime{color:inherit}
 </style>
 
 
-<style id="v35-sidebar-autohide">
-/* Shared optional Sidebar Auto Hide */
-#sidebarAutoHide{height:32px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);font-size:9px;padding:0 8px;min-width:170px}
+
+
+<style id="v37-complete-sidebar-controls">
+:root{
+  --cf-collapsed-w:58px;
+  --cf-sidebar-motion:220ms;
+  --cf-expanded-icon-size:14px;
+  --cf-collapsed-icon-size:18px;
+  --cf-collapsed-justify:center;
+}
+#sidebarAutoHide,#sidebarExpandMode,#sidebarCollapsedAlign,#sidebarCollapsedTooltip,
+#sidebarSameIcons,#sidebarExpandedIconSet,#sidebarCollapsedIconSet,#sidebarActiveIconStyle{
+  height:32px;min-width:170px;border:1px solid var(--border);border-radius:7px;
+  background:var(--surface);color:var(--text);font-size:9px;padding:0 8px
+}
+.sidebar-control-divider{
+  grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 11px;margin-top:2px;border:1px dashed var(--border);border-radius:9px;
+  background:linear-gradient(90deg,var(--primary-soft),var(--surface-soft))
+}
+.sidebar-control-divider b{display:block;font-size:10px}
+.sidebar-control-divider small{display:block;margin-top:2px;font-size:8px;color:var(--muted)}
+.sidebar-control-divider>span{font-size:8px;font-weight:800;color:var(--primary);padding:5px 8px;
+  border:1px solid var(--border);background:var(--surface);border-radius:999px;white-space:nowrap}
+.collapsed-option,.collapsed-icon-option{transition:opacity .15s ease,filter .15s ease}
+.collapsed-option.cf-control-disabled,.collapsed-icon-option.cf-control-disabled{opacity:.42;filter:saturate(.45)}
+.collapsed-option.cf-control-disabled input,.collapsed-option.cf-control-disabled select,
+.collapsed-icon-option.cf-control-disabled input,.collapsed-icon-option.cf-control-disabled select{pointer-events:none}
+
+.cf-menu-icon{width:22px;min-width:22px;height:22px;display:inline-grid;place-items:center;
+  font-size:var(--cf-expanded-icon-size);line-height:1;transition:all .16s ease}
+.cf-menu-label{white-space:nowrap}
+.cf-normalized-nav:before{display:none!important;content:none!important}
+body.cf-icon-soft-box .cf-normalized-nav.active .cf-menu-icon{
+  background:color-mix(in srgb,currentColor 14%,transparent);border-radius:6px
+}
+body.cf-icon-circle .cf-normalized-nav.active .cf-menu-icon{
+  background:color-mix(in srgb,currentColor 14%,transparent);border-radius:50%
+}
+
+/* Auto-hide OFF = normal approved sidebar. */
+body:not(.cf-sidebar-autohide) .app,
+body:not(.cf-sidebar-autohide).design-analytics-blue .app{
+  grid-template-columns:var(--studio-sidebar-w) minmax(0,1fr)!important
+}
+
+/* Auto-hide ON: collapsed track. */
+body.cf-sidebar-autohide .app,
+body.cf-sidebar-autohide.design-analytics-blue .app{
+  grid-template-columns:var(--cf-collapsed-w) minmax(0,1fr)!important;
+  transition:grid-template-columns var(--cf-sidebar-motion) ease!important
+}
 body.cf-sidebar-autohide .sidebar{
-  width:58px !important;
-  transition:width .22s ease,box-shadow .22s ease !important;
-  overflow-x:hidden;
-  z-index:80;
+  width:var(--cf-collapsed-w)!important;min-width:var(--cf-collapsed-w)!important;
+  overflow:visible!important;z-index:70;
+  transition:width var(--cf-sidebar-motion) ease,min-width var(--cf-sidebar-motion) ease,
+             box-shadow var(--cf-sidebar-motion) ease!important
 }
-body.cf-sidebar-autohide .sidebar:hover{width:var(--studio-sidebar-w,205px) !important;box-shadow:10px 0 28px rgba(32,75,112,.13)}
-body.cf-sidebar-autohide .main{margin-left:58px !important;transition:margin-left .22s ease}
-body.cf-sidebar-autohide .sidebar .brand-copy,
-body.cf-sidebar-autohide .sidebar .section-title,
-body.cf-sidebar-autohide .sidebar .nav-label,
-body.cf-sidebar-autohide .sidebar .menu-text,
-body.cf-sidebar-autohide .sidebar .global-datetime{
-  opacity:0;visibility:hidden;white-space:nowrap;transition:opacity .12s ease;
+body.cf-sidebar-autohide.cf-sidebar-expanded .sidebar{
+  width:var(--studio-sidebar-w)!important;min-width:var(--studio-sidebar-w)!important;
+  box-shadow:10px 0 28px rgba(32,75,112,.15)
 }
-body.cf-sidebar-autohide .sidebar:hover .brand-copy,
-body.cf-sidebar-autohide .sidebar:hover .section-title,
-body.cf-sidebar-autohide .sidebar:hover .nav-label,
-body.cf-sidebar-autohide .sidebar:hover .menu-text,
-body.cf-sidebar-autohide .sidebar:hover .global-datetime{
-  opacity:1;visibility:visible;transition-delay:.08s;
+body.cf-sidebar-autohide.cf-sidebar-push.cf-sidebar-expanded .app,
+body.cf-sidebar-autohide.cf-sidebar-push.cf-sidebar-expanded.design-analytics-blue .app{
+  grid-template-columns:var(--studio-sidebar-w) minmax(0,1fr)!important
 }
-body.cf-sidebar-autohide .sidebar .nav-item,
-body.cf-sidebar-autohide .sidebar a{white-space:nowrap}
-body.cf-sidebar-autohide .sidebar:hover .nav-item,
-body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
+
+/* Hide only the text portions in collapsed state. */
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .brand>div:not(.logo),
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .nav-title,
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .analytics-nav-title,
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .cf-menu-label,
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .global-datetime{
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important
+}
+body.cf-sidebar-autohide .sidebar .brand>div:not(.logo),
+body.cf-sidebar-autohide .sidebar .nav-title,
+body.cf-sidebar-autohide .sidebar .analytics-nav-title,
+body.cf-sidebar-autohide .sidebar .cf-menu-label,
+body.cf-sidebar-autohide .sidebar .global-datetime{transition:opacity calc(var(--cf-sidebar-motion) * .55) ease}
+
+/* Collapsed geometry and separate icon size. */
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .brand{
+  justify-content:var(--cf-collapsed-justify)!important;padding-left:0!important;padding-right:0!important;gap:0!important
+}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .logo{margin:0!important;flex:0 0 auto}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .cf-normalized-nav{
+  justify-content:var(--cf-collapsed-justify)!important;gap:0!important;padding-left:8px!important;padding-right:8px!important;
+  position:relative;overflow:visible!important
+}
+body.cf-sidebar-autohide:not(.cf-sidebar-expanded) .sidebar .cf-menu-icon{
+  font-size:var(--cf-collapsed-icon-size)!important;width:28px;min-width:28px;height:28px
+}
+
+/* Tooltip only while collapsed. */
+body.cf-sidebar-autohide.cf-sidebar-tooltip:not(.cf-sidebar-expanded)
+.sidebar .cf-normalized-nav[data-cf-tooltip]:hover:after{
+  content:attr(data-cf-tooltip);position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);
+  z-index:999;white-space:nowrap;padding:6px 8px;border-radius:6px;background:#17324d;color:#fff;
+  font-size:9px;font-weight:700;line-height:1;box-shadow:0 6px 18px rgba(16,42,66,.22);pointer-events:none
+}
+
+/* Live preview uses the selected collapsed width when Auto Hide is ON. */
+.sidebar-preview-shell.cf-preview-auto{
+  grid-template-columns:var(--cf-collapsed-w) 1fr!important;
+  transition:grid-template-columns var(--cf-sidebar-motion) ease
+}
+.sidebar-preview-shell.cf-preview-auto .sidebar-preview-side{overflow:hidden!important}
+.sidebar-preview-shell.cf-preview-auto .sp-brand>div,
+.sidebar-preview-shell.cf-preview-auto .sp-title,
+.sidebar-preview-shell.cf-preview-auto .sp-item span{opacity:0;visibility:hidden}
+.sidebar-preview-shell.cf-preview-auto .sp-item{
+  justify-content:var(--cf-collapsed-justify)!important;white-space:nowrap
+}
+.sidebar-preview-shell.cf-preview-auto.cf-preview-expanded{
+  grid-template-columns:var(--studio-sidebar-w) 1fr!important
+}
+.sidebar-preview-shell.cf-preview-auto.cf-preview-expanded .sp-brand>div,
+.sidebar-preview-shell.cf-preview-auto.cf-preview-expanded .sp-title,
+.sidebar-preview-shell.cf-preview-auto.cf-preview-expanded .sp-item span{opacity:1;visibility:visible}
+
 @media(max-width:760px){
-  body.cf-sidebar-autohide .sidebar{width:var(--studio-sidebar-w,205px)!important}
-  body.cf-sidebar-autohide .main{margin-left:0!important}
+  body.cf-sidebar-autohide .app,
+  body.cf-sidebar-autohide.cf-sidebar-push.cf-sidebar-expanded .app{display:block!important}
+  body.cf-sidebar-autohide .sidebar{display:none!important}
+  .sidebar-control-divider{align-items:flex-start;flex-direction:column}
 }
 </style>
 
@@ -679,10 +773,10 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
   <aside class="sidebar">
     <div class="brand">
       <div class="logo">CF</div>
-      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.5</p></div>
+      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.7</p></div>
     </div>
     <div class="nav-title">Design Studio</div>
-    <a class="nav-item workspace-home active" href="#studio" data-shared-page="home"><span class="nav-dot"></span>Design Studio</a>
+    <a class="nav-item workspace-home active cf-normalized-nav" href="#studio" data-shared-page="home"><span class="cf-menu-icon">◆</span><span class="cf-menu-label">Design Studio</span></a>
   </aside>
 
   <main class="main">
@@ -945,7 +1039,110 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
                   <span><b>Auto Hide Sidebar</b><small id="sidebarAutoHideValue">Off</small></span>
                   <select id="sidebarAutoHide">
                     <option value="off">Off — Keep Expanded</option>
-                    <option value="on">On — Expand on Hover</option>
+                    <option value="on">On — Collapse + Expand on Hover</option>
+                  </select>
+                </label>
+
+                <div class="sidebar-control-divider">
+                  <div><b>Collapsed Sidebar &amp; Motion</b><small>These settings work when Auto Hide is On.</small></div>
+                  <span id="collapsedControlsStatus">Auto Hide Off</span>
+                </div>
+
+                <label class="sidebar-control collapsed-option">
+                  <span><b>Collapsed Width</b><small id="sidebarCollapsedWidthValue">58 px</small></span>
+                  <input id="sidebarCollapsedWidth" type="range" min="44" max="96" step="2" value="58">
+                </label>
+
+                <label class="sidebar-control collapsed-option">
+                  <span><b>Open / Close Speed</b><small id="sidebarMotionSpeedValue">220 ms</small></span>
+                  <input id="sidebarMotionSpeed" type="range" min="100" max="700" step="20" value="220">
+                </label>
+
+                <label class="sidebar-control collapsed-option">
+                  <span><b>Hover Open Delay</b><small id="sidebarOpenDelayValue">80 ms</small></span>
+                  <input id="sidebarOpenDelay" type="range" min="0" max="600" step="20" value="80">
+                </label>
+
+                <label class="sidebar-control collapsed-option">
+                  <span><b>Mouse-out Close Delay</b><small id="sidebarCloseDelayValue">180 ms</small></span>
+                  <input id="sidebarCloseDelay" type="range" min="0" max="1000" step="20" value="180">
+                </label>
+
+                <label class="sidebar-control collapsed-option">
+                  <span><b>Expand Behavior</b><small>Page movement</small></span>
+                  <select id="sidebarExpandMode">
+                    <option value="overlay">Overlay Content</option>
+                    <option value="push">Push Content</option>
+                  </select>
+                </label>
+
+                <label class="sidebar-control collapsed-option">
+                  <span><b>Collapsed Alignment</b><small>Icon position</small></span>
+                  <select id="sidebarCollapsedAlign">
+                    <option value="center">Center</option>
+                    <option value="left">Left</option>
+                  </select>
+                </label>
+
+                <label class="sidebar-control collapsed-option">
+                  <span><b>Collapsed Tooltips</b><small>Menu name on icon hover</small></span>
+                  <select id="sidebarCollapsedTooltip">
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                  </select>
+                </label>
+
+                <div class="sidebar-control-divider">
+                  <div><b>Expanded &amp; Collapsed Icon Sets</b><small>Use the same icons or a separate set for collapsed mode.</small></div>
+                  <span>Shared</span>
+                </div>
+
+                <label class="sidebar-control">
+                  <span><b>Use Same Icons</b><small id="sidebarSameIconsValue">Off</small></span>
+                  <select id="sidebarSameIcons">
+                    <option value="off">Off — Separate Sets</option>
+                    <option value="on">On — Same Set</option>
+                  </select>
+                </label>
+
+                <label class="sidebar-control">
+                  <span><b>Expanded Icon Set</b><small>Full sidebar</small></span>
+                  <select id="sidebarExpandedIconSet">
+                    <option value="diamond">Diamond</option>
+                    <option value="circle">Circle</option>
+                    <option value="square">Square</option>
+                    <option value="arrow">Arrow</option>
+                    <option value="grid">Grid</option>
+                  </select>
+                </label>
+
+                <label class="sidebar-control collapsed-icon-option">
+                  <span><b>Collapsed Icon Set</b><small>Collapsed bar</small></span>
+                  <select id="sidebarCollapsedIconSet">
+                    <option value="grid">Grid</option>
+                    <option value="diamond">Diamond</option>
+                    <option value="circle">Circle</option>
+                    <option value="menu">Menu</option>
+                    <option value="square">Square</option>
+                  </select>
+                </label>
+
+                <label class="sidebar-control">
+                  <span><b>Expanded Icon Size</b><small id="sidebarExpandedIconSizeValue">14 px</small></span>
+                  <input id="sidebarExpandedIconSize" type="range" min="10" max="26" step="1" value="14">
+                </label>
+
+                <label class="sidebar-control collapsed-option collapsed-icon-option">
+                  <span><b>Collapsed Icon Size</b><small id="sidebarCollapsedIconSizeValue">18 px</small></span>
+                  <input id="sidebarCollapsedIconSize" type="range" min="11" max="30" step="1" value="18">
+                </label>
+
+                <label class="sidebar-control">
+                  <span><b>Active Icon Style</b><small>Selected menu</small></span>
+                  <select id="sidebarActiveIconStyle">
+                    <option value="plain">Plain</option>
+                    <option value="soft-box">Soft Box</option>
+                    <option value="circle">Circle Badge</option>
                   </select>
                 </label>
               </div>
@@ -1105,7 +1302,7 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
   <aside class="mobile-drawer">
     <div class="brand">
       <div class="logo">CF</div>
-      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.5</p></div>
+      <div><h1>CoreFlow Design Studio</h1><p>CoreFlow v3.7</p></div>
     </div>
     <div class="nav-title">Design Studio</div>
     <a class="nav-item workspace-home active" href="#studio" data-shared-page="home"><span class="nav-dot"></span>Design Studio</a>
@@ -1302,7 +1499,7 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
     if(!desktopSidebar)return;
     desktopSidebar.innerHTML=`<div class="brand"><div class="logo">CF</div><div><h1>CoreFlow Design Studio</h1><p>Analytics Blue</p></div></div>
     <div class="analytics-nav-title">Design Studio</div>
-    <a class="analytics-nav-item active" href="#studio" data-ab-home data-shared-page="home">Design Studio</a>`;
+    <a class="analytics-nav-item active cf-normalized-nav" href="#studio" data-ab-home data-shared-page="home"><span class="cf-menu-icon">◆</span><span class="cf-menu-label">Design Studio</span></a>`;
     bindStudioSidebar();
     applySidebarSettingsToUI();
   }
@@ -1310,7 +1507,7 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
     if(!desktopSidebar)return;
     desktopSidebar.innerHTML=`<div class="brand"><div class="logo">CF</div><div><h1>CoreFlow Design Studio</h1><p>Modern Light</p></div></div>
     <div class="nav-title">Design Studio</div>
-    <a class="nav-item workspace-home active" href="#studio" data-shared-page="home"><span class="nav-dot"></span>Design Studio</a>`;
+    <a class="nav-item workspace-home active cf-normalized-nav" href="#studio" data-shared-page="home"><span class="cf-menu-icon">◆</span><span class="cf-menu-label">Design Studio</span></a>`;
     desktopSidebar.querySelectorAll('.workspace-home').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showAnalyticsHome()}));
     applySidebarSettingsToUI();
   }
@@ -1536,9 +1733,35 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
   document.getElementById('sidebarStudioBack')?.addEventListener('click',showAnalyticsHome);
 
   /* Shared Sidebar Studio settings */
-  const SIDEBAR_DEFAULTS={width:205,row:42,text:12,gap:6,radius:8,align:'left'};
+  const SIDEBAR_DEFAULTS={
+    width:205,row:42,text:12,gap:6,radius:8,align:'left',
+    autoHide:'off',collapsedWidth:58,motionSpeed:220,openDelay:80,closeDelay:180,
+    expandMode:'overlay',collapsedAlign:'center',collapsedTooltip:'on',
+    sameIcons:'off',expandedIconSet:'diamond',collapsedIconSet:'grid',
+    expandedIconSize:14,collapsedIconSize:18,activeIconStyle:'plain'
+  };
   let sidebarSettings={...SIDEBAR_DEFAULTS};
   try{sidebarSettings={...SIDEBAR_DEFAULTS,...JSON.parse(localStorage.getItem('coreflow.sidebarStudio')||'{}')}}catch(e){}
+
+  let sidebarOpenTimer=null,sidebarCloseTimer=null;
+
+  function sidebarIconChar(set){
+    return ({diamond:'◆',circle:'●',square:'■',arrow:'▶',grid:'▦',menu:'☰'})[set]||'◆';
+  }
+
+  function refreshSidebarIcons(){
+    const collapsed=document.body.classList.contains('cf-sidebar-autohide') &&
+                    !document.body.classList.contains('cf-sidebar-expanded');
+    const set=collapsed && sidebarSettings.sameIcons!=='on'
+      ? sidebarSettings.collapsedIconSet
+      : sidebarSettings.expandedIconSet;
+    const icon=sidebarIconChar(set);
+    document.querySelectorAll('.app > .sidebar .cf-menu-icon').forEach(el=>el.textContent=icon);
+    document.querySelectorAll('.app > .sidebar .cf-normalized-nav').forEach(el=>{
+      const label=el.querySelector('.cf-menu-label')?.textContent?.trim()||'Menu';
+      el.dataset.cfTooltip=label;
+    });
+  }
 
   function applySidebarSettingsToUI(){
     const r=document.documentElement.style;
@@ -1548,6 +1771,25 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
     r.setProperty('--studio-sidebar-gap',sidebarSettings.gap+'px');
     r.setProperty('--studio-sidebar-radius',sidebarSettings.radius+'px');
     r.setProperty('--studio-sidebar-align',sidebarSettings.align);
+    r.setProperty('--cf-collapsed-w',sidebarSettings.collapsedWidth+'px');
+    r.setProperty('--cf-sidebar-motion',sidebarSettings.motionSpeed+'ms');
+    r.setProperty('--cf-expanded-icon-size',sidebarSettings.expandedIconSize+'px');
+    r.setProperty('--cf-collapsed-icon-size',sidebarSettings.collapsedIconSize+'px');
+    r.setProperty('--cf-collapsed-justify',sidebarSettings.collapsedAlign==='left'?'flex-start':'center');
+
+    const auto=sidebarSettings.autoHide==='on';
+    document.body.classList.toggle('cf-sidebar-autohide',auto);
+    document.body.classList.toggle('cf-sidebar-push',sidebarSettings.expandMode==='push');
+    document.body.classList.toggle('cf-sidebar-tooltip',sidebarSettings.collapsedTooltip==='on');
+    document.body.classList.toggle('cf-icon-soft-box',sidebarSettings.activeIconStyle==='soft-box');
+    document.body.classList.toggle('cf-icon-circle',sidebarSettings.activeIconStyle==='circle');
+    if(!auto)document.body.classList.remove('cf-sidebar-expanded');
+
+    const preview=document.querySelector('.sidebar-preview-shell');
+    preview?.classList.toggle('cf-preview-auto',auto);
+    if(!auto)preview?.classList.remove('cf-preview-expanded');
+
+    refreshSidebarIcons();
   }
 
   function setSidebarControlValues(){
@@ -1556,14 +1798,37 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
       ['sidebarRowControl','sidebarRowValue','row',' px'],
       ['sidebarTextControl','sidebarTextValue','text',' px'],
       ['sidebarGapControl','sidebarGapValue','gap',' px'],
-      ['sidebarRadiusControl','sidebarRadiusValue','radius',' px']
+      ['sidebarRadiusControl','sidebarRadiusValue','radius',' px'],
+      ['sidebarCollapsedWidth','sidebarCollapsedWidthValue','collapsedWidth',' px'],
+      ['sidebarMotionSpeed','sidebarMotionSpeedValue','motionSpeed',' ms'],
+      ['sidebarOpenDelay','sidebarOpenDelayValue','openDelay',' ms'],
+      ['sidebarCloseDelay','sidebarCloseDelayValue','closeDelay',' ms'],
+      ['sidebarExpandedIconSize','sidebarExpandedIconSizeValue','expandedIconSize',' px'],
+      ['sidebarCollapsedIconSize','sidebarCollapsedIconSizeValue','collapsedIconSize',' px']
     ];
     pairs.forEach(([cid,vid,key,suffix])=>{
       const c=document.getElementById(cid),v=document.getElementById(vid);
       if(c)c.value=sidebarSettings[key];
       if(v)v.textContent=sidebarSettings[key]+suffix;
     });
-    const a=document.getElementById('sidebarAlignControl');if(a)a.value=sidebarSettings.align;
+
+    const selects=[
+      ['sidebarAlignControl','align'],['sidebarAutoHide','autoHide'],
+      ['sidebarExpandMode','expandMode'],['sidebarCollapsedAlign','collapsedAlign'],
+      ['sidebarCollapsedTooltip','collapsedTooltip'],['sidebarSameIcons','sameIcons'],
+      ['sidebarExpandedIconSet','expandedIconSet'],['sidebarCollapsedIconSet','collapsedIconSet'],
+      ['sidebarActiveIconStyle','activeIconStyle']
+    ];
+    selects.forEach(([id,key])=>{const e=document.getElementById(id);if(e)e.value=sidebarSettings[key]});
+
+    const auto=sidebarSettings.autoHide==='on';
+    const same=sidebarSettings.sameIcons==='on';
+    const ah=document.getElementById('sidebarAutoHideValue');if(ah)ah.textContent=auto?'On':'Off';
+    const si=document.getElementById('sidebarSameIconsValue');if(si)si.textContent=same?'On':'Off';
+    const cs=document.getElementById('collapsedControlsStatus');if(cs)cs.textContent=auto?'Auto Hide On':'Auto Hide Off';
+
+    document.querySelectorAll('.collapsed-option').forEach(el=>el.classList.toggle('cf-control-disabled',!auto));
+    document.querySelectorAll('.collapsed-icon-option').forEach(el=>el.classList.toggle('cf-control-disabled',!auto||same));
   }
 
   function updateSidebarPreviewDesign(){
@@ -1572,21 +1837,40 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
   }
 
   function readSidebarControls(){
-    const num=id=>Number(document.getElementById(id)?.value||0);
+    const num=(id,fallback)=>Number(document.getElementById(id)?.value??fallback);
     sidebarSettings={
-      width:num('sidebarWidthControl'),
-      row:num('sidebarRowControl'),
-      text:num('sidebarTextControl'),
-      gap:num('sidebarGapControl'),
-      radius:num('sidebarRadiusControl'),
-      align:document.getElementById('sidebarAlignControl')?.value||'left'
+      width:num('sidebarWidthControl',205),
+      row:num('sidebarRowControl',42),
+      text:num('sidebarTextControl',12),
+      gap:num('sidebarGapControl',6),
+      radius:num('sidebarRadiusControl',8),
+      align:document.getElementById('sidebarAlignControl')?.value||'left',
+      autoHide:document.getElementById('sidebarAutoHide')?.value||'off',
+      collapsedWidth:num('sidebarCollapsedWidth',58),
+      motionSpeed:num('sidebarMotionSpeed',220),
+      openDelay:num('sidebarOpenDelay',80),
+      closeDelay:num('sidebarCloseDelay',180),
+      expandMode:document.getElementById('sidebarExpandMode')?.value||'overlay',
+      collapsedAlign:document.getElementById('sidebarCollapsedAlign')?.value||'center',
+      collapsedTooltip:document.getElementById('sidebarCollapsedTooltip')?.value||'on',
+      sameIcons:document.getElementById('sidebarSameIcons')?.value||'off',
+      expandedIconSet:document.getElementById('sidebarExpandedIconSet')?.value||'diamond',
+      collapsedIconSet:document.getElementById('sidebarCollapsedIconSet')?.value||'grid',
+      expandedIconSize:num('sidebarExpandedIconSize',14),
+      collapsedIconSize:num('sidebarCollapsedIconSize',18),
+      activeIconStyle:document.getElementById('sidebarActiveIconStyle')?.value||'plain'
     };
     applySidebarSettingsToUI();
     setSidebarControlValues();
-    const state=document.getElementById('sidebarSaveState');if(state){state.textContent='Unsaved';state.style.color='#9a6812'}
+    const state=document.getElementById('sidebarSaveState');
+    if(state){state.textContent='Unsaved';state.style.color='#9a6812'}
   }
 
-  ['sidebarWidthControl','sidebarRowControl','sidebarTextControl','sidebarGapControl','sidebarRadiusControl','sidebarAlignControl'].forEach(id=>{
+  ['sidebarWidthControl','sidebarRowControl','sidebarTextControl','sidebarGapControl','sidebarRadiusControl','sidebarAlignControl',
+   'sidebarAutoHide','sidebarCollapsedWidth','sidebarMotionSpeed','sidebarOpenDelay','sidebarCloseDelay',
+   'sidebarExpandMode','sidebarCollapsedAlign','sidebarCollapsedTooltip','sidebarSameIcons',
+   'sidebarExpandedIconSet','sidebarCollapsedIconSet','sidebarExpandedIconSize','sidebarCollapsedIconSize',
+   'sidebarActiveIconStyle'].forEach(id=>{
     document.getElementById(id)?.addEventListener('input',readSidebarControls);
     document.getElementById(id)?.addEventListener('change',readSidebarControls);
   });
@@ -1598,10 +1882,38 @@ body.cf-sidebar-autohide .sidebar:hover a{white-space:normal}
 
   document.getElementById('sidebarResetBtn')?.addEventListener('click',()=>{
     sidebarSettings={...SIDEBAR_DEFAULTS};
+    clearTimeout(sidebarOpenTimer);clearTimeout(sidebarCloseTimer);
+    document.body.classList.remove('cf-sidebar-expanded');
     localStorage.setItem('coreflow.sidebarStudio',JSON.stringify(sidebarSettings));
     applySidebarSettingsToUI();setSidebarControlValues();
     const state=document.getElementById('sidebarSaveState');if(state){state.textContent='Saved';state.style.color='#16834f'}
   });
+
+  function expandSharedSidebar(){
+    if(sidebarSettings.autoHide!=='on')return;
+    clearTimeout(sidebarCloseTimer);clearTimeout(sidebarOpenTimer);
+    sidebarOpenTimer=setTimeout(()=>{
+      document.body.classList.add('cf-sidebar-expanded');
+      refreshSidebarIcons();
+    },sidebarSettings.openDelay);
+  }
+  function collapseSharedSidebar(){
+    if(sidebarSettings.autoHide!=='on')return;
+    clearTimeout(sidebarOpenTimer);clearTimeout(sidebarCloseTimer);
+    sidebarCloseTimer=setTimeout(()=>{
+      document.body.classList.remove('cf-sidebar-expanded');
+      refreshSidebarIcons();
+    },sidebarSettings.closeDelay);
+  }
+
+  desktopSidebar?.addEventListener('mouseenter',expandSharedSidebar);
+  desktopSidebar?.addEventListener('mouseleave',collapseSharedSidebar);
+  desktopSidebar?.addEventListener('focusin',expandSharedSidebar);
+  desktopSidebar?.addEventListener('focusout',e=>{if(!desktopSidebar.contains(e.relatedTarget))collapseSharedSidebar()});
+
+  const sidebarPreviewShell=document.querySelector('.sidebar-preview-shell');
+  sidebarPreviewShell?.addEventListener('mouseenter',()=>{if(sidebarSettings.autoHide==='on')sidebarPreviewShell.classList.add('cf-preview-expanded')});
+  sidebarPreviewShell?.addEventListener('mouseleave',()=>sidebarPreviewShell.classList.remove('cf-preview-expanded'));
 
   applySidebarSettingsToUI();
   setSidebarControlValues();
@@ -2095,36 +2407,6 @@ body.design-analytics-blue.design-default-original .analytics-nav-item.active{
 </script>
 
 
-<script id="v35-sidebar-autohide-js">
-(function(){
-  const KEY='coreflow.sidebarStudio';
-  const select=document.getElementById('sidebarAutoHide');
-  const state=document.getElementById('sidebarAutoHideValue');
-
-  function load(){
-    let saved={};
-    try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
-    const value=saved.autoHide==='on'?'on':'off';
-    if(select) select.value=value;
-    apply(value,false);
-  }
-  function apply(value,save){
-    const on=value==='on';
-    document.body.classList.toggle('cf-sidebar-autohide',on);
-    if(state) state.textContent=on?'On':'Off';
-    if(save){
-      let saved={};
-      try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
-      saved.autoHide=value;
-      localStorage.setItem(KEY,JSON.stringify(saved));
-      const saveState=document.querySelector('#sidebarStudioWorkspace .studio-save-state');
-      if(saveState){saveState.textContent='Saved';saveState.style.color='#16834f'}
-    }
-  }
-  select?.addEventListener('change',()=>apply(select.value,true));
-  load();
-})();
-</script>
 
 </body>
 </html>
