@@ -20,6 +20,39 @@
 .applied-pill{font-size:7px;border:1px solid var(--b);border-radius:999px;padding:4px 7px;background:#f8fcff}
 body.analytics-system{--bg:#e9f0f6;--s:#fff;--p:#f3a43b;--a:#2789e7;--sb:#101820;--b:#cfdce7;--t:#15283b;--m:#718397}
 body.blue-system{--bg:#edf8ff;--s:#fff;--p:#078bc2;--a:#17b8e6;--sb:#07567d;--b:#8fd7f7;--t:#0a4263;--m:#6f8d9e}
+
+/* v1.3 REAL APPLY ENGINE — these styles affect the actual parent CoreFlow document */
+body[data-system-design="Analytics Blue"]{
+ --bg:#e8eef4;--s:#ffffff;--p:#f3a43b;--a:#2789e7;--b:#cbd8e3;--t:#17283a;--m:#6f8190;
+}
+body[data-system-design="Analytics Blue"] .top{background:#fff;border-bottom-color:#d2dde6}
+body[data-system-design="Analytics Blue"] .panel{border-color:#cbd8e3;box-shadow:0 5px 18px rgba(19,40,57,.08)}
+body[data-system-design="Analytics Blue"] .notice{border-left-color:#f3a43b;background:#fff4df}
+body[data-system-design="Analytics Blue"] .btn.p{background:#f3a43b;border-color:#f3a43b;color:#17202a}
+body[data-system-design="Analytics Blue"] .card:hover{border-color:#f3a43b}
+body[data-system-design="Design Studio Blue"]{
+ --bg:#edf8ff;--s:#fff;--p:#078bc2;--a:#17b8e6;--b:#8fd7f7;--t:#0a4263;--m:#6f8d9e;
+}
+body[data-sidebar-design="Analytics Blue"] .side{background:#101820!important}
+body[data-sidebar-design="Analytics Blue"] .nav.on,
+body[data-sidebar-design="Analytics Blue"] .nav:hover{background:#f3a43b!important;color:#17202a!important}
+body[data-sidebar-design="Analytics Blue"] .brand{border-bottom-color:#31404b}
+body[data-sidebar-design="Design Studio Blue"] .side{background:#07567d!important}
+body[data-sidebar-design="Design Studio Blue"] .nav.on,
+body[data-sidebar-design="Design Studio Blue"] .nav:hover{background:#078bc2!important;color:#fff!important}
+
+.main-banner{border:1px solid var(--b);border-radius:11px;padding:15px 17px;margin-bottom:9px;background:linear-gradient(105deg,var(--s),color-mix(in srgb,var(--p) 10%,white));min-height:92px;display:flex;align-items:center}
+.main-banner h2{font-size:19px;margin:2px 0 3px}.main-banner p{font-size:8px;color:var(--m);margin:0}.main-banner .banner-mark{margin-left:auto;font-size:34px;color:var(--p);font-weight:900}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:9px}
+.kpi-card{background:var(--s);border:1px solid var(--b);border-radius:9px;padding:10px;min-height:61px}
+.kpi-card b{font-size:16px;color:var(--p)}.kpi-card strong{display:block;font-size:8px;margin-top:3px}.kpi-card small{font-size:6px;color:var(--m)}
+.page-nav{background:var(--s);border:1px solid var(--b);border-radius:10px;padding:9px;margin-bottom:9px}
+.page-nav-title{font-size:9px;font-weight:900;margin-bottom:7px}.page-nav-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.page-nav-btn{height:48px;border:1px solid var(--b);border-radius:8px;background:#f8fcff;color:var(--t);font-size:8px;font-weight:800;cursor:pointer}
+.page-nav-btn.active{background:var(--p);color:#fff;border-color:var(--p)}
+.target-summary{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}
+.target-chip{font-size:7px;border:1px solid var(--b);border-radius:999px;padding:4px 7px;background:var(--s)}
+@media(max-width:1000px){.kpi-row{grid-template-columns:repeat(2,1fr)}.page-nav-grid{grid-template-columns:repeat(3,1fr)}}
 </style></head><body><div class="app"><aside class="side"><div class="brand">CoreFlow Design System<small>Shared Design Engine v1.0</small></div><div id="navs"></div></aside><main class="main"><header class="top"><h1 id="title">Design Studio Home</h1><div class="acts"><button class="btn" id="rp">Responsive Preview</button><button class="btn" id="save">Save</button><button class="btn p" id="apply">Apply</button></div></header><div class="work"><div class="note">Live Preview changes the draft only. Save stores it. Apply activates the saved configuration for all connected studios.</div><div id="pages"></div></div></main></div><div class="modal" id="modal"><div class="mb"><div class="mh"><b>Responsive Preview</b><span style="margin-left:auto"></span><button class="btn dev" data-d="">Desktop</button><button class="btn dev" data-d="tablet">Tablet</button><button class="btn dev" data-d="mobile">Mobile</button><button class="btn" id="close">Close</button></div><div class="stage"><div class="device" id="device"><iframe id="rframe"></iframe></div></div></div></div><div class="apply-modal" id="applyModal"><div class="apply-box">
 <h3>Apply Design</h3><p id="applyDesignName">Choose where this design should be applied. Apply works immediately; Save Design is not required.</p>
 <div class="apply-mode">
@@ -47,7 +80,15 @@ const applyBtn=document.getElementById('apply');
 const closeBtn=document.getElementById('close');
 const toastEl=document.getElementById('toast');
 navs.innerHTML=items.map(x=>`<button class="nav ${x[0]=='home'?'on':''}" data-id="${x[0]}">${x[1]}</button>`).join('');const studio=items.slice(1,13);function generic(name,n){return `<div class="panel"><h2>${name}</h2><div class="sub">Preview + Apply + Save · shared through the central design engine.</div><div class="gallery">${Array.from({length:n},(_,i)=>`<div class="preset"><b>${name.replace(' Studio','')} ${String(i+1).padStart(2,'0')}</b><small>${i%5==0?'Animated · ':''}Preset design</small><div class="sw"><i style="background:hsl(${i*37%360} 65% 45%)"></i><i style="background:hsl(${(i*37+55)%360} 75% 75%)"></i></div></div>`).join('')}</div></div>`}
-pages.innerHTML=`<section class="page on" id="home"><div class="panel"><h2>One Engine · Separate Studios · Shared Data</h2><div class="sub">Each studio stays inside its own limitation while connected pages read the same applied configuration.</div><div class="grid">${studio.map(x=>`<div class="card" data-go="${x[0]}"><b>${x[1]}</b><p>Independent controls connected to the shared design engine.</p></div>`).join('')}</div></div></section><section class="page" id="gallery"><div class="panel"><h2>Design Gallery</h2><div class="sub">2 basic designs attached as the first base layouts. Import + New Design + Save + Live Preview + Apply.</div><div style="margin-bottom:8px"><button class="btn">Import Design</button> <button class="btn">+ New Design</button></div><div class="designs">
+pages.innerHTML=`<section class="page on" id="home">
+<div class="main-banner"><div><div class="sub" style="margin:0">CORE FLOW DESIGN CONTROL CENTER</div><h2>Welcome to Design Studio</h2><p>Design, customize and control the shared CoreFlow appearance from one connected system.</p></div><div class="banner-mark">CF</div></div>
+<div class="kpi-row"><div class="kpi-card"><b>2</b><strong>BASE DESIGNS</strong><small>Design Studio Blue + Analytics Blue</small></div><div class="kpi-card"><b>11</b><strong>DESIGN STUDIOS</strong><small>Connected to one engine</small></div><div class="kpi-card"><b>4</b><strong>APPLY TARGETS</strong><small>System · Sidebar · Dashboard · Login</small></div><div class="kpi-card"><b>100%</b><strong>SHARED DATA</strong><small>Applied settings persist on reload</small></div></div>
+<div class="page-nav"><div class="page-nav-title">Design Studio Navigation</div><div class="page-nav-grid">${studio.slice(0,5).map(x=>`<button class="page-nav-btn" data-go="${x[0]}">${x[1]}</button>`).join('')}</div></div>
+<div class="panel"><h2>Design Studio Pages</h2><div class="sub">Each studio remains independent while reading the same applied configuration.</div><div class="grid">${studio.map(x=>`<div class="card" data-go="${x[0]}"><b>${x[1]}</b><p>Independent controls connected to the shared design engine.</p></div>`).join('')}</div></div></section><section class="page" id="gallery">
+<div class="main-banner"><div><div class="sub" style="margin:0">DESIGN GALLERY</div><h2>Choose Your CoreFlow Design</h2><p>Select, live preview, save or immediately apply a base design to one or more system areas.</p></div><div class="banner-mark">▦</div></div>
+<div class="kpi-row"><div class="kpi-card"><b>2</b><strong>AVAILABLE DESIGNS</strong><small>Base designs in gallery</small></div><div class="kpi-card"><b id="appliedCount">1</b><strong>APPLIED DESIGNS</strong><small>Currently used across targets</small></div><div class="kpi-card"><b id="savedCount">0</b><strong>SAVED DESIGNS</strong><small>Your saved gallery presets</small></div><div class="kpi-card"><b>4</b><strong>APPLY AREAS</strong><small>System · Sidebar · Dashboard · Login</small></div></div>
+<div class="page-nav"><div class="page-nav-title">Design Gallery Navigation</div><div class="page-nav-grid"><button class="page-nav-btn active">Design Gallery</button><button class="page-nav-btn" id="navImport">Import Design</button><button class="page-nav-btn" id="navNew">+ New Design</button><button class="page-nav-btn" id="navSaved">Saved Designs</button><button class="page-nav-btn" id="navResponsive">Responsive Preview</button></div></div>
+<div class="panel"><h2>Available Designs</h2><div class="sub">2 basic designs attached as the first base layouts. Import + New Design + Save + Live Preview + Apply.</div><div style="margin-bottom:8px"><button class="btn">Import Design</button> <button class="btn">+ New Design</button></div><div class="designs">
 <div class="design" data-card-design="Design Studio Blue"><iframe id="bf"></iframe><div class="di"><b>Design 01 — Design Studio Blue</b><div class="design-actions"><button class="btn choose" data-design="Design Studio Blue">Select</button><button class="btn live" data-design="Design Studio Blue">Live Preview</button><button class="btn save-design" data-design="Design Studio Blue">Save Design</button><button class="btn p apply-design" data-design="Design Studio Blue">Apply</button></div><div class="applied-strip" data-status="Design Studio Blue"></div></div></div>
 <div class="design" data-card-design="Analytics Blue"><iframe id="af"></iframe><div class="di"><b>Design 02 — Analytics Blue</b><div class="design-actions"><button class="btn choose" data-design="Analytics Blue">Select</button><button class="btn live" data-design="Analytics Blue">Live Preview</button><button class="btn save-design" data-design="Analytics Blue">Save Design</button><button class="btn p apply-design" data-design="Analytics Blue">Apply</button></div><div class="applied-strip" data-status="Analytics Blue"></div></div></div>
 </div></div></section><section class="page" id="theme">${generic('Theme Studio',40)}</section><section class="page" id="sidebar">${generic('Sidebar Studio',10)}</section><section class="page" id="icons">${generic('Icon Studio',20)}</section><section class="page" id="wallpaper"><div class="panel"><h2>Wallpaper Studio</h2><div class="sub">50 wallpapers · auto adjust for system, sidebar, dashboard and login.</div><div class="walls">${Array.from({length:50},(_,i)=>`<div class="wall" style="background:linear-gradient(${45+i%4*30}deg,hsl(${i*31%360} 65% 40%),hsl(${(i*31+70)%360} 75% 70%))"></div>`).join('')}</div></div></section><section class="page" id="clock"><div class="panel"><h2>Time & Date Studio</h2><div class="sub">55 analogue/digital clock presets · expanded/collapsed sidebar, dashboard and top bar.</div><div class="clocks">${Array.from({length:55},(_,i)=>`<div class="clock">${i%3?'10:28':'◷'}<small>${i%3?'Digital':'Analogue'} ${i+1}</small></div>`).join('')}</div></div></section><section class="page" id="user"><div class="panel"><h2>User Profile</h2><div class="sub">Single shared user source.</div><div class="form">${['User Name','Short Name','Employee ID','Department','Designation'].map((x,i)=>`<div class="f"><label>${x}</label><input value="${i==0?'Muhammad Waqas':i==1?'MW':''}"></div>`).join('')}<div class="f"><label>Picture</label><input type="file"></div><div class="f"><label>Status</label><select><option>Auto Detect</option><option>Online</option><option>Offline</option></select></div></div></div></section><section class="page" id="company"><div class="panel"><h2>Company Profile</h2><div class="sub">Shared company identity.</div><div class="form">${['Full Name','Short Name','Phone','Address','NTN'].map((x,i)=>`<div class="f"><label>${x}</label><input value="${i==0?'Flying Paper Mill':i==1?'FPM':''}"></div>`).join('')}<div class="f"><label>Logo</label><input type="file"></div></div></div></section><section class="page" id="banner">${generic('Banner Studio',24)}</section><section class="page" id="dashboard">${generic('Dashboard Studio',12)}</section><section class="page" id="login">${generic('Login Page Studio',24)}</section><section class="page" id="settings"><div class="panel"><h2>Design Settings / System Control</h2><div class="sub">Backup / Restore · Import / Export · Design History · Animation Level · Auto Contrast.</div><button class="btn" id="export">Export Configuration</button> <button class="btn" id="reset">Restore Defaults</button></div></section>`;
@@ -87,11 +128,30 @@ function renderApplied(){
  let a=readApplied();
  document.querySelectorAll('[data-status]').forEach(box=>{let n=box.dataset.status,areas=Object.keys(a).filter(k=>a[k]===n);box.innerHTML=areas.map(k=>`<span class="applied-pill">✓ ${k[0].toUpperCase()+k.slice(1)}</span>`).join('')});
  applyVisual(a);
+ const ac=document.getElementById('appliedCount');
+ if(ac) ac.textContent=new Set(Object.values(a)).size;
+ const sc=document.getElementById('savedCount');
+ if(sc) sc.textContent=JSON.parse(localStorage.getItem('cfSavedDesigns')||'[]').length;
 }
 function applyVisual(a){
- document.body.classList.remove('analytics-system','blue-system');
- document.body.classList.add(a.system==='Analytics Blue'?'analytics-system':'blue-system');
- if(a.sidebar==='Analytics Blue'){document.documentElement.style.setProperty('--sb','#101820')}else{document.documentElement.style.setProperty('--sb','#07567d')}
+ document.body.dataset.systemDesign=a.system||'Design Studio Blue';
+ document.body.dataset.sidebarDesign=a.sidebar||'Design Studio Blue';
+
+ // Explicitly set the live parent-shell variables so the actual hosted file changes immediately.
+ const analytics=(a.system==='Analytics Blue');
+ const root=document.documentElement;
+ root.style.setProperty('--bg',analytics?'#e8eef4':'#edf8ff');
+ root.style.setProperty('--s','#ffffff');
+ root.style.setProperty('--p',analytics?'#f3a43b':'#078bc2');
+ root.style.setProperty('--a',analytics?'#2789e7':'#17b8e6');
+ root.style.setProperty('--b',analytics?'#cbd8e3':'#8fd7f7');
+ root.style.setProperty('--t',analytics?'#17283a':'#0a4263');
+ root.style.setProperty('--m',analytics?'#6f8190':'#6f8d9e');
+ root.style.setProperty('--sb',(a.sidebar==='Analytics Blue')?'#101820':'#07567d');
+
+ // Dashboard/Login are stored now and will be consumed by their studios when those pages are built.
+ document.body.dataset.dashboardDesign=a.dashboard||'Design Studio Blue';
+ document.body.dataset.loginDesign=a.login||'Design Studio Blue';
 }
 document.getElementById('applyNow').onclick=()=>{
  let areas=applyMode==='all'?['system','sidebar','dashboard','login']:[...applyTargets.querySelectorAll('input:checked')].map(x=>x.value);
@@ -105,4 +165,10 @@ document.getElementById('applyNow').onclick=()=>{
 document.getElementById('export').onclick=()=>{let a=document.createElement('a'),b=new Blob([JSON.stringify({draft,applied:readApplied()},null,2)],{type:'application/json'});a.href=URL.createObjectURL(b);a.download='CoreFlow-Design-Configuration.json';a.click()};
 document.getElementById('reset').onclick=()=>{localStorage.removeItem('cfDraft');localStorage.removeItem('cfAppliedTargets');draft={design:'Design Studio Blue',theme:'Ocean'};renderApplied();selectDesign(draft.design);msg('Defaults restored')};
 selectDesign(draft.design);renderApplied();
+const ni=document.getElementById('navImport'),nn=document.getElementById('navNew'),ns=document.getElementById('navSaved'),nr=document.getElementById('navResponsive');
+if(ni)ni.onclick=()=>msg('Import Design control ready — file import will be completed inside Design Gallery.');
+if(nn)nn.onclick=()=>msg('New Design control ready.');
+if(ns)ns.onclick=()=>msg('Saved Designs: '+JSON.parse(localStorage.getItem('cfSavedDesigns')||'[]').join(', '));
+if(nr)nr.onclick=()=>openP();
+
 </script></body></html>
