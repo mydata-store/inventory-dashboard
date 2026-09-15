@@ -446,32 +446,6 @@ body.design-analytics-blue .analytics-nav-item:not(.active){color:var(--ab-text)
 body.design-analytics-blue .ab-action{border-color:var(--ab-border)!important}
 body.design-analytics-blue .ab-activity-row{border-color:var(--ab-border)!important}
 </style>
-<script id="v27-analytics-theme-runtime">
-(function(){
- function syncAnalyticsTheme(){
-   if(!document.body.classList.contains('design-analytics-blue')) return;
-   /* Theme Studio already owns the global CSS variables. Repaint after
-      preview/apply/restore/import actions without changing Analytics layout. */
-   document.body.classList.remove('ab-theme-sync');
-   void document.body.offsetWidth;
-   document.body.classList.add('ab-theme-sync');
- }
- document.addEventListener('click',function(e){
-   var t=e.target.closest('button');
-   if(!t) return;
-   var s=(t.textContent||'').trim().toLowerCase();
-   if(s==='apply'||s==='save & apply'||s.indexOf('restore selected theme')>=0){
-     setTimeout(syncAnalyticsTheme,20);
-     setTimeout(syncAnalyticsTheme,180);
-   }
- });
- window.addEventListener('storage',syncAnalyticsTheme);
- window.addEventListener('hashchange',syncAnalyticsTheme);
- window.addEventListener('load',syncAnalyticsTheme);
-})();
-</script>
-
-
 <style id="v30-two-designs-only">
 /* v3.0 — Gallery contains only the two finalized designs */
 #gallery .gallery{grid-template-columns:repeat(2,minmax(0,1fr))!important}
@@ -2703,16 +2677,46 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
     document.querySelectorAll('[data-theme-apply]').forEach(b=>{const on=b.dataset.themeApply===currentThemeId;b.classList.toggle('applied',on);b.textContent=on?'Applied':'Apply'});
     document.querySelectorAll('[data-theme-badge]').forEach(b=>{const on=b.dataset.themeBadge===currentThemeId;b.classList.toggle('active',on);b.textContent=on?'Active':'Ready'});
   }
+  const CF_KEYS={
+    design:'coreflow.activeDesign',
+    activeTheme:'coreflow.activeTheme',
+    designTheme:'coreflow.designTheme.'
+  };
+  const CF_DEFAULT_THEME={
+    'modern-light':'default-blue',
+    'analytics-blue':'__design_original__'
+  };
+
   function activeDesignId(){
     return document.body.classList.contains('design-analytics-blue') ? 'analytics-blue' : 'modern-light';
   }
-  function applyTheme(id, persist=true){
-    if(!THEMES[id])return false;
-    currentThemeId=id;
-    if(persist){
-      localStorage.setItem('coreflow.activeTheme',id);
-      localStorage.setItem('coreflow.designTheme.'+activeDesignId(),id);
+
+  function normalizedThemeForDesign(design, raw){
+    if(design==='analytics-blue' && (!raw || raw==='ice-blue' || raw==='__design_original__')){
+      return '__design_original__';
     }
+    if(design==='modern-light' && (!raw || !THEMES[raw])){
+      return 'default-blue';
+    }
+    return THEMES[raw] ? raw : CF_DEFAULT_THEME[design];
+  }
+
+  function savedThemeForDesign(design){
+    return normalizedThemeForDesign(design, localStorage.getItem(CF_KEYS.designTheme+design));
+  }
+
+  function saveThemeSelection(design,id){
+    const normalized=normalizedThemeForDesign(design,id);
+    localStorage.setItem(CF_KEYS.designTheme+design,normalized);
+    if(normalized!=='__design_original__'){
+      localStorage.setItem(CF_KEYS.activeTheme,normalized);
+    }
+    return normalized;
+  }
+
+  function applyThemeVisual(id){
+    if(!THEMES[id]) return false;
+    currentThemeId=id;
     document.body.classList.remove('design-default-original');
     selectedThemeId=id;
     themeDraft=cloneTheme(THEMES[id]);
@@ -2725,6 +2729,31 @@ body.design-analytics-blue .cf-dt-topbar-card.dt-style-minimal{color:#fff!import
       document.getElementById('design01ThemeMeta').textContent='Theme: '+THEMES[id].name;
     }
     return true;
+  }
+
+  function applyDesignThemeVisual(design,id){
+    const normalized=normalizedThemeForDesign(design,id);
+    if(design==='analytics-blue' && normalized==='__design_original__'){
+      document.body.classList.add('design-default-original');
+      return true;
+    }
+    return applyThemeVisual(normalized);
+  }
+
+  function applyTheme(id,persist=true){
+    if(!THEMES[id]) return false;
+    const design=activeDesignId();
+    if(persist) saveThemeSelection(design,id);
+    return applyThemeVisual(id);
+  }
+
+  function activateDesign(design,persist=true){
+    const normalizedDesign=design==='analytics-blue'?'analytics-blue':'modern-light';
+    if(persist) localStorage.setItem(CF_KEYS.design,normalizedDesign);
+    applyDesignShell(normalizedDesign);
+    const themeId=savedThemeForDesign(normalizedDesign);
+    applyDesignThemeVisual(normalizedDesign,themeId);
+    return {design:normalizedDesign,themeId};
   }
 
   /* Design 01 — Modern Light isolated preview/apply. v1.4 changes only preview/frame geometry. */
@@ -2871,13 +2900,7 @@ body.design-analytics-blue .ab-activity-row .dot{width:8px!important;height:8px!
     if(id==='analytics-blue'){renderAnalyticsSidebar(location.hash==='#themes'?'theme':location.hash==='#gallery'?'gallery':'home')}else{restoreModernSidebar();analyticsHomeWorkspace?.classList.remove('active')}
   }
   function d01Apply(){
-    localStorage.setItem('coreflow.activeDesign','modern-light');
-    applyDesignShell('modern-light');
-    document.body.classList.remove('design-default-original');
-    const saved=localStorage.getItem('coreflow.designTheme.modern-light')||'default-blue';
-    applyTheme(THEMES[saved]?saved:'default-blue',false);
-    localStorage.setItem('coreflow.activeTheme',THEMES[saved]?saved:'default-blue');
-    localStorage.setItem('coreflow.designTheme.modern-light',THEMES[saved]?saved:'default-blue');
+    activateDesign('modern-light',true);
     showWorkspace('design');location.hash='gallery';
     document.getElementById('design01ApplyBtn').textContent='Applied';
     document.getElementById('design01ApplyBtn').classList.add('applied');
@@ -2963,75 +2986,53 @@ body.design-analytics-blue .ab-activity-row .dot{width:8px!important;height:8px!
   function d02Open(){d02Frame.srcdoc=analyticsBlueDoc(currentThemeId);document.getElementById('design02ThemeMeta').textContent='Theme: '+(THEMES[currentThemeId]?.name||'Default Blue');d02Modal.classList.add('open');d02Modal.setAttribute('aria-hidden','false');d02SetDevice(d02Current)}
   function d02CloseFn(){d02Modal.classList.remove('open');d02Modal.setAttribute('aria-hidden','true');d02Frame.src='about:blank'}
   function d02Apply(){
-    localStorage.setItem('coreflow.activeDesign','analytics-blue');
-    applyDesignShell('analytics-blue');d02CloseFn();showAnalyticsHome();
-    let saved=localStorage.getItem('coreflow.designTheme.analytics-blue');
-    if(!saved || saved==='ice-blue' || saved==='__design_original__'){
-      saved='__design_original__';
-      document.body.classList.add('design-default-original');
-      localStorage.setItem('coreflow.designTheme.analytics-blue',saved);
-    }else if(THEMES[saved]){
-      document.body.classList.remove('design-default-original');
-      applyTheme(saved,false);
-      localStorage.setItem('coreflow.activeTheme',saved);
-    }
+    const state=activateDesign('analytics-blue',true);
+    d02CloseFn();showAnalyticsHome();
     document.getElementById('design02ApplyBtn').textContent='Applied';
     document.getElementById('design02ApplyBtn').classList.add('applied');
     document.getElementById('design02Badge').textContent='Active';
     document.getElementById('design02Badge').classList.add('applied');
     document.getElementById('design02ApplyTop').textContent='Applied';
-    const st=document.getElementById('design02Status');if(st)st.textContent='Active design · '+(saved==='__design_original__'?'Analytics Blue':(THEMES[currentThemeId]?.name||'Analytics Blue'));
+    const st=document.getElementById('design02Status');
+    if(st)st.textContent='Active design · '+(state.themeId==='__design_original__'?'Analytics Blue':(THEMES[state.themeId]?.name||'Analytics Blue'));
     const d1=document.getElementById('design01ApplyBtn');if(d1){d1.textContent='Apply';d1.classList.remove('applied')}
     const b1=document.getElementById('design01Badge');if(b1){b1.textContent='Ready';b1.classList.remove('applied')}
     const s1=document.getElementById('design01Status');if(s1)s1.textContent='Ready to preview';
   }
   document.getElementById('design02PreviewBtn')?.addEventListener('click',d02Open);document.getElementById('design02Close')?.addEventListener('click',d02CloseFn);d02Modal?.addEventListener('click',e=>{if(e.target===d02Modal)d02CloseFn()});d02Buttons.forEach(b=>b.addEventListener('click',()=>d02SetDevice(b.dataset.design02Device)));document.getElementById('design02ApplyBtn')?.addEventListener('click',d02Apply);document.getElementById('design02ApplyTop')?.addEventListener('click',d02Apply);window.addEventListener('resize',()=>{if(d02Modal?.classList.contains('open'))d02Fit()});
-  const savedDesign=localStorage.getItem('coreflow.activeDesign')||'modern-light';
-  applyDesignShell(savedDesign);
-  if(savedDesign==='analytics-blue'){
+  const savedDesign=localStorage.getItem(CF_KEYS.design)||'modern-light';
+  const startupState=activateDesign(savedDesign,false);
+
+  if(startupState.design==='analytics-blue'){
     showAnalyticsHome();
     document.getElementById('design02ApplyBtn').textContent='Applied';
     document.getElementById('design02ApplyBtn').classList.add('applied');
     document.getElementById('design02Badge').textContent='Active';
     document.getElementById('design02Badge').classList.add('applied');
     document.getElementById('design02ApplyTop').textContent='Applied';
-    let st=localStorage.getItem('coreflow.designTheme.analytics-blue');
-    if(!st || st==='ice-blue' || st==='__design_original__'){
-      document.body.classList.add('design-default-original');
-      localStorage.setItem('coreflow.designTheme.analytics-blue','__design_original__');
-    }else if(THEMES[st]){
-      document.body.classList.remove('design-default-original');
-      applyTheme(st,false);
-      localStorage.setItem('coreflow.activeTheme',st);
-    }
+    const st=document.getElementById('design02Status');
+    if(st)st.textContent='Active design · '+(startupState.themeId==='__design_original__'?'Analytics Blue':(THEMES[startupState.themeId]?.name||'Analytics Blue'));
   }else{
-    document.body.classList.remove('design-default-original');
-    let st=localStorage.getItem('coreflow.designTheme.modern-light')||'default-blue';
-    if(!THEMES[st])st='default-blue';
-    applyTheme(st,false);
-    localStorage.setItem('coreflow.activeTheme',st);
-    localStorage.setItem('coreflow.designTheme.modern-light',st);
     document.getElementById('design01ApplyBtn').textContent='Applied';
     document.getElementById('design01ApplyBtn').classList.add('applied');
     document.getElementById('design01Badge').textContent='Active';
     document.getElementById('design01Badge').classList.add('applied');
     document.getElementById('design01ApplyTop').textContent='Applied';
   }
+
   refreshThemeUI();
   updateDesign01ThemeAttachment();
 
   window.CoreFlowThemeController={
     applyTheme:(id)=>applyTheme(id,true),
+    activateDesign:(id)=>activateDesign(id,true),
     restoreDefault:()=>{
       const design=activeDesignId();
-      if(design==='analytics-blue'){
-        document.body.classList.add('design-default-original');
-        localStorage.setItem('coreflow.designTheme.analytics-blue','__design_original__');
-        return true;
-      }
-      document.body.classList.remove('design-default-original');
-      applyTheme('default-blue',true);
-      localStorage.setItem('coreflow.designTheme.modern-light','default-blue');
+      const defaultId=CF_DEFAULT_THEME[design];
+      saveThemeSelection(design,defaultId);
+      applyDesignThemeVisual(design,defaultId);
+      if(defaultId!=='__design_original__') refreshThemeUI();
+      updateDesign01ThemeAttachment();
       return true;
     }
   };
