@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CoreFlow Design System v4.1</title>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CoreFlow Design System v4.2</title>
 <script>
 /* v4.1 FIRST-PAINT SHIELD — visual only, no state writes */
 (function(){
@@ -16,6 +16,37 @@
     document.documentElement.style.background=bg;
     window.__CF_FIRST_BG__=bg;
   }catch(e){window.__CF_FIRST_BG__='#edf8ff'}
+})();
+</script>
+
+<script>
+/* v4.2 EARLY ROUTE MEMORY — exact page survives refresh */
+(function(){
+  var VALID={home:1,gallery:1,theme:1,sidebar:1,icons:1,wallpaper:1,clock:1,user:1,company:1,banner:1,dashboard:1,login:1,settings:1};
+  window.__CF_ROUTE_KEY__='cfExactPageV42';
+  window.__CF_REMEMBER_PAGE__=function(id){
+    if(!VALID[id])return;
+    try{sessionStorage.setItem(window.__CF_ROUTE_KEY__,id)}catch(e){}
+    try{localStorage.setItem(window.__CF_ROUTE_KEY__,id)}catch(e){}
+  };
+  window.__CF_GET_PAGE__=function(){
+    var p=null;
+    try{p=sessionStorage.getItem(window.__CF_ROUTE_KEY__)}catch(e){}
+    if(!VALID[p]){try{p=localStorage.getItem(window.__CF_ROUTE_KEY__)}catch(e){}}
+    if(!VALID[p]){
+      try{
+        var u=new URL(location.href);
+        p=u.searchParams.get('cfPage');
+      }catch(e){}
+    }
+    return VALID[p]?p:null;
+  };
+  document.addEventListener('click',function(e){
+    var n=e.target && e.target.closest ? e.target.closest('.nav[data-id],[data-go]') : null;
+    if(!n)return;
+    var id=n.dataset.id||n.dataset.go;
+    if(VALID[id])window.__CF_REMEMBER_PAGE__(id);
+  },true);
 })();
 </script>
 <style>
@@ -958,7 +989,7 @@ body[data-system-design="Analytics Blue"] #home .panel>h2{
    document.body.style.background=bg;
  }catch(e){}
 })();
-</script><div class="app"><aside class="side"><div class="brand">CoreFlow Design System<small>Shared Design Engine v4.1 · No-Blink Paint</small></div><div id="navs"></div></aside><main class="main"><header class="top">
+</script><div class="app"><aside class="side"><div class="brand">CoreFlow Design System<small>Shared Design Engine v4.2 · Exact Page Refresh</small></div><div id="navs"></div></aside><main class="main"><header class="top">
 <div class="cf-blue-head" style="display:flex;align-items:center;width:100%"><h1 id="title">Design Studio Home</h1><div class="acts"><button class="btn" id="rp">Responsive Preview</button></div></div>
 <div class="cf-analytics-head"><input class="cf-search" placeholder="Search designs..."><div class="cf-head-spacer"></div><div class="cf-clock"><b id="analyticsTime">--:--</b><small id="analyticsDate">CoreFlow Design System</small></div><div class="cf-profile"><div class="cf-avatar">MW</div><div><b>Muhammad Waqas</b><small>Design Workspace</small></div></div><button class="btn" id="rpAnalytics">Responsive Preview</button></div>
 </header><div class="work"><div id="pages"></div></div></main></div><div class="modal" id="modal"><div class="mb"><div class="mh"><b>Responsive Preview</b><span style="margin-left:auto"></span><button class="btn dev" data-d="">Desktop</button><button class="btn dev" data-d="tablet">Tablet</button><button class="btn dev" data-d="mobile">Mobile</button><button class="btn" id="close">Close</button></div><div class="stage"><div class="device" id="device"><iframe id="rframe"></iframe></div></div></div></div><div class="apply-modal" id="applyModal"><div class="apply-box">
@@ -1071,14 +1102,15 @@ function cfLoad(){
  if(!saved){
    try{saved=JSON.parse(localStorage.getItem('cfCoreFlowState')||'null')}catch(e){}
  }
+ const exactPage=(window.__CF_GET_PAGE__&&window.__CF_GET_PAGE__())||null;
  let st={
-   page:saved&&CF_VALID_PAGES.has(saved.page)?saved.page:'home',
+   page:exactPage||(saved&&CF_VALID_PAGES.has(saved.page)?saved.page:'home'),
    targets:cfTargets(saved&&saved.targets),
    selected:saved&&cfGood(saved.selected)?saved.selected:null
  };
  const url=cfReadURLState();
  if(url.hasState){
-   if(url.page)st.page=url.page;
+   if(!exactPage&&url.page)st.page=url.page;
    const old=cfTargets(st.targets);
    st.targets=cfTargets({
      system:url.targets.system||old.system,
@@ -1093,7 +1125,8 @@ function cfLoad(){
 function cfWriteURLState(){
  try{
    const u=new URL(location.href),t=cfTargets(cfState.targets);
-   u.searchParams.set('cfPage',CF_VALID_PAGES.has(cfState.page)?cfState.page:'home');
+   const exact=(window.__CF_GET_PAGE__&&window.__CF_GET_PAGE__())||cfState.page;
+   u.searchParams.set('cfPage',CF_VALID_PAGES.has(exact)?exact:'home');
    u.searchParams.set('cfSystem',cfNameToURL(t.system));
    u.searchParams.set('cfSidebar',cfNameToURL(t.sidebar));
    u.searchParams.set('cfDashboard',cfNameToURL(t.dashboard));
@@ -1107,6 +1140,7 @@ let cfBooting=true;
 function nav(id){
  if(id==='responsive'){openP();return}
  if(!CF_VALID_PAGES.has(id))id='home';
+ if(window.__CF_REMEMBER_PAGE__)window.__CF_REMEMBER_PAGE__(id);
  const page=document.getElementById(id);if(!page)return;
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
  page.classList.add('on');
@@ -1217,7 +1251,9 @@ document.getElementById('applyNow').onclick=()=>{
 document.getElementById('export').onclick=()=>{let a=document.createElement('a'),b=new Blob([JSON.stringify({draft,applied:readApplied()},null,2)],{type:'application/json'});a.href=URL.createObjectURL(b);a.download='CoreFlow-Design-Configuration.json';a.click()};
 document.getElementById('reset').onclick=()=>{
  ['cfDraft','cfAppliedTargetsV16','cfAppliedTargetsV14','cfAppliedTargets','cfApplied','cfCurrentPage','cfAppliedStateMeta','cfCoreFlowState','cfHardStateV34','cfCoreFlowStateV40'].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+ try{sessionStorage.removeItem('cfExactPageV42');localStorage.removeItem('cfExactPageV42')}catch(e){}
  cfState={page:'home',targets:cfTargets({}),selected:'Design Studio Blue'};
+ if(window.__CF_REMEMBER_PAGE__)window.__CF_REMEMBER_PAGE__('home');
  draft={design:'Design Studio Blue',theme:'Ocean'};
  cfSave();cfWriteURLState();renderApplied();selectDesign(draft.design);nav('home');msg('Defaults restored');
 };
@@ -1231,7 +1267,9 @@ function coreFlowBoot(){
  renderApplied();
  document.querySelectorAll('[data-card-design]').forEach(c=>c.classList.toggle('selected',c.dataset.cardDesign===draft.design));
 
- const pageId=CF_VALID_PAGES.has(cfState.page)?cfState.page:'home';
+ const remembered=(window.__CF_GET_PAGE__&&window.__CF_GET_PAGE__())||null;
+ const pageId=remembered||(CF_VALID_PAGES.has(cfState.page)?cfState.page:'home');
+ cfState.page=pageId;
  nav(pageId);
 
  // First paint gate: only now make the app visible.
