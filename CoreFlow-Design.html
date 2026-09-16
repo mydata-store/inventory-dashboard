@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CoreFlow Design System v3.3</title><style>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CoreFlow Design System v3.4</title><style>
 :root{--bg:#edf8ff;--s:#fff;--p:#078bc2;--a:#17b8e6;--sb:#07567d;--b:#8fd7f7;--t:#0a4263;--m:#6f8d9e}*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial;background:var(--bg);color:var(--t)}button,input,select{font:inherit}.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.side{position:fixed;width:220px;inset:0 auto 0 0;background:var(--sb);color:#fff;padding:12px 9px;overflow:auto}.brand{padding:8px;border-bottom:1px solid #ffffff33;font-weight:800}.brand small{display:block;font-size:8px;opacity:.75}.nav{width:100%;height:34px;border:0;border-radius:7px;background:transparent;color:#fff;text-align:left;padding:0 9px;font-size:10px;font-weight:700;margin:2px 0;cursor:pointer}.nav.on,.nav:hover{background:var(--p)}.main{grid-column:2}.top{height:60px;background:#fff;border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 14px;position:sticky;top:0;z-index:3}.top h1{font-size:18px}.acts{margin-left:auto;display:flex;gap:6px}.btn{height:33px;border:1px solid var(--b);background:#fff;border-radius:7px;padding:0 11px;font-size:9px;font-weight:700;cursor:pointer}.btn.p{background:var(--p);color:#fff}.work{padding:12px}.note{background:#fff7d7;border-left:3px solid var(--a);padding:9px;border-radius:7px;font-size:9px;margin-bottom:10px}.page{display:none}.page.on{display:block}.panel{background:#fff;border:1px solid var(--b);border-radius:11px;padding:13px;margin-bottom:10px}.panel h2{font-size:17px;margin:0 0 3px}.sub{font-size:8px;color:var(--m);margin-bottom:10px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.card,.preset{border:1px solid var(--b);border-radius:9px;padding:10px;background:#f9fdff;cursor:pointer}.card{min-height:105px}.card b,.preset b{font-size:10px}.card p,.preset small{font-size:7px;color:var(--m);display:block;margin-top:5px}.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.sw{display:flex;gap:3px;margin-top:7px}.sw i{width:18px;height:18px;border-radius:4px}.designs{display:grid;grid-template-columns:1fr 1fr;gap:9px}.design{border:1px solid var(--b);border-radius:10px;overflow:hidden}.design iframe{width:100%;height:300px;border:0;pointer-events:none}.di{padding:9px}.form{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.f label{font-size:7px;font-weight:700;display:block;margin-bottom:3px}.f input,.f select{width:100%;height:32px;border:1px solid var(--b);border-radius:6px;padding:0 6px}.walls{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.wall{height:55px;border-radius:7px}.clocks{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.clock{text-align:center;padding:10px;border:1px solid var(--b);border-radius:8px;font-weight:800}.clock small{display:block;font-size:6px;color:var(--m)}.modal{display:none;position:fixed;inset:0;background:#001d2bbb;z-index:20;padding:15px}.modal.on{display:flex}.mb{background:#fff;border-radius:11px;width:100%;display:flex;flex-direction:column}.mh{height:48px;padding:7px;display:flex;align-items:center;gap:5px;border-bottom:1px solid #ccc}.stage{flex:1;background:#dce7ed;display:grid;place-items:center;padding:12px;overflow:auto}.device{width:100%;height:100%;background:#fff}.device.tablet{width:768px;height:900px}.device.mobile{width:390px;height:780px}.device iframe{width:100%;height:100%;border:0}.toast{display:none;position:fixed;right:15px;bottom:15px;background:#123d55;color:#fff;padding:9px 12px;border-radius:7px;font-size:9px;z-index:30}@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.gallery{grid-template-columns:repeat(3,1fr)}}
 
 .design.selected{outline:2px solid var(--p);box-shadow:0 0 0 3px rgba(7,139,194,.10)}
@@ -1276,4 +1276,187 @@ if(nn)nn.onclick=()=>msg('New Design control ready.');
 if(ns)ns.onclick=()=>msg('Saved Designs: '+JSON.parse(localStorage.getItem('cfSavedDesigns')||'[]').join(', '));
 if(nr)nr.onclick=()=>openP();
 
-</script></body></html>
+</script>
+<script>
+/* ==========================================================
+   v3.4 HARD REFRESH CONTROLLER
+   Independent recovery layer. It does not redesign either base design.
+   It owns only: current page + applied base-design persistence.
+   ========================================================== */
+(function(){
+  'use strict';
+  const KEY='cfHardStateV34';
+  const PAGES=new Set(['home','gallery','theme','sidebar','icons','wallpaper','clock','user','company','banner','dashboard','login','settings']);
+  const good=n=>n==='Analytics Blue'||n==='Design Studio Blue';
+  const norm=t=>{
+    t=t||{};
+    return {
+      system:good(t.system)?t.system:'Design Studio Blue',
+      sidebar:good(t.sidebar)?t.sidebar:'Design Studio Blue',
+      dashboard:good(t.dashboard)?t.dashboard:'Design Studio Blue',
+      login:good(t.login)?t.login:'Design Studio Blue'
+    };
+  };
+  const fromURL=v=>v==='analytics'?'Analytics Blue':v==='blue'?'Design Studio Blue':null;
+  const toURL=v=>v==='Analytics Blue'?'analytics':'blue';
+
+  function load(){
+    let x=null;
+    try{x=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+    if(!x)x={page:'home',targets:norm({})};
+
+    // Visible URL is refresh authority when present.
+    try{
+      const u=new URL(location.href);
+      const p=u.searchParams.get('cfPage');
+      if(PAGES.has(p))x.page=p;
+      const t={
+        system:fromURL(u.searchParams.get('cfSystem')),
+        sidebar:fromURL(u.searchParams.get('cfSidebar')),
+        dashboard:fromURL(u.searchParams.get('cfDashboard')),
+        login:fromURL(u.searchParams.get('cfLogin'))
+      };
+      const old=norm(x.targets);
+      x.targets=norm({
+        system:t.system||old.system,
+        sidebar:t.sidebar||old.sidebar,
+        dashboard:t.dashboard||old.dashboard,
+        login:t.login||old.login
+      });
+    }catch(e){}
+    if(!PAGES.has(x.page))x.page='home';
+    x.targets=norm(x.targets);
+    return x;
+  }
+
+  let state=load();
+  let pending=state.targets.system;
+  let mode='all';
+
+  function save(){
+    try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
+    try{
+      const u=new URL(location.href);
+      u.searchParams.set('cfPage',state.page);
+      u.searchParams.set('cfSystem',toURL(state.targets.system));
+      u.searchParams.set('cfSidebar',toURL(state.targets.sidebar));
+      u.searchParams.set('cfDashboard',toURL(state.targets.dashboard));
+      u.searchParams.set('cfLogin',toURL(state.targets.login));
+      u.hash='';
+      history.replaceState(null,'',u.pathname+u.search);
+    }catch(e){}
+  }
+
+  function showPage(id){
+    if(!PAGES.has(id))id='home';
+    const page=document.getElementById(id);
+    if(!page)return;
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+    page.classList.add('on');
+    document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.id===id));
+    const n=document.querySelector('.nav[data-id="'+id+'"]');
+    const title=document.getElementById('title');
+    if(title&&n)title.textContent=n.textContent.trim().replace(/^[^\w]+/,'');
+    state.page=id;
+    save();
+  }
+
+  function paint(){
+    const t=norm(state.targets);
+    state.targets=t;
+    document.body.dataset.systemDesign=t.system;
+    document.body.dataset.sidebarDesign=t.sidebar;
+    document.body.dataset.dashboardDesign=t.dashboard;
+    document.body.dataset.loginDesign=t.login;
+
+    const analytics=t.system==='Analytics Blue';
+    const root=document.documentElement;
+    root.style.setProperty('--bg',analytics?'#e9f0f6':'#edf8ff');
+    root.style.setProperty('--s','#ffffff');
+    root.style.setProperty('--p',analytics?'#f4a43a':'#078bc2');
+    root.style.setProperty('--a',analytics?'#2789e7':'#17b8e6');
+    root.style.setProperty('--b',analytics?'#d0dbe5':'#8fd7f7');
+    root.style.setProperty('--t',analytics?'#15283b':'#0a4263');
+    root.style.setProperty('--m',analytics?'#718397':'#6f8d9e');
+    root.style.setProperty('--sb',t.sidebar==='Analytics Blue'?'#101820':'#07567d');
+
+    const map={liveSystem:['System',t.system],liveSidebar:['Sidebar',t.sidebar],liveDashboard:['Dashboard',t.dashboard],liveLogin:['Login',t.login]};
+    Object.entries(map).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v[0]+': '+v[1]});
+    document.querySelectorAll('[data-status]').forEach(box=>{
+      const name=box.dataset.status;
+      const areas=Object.keys(t).filter(k=>t[k]===name);
+      box.innerHTML=areas.map(k=>'<span class="applied-pill">✓ '+k[0].toUpperCase()+k.slice(1)+'</span>').join('');
+    });
+    const ac=document.getElementById('appliedCount');
+    if(ac)ac.textContent=new Set(Object.values(t)).size;
+    save();
+  }
+
+  // Capture navigation BEFORE older handlers can alter/lose the state.
+  document.addEventListener('click',function(e){
+    const nav=e.target.closest('.nav[data-id],[data-go]');
+    if(nav){
+      const id=nav.dataset.id||nav.dataset.go;
+      if(PAGES.has(id)){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        showPage(id);
+        return;
+      }
+    }
+
+    const applyCard=e.target.closest('.apply-design');
+    if(applyCard){
+      pending=applyCard.dataset.design;
+      return; // allow existing modal UI to open
+    }
+
+    const modeCard=e.target.closest('.mode-card');
+    if(modeCard){mode=modeCard.dataset.mode||'all';return;}
+
+    if(e.target.closest('#applyNow')){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      let areas=['system','sidebar','dashboard','login'];
+      if(mode==='separate'){
+        const box=document.getElementById('applyTargets');
+        areas=box?[...box.querySelectorAll('input:checked')].map(x=>x.value):[];
+      }
+      if(!areas.length)return;
+
+      const t=norm(state.targets);
+      areas.forEach(a=>t[a]=pending);
+      state.targets=t;
+      paint();
+      const modal=document.getElementById('applyModal');
+      if(modal)modal.classList.remove('on');
+      return;
+    }
+
+    const saveDesign=e.target.closest('.save-design');
+    if(saveDesign){
+      const name=saveDesign.dataset.design;
+      if(good(name)){
+        state.targets.system=name;
+        pending=name;
+        paint();
+      }
+    }
+  },true);
+
+  // Final boot restoration runs after the original engine.
+  state=load();
+  paint();
+  showPage(state.page);
+
+  // One more restoration on pageshow covers browser refresh/back-forward cache.
+  window.addEventListener('pageshow',function(){
+    state=load();
+    paint();
+    showPage(state.page);
+  });
+})();
+</script>
+
+</body></html>
