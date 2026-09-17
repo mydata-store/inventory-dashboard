@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v1.2 — Safe Storage Foundation</title>
+<title>CoreFlow Clean v1.5 — Design Gallery Migration</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -21,6 +21,26 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 .tests{font:12px Consolas,monospace;line-height:1.9;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}.pass{color:#16803c}.fail{color:#b42318}.bootmsg{position:fixed;right:14px;bottom:14px;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:12px Segoe UI,Arial,sans-serif;box-shadow:0 5px 18px #17203318;color:var(--muted)}.bootmsg.error{color:#b42318;border-color:#f0b7b2}
 @media(max-width:1000px){.kpis,.grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){#app{grid-template-columns:70px 1fr}.brand{font-size:0}.brand:before{content:"CF";font-size:18px}.brand small,.nav span{display:none}.nav{text-align:center}.kpis,.grid{grid-template-columns:1fr}.content{padding:14px}.top{padding:0 14px}}
+
+/* v1.5 Design Gallery — isolated component styles */
+.gallery-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.gallery-tools{display:flex;gap:8px;flex-wrap:wrap}
+.dg-btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:9px 12px;border-radius:9px;cursor:pointer;font-weight:600}
+.dg-btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.dg-btn:disabled{opacity:.45;cursor:not-allowed}
+.design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.design-card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.design-card.active{border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 15%,transparent)}
+.design-preview{height:235px;background:#eef3f9;padding:12px}
+.mini-shell{height:100%;display:grid;grid-template-columns:24% 1fr;border-radius:11px;overflow:hidden;background:#fff;box-shadow:0 7px 22px #142a4b18}
+.mini-side{background:linear-gradient(180deg,#12345f,#184a82);padding:12px 7px}.mini-logo{height:16px;width:55%;background:#fff;border-radius:5px;margin-bottom:16px}.mini-line{height:7px;background:#ffffffaa;border-radius:4px;margin:8px 0}.mini-main{padding:10px;background:#f4f7fb}.mini-top{height:20px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:9px}.mini-hero{height:55px;border-radius:8px;background:linear-gradient(110deg,#e8f2ff,#f3efff);border-left:4px solid #2563eb;margin-bottom:9px}.mini-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.mini-kpis i{height:28px;background:#fff;border:1px solid #dfe7f1;border-radius:6px}.mini-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:7px}.mini-cards i{height:23px;background:#fff;border:1px solid #dfe7f1;border-radius:5px}
+.design-card[data-design="studioBlue"] .mini-main{background:#f6f9fd}.design-card[data-design="studioBlue"] .mini-hero{background:linear-gradient(110deg,#e9f4ff,#eef7ff);border-left-color:#1677ff}
+.design-card[data-design="analytics"] .mini-side{background:linear-gradient(180deg,#0f2344,#153562)}
+.design-card[data-design="analytics"] .mini-hero{background:linear-gradient(110deg,#eaf3ff,#f5f1ff);border-left-color:#2563eb}
+.design-info{padding:15px}.design-info h3{margin:0 0 5px}.design-info p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}.design-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.design-status{margin-top:10px;font-size:12px;color:var(--muted)}.design-status.active{color:#16803c;font-weight:700}
+.dg-note{margin-top:14px;padding:11px 13px;border-radius:10px;background:#f7faff;border:1px solid #dce8f8;color:#53657c;font-size:13px}
+@media(max-width:900px){.design-grid{grid-template-columns:1fr}}
+
 </style>
 <script>
 (function(){
@@ -81,12 +101,13 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
        try{
          const u=new URL(location.href);
          u.searchParams.set('cfPage',page);
+         u.searchParams.set('cfDesign',this.state.design.base);
          history.pushState({coreflow:true,page:page},'',u.pathname+u.search+u.hash);
        }catch(e){}
      }
      this.renderRoute();
    },
-   setBase(base){if(!['analytics','studioBlue'].includes(base))return;this.state.design.base=base;this.save();this.applyDesign();updateDiagnostics()},
+   setBase(base){if(!['analytics','studioBlue'].includes(base))return;this.state.design.base=base;this.save();try{const u=new URL(location.href);u.searchParams.set('cfDesign',base);history.replaceState({coreflow:true,page:this.state.route.page},'',u.pathname+u.search+u.hash)}catch(e){}this.applyDesign();updateGalleryUI();updateDiagnostics()},
    applyDesign(){
      const blue=this.state.design.base==='studioBlue';
      document.documentElement.style.setProperty('--nav',blue?'#12325c':'#10284b');
@@ -123,11 +144,18 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.4</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.5</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
-<section class="page" id="gallery" data-title="Design Gallery"><div class="banner"><h1>Design Gallery</h1><p>Temporary foundation test. Approved Gallery will be migrated later.</p></div><div class="panel"><div class="row"><button class="action primary" onclick="CoreFlow.setBase('analytics')">Apply Analytics Blue</button><button class="action" onclick="CoreFlow.setBase('studioBlue')">Apply Design Studio Blue</button></div></div></section>
+<section class="page" id="gallery" data-title="Design Gallery">
+<div class="banner"><div class="gallery-head"><div><div>CoreFlow</div><h1>Design Gallery</h1><p>Two locked base designs. Preview is temporary; Apply activates the selected base design.</p></div><div class="gallery-tools"><button class="dg-btn" disabled>Import Design</button><button class="dg-btn" disabled>+ New Design</button></div></div></div>
+<div class="kpis"><div class="kpi">Available Designs<strong>2</strong></div><div class="kpi">Active Design<strong id="dgActiveKpi">—</strong></div><div class="kpi">Apply Targets<strong>4</strong></div><div class="kpi">Gallery Status<strong>LOCKED</strong></div></div>
+<div class="panel"><div class="gallery-head"><div><b>Available Designs</b><div style="font-size:12px;color:var(--muted);margin-top:4px">Design 01 — Design Studio Blue · Design 02 — Analytics Blue</div></div></div>
+<div class="design-grid">
+<article class="design-card" data-design="studioBlue"><div class="design-preview"><div class="mini-shell"><div class="mini-side"><div class="mini-logo"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div><div class="mini-main"><div class="mini-top"></div><div class="mini-hero"></div><div class="mini-kpis"><i></i><i></i><i></i><i></i></div><div class="mini-cards"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></div><div class="design-info"><h3>Design 01 — Design Studio Blue</h3><p>Modern light CoreFlow layout with Default Blue as its design default.</p><div class="design-actions"><button class="dg-btn" data-preview-design="studioBlue">Live Preview</button><button class="dg-btn primary" data-apply-design="studioBlue">Apply</button></div><div class="design-status" data-design-status="studioBlue">Ready</div></div></article>
+<article class="design-card" data-design="analytics"><div class="design-preview"><div class="mini-shell"><div class="mini-side"><div class="mini-logo"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div><div class="mini-main"><div class="mini-top"></div><div class="mini-hero"></div><div class="mini-kpis"><i></i><i></i><i></i><i></i></div><div class="mini-cards"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></div><div class="design-info"><h3>Design 02 — Analytics Blue</h3><p>Data-first light ERP design with Analytics Blue appearance and its own design defaults.</p><div class="design-actions"><button class="dg-btn" data-preview-design="analytics">Live Preview</button><button class="dg-btn primary" data-apply-design="analytics">Apply</button></div><div class="design-status" data-design-status="analytics">Ready</div></div></article>
+</div><div class="dg-note" id="dgMessage">Gallery migrated into the clean engine. Router, refresh and browser-history foundation remain isolated.</div></div></section>
 <section class="page" id="theme" data-title="Theme Studio"><div class="banner"><h1>Theme Studio</h1><p>Placeholder — migration not started.</p></div></section>
 <section class="page" id="sidebar" data-title="Sidebar Studio"><div class="banner"><h1>Sidebar Studio</h1><p>Placeholder.</p></div></section>
 <section class="page" id="icons" data-title="Icon Studio"><div class="banner"><h1>Icon Studio</h1><p>Placeholder.</p></div></section>
@@ -147,14 +175,41 @@ window.addEventListener('error',function(e){
 });
 /* Refresh Route Restore: URL is durable even when browser storage is full. */
 try{
- const routeFromURL=new URL(location.href).searchParams.get('cfPage');
+ const bootURL=new URL(location.href);
+ const routeFromURL=bootURL.searchParams.get('cfPage');
+ const designFromURL=bootURL.searchParams.get('cfDesign');
  if(CoreFlow.PAGES.includes(routeFromURL)) CoreFlow.state.route.page=routeFromURL;
+ if(['analytics','studioBlue'].includes(designFromURL)) CoreFlow.state.design.base=designFromURL;
 }catch(e){}
 
 const studios=[['gallery','Design Gallery'],['theme','Theme Studio'],['sidebar','Sidebar Studio'],['icons','Icon Studio'],['wallpaper','Wallpaper Studio'],['clock','Time & Date Studio'],['user','User Profile'],['company','Company Profile'],['banner','Banner Studio'],['dashboard','Dashboard Studio'],['login','Login Page Studio'],['settings','Design Settings']];
 const cardsEl=document.getElementById('cards');
 if(cardsEl)cardsEl.innerHTML=studios.map(s=>`<div class="card" data-go="${s[0]}"><b>${s[1]}</b><small>Open clean studio shell →</small></div>`).join('');
 document.addEventListener('click',e=>{const x=e.target.closest('[data-page],[data-go]');if(x)CoreFlow.navigate(x.dataset.page||x.dataset.go)});
+let galleryPreviewBase=null;
+function updateGalleryUI(){
+ const active=CoreFlow.state.design.base;
+ document.querySelectorAll('.design-card[data-design]').forEach(c=>c.classList.toggle('active',c.dataset.design===active));
+ document.querySelectorAll('[data-design-status]').forEach(x=>{const on=x.dataset.designStatus===active;x.textContent=on?'Applied':'Ready';x.classList.toggle('active',on)});
+ const k=document.getElementById('dgActiveKpi');if(k)k.textContent=active==='analytics'?'Analytics':'Studio Blue';
+}
+document.addEventListener('click',e=>{
+ const p=e.target.closest('[data-preview-design]');
+ if(p){
+   const id=p.dataset.previewDesign;
+   galleryPreviewBase=CoreFlow.state.design.base;
+   CoreFlow.applyDesign.call({state:{design:{base:id}}});
+   const m=document.getElementById('dgMessage');if(m)m.textContent='Live Preview: '+(id==='analytics'?'Analytics Blue':'Design Studio Blue')+' — not saved. Press Apply to activate.';
+   return;
+ }
+ const a=e.target.closest('[data-apply-design]');
+ if(a){
+   CoreFlow.setBase(a.dataset.applyDesign);
+   galleryPreviewBase=null;
+   const m=document.getElementById('dgMessage');if(m)m.textContent='Applied: '+(a.dataset.applyDesign==='analytics'?'Analytics Blue':'Design Studio Blue')+'. Refresh will keep this base design.';
+ }
+});
+
 function updateDiagnostics(){
  let saved={};try{saved=JSON.parse(localStorage.getItem(CoreFlow.KEY))||{}}catch(e){}
  const persistent=CoreFlow.Storage.mode==='localStorage';
@@ -184,6 +239,7 @@ try{
    const initialPage=CoreFlow.PAGES.includes(CoreFlow.state.route.page)?CoreFlow.state.route.page:'home';
    const u=new URL(location.href);
    u.searchParams.set('cfPage',initialPage);
+   u.searchParams.set('cfDesign',CoreFlow.state.design.base);
    history.replaceState({coreflow:true,page:initialPage},'',u.pathname+u.search+u.hash);
  }catch(e){}
  window.addEventListener('popstate',function(ev){
@@ -194,6 +250,7 @@ try{
  CoreFlow.save();
  CoreFlow.applyDesign();
  CoreFlow.renderRoute();
+ updateGalleryUI();
  document.body.classList.add('ready');
  updateDiagnostics();
  const bm=document.getElementById('bootmsg');
