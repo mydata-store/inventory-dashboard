@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v1.0 — Foundation</title>
+<title>CoreFlow Clean v1.1 — Safe Foundation</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
-body:not(.ready) #app{visibility:hidden}
 #app{min-height:100vh;display:grid;grid-template-columns:220px 1fr}
 aside{background:linear-gradient(180deg,var(--nav),var(--nav2));color:#fff;padding:16px 12px}
 .brand{font-weight:800;font-size:21px;padding:8px 10px 20px}.brand small{display:block;font-size:10px;opacity:.65;letter-spacing:1.4px;margin-top:4px}
@@ -19,7 +18,7 @@ main{min-width:0}.top{height:64px;background:#fff;border-bottom:1px solid var(--
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{padding:16px;cursor:pointer}.card:hover{border-color:#a7c2f4;box-shadow:0 5px 16px #1d365a12}.card b{display:block}.card small{color:var(--muted)}
 .panel{padding:18px;margin-top:18px}.row{display:flex;gap:10px;flex-wrap:wrap}
 button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;border-radius:9px;cursor:pointer}.action.primary{background:var(--primary);border-color:var(--primary);color:#fff}
-.tests{font:12px Consolas,monospace;line-height:1.9;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}.pass{color:#16803c}
+.tests{font:12px Consolas,monospace;line-height:1.9;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}.pass{color:#16803c}.fail{color:#b42318}.bootmsg{position:fixed;right:14px;bottom:14px;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:12px Segoe UI,Arial,sans-serif;box-shadow:0 5px 18px #17203318;color:var(--muted)}.bootmsg.error{color:#b42318;border-color:#f0b7b2}
 @media(max-width:1000px){.kpis,.grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){#app{grid-template-columns:70px 1fr}.brand{font-size:0}.brand:before{content:"CF";font-size:18px}.brand small,.nav span{display:none}.nav{text-align:center}.kpis,.grid{grid-template-columns:1fr}.content{padding:14px}.top{padding:0 14px}}
 </style>
@@ -70,6 +69,7 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 </script>
 </head>
 <body>
+<div id="bootmsg" class="bootmsg">CoreFlow starting…</div>
 <div id="app">
 <aside><div class="brand">CoreFlow<small>CLEAN FOUNDATION</small></div>
 <button class="nav" data-page="home">⌂ <span>Design Studio</span></button>
@@ -86,7 +86,7 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.0</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.1</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div class="tests" id="tests"></div></div></section>
@@ -104,8 +104,13 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <section class="page" id="settings" data-title="Design Settings"><div class="banner"><h1>Design Settings</h1><p>Clean state diagnostics.</p></div><div class="panel"><button class="action" onclick="if(confirm('Reset clean state?')){localStorage.removeItem(CoreFlow.KEY);location.reload()}">Reset Clean State</button><pre class="tests" id="dump"></pre></div></section>
 </div></main></div>
 <script>
+window.addEventListener('error',function(e){
+ const bm=document.getElementById('bootmsg');
+ if(bm){bm.classList.add('error');bm.textContent='JavaScript error: '+(e.message||'unknown error')}
+});
 const studios=[['gallery','Design Gallery'],['theme','Theme Studio'],['sidebar','Sidebar Studio'],['icons','Icon Studio'],['wallpaper','Wallpaper Studio'],['clock','Time & Date Studio'],['user','User Profile'],['company','Company Profile'],['banner','Banner Studio'],['dashboard','Dashboard Studio'],['login','Login Page Studio'],['settings','Design Settings']];
-cards.innerHTML=studios.map(s=>`<div class="card" data-go="${s[0]}"><b>${s[1]}</b><small>Open clean studio shell →</small></div>`).join('');
+const cardsEl=document.getElementById('cards');
+if(cardsEl)cardsEl.innerHTML=studios.map(s=>`<div class="card" data-go="${s[0]}"><b>${s[1]}</b><small>Open clean studio shell →</small></div>`).join('');
 document.addEventListener('click',e=>{const x=e.target.closest('[data-page],[data-go]');if(x)CoreFlow.navigate(x.dataset.page||x.dataset.go)});
 function updateDiagnostics(){
  let saved={};try{saved=JSON.parse(localStorage.getItem(CoreFlow.KEY))||{}}catch(e){}
@@ -116,13 +121,22 @@ function updateDiagnostics(){
  ['No session route controller',true],
  ['Saved state loaded before UI',true]
  ];
- if(window.tests)tests.innerHTML=checks.map(c=>`<div class="pass">${c[1]?'PASS':'FAIL'} — ${c[0]}</div>`).join('');
+ const testsEl=document.getElementById('tests');
+ if(testsEl)testsEl.innerHTML=checks.map(c=>`<div class="${c[1]?'pass':'fail'}">${c[1]?'PASS':'FAIL'} — ${c[0]}</div>`).join('');
  const d=document.getElementById('dump');if(d)d.textContent=JSON.stringify(CoreFlow.state,null,2);
 }
-CoreFlow.save();
-CoreFlow.applyDesign();
-CoreFlow.renderRoute();
-document.body.classList.add('ready');
-updateDiagnostics();
+try{
+ CoreFlow.save();
+ CoreFlow.applyDesign();
+ CoreFlow.renderRoute();
+ document.body.classList.add('ready');
+ updateDiagnostics();
+ const bm=document.getElementById('bootmsg');
+ if(bm){bm.textContent='CoreFlow ready';setTimeout(()=>bm.remove(),1200)}
+}catch(err){
+ console.error('CoreFlow boot error:',err);
+ const bm=document.getElementById('bootmsg');
+ if(bm){bm.classList.add('error');bm.textContent='CoreFlow startup error — open browser console for detail'}
+}
 </script>
 </body></html>
