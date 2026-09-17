@@ -186,6 +186,9 @@ html[data-cf-route="home"] #home,html[data-cf-route="gallery"] #gallery,html[dat
      updateDiagnostics();
    }
  };
+ /* v2.2.3 Full Hydration: CoreFlow.state already comes from the synchronous
+    boot snapshot. Keep a normalized copy before any Studio draft is created. */
+ CoreFlow.state=normalize(CoreFlow.state);
 })();
 </script>
 <script>
@@ -221,7 +224,7 @@ html[data-cf-route="home"] #home,html[data-cf-route="gallery"] #gallery,html[dat
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v2.2.2</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v2.2.3</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Local Database<strong>READY</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
@@ -597,13 +600,30 @@ window.addEventListener('popstate',function(ev){
 
 /* CLEAN BOOT ORDER:
    Database -> state -> URL route -> design/theme -> UI -> ready */
+/* v2.2.3 Full first-frame visual hydration.
+   Apply saved bindings before waiting for IndexedDB. */
+(function cfHydrateFirstFrame(){
+ try{
+  const s=CoreFlow.state;
+  CoreFlow.applyDesign();
+  if(typeof cfThemeApply==='function')cfThemeApply();
+  if(typeof cfApplySidebar==='function'){const x=typeof cfSidebarSaved==='function'?cfSidebarSaved():null;if(x)cfApplySidebar(x)}
+  if(typeof cfApplyIcons==='function'){const x=typeof cfIconSaved==='function'?cfIconSaved():null;if(x)cfApplyIcons(x)}
+  if(typeof cfApplyWallpaper==='function'){const x=typeof cfWallpaperSaved==='function'?cfWallpaperSaved():null;if(x)cfApplyWallpaper(x)}
+  if(typeof cfApplyTime==='function'){const x=typeof cfTimeSaved==='function'?cfTimeSaved():null;if(x)cfApplyTime(x)}
+  if(typeof cfApplyUserProfile==='function'){const x=typeof cfUpSaved==='function'?cfUpSaved():null;if(x)cfApplyUserProfile(x)}
+ }catch(e){console.warn('CoreFlow first-frame hydration skipped',e)}
+})();
+
 (async function(){
  try{
    const snapshot=CoreFlow.readBootSnapshot();
+   const before=JSON.stringify(CoreFlow.state);
    const saved=await CoreFlow.LocalStateDB.read();
    CoreFlow.state=saved?CoreFlow.normalize(saved):(snapshot||CoreFlow.clone(CoreFlow.DEFAULT));
    if(!saved)CoreFlow.state=await CoreFlow.LocalStateDB.write(CoreFlow.state);
    CoreFlow.writeBootSnapshot(CoreFlow.state);
+   const dbChanged=before!==JSON.stringify(CoreFlow.state);
    CoreFlow.dbStatus='ready';
 
    const u=new URL(location.href);
@@ -621,7 +641,7 @@ window.addEventListener('popstate',function(ev){
    const savedWallpaper=CoreFlow.state.targets&&CoreFlow.state.targets.wallpaper;if(savedWallpaper)cfApplyWallpaperToSystem(savedWallpaper);
    const savedTimeDate=CoreFlow.state.targets&&CoreFlow.state.targets.timeDate;if(savedTimeDate)cfApplyTimeToSystem(savedTimeDate);
    CoreFlow.renderRoute();updateGalleryUI();cfThemeUI();
-    cfUpUI();const savedProfile=cfUpSaved();if(savedProfile)cfApplyUserProfile(savedProfile);cfSidebarUI();cfIconUI();cfWallpaperUI();cfTimeUI();
+    cfUpUI();if(dbChanged){const savedProfile=cfUpSaved();if(savedProfile)cfApplyUserProfile(savedProfile);}cfSidebarUI();cfIconUI();cfWallpaperUI();cfTimeUI();
    document.body.classList.add('ready');updateDiagnostics();
    const bm=document.getElementById('bootmsg');if(bm)bm.remove()
  }catch(err){
