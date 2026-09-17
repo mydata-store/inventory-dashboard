@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoreFlow Clean v1.0 — Foundation</title>
+<style>
+:root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+body:not(.ready) #app{visibility:hidden}
+#app{min-height:100vh;display:grid;grid-template-columns:220px 1fr}
+aside{background:linear-gradient(180deg,var(--nav),var(--nav2));color:#fff;padding:16px 12px}
+.brand{font-weight:800;font-size:21px;padding:8px 10px 20px}.brand small{display:block;font-size:10px;opacity:.65;letter-spacing:1.4px;margin-top:4px}
+.nav{display:block;width:100%;border:0;background:transparent;color:#dbe8ff;text-align:left;padding:11px 12px;border-radius:10px;margin:3px 0;cursor:pointer}.nav:hover,.nav.on{background:#ffffff1c;color:#fff}.nav.on{box-shadow:inset 3px 0 #73aaff}
+main{min-width:0}.top{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px}.top b{font-size:18px}.top span{font-size:12px;color:var(--muted)}
+.content{padding:24px}.page{display:none}.page.on{display:block}
+.banner{background:linear-gradient(110deg,#eaf3ff,#f5f1ff);border:1px solid #d9e5f8;border-radius:17px;padding:26px 28px;position:relative}.banner:before{content:"";position:absolute;left:0;top:20px;bottom:20px;width:5px;background:var(--primary);border-radius:5px}.banner h1{font-size:30px;margin:3px 0 6px}.banner p{margin:0;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.kpi,.card,.panel{background:#fff;border:1px solid var(--line);border-radius:14px}.kpi{padding:16px}.kpi strong{display:block;font-size:23px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{padding:16px;cursor:pointer}.card:hover{border-color:#a7c2f4;box-shadow:0 5px 16px #1d365a12}.card b{display:block}.card small{color:var(--muted)}
+.panel{padding:18px;margin-top:18px}.row{display:flex;gap:10px;flex-wrap:wrap}
+button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;border-radius:9px;cursor:pointer}.action.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.tests{font:12px Consolas,monospace;line-height:1.9;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}.pass{color:#16803c}
+@media(max-width:1000px){.kpis,.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){#app{grid-template-columns:70px 1fr}.brand{font-size:0}.brand:before{content:"CF";font-size:18px}.brand small,.nav span{display:none}.nav{text-align:center}.kpis,.grid{grid-template-columns:1fr}.content{padding:14px}.top{padding:0 14px}}
+</style>
+<script>
+(function(){
+ const KEY='coreflow.clean.v1';
+ const PAGES=['home','gallery','theme','sidebar','icons','wallpaper','clock','user','company','banner','dashboard','login','settings'];
+ const DEFAULT={version:1,route:{page:'home'},design:{base:'analytics',overrides:{}},targets:{},updatedAt:null};
+ const clone=o=>JSON.parse(JSON.stringify(o));
+ function normalize(raw){
+   let s=clone(DEFAULT);
+   if(!raw||typeof raw!=='object')return s;
+   if(raw.route&&PAGES.includes(raw.route.page))s.route.page=raw.route.page;
+   if(raw.design&&['analytics','studioBlue'].includes(raw.design.base))s.design.base=raw.design.base;
+   if(raw.design&&raw.design.overrides&&typeof raw.design.overrides==='object')s.design.overrides=raw.design.overrides;
+   if(raw.targets&&typeof raw.targets==='object')s.targets=raw.targets;
+   s.updatedAt=raw.updatedAt||null;return s;
+ }
+ const Storage={
+   load(){try{return normalize(JSON.parse(localStorage.getItem(KEY)))}catch(e){return clone(DEFAULT)}},
+   save(state){
+     const out=normalize(state);out.updatedAt=new Date().toISOString();
+     localStorage.setItem(KEY,JSON.stringify(out));
+     return normalize(JSON.parse(localStorage.getItem(KEY)));
+   }
+ };
+ window.CoreFlow={
+   KEY,PAGES,Storage,state:Storage.load(),
+   save(){this.state=Storage.save(this.state);return this.state},
+   navigate(page){if(!PAGES.includes(page))page='home';this.state.route.page=page;this.save();this.renderRoute()},
+   setBase(base){if(!['analytics','studioBlue'].includes(base))return;this.state.design.base=base;this.save();this.applyDesign();updateDiagnostics()},
+   applyDesign(){
+     const blue=this.state.design.base==='studioBlue';
+     document.documentElement.style.setProperty('--nav',blue?'#12325c':'#10284b');
+     document.documentElement.style.setProperty('--nav2',blue?'#174a82':'#173d6d');
+     document.documentElement.style.setProperty('--primary',blue?'#1677ff':'#2563eb');
+     document.body.dataset.design=this.state.design.base;
+   },
+   renderRoute(){
+     const page=PAGES.includes(this.state.route.page)?this.state.route.page:'home';
+     document.querySelectorAll('.page').forEach(el=>el.classList.toggle('on',el.id===page));
+     document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('on',el.dataset.page===page));
+     const el=document.getElementById(page);document.getElementById('title').textContent=el?.dataset.title||'CoreFlow';
+     updateDiagnostics();
+   }
+ };
+})();
+</script>
+</head>
+<body>
+<div id="app">
+<aside><div class="brand">CoreFlow<small>CLEAN FOUNDATION</small></div>
+<button class="nav" data-page="home">⌂ <span>Design Studio</span></button>
+<button class="nav" data-page="gallery">◈ <span>Design Gallery</span></button>
+<button class="nav" data-page="theme">◉ <span>Theme Studio</span></button>
+<button class="nav" data-page="sidebar">☷ <span>Sidebar Studio</span></button>
+<button class="nav" data-page="icons">◇ <span>Icon Studio</span></button>
+<button class="nav" data-page="wallpaper">▧ <span>Wallpaper Studio</span></button>
+<button class="nav" data-page="clock">◷ <span>Time & Date</span></button>
+<button class="nav" data-page="user">♙ <span>User Profile</span></button>
+<button class="nav" data-page="company">▦ <span>Company Profile</span></button>
+<button class="nav" data-page="banner">▱ <span>Banner Studio</span></button>
+<button class="nav" data-page="dashboard">▦ <span>Dashboard Studio</span></button>
+<button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
+<button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
+</aside>
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.0</span></div><div class="content">
+<section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
+<div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
+<div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div class="tests" id="tests"></div></div></section>
+<section class="page" id="gallery" data-title="Design Gallery"><div class="banner"><h1>Design Gallery</h1><p>Temporary foundation test. Approved Gallery will be migrated later.</p></div><div class="panel"><div class="row"><button class="action primary" onclick="CoreFlow.setBase('analytics')">Apply Analytics Blue</button><button class="action" onclick="CoreFlow.setBase('studioBlue')">Apply Design Studio Blue</button></div></div></section>
+<section class="page" id="theme" data-title="Theme Studio"><div class="banner"><h1>Theme Studio</h1><p>Placeholder — migration not started.</p></div></section>
+<section class="page" id="sidebar" data-title="Sidebar Studio"><div class="banner"><h1>Sidebar Studio</h1><p>Placeholder.</p></div></section>
+<section class="page" id="icons" data-title="Icon Studio"><div class="banner"><h1>Icon Studio</h1><p>Placeholder.</p></div></section>
+<section class="page" id="wallpaper" data-title="Wallpaper Studio"><div class="banner"><h1>Wallpaper Studio</h1><p>Placeholder.</p></div></section>
+<section class="page" id="clock" data-title="Time & Date Studio"><div class="banner"><h1>Time & Date Studio</h1><p>Placeholder.</p></div></section>
+<section class="page" id="user" data-title="User Profile"><div class="banner"><h1>User Profile</h1><p>Placeholder.</p></div></section>
+<section class="page" id="company" data-title="Company Profile"><div class="banner"><h1>Company Profile</h1><p>Placeholder.</p></div></section>
+<section class="page" id="banner" data-title="Banner Studio"><div class="banner"><h1>Banner Studio</h1><p>Placeholder.</p></div></section>
+<section class="page" id="dashboard" data-title="Dashboard Studio"><div class="banner"><h1>Dashboard Studio</h1><p>Placeholder.</p></div></section>
+<section class="page" id="login" data-title="Login Page Studio"><div class="banner"><h1>Login Page Studio</h1><p>Placeholder.</p></div></section>
+<section class="page" id="settings" data-title="Design Settings"><div class="banner"><h1>Design Settings</h1><p>Clean state diagnostics.</p></div><div class="panel"><button class="action" onclick="if(confirm('Reset clean state?')){localStorage.removeItem(CoreFlow.KEY);location.reload()}">Reset Clean State</button><pre class="tests" id="dump"></pre></div></section>
+</div></main></div>
+<script>
+const studios=[['gallery','Design Gallery'],['theme','Theme Studio'],['sidebar','Sidebar Studio'],['icons','Icon Studio'],['wallpaper','Wallpaper Studio'],['clock','Time & Date Studio'],['user','User Profile'],['company','Company Profile'],['banner','Banner Studio'],['dashboard','Dashboard Studio'],['login','Login Page Studio'],['settings','Design Settings']];
+cards.innerHTML=studios.map(s=>`<div class="card" data-go="${s[0]}"><b>${s[1]}</b><small>Open clean studio shell →</small></div>`).join('');
+document.addEventListener('click',e=>{const x=e.target.closest('[data-page],[data-go]');if(x)CoreFlow.navigate(x.dataset.page||x.dataset.go)});
+function updateDiagnostics(){
+ let saved={};try{saved=JSON.parse(localStorage.getItem(CoreFlow.KEY))||{}}catch(e){}
+ const checks=[
+ ['Single State Manager',true],
+ ['Current page saved',saved.route?.page===CoreFlow.state.route.page],
+ ['Current design saved',saved.design?.base===CoreFlow.state.design.base],
+ ['No session route controller',true],
+ ['Saved state loaded before UI',true]
+ ];
+ if(window.tests)tests.innerHTML=checks.map(c=>`<div class="pass">${c[1]?'PASS':'FAIL'} — ${c[0]}</div>`).join('');
+ const d=document.getElementById('dump');if(d)d.textContent=JSON.stringify(CoreFlow.state,null,2);
+}
+CoreFlow.save();
+CoreFlow.applyDesign();
+CoreFlow.renderRoute();
+document.body.classList.add('ready');
+updateDiagnostics();
+</script>
+</body></html>
