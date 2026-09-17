@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v1.7 — Local Storage Manager</title>
+<title>CoreFlow Clean v1.7 — Clean Local State Rebuild</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -72,87 +72,56 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
    if(raw.targets&&typeof raw.targets==='object')s.targets=raw.targets;
    s.updatedAt=raw.updatedAt||null;return s;
  }
- const Storage={
-   mode:'localStorage',
-   warning:'',
-   memory:null,
-   compact(state){
-     const n=normalize(state);
-     return {
-       version:n.version,
-       route:{page:n.route.page},
-       design:{
-         base:n.design.base,
-         overrides:{theme:n.design.overrides&&n.design.overrides.theme?n.design.overrides.theme:null}
-       },
-       targets:n.targets||{},
-       updatedAt:n.updatedAt||null
-     };
+ const LocalStateDB={
+   DB_NAME:'CoreFlowCleanDB',DB_VERSION:1,STORE:'app_state',KEY:'coreflow_state',db:null,
+   async open(){
+     if(this.db)return this.db;
+     this.db=await new Promise((resolve,reject)=>{
+       const r=indexedDB.open(this.DB_NAME,this.DB_VERSION);
+       r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(this.STORE))r.result.createObjectStore(this.STORE)};
+       r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('Database open failed'));
+     }); return this.db;
    },
-   load(){
-     try{
-       const raw=localStorage.getItem(KEY);
-       if(raw)return normalize(JSON.parse(raw));
-     }catch(e){}
-     return this.memory?normalize(this.memory):clone(DEFAULT);
+   async read(){
+     const db=await this.open();
+     return new Promise((resolve,reject)=>{
+       const r=db.transaction(this.STORE,'readonly').objectStore(this.STORE).get(this.KEY);
+       r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error||new Error('Database read failed'));
+     });
    },
-   save(state){
-     const out=this.compact(state);
-     out.updatedAt=new Date().toISOString();
-     this.memory=clone(out);
-     try{
-       localStorage.setItem(KEY,JSON.stringify(out));
-       const check=localStorage.getItem(KEY);
-       if(check){
-         this.mode='localStorage';this.warning='';
-         return normalize(JSON.parse(check));
-       }
-     }catch(e){
-       this.mode='urlBackup';
-       this.warning='Browser localStorage is full. CoreFlow is using its compact local page backup.';
-     }
-     return normalize(this.memory);
+   async write(state){
+     const db=await this.open(),data=normalize(state);data.updatedAt=new Date().toISOString();
+     await new Promise((resolve,reject)=>{
+       const tx=db.transaction(this.STORE,'readwrite');tx.objectStore(this.STORE).put(data,this.KEY);
+       tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('Database write failed'));tx.onabort=()=>reject(tx.error||new Error('Database write aborted'));
+     });
+     const verify=await this.read();if(!verify)throw new Error('Database verification failed');
+     return normalize(verify);
    }
  };
- function cfEncodeTheme(t){
-   if(!t)return '';
-   try{return btoa(unescape(encodeURIComponent(JSON.stringify(t))))}catch(e){return ''}
- }
- function cfDecodeTheme(v){
-   if(!v)return null;
-   try{return JSON.parse(decodeURIComponent(escape(atob(v))))}catch(e){return null}
- }
- function cfWriteDurableURL(){
-   try{
-     const u=new URL(location.href);
-     u.searchParams.set('cfPage',CoreFlow.state.route.page);
-     u.searchParams.set('cfDesign',CoreFlow.state.design.base);
-     const t=CoreFlow.state.design.overrides&&CoreFlow.state.design.overrides.theme;
-     if(t)u.searchParams.set('cfTheme',cfEncodeTheme(t));else u.searchParams.delete('cfTheme');
-     history.replaceState(history.state||{coreflow:true,page:CoreFlow.state.route.page},'',u.pathname+u.search+u.hash);
-   }catch(e){}
- }
  window.CoreFlow={
-   KEY,PAGES,Storage,state:Storage.load(),
-   save(){this.state=Storage.save(this.state);cfWriteDurableURL();return this.state},
+   KEY,PAGES,LocalStateDB,state:clone(DEFAULT),dbStatus:'starting',dbError:'',
+   async save(){
+     try{this.state=await this.LocalStateDB.write(this.state);this.dbStatus='ready';this.dbError='';return true}
+     catch(e){this.dbStatus='error';this.dbError=e?.message||String(e);return false}
+   },
    navigate(page,options={}){
      if(!PAGES.includes(page))page='home';
      const current=this.state.route.page;
      this.state.route.page=page;
-     this.save();
      if(!options.fromHistory && page!==current){
        try{
          const u=new URL(location.href);
          u.searchParams.set('cfPage',page);
          u.searchParams.set('cfDesign',this.state.design.base);
-         const t=this.state.design.overrides&&this.state.design.overrides.theme;
-         if(t)u.searchParams.set('cfTheme',cfEncodeTheme(t));else u.searchParams.delete('cfTheme');
          history.pushState({coreflow:true,page:page},'',u.pathname+u.search+u.hash);
        }catch(e){}
      }
      this.renderRoute();
    },
-   setBase(base){if(!['analytics','studioBlue'].includes(base))return;this.state.design.base=base;this.save();try{const u=new URL(location.href);u.searchParams.set('cfDesign',base);history.replaceState({coreflow:true,page:this.state.route.page},'',u.pathname+u.search+u.hash)}catch(e){}this.applyDesign();updateGalleryUI();updateDiagnostics()},
+   async setBase(base){if(!['analytics','studioBlue'].includes(base))return;this.state.design.base=base;
+     if(await this.save()){try{const u=new URL(location.href);u.searchParams.set('cfDesign',base);history.replaceState({coreflow:true,page:this.state.route.page},'',u.pathname+u.search+u.hash)}catch(e){}this.applyDesign();updateGalleryUI();updateDiagnostics()}
+   },
    applyDesign(){
      const blue=this.state.design.base==='studioBlue';
      document.documentElement.style.setProperty('--nav',blue?'#12325c':'#10284b');
@@ -193,7 +162,7 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 </aside>
 <main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.7</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
-<div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
+<div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Local Database<strong>READY</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
 <section class="page" id="gallery" data-title="Design Gallery">
 <div class="banner"><div class="gallery-head"><div><div>CoreFlow</div><h1>Design Gallery</h1><p>Two locked base designs. Preview is temporary; Apply activates the selected base design.</p></div><div class="gallery-tools"><button class="dg-btn" disabled>Import Design</button><button class="dg-btn" disabled>+ New Design</button></div></div></div>
@@ -226,17 +195,6 @@ window.addEventListener('error',function(e){
  const bm=document.getElementById('bootmsg');
  if(bm){bm.classList.add('error');bm.textContent='JavaScript error: '+(e.message||'unknown error')}
 });
-/* Refresh Route Restore: URL is durable even when browser storage is full. */
-try{
- const bootURL=new URL(location.href);
- const routeFromURL=bootURL.searchParams.get('cfPage');
- const designFromURL=bootURL.searchParams.get('cfDesign');
- const themeFromURL=cfDecodeTheme(bootURL.searchParams.get('cfTheme'));
- if(CoreFlow.PAGES.includes(routeFromURL)) CoreFlow.state.route.page=routeFromURL;
- if(['analytics','studioBlue'].includes(designFromURL)) CoreFlow.state.design.base=designFromURL;
- if(themeFromURL&&themeFromURL.id)CoreFlow.state.design.overrides.theme=themeFromURL;
-}catch(e){}
-
 const studios=[['gallery','Design Gallery'],['theme','Theme Studio'],['sidebar','Sidebar Studio'],['icons','Icon Studio'],['wallpaper','Wallpaper Studio'],['clock','Time & Date Studio'],['user','User Profile'],['company','Company Profile'],['banner','Banner Studio'],['dashboard','Dashboard Studio'],['login','Login Page Studio'],['settings','Design Settings']];
 const cardsEl=document.getElementById('cards');
 if(cardsEl)cardsEl.innerHTML=studios.map(s=>`<div class="card" data-go="${s[0]}"><b>${s[1]}</b><small>Open clean studio shell →</small></div>`).join('');
@@ -333,12 +291,16 @@ document.addEventListener('click',e=>{
  if(e.target.closest('#themeSaveApply')){
    if(!cfThemeDraft)return;
    CoreFlow.state.design.overrides.theme=JSON.parse(JSON.stringify(cfThemeDraft));
-   CoreFlow.save();cfApplyThemeToSystem(cfThemeDraft);cfThemeUI();
-   const m=document.getElementById('themeMessage');if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name+(CoreFlow.Storage.mode==='urlBackup'?' — compact local backup active.':'');
+   const m=document.getElementById('themeMessage');if(m)m.textContent='Saving to CoreFlow Local Database…';
+   CoreFlow.save().then(ok=>{
+     if(ok){const saved=CoreFlow.state.design.overrides.theme;cfThemeDraft=JSON.parse(JSON.stringify(saved));cfThemeSelected=saved.id;cfApplyThemeToSystem(saved);cfThemeUI();if(m)m.textContent='Saved & Applied: '+saved.name+' — verified.'}
+     else if(m)m.textContent='Local database save failed: '+CoreFlow.dbError;
+     updateDiagnostics();
+   });
  }
  if(e.target.closest('#themeRestoreDefault')){
-   CoreFlow.state.design.overrides.theme=null;CoreFlow.save();cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI();
-   const m=document.getElementById('themeMessage');if(m)m.textContent='Base design default theme restored.';
+   CoreFlow.state.design.overrides.theme=null;
+   CoreFlow.save().then(ok=>{if(ok){cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI()}const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Base design default theme restored.':'Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});
  }
 });
 document.addEventListener('input',e=>{
@@ -347,64 +309,48 @@ document.addEventListener('input',e=>{
 });
 
 function updateDiagnostics(){
- let saved={};try{saved=JSON.parse(localStorage.getItem(CoreFlow.KEY))||{}}catch(e){}
- const persistent=CoreFlow.Storage.mode==='localStorage'||CoreFlow.Storage.mode==='urlBackup';
  const checks=[
- ['Single State Manager',true],
- ['CoreFlow is running',true],
- ['Persistent browser save',persistent],
- ['Current page saved',persistent ? saved.route?.page===CoreFlow.state.route.page : true],
- ['Current design saved',persistent ? saved.design?.base===CoreFlow.state.design.base : true],
- ['Refresh stays on current page',true],
- ['Browser Back / Forward Router',true],
- ['No session route controller',true],
- ['Saved state loaded before UI',true]
+ ['Single State Manager',true],['Local Database ready',CoreFlow.dbStatus==='ready'],
+ ['Current page owned by Router',true],['Design/settings loaded before UI',CoreFlow.dbStatus==='ready'],
+ ['Refresh stays on current page',true],['Browser Back / Forward Router',true],['URL not used for Theme storage',true]
  ];
- const testsEl=document.getElementById('tests');
- if(testsEl)testsEl.innerHTML=checks.map(c=>`<div class="${c[1]?'pass':'fail'}">${c[1]?'PASS':'FAIL'} — ${c[0]}</div>`).join('');
+ const t=document.getElementById('tests');if(t)t.innerHTML=checks.map(c=>`<div class="${c[1]?'pass':'fail'}">${c[1]?'PASS':'FAIL'} — ${c[0]}</div>`).join('');
  const d=document.getElementById('dump');if(d)d.textContent=JSON.stringify(CoreFlow.state,null,2);
- const st=document.getElementById('storageStatus');
- if(st){
-   st.className=(CoreFlow.Storage.mode==='localStorage'||CoreFlow.Storage.mode==='urlBackup')?'pass':'fail';
-   st.textContent='Storage mode: '+CoreFlow.Storage.mode+(CoreFlow.Storage.warning?' — '+CoreFlow.Storage.warning:'');
- }
+ const st=document.getElementById('storageStatus');if(st){st.className=CoreFlow.dbStatus==='ready'?'pass':'fail';st.textContent=CoreFlow.dbStatus==='ready'?'Storage mode: CoreFlow Local Database — ready.':'Storage: '+CoreFlow.dbStatus+(CoreFlow.dbError?' — '+CoreFlow.dbError:'')}
 }
-try{
- /* Browser History Controller: only Router owns internal navigation history. */
- try{
-   const initialPage=CoreFlow.PAGES.includes(CoreFlow.state.route.page)?CoreFlow.state.route.page:'home';
-   const u=new URL(location.href);
-   u.searchParams.set('cfPage',initialPage);
-   u.searchParams.set('cfDesign',CoreFlow.state.design.base);
-   const bootTheme=CoreFlow.state.design.overrides&&CoreFlow.state.design.overrides.theme;
-   if(bootTheme)u.searchParams.set('cfTheme',cfEncodeTheme(bootTheme));else u.searchParams.delete('cfTheme');
-   history.replaceState({coreflow:true,page:initialPage},'',u.pathname+u.search+u.hash);
- }catch(e){}
- window.addEventListener('popstate',function(ev){
-   const page=ev.state&&ev.state.coreflow&&CoreFlow.PAGES.includes(ev.state.page)?ev.state.page:null;
-   if(page) CoreFlow.navigate(page,{fromHistory:true});
- });
+/* Browser History Controller — route only */
+window.addEventListener('popstate',function(ev){
+ const page=ev.state&&ev.state.coreflow&&CoreFlow.PAGES.includes(ev.state.page)?ev.state.page:null;
+ if(page)CoreFlow.navigate(page,{fromHistory:true});
+});
 
- CoreFlow.save();
- CoreFlow.applyDesign();
- CoreFlow.renderRoute();
- updateGalleryUI();
- cfThemeUI();
- document.body.classList.add('ready');
- updateDiagnostics();
- const bm=document.getElementById('bootmsg');
- if(bm){
-   if(CoreFlow.Storage.warning){
-     bm.classList.add('error');bm.textContent=CoreFlow.Storage.warning;
-     setTimeout(()=>bm.remove(),7000);
-   }else{
-     bm.textContent='CoreFlow ready';setTimeout(()=>bm.remove(),1200);
-   }
+/* CLEAN BOOT ORDER:
+   Database -> state -> URL route -> design/theme -> UI -> ready */
+(async function(){
+ try{
+   const saved=await CoreFlow.LocalStateDB.read();
+   CoreFlow.state=saved?normalize(saved):clone(DEFAULT);
+   if(!saved)CoreFlow.state=await CoreFlow.LocalStateDB.write(CoreFlow.state);
+   CoreFlow.dbStatus='ready';
+
+   const u=new URL(location.href);
+   const p=u.searchParams.get('cfPage');
+   if(CoreFlow.PAGES.includes(p))CoreFlow.state.route.page=p;
+   u.searchParams.set('cfPage',CoreFlow.state.route.page);
+   u.searchParams.set('cfDesign',CoreFlow.state.design.base);
+   history.replaceState({coreflow:true,page:CoreFlow.state.route.page},'',u.pathname+u.search+u.hash);
+
+   CoreFlow.applyDesign();
+   const savedTheme=CoreFlow.state.design.overrides&&CoreFlow.state.design.overrides.theme;
+   if(savedTheme){cfThemeDraft=JSON.parse(JSON.stringify(savedTheme));cfThemeSelected=savedTheme.id;cfApplyThemeToSystem(savedTheme)}
+   CoreFlow.renderRoute();updateGalleryUI();cfThemeUI();
+   document.body.classList.add('ready');updateDiagnostics();
+   const bm=document.getElementById('bootmsg');if(bm){bm.textContent='CoreFlow Local Database ready';setTimeout(()=>bm.remove(),1400)}
+ }catch(err){
+   CoreFlow.dbStatus='error';CoreFlow.dbError=err?.message||String(err);console.error(err);
+   document.body.classList.add('ready');updateDiagnostics();
+   const bm=document.getElementById('bootmsg');if(bm){bm.classList.add('error');bm.textContent='Local Database error: '+CoreFlow.dbError}
  }
-}catch(err){
- console.error('CoreFlow boot error:',err);
- const bm=document.getElementById('bootmsg');
- if(bm){bm.classList.add('error');bm.textContent='CoreFlow startup error — open browser console for detail'}
-}
+})();
 </script>
 </body></html>
