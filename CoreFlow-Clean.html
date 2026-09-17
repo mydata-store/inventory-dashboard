@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v1.6 — Theme Studio</title>
+<title>CoreFlow Clean v1.7 — IndexedDB Local Database</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -104,8 +104,49 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
      }
    }
  };
+
+ const LocalDB={
+   name:'CoreFlowLocalDB',store:'state',key:'main',db:null,ready:false,error:'',
+   open(){
+     return new Promise((resolve,reject)=>{
+       if(!window.indexedDB){this.error='IndexedDB is not supported.';return reject(new Error(this.error))}
+       const r=indexedDB.open(this.name,1);
+       r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains(this.store))d.createObjectStore(this.store)};
+       r.onsuccess=()=>{this.db=r.result;this.ready=true;resolve(this.db)};
+       r.onerror=()=>{this.error='Local database could not open.';reject(r.error)}
+     })
+   },
+   async load(){
+     if(!this.db)await this.open();
+     return new Promise((resolve,reject)=>{
+       const tx=this.db.transaction(this.store,'readonly'),req=tx.objectStore(this.store).get(this.key);
+       req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)
+     })
+   },
+   async save(state){
+     if(!this.db)await this.open();
+     const data=normalize(state);data.updatedAt=new Date().toISOString();
+     return new Promise((resolve,reject)=>{
+       const tx=this.db.transaction(this.store,'readwrite');
+       tx.objectStore(this.store).put(data,this.key);
+       tx.oncomplete=()=>resolve(data);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)
+     })
+   }
+ };
  window.CoreFlow={
-   KEY,PAGES,Storage,state:Storage.load(),
+   KEY,PAGES,Storage,LocalDB,state:Storage.load(),
+   async savePersistent(){
+     this.state=normalize(this.state);
+     try{
+       await this.LocalDB.save(this.state);
+       this.Storage.mode='IndexedDB';
+       this.Storage.warning='';
+       return true;
+     }catch(e){
+       this.Storage.warning='Local database save failed; current session remains available.';
+       return false;
+     }
+   },
    save(){this.state=Storage.save(this.state);return this.state},
    navigate(page,options={}){
      if(!PAGES.includes(page))page='home';
@@ -161,9 +202,9 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.6</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.7</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
-<div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
+<div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Local Database<strong>IndexedDB</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
 <section class="page" id="gallery" data-title="Design Gallery">
 <div class="banner"><div class="gallery-head"><div><div>CoreFlow</div><h1>Design Gallery</h1><p>Two locked base designs. Preview is temporary; Apply activates the selected base design.</p></div><div class="gallery-tools"><button class="dg-btn" disabled>Import Design</button><button class="dg-btn" disabled>+ New Design</button></div></div></div>
@@ -301,11 +342,21 @@ document.addEventListener('click',e=>{
  if(e.target.closest('#themeSaveApply')){
    if(!cfThemeDraft)return;
    CoreFlow.state.design.overrides.theme=JSON.parse(JSON.stringify(cfThemeDraft));
-   CoreFlow.save();cfApplyThemeToSystem(cfThemeDraft);cfThemeUI();
-   const m=document.getElementById('themeMessage');if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name;
+   const m=document.getElementById('themeMessage');if(m)m.textContent='Saving to CoreFlow Local Database…';
+   CoreFlow.savePersistent().then(async ok=>{
+     if(ok){
+       const verify=await CoreFlow.LocalDB.load();
+       const saved=verify&&verify.design&&verify.design.overrides&&verify.design.overrides.theme;
+       if(saved){
+         CoreFlow.state=normalize(verify);cfApplyThemeToSystem(saved);cfThemeDraft=JSON.parse(JSON.stringify(saved));cfThemeSelected=saved.id;cfThemeUI();
+         if(m)m.textContent='Saved & Applied locally: '+saved.name+' — verified in IndexedDB.';
+       }else if(m)m.textContent='Save verification failed.';
+     }else if(m)m.textContent=CoreFlow.Storage.warning;
+     updateDiagnostics();
+   });
  }
  if(e.target.closest('#themeRestoreDefault')){
-   CoreFlow.state.design.overrides.theme=null;CoreFlow.save();cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI();
+   CoreFlow.state.design.overrides.theme=null;CoreFlow.savePersistent();cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI();
    const m=document.getElementById('themeMessage');if(m)m.textContent='Base design default theme restored.';
  }
 });
@@ -316,7 +367,7 @@ document.addEventListener('input',e=>{
 
 function updateDiagnostics(){
  let saved={};try{saved=JSON.parse(localStorage.getItem(CoreFlow.KEY))||{}}catch(e){}
- const persistent=CoreFlow.Storage.mode==='localStorage';
+ const persistent=CoreFlow.Storage.mode==='IndexedDB'||CoreFlow.Storage.mode==='localStorage';
  const checks=[
  ['Single State Manager',true],
  ['CoreFlow is running',true],
@@ -333,7 +384,7 @@ function updateDiagnostics(){
  const d=document.getElementById('dump');if(d)d.textContent=JSON.stringify(CoreFlow.state,null,2);
  const st=document.getElementById('storageStatus');
  if(st){
-   st.className=CoreFlow.Storage.mode==='localStorage'?'pass':'fail';
+   st.className=(CoreFlow.Storage.mode==='IndexedDB'||CoreFlow.Storage.mode==='localStorage')?'pass':'fail';
    st.textContent='Storage mode: '+CoreFlow.Storage.mode+(CoreFlow.Storage.warning?' — '+CoreFlow.Storage.warning:'');
  }
 }
@@ -351,22 +402,34 @@ try{
    if(page) CoreFlow.navigate(page,{fromHistory:true});
  });
 
- CoreFlow.save();
- CoreFlow.applyDesign();
- CoreFlow.renderRoute();
- updateGalleryUI();
- cfThemeUI();
- document.body.classList.add('ready');
- updateDiagnostics();
- const bm=document.getElementById('bootmsg');
- if(bm){
-   if(CoreFlow.Storage.warning){
-     bm.classList.add('error');bm.textContent=CoreFlow.Storage.warning;
-     setTimeout(()=>bm.remove(),7000);
-   }else{
-     bm.textContent='CoreFlow ready';setTimeout(()=>bm.remove(),1200);
+ /* Local Database First boot: durable studio settings come from IndexedDB.
+    URL remains authoritative only for current route/base-design navigation. */
+ (async function(){
+   try{
+     await CoreFlow.LocalDB.open();
+     const durable=await CoreFlow.LocalDB.load();
+     if(durable){
+       const urlPage=CoreFlow.state.route.page, urlBase=CoreFlow.state.design.base;
+       CoreFlow.state=normalize(durable);
+       CoreFlow.state.route.page=urlPage;
+       CoreFlow.state.design.base=urlBase;
+     }else{
+       await CoreFlow.LocalDB.save(CoreFlow.state);
+     }
+     CoreFlow.Storage.mode='IndexedDB';CoreFlow.Storage.warning='';
+   }catch(dbErr){
+     console.error('IndexedDB startup:',dbErr);
    }
- }
+   CoreFlow.applyDesign();
+   CoreFlow.renderRoute();
+   updateGalleryUI();
+   cfThemeUI();
+   document.body.classList.add('ready');
+   updateDiagnostics();
+   const bm=document.getElementById('bootmsg');
+   if(bm){bm.textContent=CoreFlow.LocalDB.ready?'CoreFlow Local Database ready':'CoreFlow ready with storage warning';setTimeout(()=>bm.remove(),1800)}
+ })();
+
 }catch(err){
  console.error('CoreFlow boot error:',err);
  const bm=document.getElementById('bootmsg');
