@@ -95,29 +95,10 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 @media(max-width:650px){.up-gallery,.up-controls{grid-template-columns:1fr}}
 
 
-/* v2.3 Company Profile Studio — isolated module */
-.cp-gallery{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:11px;margin-top:14px}
-.cp-style{border:1px solid var(--line);background:#fff;border-radius:13px;padding:11px;cursor:pointer}
-.cp-style.selected{border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 12%,transparent)}
-.cp-mini{height:94px;border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;color:#fff}
-.cp-mini-logo{width:48px;height:48px;border-radius:10px;background:#ffffffdd;color:#24496f;display:grid;place-items:center;font-weight:900;font-size:12px;overflow:hidden}
-.cp-mini-logo img{width:100%;height:100%;object-fit:contain}
-.cp-mini-lines{flex:1}.cp-mini-lines i{display:block;height:7px;background:#ffffffa8;border-radius:5px;margin:7px 0}.cp-mini-lines i:last-child{width:60%}
-.cp-editor{display:grid;grid-template-columns:1.08fr .92fr;gap:16px}
-.cp-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.cp-field{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}
-.cp-field label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}
-.cp-field input[type=text],.cp-field input[type=tel],.cp-field select{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;background:#fff;color:var(--text)}
-.cp-field input[type=range]{width:100%}.cp-switch{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.cp-upload{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cp-preview{background:#eef3f8;border:1px solid var(--line);border-radius:13px;padding:14px}
-.cp-preview-card{min-height:260px;border-radius:15px;padding:22px;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff}
-.cp-preview-logo{display:grid;place-items:center;margin:0 auto 12px;background:#fff;overflow:hidden;font-weight:900}
-.cp-preview-logo img{width:100%;height:100%;object-fit:contain}
-.cp-preview-name{font-weight:850}.cp-preview-meta{opacity:.78;margin-top:5px;font-size:12px;line-height:1.5}
-.cp-note{font-size:12px;color:var(--muted);margin-top:8px}
-@media(max-width:1000px){.cp-gallery{grid-template-columns:repeat(2,1fr)}.cp-editor{grid-template-columns:1fr}}
-@media(max-width:650px){.cp-gallery,.cp-controls{grid-template-columns:1fr}}
+/* v2.2.1 Stability Gate — prevent intermediate/default frames */
+html.cf-booting #app{visibility:hidden}
+html.cf-booting .bootmsg{display:none}
+html.cf-booting .bootmsg.error{display:block}
 
 </style>
 <script>
@@ -197,14 +178,21 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
    },
    renderRoute(){
      const page=PAGES.includes(this.state.route.page)?this.state.route.page:'home';
-     document.querySelectorAll('.page').forEach(el=>el.classList.toggle('on',el.id===page));
-     document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('on',el.dataset.page===page));
-     const el=document.getElementById(page);document.getElementById('title').textContent=el?.dataset.title||'CoreFlow';
-     updateDiagnostics();
+     const previous=document.querySelector('.page.on');
+     const next=document.getElementById(page);
+     if(previous&&previous!==next)previous.classList.remove('on');
+     if(next&&!next.classList.contains('on'))next.classList.add('on');
+     const activeNav=document.querySelector('[data-page].on');
+     if(activeNav&&activeNav.dataset.page!==page)activeNav.classList.remove('on');
+     const nextNav=document.querySelector('[data-page="'+page+'"]');
+     if(nextNav)nextNav.classList.add('on');
+     const title=document.getElementById('title');if(title)title.textContent=next?.dataset.title||'CoreFlow';
+     if(typeof cfInitPage==='function')cfInitPage(page);
    }
  };
 })();
 </script>
+<script>document.documentElement.classList.add('cf-booting');</script>
 </head>
 <body>
 <div id="bootmsg" class="bootmsg">CoreFlow starting…</div>
@@ -224,7 +212,7 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v2.3.0</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v2.2.1</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Local Database<strong>READY</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
@@ -259,13 +247,7 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <div class="panel"><div class="up-editor"><div><b>Profile Controls</b><div class="up-controls" id="upControls" style="margin-top:12px"></div></div>
 <div class="up-preview"><div class="gallery-head"><b>Live Preview</b><small style="color:var(--muted)">Preview only until Save & Apply</small></div><div class="up-preview-card" id="upPreviewCard" style="margin-top:12px"><img id="upPreviewImg" class="up-avatar" alt=""><div class="up-preview-name" id="upPreviewName">Muhammad Waqas</div><div class="up-preview-role" id="upPreviewRole">Store / Procurement</div></div><div class="up-note" id="upMessage">Profile Studio ready.</div></div></div></div>
 </section>
-<section class="page" id="company" data-title="Company Profile">
-<div class="banner"><div class="gallery-head"><div><div>CoreFlow</div><h1>Company Profile Studio</h1><p>Manage company identity independently. Company Profile owns company name, contact details and logo presentation only.</p></div><div class="gallery-tools"><button class="dg-btn" id="cpRestore">Restore Default</button><button class="dg-btn primary" id="cpSave">Save & Apply</button></div></div></div>
-<div class="kpis"><div class="kpi">Profile Styles<strong>4</strong></div><div class="kpi">Selected<strong id="cpStyleKpi">Corporate</strong></div><div class="kpi">Identity Fields<strong>4</strong></div><div class="kpi">Persistence<strong id="cpPersistKpi">READY</strong></div></div>
-<div class="panel"><b>Company Card Gallery</b><div class="cp-note">Functional foundation. Final typography, spacing and premium visual polish will be completed in the polish phase.</div><div class="cp-gallery" id="cpGallery"></div></div>
-<div class="panel"><div class="cp-editor"><div><b>Company Controls</b><div class="cp-controls" id="cpControls" style="margin-top:12px"></div></div>
-<div class="cp-preview"><div class="gallery-head"><b>Live Preview</b><small style="color:var(--muted)">Preview only until Save & Apply</small></div><div class="cp-preview-card" id="cpPreviewCard" style="margin-top:12px"><div><div class="cp-preview-logo" id="cpPreviewLogo">CF</div><div class="cp-preview-name" id="cpPreviewName">CoreFlow</div><div class="cp-preview-meta" id="cpPreviewMeta">Company Address<br>Telephone</div></div></div><div class="cp-note" id="cpMessage">Company Profile Studio ready.</div></div></div></div>
-</section>
+<section class="page" id="company" data-title="Company Profile"><div class="banner"><h1>Company Profile</h1><p>Placeholder.</p></div></section>
 <section class="page" id="banner" data-title="Banner Studio"><div class="banner"><h1>Banner Studio</h1><p>Placeholder.</p></div></section>
 <section class="page" id="dashboard" data-title="Dashboard Studio"><div class="banner"><h1>Dashboard Studio</h1><p>Placeholder.</p></div></section>
 <section class="page" id="login" data-title="Login Page Studio"><div class="banner"><h1>Login Page Studio</h1><p>Placeholder.</p></div></section>
@@ -572,78 +554,25 @@ document.addEventListener('input',e=>{
 });
 
 
-/* v2.3 Company Profile Studio — isolated owner */
-const CF_CP_DEFAULT={
- style:'corporate',companyName:'CoreFlow',address:'Company Address',telephone:'Telephone',tagline:'Clean Foundation',
- logo:'',logoSize:74,logoShape:'rounded',nameSize:20,background:'#12345f',textColor:'#ffffff',
- effect:'solid',showSidebarLogo:true,showTopBrand:true
-};
-const CF_CP_STYLES=[
- {id:'corporate',name:'Corporate',bg:'#12345f'},
- {id:'modern',name:'Modern',bg:'#173d6d'},
- {id:'soft',name:'Soft Identity',bg:'#315985'},
- {id:'glass',name:'Glass Identity',bg:'#24496f'}
-];
-let cfCpDraft=null;
-function cfCpClone(v){return JSON.parse(JSON.stringify(v))}
-function cfCpSaved(){return CoreFlow.state.targets?.companyProfile||null}
-function cfCpEnsure(){if(!CoreFlow.state.targets)CoreFlow.state.targets={};if(!cfCpDraft)cfCpDraft=cfCpClone(cfCpSaved()||CF_CP_DEFAULT)}
-function cfCpGallery(){
- const el=document.getElementById('cpGallery');if(!el)return;cfCpEnsure();
- el.innerHTML=CF_CP_STYLES.map(s=>`<div class="cp-style ${cfCpDraft.style===s.id?'selected':''}" data-cp-style="${s.id}"><div class="cp-mini" style="background:${s.bg}"><div class="cp-mini-logo">CF</div><div class="cp-mini-lines"><i></i><i></i></div></div><b>${s.name}</b></div>`).join('');
-}
-function cfCpControls(){
- const el=document.getElementById('cpControls');if(!el)return;cfCpEnsure();
- const esc=v=>String(v||'').replace(/"/g,'&quot;');
- el.innerHTML=`
- <div class="cp-field"><label>Company Name</label><input type="text" data-cp="companyName" value="${esc(cfCpDraft.companyName)}"></div>
- <div class="cp-field"><label>Telephone</label><input type="tel" data-cp="telephone" value="${esc(cfCpDraft.telephone)}"></div>
- <div class="cp-field"><label>Address</label><input type="text" data-cp="address" value="${esc(cfCpDraft.address)}"></div>
- <div class="cp-field"><label>Tagline / Subtitle</label><input type="text" data-cp="tagline" value="${esc(cfCpDraft.tagline)}"></div>
- <div class="cp-field"><label>Company Logo</label><div class="cp-upload"><input id="cpLogoInput" type="file" accept="image/*"><button class="dg-btn" id="cpClearLogo" type="button">Clear</button></div></div>
- <div class="cp-field"><label>Logo Shape</label><select data-cp="logoShape"><option value="rounded" ${cfCpDraft.logoShape==='rounded'?'selected':''}>Rounded</option><option value="circle" ${cfCpDraft.logoShape==='circle'?'selected':''}>Circle</option><option value="square" ${cfCpDraft.logoShape==='square'?'selected':''}>Square</option></select></div>
- <div class="cp-field"><label>Logo Size — <span>${cfCpDraft.logoSize}px</span></label><input type="range" min="42" max="130" value="${cfCpDraft.logoSize}" data-cp-num="logoSize"></div>
- <div class="cp-field"><label>Company Name Size — <span>${cfCpDraft.nameSize}px</span></label><input type="range" min="14" max="30" value="${cfCpDraft.nameSize}" data-cp-num="nameSize"></div>
- <div class="cp-field"><label>Card Background</label><input type="color" data-cp="background" value="${cfCpDraft.background}"></div>
- <div class="cp-field"><label>Text Color</label><input type="color" data-cp="textColor" value="${cfCpDraft.textColor}"></div>
- <div class="cp-field"><label>Card Effect</label><select data-cp="effect"><option value="solid" ${cfCpDraft.effect==='solid'?'selected':''}>Solid</option><option value="soft" ${cfCpDraft.effect==='soft'?'selected':''}>Soft Shadow</option><option value="glass" ${cfCpDraft.effect==='glass'?'selected':''}>Glassy</option></select></div>
- <div class="cp-field"><div class="cp-switch"><b>Show Sidebar Logo</b><input type="checkbox" data-cp-check="showSidebarLogo" ${cfCpDraft.showSidebarLogo?'checked':''}></div></div>
- <div class="cp-field"><div class="cp-switch"><b>Show Top Brand</b><input type="checkbox" data-cp-check="showTopBrand" ${cfCpDraft.showTopBrand?'checked':''}></div></div>`;
-}
-function cfCpPreview(){
- const card=document.getElementById('cpPreviewCard');if(!card)return;cfCpEnsure();
- const logo=document.getElementById('cpPreviewLogo'),nm=document.getElementById('cpPreviewName'),meta=document.getElementById('cpPreviewMeta');
- card.style.background=cfCpDraft.background;card.style.color=cfCpDraft.textColor;
- card.style.boxShadow=cfCpDraft.effect==='soft'?'0 12px 28px #17203328':cfCpDraft.effect==='glass'?'inset 0 0 0 1px #ffffff44,0 12px 28px #17203320':'none';
- if(logo){logo.style.width=logo.style.height=cfCpDraft.logoSize+'px';logo.style.borderRadius=cfCpDraft.logoShape==='circle'?'50%':cfCpDraft.logoShape==='rounded'?'16px':'3px';logo.innerHTML=cfCpDraft.logo?`<img src="${cfCpDraft.logo}" alt="">`:'CF'}
- if(nm){nm.textContent=cfCpDraft.companyName;nm.style.fontSize=cfCpDraft.nameSize+'px'}
- if(meta)meta.innerHTML=`${cfCpDraft.tagline||''}${cfCpDraft.address?'<br>'+cfCpDraft.address:''}${cfCpDraft.telephone?'<br>'+cfCpDraft.telephone:''}`;
- const k=document.getElementById('cpStyleKpi');if(k)k.textContent=CF_CP_STYLES.find(x=>x.id===cfCpDraft.style)?.name||'Corporate';
-}
-function cfCpUI(){cfCpEnsure();cfCpGallery();cfCpControls();cfCpPreview();const p=document.getElementById('cpPersistKpi');if(p)p.textContent=cfCpSaved()?'SAVED':'READY'}
-function cfApplyCompanyProfile(p){
- if(!p)return;
- const brand=document.querySelector('.brand');
- if(brand){
-   brand.innerHTML=`${p.showSidebarLogo&&p.logo?`<img src="${p.logo}" style="display:block;max-width:54px;max-height:42px;object-fit:contain;margin-bottom:5px">`:''}${p.companyName}<small>${p.tagline||''}</small>`;
+/* v2.2.1 Lazy Studio Initializer — UI is built only when a studio is visited */
+const CF_INITIALIZED_PAGES=new Set();
+function cfInitPage(page){
+ if(CF_INITIALIZED_PAGES.has(page))return;
+ CF_INITIALIZED_PAGES.add(page);
+ try{
+   if(page==='gallery')updateGalleryUI();
+   else if(page==='theme')cfThemeUI();
+   else if(page==='sidebar')cfSidebarUI();
+   else if(page==='icons')cfIconUI();
+   else if(page==='wallpaper')cfWallpaperUI();
+   else if(page==='clock')cfTimeUI();
+   else if(page==='user')cfUpUI();
+   else if(page==='home'||page==='settings')updateDiagnostics();
+ }catch(err){
+   CF_INITIALIZED_PAGES.delete(page);
+   throw err;
  }
- let top=document.getElementById('cfCompanyTopBrand');
- if(!top){top=document.createElement('span');top.id='cfCompanyTopBrand';top.style.cssText='font-size:12px;font-weight:700;color:var(--muted);margin-left:10px';const title=document.getElementById('title');if(title)title.insertAdjacentElement('afterend',top)}
- if(top){top.style.display=p.showTopBrand?'inline':'none';top.textContent=p.companyName}
 }
-document.addEventListener('click',e=>{
- const st=e.target.closest('[data-cp-style]');
- if(st){cfCpEnsure();cfCpDraft.style=st.dataset.cpStyle;const s=CF_CP_STYLES.find(x=>x.id===cfCpDraft.style);if(s)cfCpDraft.background=s.bg;cfCpGallery();cfCpControls();cfCpPreview();return}
- if(e.target.closest('#cpClearLogo')){cfCpEnsure();cfCpDraft.logo='';cfCpPreview();return}
- if(e.target.closest('#cpRestore')){cfCpDraft=cfCpClone(CF_CP_DEFAULT);cfCpUI();const m=document.getElementById('cpMessage');if(m)m.textContent='Default company profile restored in preview. Save & Apply to persist.';return}
- if(e.target.closest('#cpSave')){cfCpEnsure();CoreFlow.state.targets.companyProfile=cfCpClone(cfCpDraft);const m=document.getElementById('cpMessage');if(m)m.textContent='Saving to CoreFlow Local Database…';CoreFlow.save().then(ok=>{if(ok){cfApplyCompanyProfile(CoreFlow.state.targets.companyProfile);cfCpUI();if(m)m.textContent='Saved & Applied — refresh persistence ready.'}else if(m)m.textContent='Save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
-});
-document.addEventListener('input',e=>{
- if(e.target.id==='cpLogoInput'&&e.target.files?.[0]){const r=new FileReader();r.onload=()=>{cfCpEnsure();cfCpDraft.logo=String(r.result||'');cfCpPreview()};r.readAsDataURL(e.target.files[0]);return}
- if(e.target.matches('[data-cp]')){cfCpEnsure();cfCpDraft[e.target.dataset.cp]=e.target.value;cfCpPreview();return}
- if(e.target.matches('[data-cp-num]')){cfCpEnsure();cfCpDraft[e.target.dataset.cpNum]=Number(e.target.value);cfCpControls();cfCpPreview();return}
- if(e.target.matches('[data-cp-check]')){cfCpEnsure();cfCpDraft[e.target.dataset.cpCheck]=e.target.checked;cfCpPreview()}
-});
 
 function updateDiagnostics(){
  const checks=[
@@ -701,15 +630,17 @@ window.addEventListener('popstate',function(ev){
    const savedIcons=CoreFlow.state.targets&&CoreFlow.state.targets.icons;if(savedIcons)cfApplyIconsToSystem(savedIcons);else cfApplyIconsToSystem(CF_ICON_DEFAULT);
    const savedWallpaper=CoreFlow.state.targets&&CoreFlow.state.targets.wallpaper;if(savedWallpaper)cfApplyWallpaperToSystem(savedWallpaper);
    const savedTimeDate=CoreFlow.state.targets&&CoreFlow.state.targets.timeDate;if(savedTimeDate)cfApplyTimeToSystem(savedTimeDate);
-   CoreFlow.renderRoute();updateGalleryUI();cfThemeUI();
-    cfUpUI();const savedProfile=cfUpSaved();if(savedProfile)cfApplyUserProfile(savedProfile);
-    cfCpUI();const savedCompany=cfCpSaved();if(savedCompany)cfApplyCompanyProfile(savedCompany);cfSidebarUI();cfIconUI();cfWallpaperUI();cfTimeUI();
-   document.body.classList.add('ready');updateDiagnostics();
-   const bm=document.getElementById('bootmsg');if(bm){bm.textContent='CoreFlow Local Database ready';setTimeout(()=>bm.remove(),1400)}
+   const savedProfile=cfUpSaved();if(savedProfile)cfApplyUserProfile(savedProfile);
+   CoreFlow.renderRoute();
+   updateDiagnostics();
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   document.body.classList.add('ready');
+   document.documentElement.classList.remove('cf-booting');
+   const bm=document.getElementById('bootmsg');if(bm)bm.remove();
  }catch(err){
    CoreFlow.dbStatus='error';CoreFlow.dbError=err?.message||String(err);console.error(err);
-   document.body.classList.add('ready');updateDiagnostics();
-   const bm=document.getElementById('bootmsg');if(bm){bm.classList.add('error');bm.textContent='Local Database error: '+CoreFlow.dbError}
+   document.body.classList.add('ready');document.documentElement.classList.remove('cf-booting');updateDiagnostics();
+   const bm=document.getElementById('bootmsg');if(bm){bm.style.display='block';bm.classList.add('error');bm.textContent='Local Database error: '+CoreFlow.dbError}
  }
 })();
 </script>
