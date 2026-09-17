@@ -94,16 +94,15 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 @media(max-width:1000px){.up-gallery{grid-template-columns:repeat(2,1fr)}.up-editor{grid-template-columns:1fr}}
 @media(max-width:650px){.up-gallery,.up-controls{grid-template-columns:1fr}}
 
-
-/* v2.2.1 Stability Gate — prevent intermediate/default frames */
-html.cf-booting #app{visibility:hidden}
-html.cf-booting .bootmsg{display:none}
-html.cf-booting .bootmsg.error{display:block}
+/* v2.2.2 first-paint route */
+html[data-cf-route] .page{display:none}
+html[data-cf-route="home"] #home,html[data-cf-route="gallery"] #gallery,html[data-cf-route="theme"] #theme,html[data-cf-route="sidebar"] #sidebar,html[data-cf-route="icons"] #icons,html[data-cf-route="wallpaper"] #wallpaper,html[data-cf-route="clock"] #clock,html[data-cf-route="user"] #user,html[data-cf-route="company"] #company,html[data-cf-route="banner"] #banner,html[data-cf-route="dashboard"] #dashboard,html[data-cf-route="login"] #login,html[data-cf-route="settings"] #settings{display:block}
 
 </style>
 <script>
 (function(){
  const KEY='coreflow.clean.v1';
+ const SNAPSHOT_KEY='coreflow.clean.boot.snapshot.v1';
  const PAGES=['home','gallery','theme','sidebar','icons','wallpaper','clock','user','company','banner','dashboard','login','settings'];
  const DEFAULT={version:1,route:{page:'home'},design:{base:'analytics',overrides:{theme:null}},targets:{},updatedAt:null};
  const clone=o=>JSON.parse(JSON.stringify(o));
@@ -116,6 +115,8 @@ html.cf-booting .bootmsg.error{display:block}
    if(raw.targets&&typeof raw.targets==='object')s.targets=raw.targets;
    s.updatedAt=raw.updatedAt||null;return s;
  }
+ function readBootSnapshot(){try{const x=localStorage.getItem(SNAPSHOT_KEY);return x?normalize(JSON.parse(x)):null}catch(e){return null}}
+ function writeBootSnapshot(s){try{localStorage.setItem(SNAPSHOT_KEY,JSON.stringify(normalize(s)))}catch(e){}}
  const LocalStateDB={
    DB_NAME:'CoreFlowCleanDB',DB_VERSION:1,STORE:'app_state',KEY:'coreflow_state',db:null,
    async open(){
@@ -144,16 +145,17 @@ html.cf-booting .bootmsg.error{display:block}
    }
  };
  window.CoreFlow={
-   KEY,PAGES,LocalStateDB,state:clone(DEFAULT),dbStatus:'starting',dbError:'',
+   KEY,SNAPSHOT_KEY,PAGES,DEFAULT,clone,normalize,LocalStateDB,readBootSnapshot,writeBootSnapshot,state:readBootSnapshot()||clone(DEFAULT),dbStatus:'starting',dbError:'',
    normalize,clone,DEFAULT,
    async save(){
-     try{this.state=await this.LocalStateDB.write(this.state);this.dbStatus='ready';this.dbError='';return true}
+     try{this.state=await this.LocalStateDB.write(this.state);writeBootSnapshot(this.state);this.dbStatus='ready';this.dbError='';return true}
      catch(e){this.dbStatus='error';this.dbError=e?.message||String(e);return false}
    },
    navigate(page,options={}){
      if(!PAGES.includes(page))page='home';
      const current=this.state.route.page;
      this.state.route.page=page;
+      document.documentElement.dataset.cfRoute=page;
      if(!options.fromHistory && page!==current){
        try{
          const u=new URL(location.href);
@@ -178,24 +180,31 @@ html.cf-booting .bootmsg.error{display:block}
    },
    renderRoute(){
      const page=PAGES.includes(this.state.route.page)?this.state.route.page:'home';
-     const previous=document.querySelector('.page.on');
-     const next=document.getElementById(page);
-     if(previous&&previous!==next)previous.classList.remove('on');
-     if(next&&!next.classList.contains('on'))next.classList.add('on');
-     const activeNav=document.querySelector('[data-page].on');
-     if(activeNav&&activeNav.dataset.page!==page)activeNav.classList.remove('on');
-     const nextNav=document.querySelector('[data-page="'+page+'"]');
-     if(nextNav)nextNav.classList.add('on');
-     const title=document.getElementById('title');if(title)title.textContent=next?.dataset.title||'CoreFlow';
-     if(typeof cfInitPage==='function')cfInitPage(page);
+     document.querySelectorAll('.page').forEach(el=>el.classList.toggle('on',el.id===page));
+     document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('on',el.dataset.page===page));
+     const el=document.getElementById(page);document.getElementById('title').textContent=el?.dataset.title||'CoreFlow';
+     updateDiagnostics();
    }
  };
 })();
 </script>
-<script>document.documentElement.classList.add('cf-booting');</script>
+<script>
+(function(){
+ try{
+  const pages=['home','gallery','theme','sidebar','icons','wallpaper','clock','user','company','banner','dashboard','login','settings'];
+  const q=new URL(location.href).searchParams.get('cfPage');
+  const raw=localStorage.getItem('coreflow.clean.boot.snapshot.v1'),s=raw?JSON.parse(raw):null;
+  document.documentElement.dataset.cfRoute=pages.includes(q)?q:(pages.includes(s?.route?.page)?s.route.page:'home');
+  if(!s)return;
+  const d=s.design||{},blue=d.base==='studioBlue',th=d.overrides&&d.overrides.theme,r=document.documentElement.style;
+  r.setProperty('--nav',th?.sidebar||(blue?'#12325c':'#10284b'));r.setProperty('--nav2',th?.sidebar||(blue?'#174a82':'#173d6d'));
+  r.setProperty('--primary',th?.primary||(blue?'#1677ff':'#2563eb'));if(th?.workspace)r.setProperty('--bg',th.workspace);if(th?.surface)r.setProperty('--card',th.surface);
+ }catch(e){}
+})();
+</script>
 </head>
 <body>
-<div id="bootmsg" class="bootmsg">CoreFlow starting…</div>
+<div id="bootmsg" class="bootmsg" style="display:none">CoreFlow starting…</div>
 <div id="app">
 <aside><div class="brand">CoreFlow<small>CLEAN FOUNDATION</small></div>
 <button class="nav" data-page="home">⌂ <span>Design Studio</span></button>
@@ -212,7 +221,7 @@ html.cf-booting .bootmsg.error{display:block}
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v2.2.1</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v2.2.2</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Local Database<strong>READY</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
@@ -256,7 +265,7 @@ html.cf-booting .bootmsg.error{display:block}
 <script>
 window.addEventListener('error',function(e){
  const bm=document.getElementById('bootmsg');
- if(bm){bm.classList.add('error');bm.textContent='JavaScript error: '+(e.message||'unknown error')}
+ if(bm){bm.style.display='block';bm.classList.add('error');bm.textContent='JavaScript error: '+(e.message||'unknown error')}
 });
 const studios=[['gallery','Design Gallery'],['theme','Theme Studio'],['sidebar','Sidebar Studio'],['icons','Icon Studio'],['wallpaper','Wallpaper Studio'],['clock','Time & Date Studio'],['user','User Profile'],['company','Company Profile'],['banner','Banner Studio'],['dashboard','Dashboard Studio'],['login','Login Page Studio'],['settings','Design Settings']];
 const cardsEl=document.getElementById('cards');
@@ -553,27 +562,6 @@ document.addEventListener('input',e=>{
  if(e.target.matches('[data-up-check]')){cfUpEnsure();cfUpDraft[e.target.dataset.upCheck]=e.target.checked;cfUpPreview()}
 });
 
-
-/* v2.2.1 Lazy Studio Initializer — UI is built only when a studio is visited */
-const CF_INITIALIZED_PAGES=new Set();
-function cfInitPage(page){
- if(CF_INITIALIZED_PAGES.has(page))return;
- CF_INITIALIZED_PAGES.add(page);
- try{
-   if(page==='gallery')updateGalleryUI();
-   else if(page==='theme')cfThemeUI();
-   else if(page==='sidebar')cfSidebarUI();
-   else if(page==='icons')cfIconUI();
-   else if(page==='wallpaper')cfWallpaperUI();
-   else if(page==='clock')cfTimeUI();
-   else if(page==='user')cfUpUI();
-   else if(page==='home'||page==='settings')updateDiagnostics();
- }catch(err){
-   CF_INITIALIZED_PAGES.delete(page);
-   throw err;
- }
-}
-
 function updateDiagnostics(){
  const checks=[
  ['Single State Manager',true],['Local Database ready',CoreFlow.dbStatus==='ready'],
@@ -611,9 +599,11 @@ window.addEventListener('popstate',function(ev){
    Database -> state -> URL route -> design/theme -> UI -> ready */
 (async function(){
  try{
+   const snapshot=CoreFlow.readBootSnapshot();
    const saved=await CoreFlow.LocalStateDB.read();
-   CoreFlow.state=saved?CoreFlow.normalize(saved):CoreFlow.clone(CoreFlow.DEFAULT);
+   CoreFlow.state=saved?CoreFlow.normalize(saved):(snapshot||CoreFlow.clone(CoreFlow.DEFAULT));
    if(!saved)CoreFlow.state=await CoreFlow.LocalStateDB.write(CoreFlow.state);
+   CoreFlow.writeBootSnapshot(CoreFlow.state);
    CoreFlow.dbStatus='ready';
 
    const u=new URL(location.href);
@@ -630,16 +620,13 @@ window.addEventListener('popstate',function(ev){
    const savedIcons=CoreFlow.state.targets&&CoreFlow.state.targets.icons;if(savedIcons)cfApplyIconsToSystem(savedIcons);else cfApplyIconsToSystem(CF_ICON_DEFAULT);
    const savedWallpaper=CoreFlow.state.targets&&CoreFlow.state.targets.wallpaper;if(savedWallpaper)cfApplyWallpaperToSystem(savedWallpaper);
    const savedTimeDate=CoreFlow.state.targets&&CoreFlow.state.targets.timeDate;if(savedTimeDate)cfApplyTimeToSystem(savedTimeDate);
-   const savedProfile=cfUpSaved();if(savedProfile)cfApplyUserProfile(savedProfile);
-   CoreFlow.renderRoute();
-   updateDiagnostics();
-   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-   document.body.classList.add('ready');
-   document.documentElement.classList.remove('cf-booting');
-   const bm=document.getElementById('bootmsg');if(bm)bm.remove();
+   CoreFlow.renderRoute();updateGalleryUI();cfThemeUI();
+    cfUpUI();const savedProfile=cfUpSaved();if(savedProfile)cfApplyUserProfile(savedProfile);cfSidebarUI();cfIconUI();cfWallpaperUI();cfTimeUI();
+   document.body.classList.add('ready');updateDiagnostics();
+   const bm=document.getElementById('bootmsg');if(bm)bm.remove()
  }catch(err){
    CoreFlow.dbStatus='error';CoreFlow.dbError=err?.message||String(err);console.error(err);
-   document.body.classList.add('ready');document.documentElement.classList.remove('cf-booting');updateDiagnostics();
+   document.body.classList.add('ready');updateDiagnostics();
    const bm=document.getElementById('bootmsg');if(bm){bm.style.display='block';bm.classList.add('error');bm.textContent='Local Database error: '+CoreFlow.dbError}
  }
 })();
