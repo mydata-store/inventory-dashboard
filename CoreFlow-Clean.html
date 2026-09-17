@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v1.5 — Design Gallery Migration</title>
+<title>CoreFlow Clean v1.6 — Theme Studio</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -41,12 +41,27 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 .dg-note{margin-top:14px;padding:11px 13px;border-radius:10px;background:#f7faff;border:1px solid #dce8f8;color:#53657c;font-size:13px}
 @media(max-width:900px){.design-grid{grid-template-columns:1fr}}
 
+
+/* v1.6 Theme Studio — isolated module */
+.theme-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.theme-library{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:11px;margin-top:15px}
+.theme-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px;cursor:pointer;position:relative}
+.theme-card:hover,.theme-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 12%,transparent)}
+.theme-card.applied:after{content:"Applied";position:absolute;right:8px;top:8px;background:#e9f8ef;color:#16803c;font-size:10px;font-weight:700;padding:3px 6px;border-radius:10px}
+.theme-swatch{display:grid;grid-template-columns:1.5fr repeat(4,1fr);height:42px;border-radius:8px;overflow:hidden;margin-bottom:9px;border:1px solid #e2e8f0}.theme-swatch i{display:block}
+.theme-card b{font-size:12px}.theme-card small{display:block;color:var(--muted);margin-top:3px;font-size:10px}
+.theme-editor{display:grid;grid-template-columns:1fr 1fr;gap:16px}.theme-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.theme-field{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}.theme-field label{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600}.theme-field input[type=color]{width:42px;height:28px;border:0;background:none;padding:0}
+.theme-live{border:1px solid var(--line);border-radius:12px;background:#eef3f8;padding:12px}.theme-live-shell{height:260px;display:grid;grid-template-columns:28% 1fr;border-radius:10px;overflow:hidden;background:#fff}.theme-live-side{padding:12px}.theme-live-side i{display:block;height:8px;background:#ffffffa8;border-radius:4px;margin:10px 0}.theme-live-main{padding:11px}.theme-live-top,.theme-live-banner,.theme-live-box{border-radius:7px}.theme-live-top{height:25px;margin-bottom:9px}.theme-live-banner{height:65px;margin-bottom:9px}.theme-live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.theme-live-box{height:48px}
+.theme-message{font-size:12px;color:var(--muted);margin-top:10px}
+@media(max-width:1150px){.theme-library{grid-template-columns:repeat(4,1fr)}}@media(max-width:900px){.theme-library{grid-template-columns:repeat(2,1fr)}.theme-editor{grid-template-columns:1fr}}@media(max-width:600px){.theme-library,.theme-controls{grid-template-columns:1fr}}
+
 </style>
 <script>
 (function(){
  const KEY='coreflow.clean.v1';
  const PAGES=['home','gallery','theme','sidebar','icons','wallpaper','clock','user','company','banner','dashboard','login','settings'];
- const DEFAULT={version:1,route:{page:'home'},design:{base:'analytics',overrides:{}},targets:{},updatedAt:null};
+ const DEFAULT={version:1,route:{page:'home'},design:{base:'analytics',overrides:{theme:null}},targets:{},updatedAt:null};
  const clone=o=>JSON.parse(JSON.stringify(o));
  function normalize(raw){
    let s=clone(DEFAULT);
@@ -114,6 +129,8 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
      document.documentElement.style.setProperty('--nav2',blue?'#174a82':'#173d6d');
      document.documentElement.style.setProperty('--primary',blue?'#1677ff':'#2563eb');
      document.body.dataset.design=this.state.design.base;
+     const savedTheme=this.state.design.overrides&&this.state.design.overrides.theme;
+     if(savedTheme&&typeof cfApplyThemeToSystem==='function')cfApplyThemeToSystem(savedTheme);
    },
    renderRoute(){
      const page=PAGES.includes(this.state.route.page)?this.state.route.page:'home';
@@ -144,7 +161,7 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.5</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.6</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
@@ -156,7 +173,13 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <article class="design-card" data-design="studioBlue"><div class="design-preview"><div class="mini-shell"><div class="mini-side"><div class="mini-logo"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div><div class="mini-main"><div class="mini-top"></div><div class="mini-hero"></div><div class="mini-kpis"><i></i><i></i><i></i><i></i></div><div class="mini-cards"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></div><div class="design-info"><h3>Design 01 — Design Studio Blue</h3><p>Modern light CoreFlow layout with Default Blue as its design default.</p><div class="design-actions"><button class="dg-btn" data-preview-design="studioBlue">Live Preview</button><button class="dg-btn primary" data-apply-design="studioBlue">Apply</button></div><div class="design-status" data-design-status="studioBlue">Ready</div></div></article>
 <article class="design-card" data-design="analytics"><div class="design-preview"><div class="mini-shell"><div class="mini-side"><div class="mini-logo"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div><div class="mini-main"><div class="mini-top"></div><div class="mini-hero"></div><div class="mini-kpis"><i></i><i></i><i></i><i></i></div><div class="mini-cards"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></div><div class="design-info"><h3>Design 02 — Analytics Blue</h3><p>Data-first light ERP design with Analytics Blue appearance and its own design defaults.</p><div class="design-actions"><button class="dg-btn" data-preview-design="analytics">Live Preview</button><button class="dg-btn primary" data-apply-design="analytics">Apply</button></div><div class="design-status" data-design-status="analytics">Ready</div></div></article>
 </div><div class="dg-note" id="dgMessage">Gallery migrated into the clean engine. Router, refresh and browser-history foundation remain isolated.</div></div></section>
-<section class="page" id="theme" data-title="Theme Studio"><div class="banner"><h1>Theme Studio</h1><p>Placeholder — migration not started.</p></div></section>
+<section class="page" id="theme" data-title="Theme Studio">
+<div class="banner"><div class="gallery-head"><div><div>CoreFlow</div><h1>Theme Studio</h1><p>Theme controls appearance tokens only. Base design structure remains unchanged.</p></div><div class="gallery-tools"><button class="dg-btn" id="themeRestoreDefault">Restore Design Default</button><button class="dg-btn primary" id="themeSaveApply">Save & Apply</button></div></div></div>
+<div class="kpis"><div class="kpi">Theme Library<strong>40</strong></div><div class="kpi">Selected Theme<strong id="themeSelectedKpi">Default</strong></div><div class="kpi">Base Design<strong id="themeBaseKpi">—</strong></div><div class="kpi">Override Status<strong id="themeOverrideKpi">OFF</strong></div></div>
+<div class="panel"><div class="theme-toolbar"><div><b>Theme Library</b><div style="font-size:12px;color:var(--muted);margin-top:4px">Preview any theme without changing the locked base design.</div></div></div><div class="theme-library" id="themeLibrary"></div></div>
+<div class="panel"><div class="theme-toolbar"><div><b>Theme Editor</b><div style="font-size:12px;color:var(--muted);margin-top:4px">Owned properties only: workspace, surface, primary, accent, sidebar, active menu and active text.</div></div></div>
+<div class="theme-editor" style="margin-top:14px"><div class="theme-controls" id="themeControls"></div><div class="theme-live"><div class="theme-live-shell"><div class="theme-live-side" id="tlSide"><i></i><i></i><i></i><i></i></div><div class="theme-live-main" id="tlMain"><div class="theme-live-top" id="tlTop"></div><div class="theme-live-banner" id="tlBanner"></div><div class="theme-live-grid"><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div></div></div></div><div class="theme-message" id="themeMessage">Select a theme to preview.</div></div></div></div>
+</section>
 <section class="page" id="sidebar" data-title="Sidebar Studio"><div class="banner"><h1>Sidebar Studio</h1><p>Placeholder.</p></div></section>
 <section class="page" id="icons" data-title="Icon Studio"><div class="banner"><h1>Icon Studio</h1><p>Placeholder.</p></div></section>
 <section class="page" id="wallpaper" data-title="Wallpaper Studio"><div class="banner"><h1>Wallpaper Studio</h1><p>Placeholder.</p></div></section>
@@ -210,6 +233,87 @@ document.addEventListener('click',e=>{
  }
 });
 
+
+const CF_THEME_FIELDS=[
+ ['workspace','Workspace'],['surface','Surface Cards'],['primary','Primary'],['accent','Accent'],
+ ['sidebar','Sidebar Background'],['activeMenu','Active Menu'],['activeText','Active Text']
+];
+const CF_THEME_SEEDS=[
+ ['Default Blue','#f4f7fb','#ffffff','#2563eb','#7c3aed','#10284b','#315985','#ffffff'],
+ ['Ocean','#f2f8fb','#ffffff','#087ea4','#14b8a6','#073b4c','#0d6278','#ffffff'],
+ ['Royal','#f5f5fb','#ffffff','#4338ca','#8b5cf6','#20205a','#3730a3','#ffffff'],
+ ['Emerald','#f3f8f5','#ffffff','#16803c','#10b981','#123b2b','#1d6045','#ffffff'],
+ ['Slate','#f5f7f9','#ffffff','#475569','#0f766e','#1e293b','#334155','#ffffff'],
+ ['Indigo','#f4f5fc','#ffffff','#4f46e5','#a855f7','#24235a','#3730a3','#ffffff'],
+ ['Azure','#f1f8ff','#ffffff','#0284c7','#38bdf8','#123a5a','#075985','#ffffff'],
+ ['Teal','#f2faf9','#ffffff','#0f766e','#2dd4bf','#103c3a','#115e59','#ffffff'],
+ ['Violet','#f7f4fb','#ffffff','#7c3aed','#c084fc','#36215a','#5b21b6','#ffffff'],
+ ['Graphite','#f3f4f6','#ffffff','#374151','#6b7280','#111827','#374151','#ffffff']
+];
+const CF_THEMES=[];
+for(let i=0;i<40;i++){
+ const b=CF_THEME_SEEDS[i%CF_THEME_SEEDS.length], n=Math.floor(i/CF_THEME_SEEDS.length);
+ CF_THEMES.push({id:'theme'+String(i+1).padStart(2,'0'),name:n?b[0]+' '+(n+1):b[0],
+ workspace:b[1],surface:b[2],primary:b[3],accent:b[4],sidebar:b[5],activeMenu:b[6],activeText:b[7]});
+}
+let cfThemeDraft=null,cfThemeSelected=null;
+function cfThemeApplied(){return CoreFlow.state.design.overrides?.theme||null}
+function cfRenderThemeLibrary(){
+ const lib=document.getElementById('themeLibrary');if(!lib)return;
+ const applied=cfThemeApplied();
+ lib.innerHTML=CF_THEMES.map(t=>`<div class="theme-card ${cfThemeSelected===t.id?'selected':''} ${applied?.id===t.id?'applied':''}" data-theme-id="${t.id}"><div class="theme-swatch"><i style="background:${t.sidebar}"></i><i style="background:${t.workspace}"></i><i style="background:${t.surface}"></i><i style="background:${t.primary}"></i><i style="background:${t.accent}"></i></div><b>${t.name}</b><small>${t.id.toUpperCase()}</small></div>`).join('');
+}
+function cfRenderThemeControls(){
+ const c=document.getElementById('themeControls');if(!c||!cfThemeDraft)return;
+ c.innerHTML=CF_THEME_FIELDS.map(([k,n])=>`<div class="theme-field"><label>${n}<input type="color" data-theme-color="${k}" value="${cfThemeDraft[k]}"></label></div>`).join('');
+}
+function cfPreviewTheme(t){
+ if(!t)return;cfThemeDraft=JSON.parse(JSON.stringify(t));cfThemeSelected=t.id;
+ cfRenderThemeLibrary();cfRenderThemeControls();cfThemePreviewOnly();
+ const m=document.getElementById('themeMessage');if(m)m.textContent='Preview: '+t.name+' — not saved until Save & Apply.';
+}
+function cfThemePreviewOnly(){
+ const t=cfThemeDraft;if(!t)return;
+ const side=document.getElementById('tlSide'),main=document.getElementById('tlMain'),top=document.getElementById('tlTop'),ban=document.getElementById('tlBanner');
+ if(side)side.style.background=t.sidebar;if(main)main.style.background=t.workspace;if(top)top.style.background=t.surface;
+ if(ban){ban.style.background=`linear-gradient(110deg,${t.surface},${t.workspace})`;ban.style.borderLeft='4px solid '+t.primary}
+ document.querySelectorAll('#theme .theme-live-box').forEach(x=>{x.style.background=t.surface;x.style.border='1px solid '+t.primary+'33'});
+}
+function cfApplyThemeToSystem(t){
+ if(!t){CoreFlow.applyDesign();return}
+ document.documentElement.style.setProperty('--bg',t.workspace);
+ document.documentElement.style.setProperty('--card',t.surface);
+ document.documentElement.style.setProperty('--primary',t.primary);
+ document.documentElement.style.setProperty('--nav',t.sidebar);
+ document.documentElement.style.setProperty('--nav2',t.sidebar);
+}
+function cfThemeUI(){
+ const applied=cfThemeApplied(),base=CoreFlow.state.design.base;
+ const a=document.getElementById('themeSelectedKpi');if(a)a.textContent=applied?.name||'Default';
+ const b=document.getElementById('themeBaseKpi');if(b)b.textContent=base==='analytics'?'Analytics':'Studio Blue';
+ const o=document.getElementById('themeOverrideKpi');if(o)o.textContent=applied?'ON':'OFF';
+ cfRenderThemeLibrary();
+ if(applied&&!cfThemeDraft){cfThemeDraft=JSON.parse(JSON.stringify(applied));cfThemeSelected=applied.id;cfRenderThemeControls();cfThemePreviewOnly()}
+}
+document.addEventListener('click',e=>{
+ const card=e.target.closest('[data-theme-id]');
+ if(card){cfPreviewTheme(CF_THEMES.find(t=>t.id===card.dataset.themeId));return}
+ if(e.target.closest('#themeSaveApply')){
+   if(!cfThemeDraft)return;
+   CoreFlow.state.design.overrides.theme=JSON.parse(JSON.stringify(cfThemeDraft));
+   CoreFlow.save();cfApplyThemeToSystem(cfThemeDraft);cfThemeUI();
+   const m=document.getElementById('themeMessage');if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name;
+ }
+ if(e.target.closest('#themeRestoreDefault')){
+   CoreFlow.state.design.overrides.theme=null;CoreFlow.save();cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI();
+   const m=document.getElementById('themeMessage');if(m)m.textContent='Base design default theme restored.';
+ }
+});
+document.addEventListener('input',e=>{
+ if(!e.target.matches('[data-theme-color]')||!cfThemeDraft)return;
+ cfThemeDraft[e.target.dataset.themeColor]=e.target.value;cfThemePreviewOnly();
+});
+
 function updateDiagnostics(){
  let saved={};try{saved=JSON.parse(localStorage.getItem(CoreFlow.KEY))||{}}catch(e){}
  const persistent=CoreFlow.Storage.mode==='localStorage';
@@ -251,6 +355,7 @@ try{
  CoreFlow.applyDesign();
  CoreFlow.renderRoute();
  updateGalleryUI();
+ cfThemeUI();
  document.body.classList.add('ready');
  updateDiagnostics();
  const bm=document.getElementById('bootmsg');
