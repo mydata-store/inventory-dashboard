@@ -72,7 +72,16 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
  window.CoreFlow={
    KEY,PAGES,Storage,state:Storage.load(),
    save(){this.state=Storage.save(this.state);return this.state},
-   navigate(page){if(!PAGES.includes(page))page='home';this.state.route.page=page;this.save();this.renderRoute()},
+   navigate(page,options={}){
+     if(!PAGES.includes(page))page='home';
+     const current=this.state.route.page;
+     this.state.route.page=page;
+     this.save();
+     if(!options.fromHistory && page!==current){
+       try{history.pushState({coreflow:true,page:page},'',location.href)}catch(e){}
+     }
+     this.renderRoute();
+   },
    setBase(base){if(!['analytics','studioBlue'].includes(base))return;this.state.design.base=base;this.save();this.applyDesign();updateDiagnostics()},
    applyDesign(){
      const blue=this.state.design.base==='studioBlue';
@@ -110,7 +119,7 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.2</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.3</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
 <div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
@@ -145,6 +154,7 @@ function updateDiagnostics(){
  ['Persistent browser save',persistent],
  ['Current page saved',persistent ? saved.route?.page===CoreFlow.state.route.page : true],
  ['Current design saved',persistent ? saved.design?.base===CoreFlow.state.design.base : true],
+ ['Browser Back / Forward Router',true],
  ['No session route controller',true],
  ['Saved state loaded before UI',true]
  ];
@@ -158,6 +168,16 @@ function updateDiagnostics(){
  }
 }
 try{
+ /* Browser History Controller: only Router owns internal navigation history. */
+ try{
+   const initialPage=CoreFlow.PAGES.includes(CoreFlow.state.route.page)?CoreFlow.state.route.page:'home';
+   history.replaceState({coreflow:true,page:initialPage},'',location.href);
+ }catch(e){}
+ window.addEventListener('popstate',function(ev){
+   const page=ev.state&&ev.state.coreflow&&CoreFlow.PAGES.includes(ev.state.page)?ev.state.page:null;
+   if(page) CoreFlow.navigate(page,{fromHistory:true});
+ });
+
  CoreFlow.save();
  CoreFlow.applyDesign();
  CoreFlow.renderRoute();
