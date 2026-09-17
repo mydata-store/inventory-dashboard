@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v1.1 — Safe Foundation</title>
+<title>CoreFlow Clean v1.2 — Safe Storage Foundation</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -38,11 +38,35 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
    s.updatedAt=raw.updatedAt||null;return s;
  }
  const Storage={
-   load(){try{return normalize(JSON.parse(localStorage.getItem(KEY)))}catch(e){return clone(DEFAULT)}},
+   mode:'localStorage',
+   warning:'',
+   memory:null,
+   load(){
+     try{
+       const raw=localStorage.getItem(KEY);
+       if(raw)return normalize(JSON.parse(raw));
+     }catch(e){
+       this.mode='memory';
+       this.warning='Browser storage could not be read. CoreFlow is running safely in memory.';
+     }
+     return this.memory?normalize(this.memory):clone(DEFAULT);
+   },
    save(state){
      const out=normalize(state);out.updatedAt=new Date().toISOString();
-     localStorage.setItem(KEY,JSON.stringify(out));
-     return normalize(JSON.parse(localStorage.getItem(KEY)));
+     this.memory=clone(out);
+     try{
+       localStorage.setItem(KEY,JSON.stringify(out));
+       const check=normalize(JSON.parse(localStorage.getItem(KEY)));
+       this.mode='localStorage';this.warning='';
+       this.memory=clone(check);
+       return check;
+     }catch(e){
+       this.mode='memory';
+       this.warning=(e&&e.name==='QuotaExceededError')
+         ? 'Browser storage is full. CoreFlow remains working, but permanent save is temporarily unavailable.'
+         : 'Browser storage save failed. CoreFlow remains working safely in memory.';
+       return clone(this.memory);
+     }
    }
  };
  window.CoreFlow={
@@ -86,10 +110,10 @@ button.action{border:1px solid var(--line);background:#fff;padding:10px 13px;bor
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.1</span></div><div class="content">
+<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v1.2</span></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="banner"><div>Welcome to</div><h1>Design Studio</h1><p>Clean foundation — no old routing or historical patch layers.</p></div>
 <div class="kpis"><div class="kpi">Base Designs<strong>2</strong></div><div class="kpi">Studios<strong>11</strong></div><div class="kpi">State Owners<strong>1</strong></div><div class="kpi">Storage Check<strong>ON</strong></div></div>
-<div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div class="tests" id="tests"></div></div></section>
+<div class="grid" id="cards"></div><div class="panel"><b>Foundation Acceptance Test</b><div id="storageStatus" style="margin-top:10px;font-size:13px"></div><div class="tests" id="tests"></div></div></section>
 <section class="page" id="gallery" data-title="Design Gallery"><div class="banner"><h1>Design Gallery</h1><p>Temporary foundation test. Approved Gallery will be migrated later.</p></div><div class="panel"><div class="row"><button class="action primary" onclick="CoreFlow.setBase('analytics')">Apply Analytics Blue</button><button class="action" onclick="CoreFlow.setBase('studioBlue')">Apply Design Studio Blue</button></div></div></section>
 <section class="page" id="theme" data-title="Theme Studio"><div class="banner"><h1>Theme Studio</h1><p>Placeholder — migration not started.</p></div></section>
 <section class="page" id="sidebar" data-title="Sidebar Studio"><div class="banner"><h1>Sidebar Studio</h1><p>Placeholder.</p></div></section>
@@ -114,16 +138,24 @@ if(cardsEl)cardsEl.innerHTML=studios.map(s=>`<div class="card" data-go="${s[0]}"
 document.addEventListener('click',e=>{const x=e.target.closest('[data-page],[data-go]');if(x)CoreFlow.navigate(x.dataset.page||x.dataset.go)});
 function updateDiagnostics(){
  let saved={};try{saved=JSON.parse(localStorage.getItem(CoreFlow.KEY))||{}}catch(e){}
+ const persistent=CoreFlow.Storage.mode==='localStorage';
  const checks=[
  ['Single State Manager',true],
- ['Current page saved',saved.route?.page===CoreFlow.state.route.page],
- ['Current design saved',saved.design?.base===CoreFlow.state.design.base],
+ ['CoreFlow is running',true],
+ ['Persistent browser save',persistent],
+ ['Current page saved',persistent ? saved.route?.page===CoreFlow.state.route.page : true],
+ ['Current design saved',persistent ? saved.design?.base===CoreFlow.state.design.base : true],
  ['No session route controller',true],
  ['Saved state loaded before UI',true]
  ];
  const testsEl=document.getElementById('tests');
  if(testsEl)testsEl.innerHTML=checks.map(c=>`<div class="${c[1]?'pass':'fail'}">${c[1]?'PASS':'FAIL'} — ${c[0]}</div>`).join('');
  const d=document.getElementById('dump');if(d)d.textContent=JSON.stringify(CoreFlow.state,null,2);
+ const st=document.getElementById('storageStatus');
+ if(st){
+   st.className=CoreFlow.Storage.mode==='localStorage'?'pass':'fail';
+   st.textContent='Storage mode: '+CoreFlow.Storage.mode+(CoreFlow.Storage.warning?' — '+CoreFlow.Storage.warning:'');
+ }
 }
 try{
  CoreFlow.save();
@@ -132,7 +164,14 @@ try{
  document.body.classList.add('ready');
  updateDiagnostics();
  const bm=document.getElementById('bootmsg');
- if(bm){bm.textContent='CoreFlow ready';setTimeout(()=>bm.remove(),1200)}
+ if(bm){
+   if(CoreFlow.Storage.warning){
+     bm.classList.add('error');bm.textContent=CoreFlow.Storage.warning;
+     setTimeout(()=>bm.remove(),7000);
+   }else{
+     bm.textContent='CoreFlow ready';setTimeout(()=>bm.remove(),1200);
+   }
+ }
 }catch(err){
  console.error('CoreFlow boot error:',err);
  const bm=document.getElementById('bootmsg');
