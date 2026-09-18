@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v2.8.1 — Design Gallery Polish</title>
+<title>CoreFlow Clean v2.8.2 — Design Gallery Polish</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -325,6 +325,18 @@ body[data-design="analytics"] #settings{max-width:none!important;width:100%!impo
  body[data-design="analytics"] #home .ab-grid{grid-template-columns:1fr}
 }
 
+/* v2.8.2 Analytics Blue Top Bar */
+body[data-design="analytics"] .top{height:62px;display:grid;grid-template-columns:minmax(220px,1fr) auto minmax(290px,1fr);align-items:center;gap:12px;padding:0 18px;background:#fff;border-bottom:1px solid #d8e5ef;box-shadow:0 1px 4px rgba(31,73,108,.035)}
+body[data-design="analytics"] .cf-ab-title{min-width:0}body[data-design="analytics"] .cf-ab-title b{display:block;color:#173f65;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}body[data-design="analytics"] .cf-ab-title small{display:block;margin-top:4px;color:#8297aa;font-size:9px}
+body[data-design="analytics"] .cf-ab-center{display:flex;align-items:center;justify-content:center;min-width:150px}body[data-design="analytics"] .cf-ab-right{display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:0}
+body[data-design="analytics"] .cf-ab-ready{display:flex;align-items:center;gap:7px;height:31px;padding:0 10px;border:1px solid #dbe8f2;border-radius:7px;background:#f8fbfe;color:#54728a;font-size:9px;font-weight:700;white-space:nowrap}body[data-design="analytics"] .cf-ab-ready i{width:7px;height:7px;border-radius:50%;background:#20b7a5;box-shadow:0 0 0 3px rgba(32,183,165,.10)}
+body[data-design="analytics"] .cf-ab-user{display:flex;align-items:center;gap:8px;height:38px;padding-left:9px;border-left:1px solid #e1ebf3;min-width:0}body[data-design="analytics"] .cf-ab-user img{width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid #d6e4ef;background:#edf5fb}body[data-design="analytics"] .cf-ab-user-copy{line-height:1.08;min-width:0}body[data-design="analytics"] .cf-ab-user-copy b{display:block;max-width:125px;font-size:10px;color:#244867;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}body[data-design="analytics"] .cf-ab-user-copy small{display:block;max-width:125px;margin-top:3px;font-size:8px;color:#8397a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}body[data-design="analytics"] .cf-ab-version{font-size:8px;color:#90a2b1;white-space:nowrap}
+body[data-design="analytics"] .cf-ab-center #cfTimeBinding{margin:0!important;min-width:126px!important;padding:5px 10px!important;border-radius:8px!important;background:#eef6ff!important;border:1px solid #cfe2f5!important;color:#173f65!important;text-align:center!important}
+body:not([data-design="analytics"]) .cf-ab-center,body:not([data-design="analytics"]) .cf-ab-right{display:none!important}body:not([data-design="analytics"]) .cf-ab-title small{display:none}
+@media(max-width:1180px){body[data-design="analytics"] .top{grid-template-columns:minmax(180px,1fr) auto minmax(190px,1fr);padding:0 12px;gap:8px}body[data-design="analytics"] .cf-ab-ready{display:none}body[data-design="analytics"] .cf-ab-user-copy small{display:none}}
+@media(max-width:820px){body[data-design="analytics"] .top{grid-template-columns:minmax(120px,1fr) auto auto;height:58px}body[data-design="analytics"] .cf-ab-title small,body[data-design="analytics"] .cf-ab-user-copy,body[data-design="analytics"] .cf-ab-version{display:none}body[data-design="analytics"] .cf-ab-user{border-left:0;padding-left:0}}
+@media(max-width:560px){body[data-design="analytics"] .top{grid-template-columns:1fr auto;height:56px}body[data-design="analytics"] .cf-ab-right{display:none}body[data-design="analytics"] .cf-ab-center{justify-content:flex-end;min-width:0}}
+
 </style>
 <script>
 (function(){
@@ -409,9 +421,11 @@ body[data-design="analytics"] #settings{max-width:none!important;width:100%!impo
      document.body.dataset.design=this.state.design.base;
      const savedTheme=this.state.design.overrides&&this.state.design.overrides.theme;
      if(savedTheme&&typeof cfApplyThemeToSystem==='function')cfApplyThemeToSystem(savedTheme);
+     if(typeof cfSyncAnalyticsTopBar==='function')requestAnimationFrame(cfSyncAnalyticsTopBar);
    },
    renderRoute(){
      const page=PAGES.includes(this.state.route.page)?this.state.route.page:'home';
+     if(typeof cfSyncAnalyticsTopBar==='function')requestAnimationFrame(cfSyncAnalyticsTopBar);
      document.querySelectorAll('.page').forEach(el=>el.classList.toggle('on',el.id===page));
      document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('on',el.dataset.page===page));
      const el=document.getElementById(page);document.getElementById('title').textContent=el?.dataset.title||'CoreFlow';
@@ -476,7 +490,7 @@ body[data-design="analytics"] #settings{max-width:none!important;width:100%!impo
 <button class="nav" data-page="login">▣ <span>Login Page Studio</span></button>
 <button class="nav" data-page="settings">⚙ <span>Design Settings</span></button>
 </aside>
-<main><div class="top"><b id="title">CoreFlow</b><span>Clean Core Engine v2.8.1</span></div><div class="content">
+<main><div class="top"><div class="cf-ab-title"><b id="title">CoreFlow</b><small>CoreFlow · Analytics Blue</small></div><div class="cf-ab-center" id="cfAbTopCenter"></div><div class="cf-ab-right"><div class="cf-ab-ready"><i></i><span>System Ready</span></div><div class="cf-ab-user"><img id="cfAbUserImg" alt=""><span class="cf-ab-user-copy"><b id="cfAbUserName">Muhammad Waqas</b><small id="cfAbUserRole">Store / Procurement</small></span></div><span class="cf-ab-version">v2.8.2</span></div></div><div class="content">
 <section class="page" id="home" data-title="Design Studio"><div class="ab-home">
 <div class="ab-hero"><div class="ab-copy"><span>Welcome to</span><h2>Design Studio</h2><p>Design. Customize. Control.</p></div><div class="ab-art" aria-hidden="true"><span class="ab-leaf ab-l1"></span><span class="ab-leaf ab-l2"></span><span class="ab-leaf ab-r1"></span><span class="ab-leaf ab-r2"></span><div class="ab-monitor"><div class="ab-screen"><i></i><i></i><i></i><b></b><em></em></div><div class="ab-stand"></div></div></div></div>
 <div class="ab-grid">
@@ -1244,6 +1258,13 @@ document.addEventListener('click',async e=>{const c=e.target.closest('[data-lg-l
  finally{document.documentElement.dataset.cfBindings='ready'}
 })();
 
+function cfSyncAnalyticsTopBar(){
+ const center=document.getElementById('cfAbTopCenter'),time=document.getElementById('cfTimeBinding');
+ if(center&&time&&time.parentElement!==center)center.appendChild(time);
+ const up=window.CoreFlow?.state?.targets?.userProfile||{},img=document.getElementById('cfAbUserImg'),nm=document.getElementById('cfAbUserName'),rl=document.getElementById('cfAbUserRole'),photo=up.photo||up.image||up.avatar||'';
+ if(img){if(photo){img.src=photo;img.style.visibility='visible'}else{img.removeAttribute('src');img.style.visibility='hidden'}}
+ if(nm)nm.textContent=up.name||up.fullName||'Muhammad Waqas';if(rl)rl.textContent=up.role||up.designation||'Store / Procurement';
+}
 (async function(){
  try{
    const snapshot=CoreFlow.readBootSnapshot();
