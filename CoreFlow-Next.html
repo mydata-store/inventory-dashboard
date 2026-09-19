@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Next v1.3.4 — New Design Creator</title>
+<title>CoreFlow Next v1.3.5 — New Design Creator</title>
 <script>
 /* CoreFlow Next v1.3.2 — URL-first synchronous first paint */
 (function(){try{
@@ -228,38 +228,14 @@ body.cf-sb-left #app>aside.cf-sb-runtime>*{position:relative;z-index:1}
 #cfSidebar[data-cf-sidebar-state="collapsed"] .nav.on .cf-nav-icon{color:inherit!important}
 #cfSidebar[data-cf-sidebar-state="collapsed"] .cf-sidebar-profile-slot{min-height:44px}
 
-/* v1.3.3 SAME SIDEBAR staged transition — no duplicate/floating sidebar */
-#cfSidebar .cf-nav-label,
-#cfSidebar .cf-brand-expanded,
-#cfSidebar #cfSidebarTimeExpanded,
-#cfSidebar .cf-up-expanded{transition:opacity 110ms ease!important}
-
-/* While width starts opening, keep the compact owners visible inside the SAME sidebar. */
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] .cf-brand-expanded,
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] .cf-nav-label,
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] #cfSidebarTimeExpanded,
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] .cf-up-expanded{display:none!important}
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] .cf-brand-collapsed{display:block!important}
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] #cfSidebarTimeCollapsed{display:block!important}
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] .cf-up-collapsed{display:flex!important;align-items:center;justify-content:center}
-
-/* Once enough width exists, reveal expanded content smoothly. */
-#cfSidebar[data-cf-sidebar-phase="expanding-ready"] .cf-nav-label,
-#cfSidebar[data-cf-sidebar-phase="expanding-ready"] .cf-brand-expanded,
-#cfSidebar[data-cf-sidebar-phase="expanding-ready"] #cfSidebarTimeExpanded,
-#cfSidebar[data-cf-sidebar-phase="expanding-ready"] .cf-up-expanded{opacity:1!important;visibility:visible!important}
-
-/* On close, hide wide-only content before geometry becomes narrow. */
-#cfSidebar[data-cf-sidebar-phase="collapsing-start"] .cf-nav-label,
-#cfSidebar[data-cf-sidebar-phase="collapsing-start"] .cf-brand-expanded,
-#cfSidebar[data-cf-sidebar-phase="collapsing-start"] #cfSidebarTimeExpanded,
-#cfSidebar[data-cf-sidebar-phase="collapsing-start"] .cf-up-expanded{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-
-/* v1.3.4 — same-sidebar smooth geometry + compact time/profile alignment */
+/* v1.3.5 FINAL SAME-SIDEBAR CONTINUOUS MOTION ENGINE
+   One sidebar only. Width, labels and owned widgets animate continuously.
+   No expanding-start/ready content swap is used for motion. */
 body.cf-sb-left #app>aside.cf-sb-runtime{
   contain:layout paint;
   transform:translateZ(0);
   backface-visibility:hidden;
+  will-change:width;
 }
 body.cf-sb-left #app>main{
   transform:translateZ(0);
@@ -268,53 +244,86 @@ body.cf-sb-left #app>main{
 #cfSidebar .cf-sidebar-nav-slot,
 #cfSidebar .cf-sidebar-time-slot,
 #cfSidebar .cf-sidebar-profile-slot{min-width:0}
-#cfSidebar[data-cf-sidebar-state="collapsed"] .cf-sidebar-spacer{min-height:8px}
-#cfSidebar[data-cf-sidebar-state="collapsed"] .cf-sidebar-time-slot,
-#cfSidebar[data-cf-sidebar-state="collapsed"] .cf-sidebar-profile-slot{
+
+/* Labels remain in DOM and fade/slide with the same width transition. */
+#cfSidebar .cf-nav-label,
+#cfSidebar .cf-brand-expanded,
+#cfSidebar #cfSidebarTimeExpanded,
+#cfSidebar .cf-up-expanded{
+  display:block!important;
+  opacity:1;
+  visibility:visible;
+  transform:translateX(0);
+  transition:
+    opacity calc(var(--cf-sb-speed,250ms) * .52) ease,
+    transform calc(var(--cf-sb-speed,250ms) * .62) cubic-bezier(.22,.61,.36,1);
+  will-change:opacity,transform;
+}
+#cfSidebar[data-cf-motion-target="collapsed"] .cf-nav-label,
+#cfSidebar[data-cf-motion-target="collapsed"] .cf-brand-expanded,
+#cfSidebar[data-cf-motion-target="collapsed"] #cfSidebarTimeExpanded,
+#cfSidebar[data-cf-motion-target="collapsed"] .cf-up-expanded{
+  opacity:0!important;
+  visibility:hidden!important;
+  transform:translateX(-7px);
+  pointer-events:none!important;
+}
+
+/* Compact owners cross-fade instead of being swapped by a timer. */
+#cfSidebar .cf-brand-collapsed,
+#cfSidebar #cfSidebarTimeCollapsed,
+#cfSidebar .cf-up-collapsed{
+  transition:opacity calc(var(--cf-sb-speed,250ms) * .45) ease;
+  will-change:opacity;
+}
+#cfSidebar[data-cf-motion-target="expanded"] .cf-brand-collapsed,
+#cfSidebar[data-cf-motion-target="expanded"] #cfSidebarTimeCollapsed,
+#cfSidebar[data-cf-motion-target="expanded"] .cf-up-collapsed{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+/* Compact bottom layout stays centered and stable. */
+#cfSidebar[data-cf-motion-target="collapsed"] .cf-sidebar-spacer{min-height:8px}
+#cfSidebar[data-cf-motion-target="collapsed"] .cf-sidebar-time-slot,
+#cfSidebar[data-cf-motion-target="collapsed"] .cf-sidebar-profile-slot{
   width:100%!important;
   padding-left:0!important;padding-right:0!important;
   display:flex!important;justify-content:center!important;
 }
-#cfSidebar[data-cf-sidebar-state="collapsed"] #cfSidebarTimeCollapsed{
+#cfSidebar[data-cf-motion-target="collapsed"] #cfSidebarTimeCollapsed{
+  display:block!important;
   width:46px!important;max-width:calc(100% - 2px)!important;
   margin:6px auto!important;padding:5px 2px!important;
   text-align:center!important;overflow:hidden!important;
 }
-#cfSidebar[data-cf-sidebar-state="collapsed"] #cfSidebarTimeCollapsed .cf-time-widget{
+#cfSidebar[data-cf-motion-target="collapsed"] #cfSidebarTimeCollapsed .cf-time-widget{
   width:100%!important;max-width:100%!important;margin:0!important;
   padding:4px 1px!important;font-size:8px!important;line-height:1.05!important;
 }
-#cfSidebar[data-cf-sidebar-state="collapsed"] #cfSidebarTimeCollapsed .cf-tw-time{
+#cfSidebar[data-cf-motion-target="collapsed"] #cfSidebarTimeCollapsed .cf-tw-time{
   font-size:9px!important;line-height:1.05!important;white-space:normal!important;
 }
-#cfSidebar[data-cf-sidebar-state="collapsed"] #cfSidebarTimeCollapsed .cf-tw-date{
+#cfSidebar[data-cf-motion-target="collapsed"] #cfSidebarTimeCollapsed .cf-tw-date{
   font-size:6.5px!important;line-height:1.05!important;white-space:normal!important;
 }
-#cfSidebar[data-cf-sidebar-state="collapsed"] #cfUserProfileBinding{
+#cfSidebar[data-cf-motion-target="collapsed"] #cfUserProfileBinding{
   width:100%!important;margin:3px 0 8px!important;padding:0!important;
   display:flex!important;justify-content:center!important;overflow:hidden!important;
 }
-#cfSidebar[data-cf-sidebar-state="collapsed"] #cfUserProfileBinding .cf-up-collapsed{
-  width:100%!important;display:flex!important;justify-content:center!important;
+#cfSidebar[data-cf-motion-target="collapsed"] #cfUserProfileBinding .cf-up-collapsed{
+  display:flex!important;width:100%!important;justify-content:center!important;
   align-items:center!important;padding:3px 0!important;margin:0!important;
 }
-#cfSidebar[data-cf-sidebar-state="collapsed"] #cfUserProfileBinding .cf-up-collapsed img{
+#cfSidebar[data-cf-motion-target="collapsed"] #cfUserProfileBinding .cf-up-collapsed img{
   width:34px!important;height:34px!important;min-width:34px!important;
   border-radius:50%!important;object-fit:cover!important;margin:0 auto!important;
   display:block!important;
 }
-/* During opening keep compact bottom widgets stable until expanded state owns them. */
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] .cf-sidebar-time-slot,
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] .cf-sidebar-profile-slot{
-  display:flex!important;justify-content:center!important;
-}
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] #cfSidebarTimeCollapsed{
-  display:block!important;width:46px!important;margin:6px auto!important;
-}
-#cfSidebar[data-cf-sidebar-phase="expanding-start"] #cfUserProfileBinding .cf-up-collapsed{
-  display:flex!important;justify-content:center!important;
-}
 
+/* Expanded target restores normal ownership without a delayed snap. */
+#cfSidebar[data-cf-motion-target="expanded"] #cfSidebarTimeExpanded,
+#cfSidebar[data-cf-motion-target="expanded"] .cf-up-expanded{display:block!important}
 /* v1.9 Icon Studio — isolated module */
 .ic-gallery{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:11px;margin-top:14px}.ic-set{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}.ic-set.selected{border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 12%,transparent)}.ic-strip{display:flex;gap:9px;align-items:center;font-size:20px;min-height:34px}.ic-set small{display:block;color:var(--muted);margin-top:7px}.ic-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,.72fr);gap:16px}.ic-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ic-field{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}.ic-field label{display:block;font-size:11px;font-weight:700;margin-bottom:6px}.ic-field input[type=range],.ic-field select{width:100%}.ic-field input[type=color]{width:100%;height:34px;border:0;background:none}.ic-preview{background:#eef3f8;border:1px solid var(--line);border-radius:12px;padding:12px}.ic-preview-side{width:230px;max-width:100%;min-height:360px;border-radius:11px;padding:13px 10px;background:var(--nav);color:#dbe8ff;transition:width .25s ease}.ic-preview-side.collapsed{width:72px}.ic-preview-logo{font-weight:800;padding:6px 8px 14px}.ic-preview-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;margin:4px 0;white-space:nowrap;overflow:hidden}.ic-preview-row.on{background:#ffffff18}.ic-preview-row .ip-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;flex:0 0 24px}.ic-preview-side.collapsed .ip-text{display:none}.ic-message{font-size:12px;color:var(--muted);margin-top:10px}.cf-nav-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;margin-right:2px;vertical-align:middle}@media(max-width:1000px){.ic-gallery{grid-template-columns:repeat(2,1fr)}.ic-layout{grid-template-columns:1fr}}@media(max-width:600px){.ic-gallery,.ic-controls{grid-template-columns:1fr}}
 
@@ -1761,34 +1770,33 @@ function cfSidebarGeometry(d,collapsed){
 }
 function cfSyncSidebarOwnedComponents(collapsed){const side=document.getElementById('cfSidebar');if(!side)return;const ic=(typeof cfIconSaved==='function'&&cfIconSaved())||CF_ICON_DEFAULT,set=cfIconSet(collapsed?ic.collapsedSet:ic.expandedSet);side.querySelectorAll('.nav').forEach((n,i)=>{const sp=n.querySelector('.cf-nav-icon');if(!sp)return;sp.textContent=set.icons[i]||'•';sp.style.fontSize=(collapsed?ic.collapsedSize:ic.size)+'px';sp.style.opacity=Math.max(.4,(ic.opacity??100)/100);sp.style.marginRight=collapsed?'0':(ic.gap??8)+'px'});side.dataset.cfIconCollapsed=collapsed?'1':'0';if(typeof cfRefreshTimeBindings==='function')cfRefreshTimeBindings();if(typeof cfApplyUserProfile==='function')cfApplyUserProfile((typeof cfUpSaved==='function'&&cfUpSaved())||CF_UP_DEFAULT)}
 function cfRenderSidebarState(side,collapsed,d){cfCommitSidebarVisualState(side,collapsed,d||Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{}))}
-function cfCommitSidebarVisualState(side,collapsed,d){if(!side)return;side.dataset.cfSidebarState=collapsed?'collapsed':'expanded';side.dataset.cfSidebarPhase=collapsed?'collapsed':'expanded';side.setAttribute('aria-expanded',collapsed?'false':'true');cfSyncSidebarOwnedComponents(collapsed)}
+function cfCommitSidebarVisualState(side,collapsed,d){if(!side)return;side.dataset.cfSidebarState=collapsed?'collapsed':'expanded';
+ side.dataset.cfMotionTarget=collapsed?'collapsed':'expanded';side.dataset.cfSidebarPhase=collapsed?'collapsed':'expanded';side.setAttribute('aria-expanded',collapsed?'false':'true');cfSyncSidebarOwnedComponents(collapsed)}
 function cfTransitionSidebarState(collapsed,d){
  const side=document.getElementById('cfSidebar');if(!side)return;
  clearTimeout(cfSidebarTransitionTimer);
  if(side._cfStageTimer){clearTimeout(side._cfStageTimer);side._cfStageTimer=0}
  const duration=d.animation==='none'?0:Math.max(0,+d.speed||0);
- if(!duration){cfCommitSidebarVisualState(side,collapsed,d);return}
- if(collapsed){
-   /* Same sidebar: wide content leaves first, then compact ownership is committed. */
-   side.dataset.cfSidebarPhase='collapsing-start';
-   side._cfStageTimer=setTimeout(()=>{
-     side.dataset.cfSidebarState='collapsed';
-     side.dataset.cfSidebarPhase='collapsing-ready';
-     side.setAttribute('aria-expanded','false');
-     cfSyncSidebarOwnedComponents(true);
-   },Math.min(95,Math.max(35,duration*.28)));
-   cfSidebarTransitionTimer=setTimeout(()=>cfCommitSidebarVisualState(side,true,d),duration+24);
- }else{
-   /* Same sidebar: width opens first while collapsed owners remain; then owners swap once. */
-   side.dataset.cfSidebarPhase='expanding-start';
-   side.setAttribute('aria-expanded','true');
-   side._cfStageTimer=setTimeout(()=>{
-     side.dataset.cfSidebarState='expanded';
-     side.dataset.cfSidebarPhase='expanding-ready';
-     cfSyncSidebarOwnedComponents(false);
-   },Math.min(190,Math.max(80,duration*.68)));
-   cfSidebarTransitionTimer=setTimeout(()=>cfCommitSidebarVisualState(side,false,d),duration+24);
+ const target=collapsed?'collapsed':'expanded';
+
+ /* Target changes immediately: browser interpolates from current width, so a
+    mid-animation hover reversal continues from the current visual position. */
+ side.dataset.cfMotionTarget=target;
+ side.dataset.cfSidebarPhase='moving';
+ side.dataset.cfSidebarState=target;
+ side.setAttribute('aria-expanded',collapsed?'false':'true');
+
+ /* Owner markup is prepared once at the beginning; CSS cross-fades it.
+    There is no delayed display/state swap during the transition. */
+ cfSyncSidebarOwnedComponents(collapsed);
+
+ if(!duration){
+   side.dataset.cfSidebarPhase=target;
+   return;
  }
+ cfSidebarTransitionTimer=setTimeout(()=>{
+   if(side.dataset.cfMotionTarget===target)side.dataset.cfSidebarPhase=target;
+ },duration+30);
 }
 function cfSetSidebarRuntimeState(collapsed,persist=false){const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||cfSidebarDraft||{}),side=document.getElementById('cfSidebar'),main=document.querySelector('#app>main');if(!side||!main||d.position!=='left'||!d.collapsible)return;const g=cfSidebarGeometry(d,collapsed);document.documentElement.style.setProperty('--cf-sb-current-width',g.width+'px');document.documentElement.style.setProperty('--cf-sb-workspace-offset',(d.keepFixed?g.offset:0)+'px');cfTransitionSidebarState(collapsed,d);if(persist&&d.rememberLastState){d.defaultState=collapsed?'collapsed':'expanded';CoreFlow.state.targets.sidebar=CoreFlow.clone(d);CoreFlow.writeBootSnapshot(CoreFlow.state)}}
 function cfApplySidebarToSystem(d){
