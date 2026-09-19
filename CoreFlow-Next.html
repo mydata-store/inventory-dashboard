@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Next v1.3.6 — New Design Creator</title>
+<title>CoreFlow Next v1.3.7 — New Design Creator</title>
 <script>
 /* CoreFlow Next v1.3.2 — URL-first synchronous first paint */
 (function(){try{
@@ -1798,7 +1798,7 @@ function cfTransitionSidebarState(collapsed,d){
    if(side.dataset.cfMotionTarget===target)side.dataset.cfSidebarPhase=target;
  },duration+30);
 }
-function cfSetSidebarRuntimeState(collapsed,persist=false){const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||cfSidebarDraft||{}),side=document.getElementById('cfSidebar'),main=document.querySelector('#app>main');if(!side||!main||d.position!=='left'||!d.collapsible)return;const g=cfSidebarGeometry(d,collapsed);document.documentElement.style.setProperty('--cf-sb-current-width',g.width+'px');document.documentElement.style.setProperty('--cf-sb-workspace-offset',(d.keepFixed?g.offset:0)+'px');cfTransitionSidebarState(collapsed,d);if(persist&&d.rememberLastState){d.defaultState=collapsed?'collapsed':'expanded';CoreFlow.state.targets.sidebar=CoreFlow.clone(d);CoreFlow.writeBootSnapshot(CoreFlow.state)}}
+function cfSetSidebarRuntimeState(collapsed,persist=false){const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||cfSidebarDraft||{}),side=document.getElementById('cfSidebar'),main=document.querySelector('#app>main');if(!side||!main||d.position!=='left'||!d.collapsible)return;const wanted=collapsed?'collapsed':'expanded';if(side.dataset.cfMotionTarget===wanted&&!persist)return;const g=cfSidebarGeometry(d,collapsed);document.documentElement.style.setProperty('--cf-sb-current-width',g.width+'px');document.documentElement.style.setProperty('--cf-sb-workspace-offset',(d.keepFixed?g.offset:0)+'px');cfTransitionSidebarState(collapsed,d);if(persist&&d.rememberLastState){d.defaultState=collapsed?'collapsed':'expanded';CoreFlow.state.targets.sidebar=CoreFlow.clone(d);CoreFlow.writeBootSnapshot(CoreFlow.state)}}
 function cfApplySidebarToSystem(d){
  if(!d)return;d=Object.assign({},CF_SIDEBAR_DEFAULT,d);
  const app=document.getElementById('app'),side=document.getElementById('cfSidebar'),main=document.querySelector('#app>main');if(!app||!side||!main)return;
@@ -1825,28 +1825,62 @@ function cfApplySidebarToSystem(d){
  document.querySelectorAll('#cfSidebar .nav').forEach(n=>{n.style.borderRadius=d.menuRadius+'px';n.style.minHeight=d.itemHeight+'px';n.style.marginTop=d.compactGap+'px';n.style.marginBottom=d.compactGap+'px'});
  /* Color/text/icon assets remain owned by Theme/Fonts/Icon Studios. */
 }
-/* v1.3.6 — one hover owner: ONLY the sidebar outer boundary may open/close it.
-   Child menu/icon/time/profile pointer transitions are ignored completely. */
+/* v1.3.7 — FINAL sidebar hover/dead-zone controller.
+   The sidebar does not decide hover from child enter/leave events.
+   One pointer tracker owns the state. A small horizontal dead-zone prevents
+   the rail from collapsing underneath the pointer while moving menu-to-menu. */
 let cfSidebarExitTimer=0;
-function cfSidebarBoundaryEnter(e){
- const side=e.currentTarget;
+let cfSidebarLastPointer={x:-1,y:-1};
+
+function cfSidebarRuntimeConfig(){
+ return Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{});
+}
+function cfPointerInsideSidebarZone(side,x,y,extra=10){
+ const r=side.getBoundingClientRect();
+ return x>=r.left-extra && x<=r.right+extra && y>=r.top && y<=r.bottom;
+}
+function cfSidebarRequestExpand(side){
  clearTimeout(cfSidebarExitTimer);
- const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{});
- if(d.position==='left'&&d.collapsible&&(d.autoHide||d.hoverExpand)){
-   if(side.dataset.cfMotionTarget!=='expanded')cfSetSidebarRuntimeState(false);
+ const d=cfSidebarRuntimeConfig();
+ if(d.position==='left'&&d.collapsible&&(d.autoHide||d.hoverExpand) &&
+    side.dataset.cfMotionTarget!=='expanded'){
+   cfSetSidebarRuntimeState(false);
  }
 }
-function cfSidebarBoundaryLeave(e){
- const side=e.currentTarget;
- /* relatedTarget still inside the sidebar means this was not a real outer-boundary exit. */
- if(e.relatedTarget&&side.contains(e.relatedTarget))return;
- const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{});
+function cfSidebarRequestCollapse(side){
+ const d=cfSidebarRuntimeConfig();
  if(!(d.position==='left'&&d.collapsible&&d.autoHide))return;
  clearTimeout(cfSidebarExitTimer);
  cfSidebarExitTimer=setTimeout(()=>{
-   if(side.matches(':hover'))return;
+   /* Re-read geometry at execution time. This avoids collapse caused by
+      geometry moving under a stationary pointer. */
+   if(cfPointerInsideSidebarZone(side,cfSidebarLastPointer.x,cfSidebarLastPointer.y,14))return;
    if(side.dataset.cfMotionTarget!=='collapsed')cfSetSidebarRuntimeState(true);
- },140);
+ },180);
+}
+function cfSidebarPointerMove(e){
+ cfSidebarLastPointer.x=e.clientX;
+ cfSidebarLastPointer.y=e.clientY;
+ const side=document.getElementById('cfSidebar');
+ if(!side||side.dataset.cfBoundaryBound!=='1')return;
+ if(cfPointerInsideSidebarZone(side,e.clientX,e.clientY,8)){
+   cfSidebarRequestExpand(side);
+ }else{
+   cfSidebarRequestCollapse(side);
+ }
+}
+function cfSidebarBoundaryEnter(e){
+ const side=e.currentTarget;
+ cfSidebarLastPointer.x=e.clientX;cfSidebarLastPointer.y=e.clientY;
+ cfSidebarRequestExpand(side);
+}
+function cfSidebarBoundaryLeave(e){
+ const side=e.currentTarget;
+ cfSidebarLastPointer.x=e.clientX;cfSidebarLastPointer.y=e.clientY;
+ /* Never collapse merely because a child/geometry boundary fired leave.
+    Coordinate check + grace owns the actual exit decision. */
+ if(cfPointerInsideSidebarZone(side,e.clientX,e.clientY,14))return;
+ cfSidebarRequestCollapse(side);
 }
 function cfBindSidebarHoverBoundary(){
  const side=document.getElementById('cfSidebar');
@@ -1854,6 +1888,10 @@ function cfBindSidebarHoverBoundary(){
  side.dataset.cfBoundaryBound='1';
  side.addEventListener('pointerenter',cfSidebarBoundaryEnter);
  side.addEventListener('pointerleave',cfSidebarBoundaryLeave);
+ if(document.documentElement.dataset.cfSidebarPointerTracker!=='1'){
+   document.documentElement.dataset.cfSidebarPointerTracker='1';
+   document.addEventListener('pointermove',cfSidebarPointerMove,{passive:true});
+ }
 }
 
 document.addEventListener('click',e=>{
