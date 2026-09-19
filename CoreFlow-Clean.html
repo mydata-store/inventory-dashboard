@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Clean v3.4.0 — New Design Creator</title>
+<title>CoreFlow Clean v3.4.1 — New Design Creator</title>
 <style>
 :root{--nav:#10284b;--nav2:#173d6d;--primary:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7890;--line:#dce4ef}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -572,6 +572,15 @@ body[data-design="analytics"] #gallery .design-preview{
 .theme-stats{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.theme-stat{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;font-size:9px;color:var(--muted)}
 @media(max-width:700px){.theme-name-edit{width:100%}.theme-name-edit label,.theme-name-edit input{width:100%}}
 
+
+/* v3.4.1 Theme runtime ownership — current design only */
+body.cf-theme-active aside{background:var(--cf-theme-sidebar)!important;color:var(--cf-theme-side-text,#dbe8ff)!important}
+body.cf-theme-active aside .nav{background:transparent!important;color:var(--cf-theme-side-text,#dbe8ff)!important;box-shadow:none!important}
+body.cf-theme-active aside .nav:hover{background:color-mix(in srgb,var(--cf-theme-active) 55%,transparent)!important;color:var(--cf-theme-active-text,#fff)!important}
+body.cf-theme-active aside .nav.on{background:var(--cf-theme-active)!important;color:var(--cf-theme-active-text,#fff)!important;box-shadow:inset 3px 0 var(--cf-theme-accent)!important;font-weight:700}
+body.cf-theme-active .top{border-color:color-mix(in srgb,var(--cf-theme-primary) 18%,var(--line))!important}
+body.cf-theme-active button.action.primary,body.cf-theme-active .dg-btn.primary{background:var(--cf-theme-primary)!important;border-color:var(--cf-theme-primary)!important}
+
 </style>
 <script>
 (function(){
@@ -641,7 +650,7 @@ body[data-design="analytics"] #gallery .design-preview{
      this.renderRoute();
    },
    async setBase(base){if(!['analytics','studioBlue'].includes(base))return;this.state.design.base=base;if(this.state.targets?.designGallery)this.state.targets.designGallery.activeCustomId=null;
-     if(await this.save()){try{const u=new URL(location.href);u.searchParams.set('cfDesign',base);history.replaceState({coreflow:true,page:this.state.route.page},'',u.pathname+u.search+u.hash)}catch(e){}this.applyDesign();updateGalleryUI();updateDiagnostics()}
+     if(await this.save()){try{const u=new URL(location.href);u.searchParams.set('cfDesign',base);history.replaceState({coreflow:true,page:this.state.route.page},'',u.pathname+u.search+u.hash)}catch(e){}this.applyDesign();if(typeof cfThemeApplied==='function'){const th=cfThemeApplied();cfThemeDraft=th?this.clone(th):null;cfThemeSelected=th?.id||null;if(typeof cfThemeUI==='function')cfThemeUI()}updateGalleryUI();updateDiagnostics()}
    },
    applyDesign(){
      const blue=this.state.design.base==='studioBlue',r=document.documentElement.style;
@@ -654,8 +663,8 @@ body[data-design="analytics"] #gallery .design-preview{
      r.setProperty('--muted',blue?'#6b7890':'#6f859b');
      r.setProperty('--line',blue?'#dce4ef':'#d8e5ef');
      document.body.dataset.design=this.state.design.base;
-     const savedTheme=this.state.design.overrides&&this.state.design.overrides.theme;
-     if(savedTheme&&typeof cfApplyThemeToSystem==='function')cfApplyThemeToSystem(savedTheme);
+     const savedTheme=typeof cfThemeApplied==='function'?cfThemeApplied():null;
+     if(typeof cfApplyThemeToSystem==='function')cfApplyThemeToSystem(savedTheme);
      if(typeof cfSyncAnalyticsTopBar==='function')requestAnimationFrame(cfSyncAnalyticsTopBar);
      if(typeof cfSyncModuleBack==='function')requestAnimationFrame(cfSyncModuleBack);
    },
@@ -665,6 +674,10 @@ body[data-design="analytics"] #gallery .design-preview{
      if(typeof cfSyncAnalyticsTopBar==='function')requestAnimationFrame(cfSyncAnalyticsTopBar);
      document.querySelectorAll('.page').forEach(el=>el.classList.toggle('on',el.id===page));
      document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('on',el.dataset.page===page));
+     document.querySelectorAll('aside .nav').forEach(el=>{
+       const active=el.dataset.page===page;el.classList.toggle('on',active);
+       el.style.removeProperty('background');el.style.removeProperty('color');el.style.removeProperty('box-shadow');
+     });
      const el=document.getElementById(page);document.getElementById('title').textContent=el?.dataset.title||'CoreFlow';
      /* v2.6.1 router-owned lazy UI initialization for late studios */
      if(page==='company'&&typeof cfCpUI==='function')cfCpUI();
@@ -1220,7 +1233,22 @@ const CF_THEME_PALETTES=[
 ];
 const CF_THEMES=CF_THEME_PALETTES.map((b,i)=>({id:'theme'+String(i+1).padStart(2,'0'),name:b[0],workspace:b[1],surface:b[2],primary:b[3],accent:b[4],sidebar:b[5],activeMenu:b[6],activeText:b[7],builtin:true}));
 let cfThemeDraft=null,cfThemeSelected=null;
-function cfThemeApplied(){return CoreFlow.state.design.overrides?.theme||null}
+function cfThemeApplied(){
+ CoreFlow.state.design.overrides=CoreFlow.state.design.overrides||{};
+ CoreFlow.state.design.overrides.themesByDesign=CoreFlow.state.design.overrides.themesByDesign||{};
+ const key=CoreFlow.state.design.base;
+ if(!CoreFlow.state.design.overrides.themesByDesign[key]&&CoreFlow.state.design.overrides.theme){
+   CoreFlow.state.design.overrides.themesByDesign[key]=CoreFlow.clone(CoreFlow.state.design.overrides.theme);
+ }
+ return CoreFlow.state.design.overrides.themesByDesign[key]||null
+}
+function cfSetAppliedTheme(theme){
+ CoreFlow.state.design.overrides=CoreFlow.state.design.overrides||{};
+ CoreFlow.state.design.overrides.themesByDesign=CoreFlow.state.design.overrides.themesByDesign||{};
+ const key=CoreFlow.state.design.base;
+ CoreFlow.state.design.overrides.themesByDesign[key]=theme?CoreFlow.clone(theme):null;
+ CoreFlow.state.design.overrides.theme=null;
+}
 function cfThemeStore(){CoreFlow.state.design.customThemes=CoreFlow.state.design.customThemes||{};const key=CoreFlow.state.design.base;return CoreFlow.state.design.customThemes[key]||(CoreFlow.state.design.customThemes[key]=[])}
 function cfAllThemes(){return CF_THEMES.concat(cfThemeStore())}
 function cfThemeById(id){return cfAllThemes().find(x=>x.id===id)}
@@ -1245,9 +1273,20 @@ function cfThemePreviewOnly(){
  document.querySelectorAll('#theme .theme-live-box').forEach((el,i)=>{el.style.background=x.surface;el.style.border='1px solid '+(i%2?x.accent:x.primary)+'55'});
 }
 function cfApplyThemeToSystem(x){
- if(!x){CoreFlow.applyDesign();return}
- const r=document.documentElement.style;r.setProperty('--bg',x.workspace);r.setProperty('--card',x.surface);r.setProperty('--primary',x.primary);r.setProperty('--nav',x.sidebar);r.setProperty('--nav2',x.sidebar);r.setProperty('--cf-sidebar-bg',x.sidebar);r.setProperty('--cf-theme-accent',x.accent);r.setProperty('--cf-theme-active',x.activeMenu);r.setProperty('--cf-theme-active-text',x.activeText);
- document.querySelectorAll('aside .nav.on').forEach(el=>{el.style.background=x.activeMenu;el.style.color=x.activeText});
+ const body=document.body,r=document.documentElement.style;
+ document.querySelectorAll('aside .nav').forEach(el=>{el.style.removeProperty('background');el.style.removeProperty('color');el.style.removeProperty('box-shadow')});
+ if(!x){
+   body.classList.remove('cf-theme-active');
+   ['--cf-theme-sidebar','--cf-theme-primary','--cf-theme-accent','--cf-theme-active','--cf-theme-active-text','--cf-theme-side-text'].forEach(k=>r.removeProperty(k));
+   return
+ }
+ body.classList.add('cf-theme-active');
+ r.setProperty('--bg',x.workspace);r.setProperty('--card',x.surface);r.setProperty('--primary',x.primary);
+ r.setProperty('--nav',x.sidebar);r.setProperty('--nav2',x.sidebar);r.setProperty('--cf-sidebar-bg',x.sidebar);
+ r.setProperty('--cf-theme-sidebar',x.sidebar);r.setProperty('--cf-theme-primary',x.primary);r.setProperty('--cf-theme-accent',x.accent);
+ r.setProperty('--cf-theme-active',x.activeMenu);r.setProperty('--cf-theme-active-text',x.activeText);
+ const lum=(h)=>{h=h.replace('#','');const a=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));return (a[0]*299+a[1]*587+a[2]*114)/1000};
+ r.setProperty('--cf-theme-side-text',lum(x.sidebar)>165?'#29465f':'#e8f3ff');
 }
 function cfThemeUI(){
  const applied=cfThemeApplied(),base=CoreFlow.state.design.base,a=document.getElementById('themeSelectedKpi'),b=document.getElementById('themeBaseKpi'),o=document.getElementById('themeOverrideKpi');
@@ -1266,9 +1305,9 @@ document.addEventListener('click',e=>{
  if(e.target.closest('#themeNew')){cfThemeDraft={id:cfThemeNewId(),name:'New Custom Theme',workspace:'#f5f8fc',surface:'#ffffff',primary:'#2563eb',accent:'#14b8a6',sidebar:'#10284b',activeMenu:'#315985',activeText:'#ffffff',builtin:false};cfThemeSelected=cfThemeDraft.id;cfRenderThemeControls();cfThemePreviewOnly();cfRenderThemeLibrary();document.getElementById('themeNameInput')?.focus();return}
  if(e.target.closest('#themeDuplicate')){if(!cfThemeDraft)return;cfThemeDraft=Object.assign(cfThemeClone(cfThemeDraft),{id:cfThemeNewId(),name:cfThemeDraft.name+' Copy',builtin:false});cfThemeSelected=cfThemeDraft.id;cfRenderThemeControls();cfThemePreviewOnly();cfRenderThemeLibrary();return}
  if(e.target.closest('#themeSaveAsNew')){cfSaveCustomTheme(true).then(ok=>{const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Custom theme saved to this base design.':'Theme save failed: '+CoreFlow.dbError});return}
- if(e.target.closest('#themeDeleteCustom')){if(!cfThemeDraft||cfThemeDraft.builtin){const m=document.getElementById('themeMessage');if(m)m.textContent='Built-in themes are protected. Select a custom theme to delete.';return}const store=cfThemeStore(),i=store.findIndex(x=>x.id===cfThemeDraft.id);if(i<0)return;store.splice(i,1);if(cfThemeApplied()?.id===cfThemeDraft.id)CoreFlow.state.design.overrides.theme=null;cfThemeDraft=null;cfThemeSelected=null;CoreFlow.save().then(()=>{CoreFlow.applyDesign();cfThemeUI();const m=document.getElementById('themeMessage');if(m)m.textContent='Custom theme deleted.'});return}
- if(e.target.closest('#themeSaveApply')){if(!cfThemeDraft)return;cfThemeDraft.name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name);CoreFlow.state.design.overrides.theme=cfThemeClone(cfThemeDraft);const m=document.getElementById('themeMessage');if(m)m.textContent='Saving to CoreFlow Local Database…';CoreFlow.save().then(ok=>{if(ok){cfApplyThemeToSystem(CoreFlow.state.design.overrides.theme);cfThemeUI();if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name+' — verified.'}else if(m)m.textContent='Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
- if(e.target.closest('#themeRestoreDefault')){CoreFlow.state.design.overrides.theme=null;CoreFlow.save().then(ok=>{if(ok){cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI()}const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Base design default theme restored.':'Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
+ if(e.target.closest('#themeDeleteCustom')){if(!cfThemeDraft||cfThemeDraft.builtin){const m=document.getElementById('themeMessage');if(m)m.textContent='Built-in themes are protected. Select a custom theme to delete.';return}const store=cfThemeStore(),i=store.findIndex(x=>x.id===cfThemeDraft.id);if(i<0)return;store.splice(i,1);if(cfThemeApplied()?.id===cfThemeDraft.id)cfSetAppliedTheme(null);cfThemeDraft=null;cfThemeSelected=null;CoreFlow.save().then(()=>{CoreFlow.applyDesign();cfThemeUI();const m=document.getElementById('themeMessage');if(m)m.textContent='Custom theme deleted.'});return}
+ if(e.target.closest('#themeSaveApply')){if(!cfThemeDraft)return;cfThemeDraft.name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name);cfSetAppliedTheme(cfThemeDraft);const m=document.getElementById('themeMessage');if(m)m.textContent='Saving to CoreFlow Local Database…';CoreFlow.save().then(ok=>{if(ok){cfApplyThemeToSystem(cfThemeApplied());cfThemeUI();if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name+' — verified.'}else if(m)m.textContent='Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
+ if(e.target.closest('#themeRestoreDefault')){cfSetAppliedTheme(null);CoreFlow.save().then(ok=>{if(ok){cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI()}const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Base design default theme restored.':'Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
 });
 document.addEventListener('input',e=>{
  if(!cfThemeDraft)return;
@@ -1746,9 +1785,11 @@ document.getElementById('cfModuleBack')?.addEventListener('click',()=>{
    history.replaceState({coreflow:true,page:CoreFlow.state.route.page},'',u.pathname+u.search+u.hash);
 
    CoreFlow.applyDesign();
-   const savedTheme=CoreFlow.state.design.overrides&&CoreFlow.state.design.overrides.theme;
-   if(savedTheme){cfThemeDraft=JSON.parse(JSON.stringify(savedTheme));cfThemeSelected=savedTheme.id;cfApplyThemeToSystem(savedTheme)}
+   const savedTheme=typeof cfThemeApplied==='function'?cfThemeApplied():null;
+   if(savedTheme){cfThemeDraft=JSON.parse(JSON.stringify(savedTheme));cfThemeSelected=savedTheme.id}
    const savedSidebar=CoreFlow.state.targets&&CoreFlow.state.targets.sidebar;if(savedSidebar)cfApplySidebarToSystem(savedSidebar);
+   /* Theme owns final palette; Sidebar Studio still owns layout/behavior. */
+   cfApplyThemeToSystem(savedTheme);
    const savedIcons=CoreFlow.state.targets&&CoreFlow.state.targets.icons;if(savedIcons)cfApplyIconsToSystem(savedIcons);else cfApplyIconsToSystem(CF_ICON_DEFAULT);
    const savedWallpaper=CoreFlow.state.targets&&CoreFlow.state.targets.wallpaper;if(savedWallpaper)cfApplyWallpaperToSystem(savedWallpaper);
    const savedTimeDate=CoreFlow.state.targets&&CoreFlow.state.targets.timeDate;if(savedTimeDate)cfApplyTimeToSystem(savedTimeDate);
