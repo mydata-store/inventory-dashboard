@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Next v1.3.7 — New Design Creator</title>
+<title>CoreFlow Next v1.3.8 — New Design Creator</title>
 <script>
 /* CoreFlow Next v1.3.2 — URL-first synchronous first paint */
 (function(){try{
@@ -1842,9 +1842,11 @@ function cfPointerInsideSidebarZone(side,x,y,extra=10){
 function cfSidebarRequestExpand(side){
  clearTimeout(cfSidebarExitTimer);
  const d=cfSidebarRuntimeConfig();
- if(d.position==='left'&&d.collapsible&&(d.autoHide||d.hoverExpand) &&
-    side.dataset.cfMotionTarget!=='expanded'){
-   cfSetSidebarRuntimeState(false);
+ if(d.position==='left'&&d.collapsible&&(d.autoHide||d.hoverExpand)){
+   if(side.dataset.cfSidebarState!=='expanded'||side.dataset.cfMotionTarget!=='expanded'){
+     side.dataset.cfMotionTarget='';
+     cfSetSidebarRuntimeState(false);
+   }
  }
 }
 function cfSidebarRequestCollapse(side){
@@ -1863,22 +1865,32 @@ function cfSidebarPointerMove(e){
  cfSidebarLastPointer.y=e.clientY;
  const side=document.getElementById('cfSidebar');
  if(!side||side.dataset.cfBoundaryBound!=='1')return;
- if(cfPointerInsideSidebarZone(side,e.clientX,e.clientY,8)){
-   cfSidebarRequestExpand(side);
- }else{
-   cfSidebarRequestCollapse(side);
+
+ /* Do not use document pointermove to command expansion. The real sidebar
+    pointerenter owns expansion. pointermove only protects/cancels collapse. */
+ if(cfPointerInsideSidebarZone(side,e.clientX,e.clientY,14)){
+   clearTimeout(cfSidebarExitTimer);
+   return;
  }
+ if(side.dataset.cfMotionTarget==='expanded')cfSidebarRequestCollapse(side);
 }
 function cfSidebarBoundaryEnter(e){
  const side=e.currentTarget;
  cfSidebarLastPointer.x=e.clientX;cfSidebarLastPointer.y=e.clientY;
- cfSidebarRequestExpand(side);
+ clearTimeout(cfSidebarExitTimer);
+
+ /* Authoritative expand trigger. Force the request even if an old target flag
+    was left behind by an interrupted transition. */
+ const d=cfSidebarRuntimeConfig();
+ if(d.position==='left'&&d.collapsible&&(d.autoHide||d.hoverExpand)){
+   side.dataset.cfMotionTarget='';
+   cfSetSidebarRuntimeState(false);
+ }
 }
 function cfSidebarBoundaryLeave(e){
  const side=e.currentTarget;
  cfSidebarLastPointer.x=e.clientX;cfSidebarLastPointer.y=e.clientY;
- /* Never collapse merely because a child/geometry boundary fired leave.
-    Coordinate check + grace owns the actual exit decision. */
+ if(e.relatedTarget&&side.contains(e.relatedTarget))return;
  if(cfPointerInsideSidebarZone(side,e.clientX,e.clientY,14))return;
  cfSidebarRequestCollapse(side);
 }
