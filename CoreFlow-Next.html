@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Next v1.4.1 — New Design Creator</title>
+<title>CoreFlow Next v1.4.2 — New Design Creator</title>
 <script>
-/* CoreFlow Next v1.4.1 — URL-first synchronous first paint */
+/* CoreFlow Next v1.4.2 — URL-first synchronous first paint */
 (function(){try{
  var q=new URLSearchParams(location.search),p=q.get('cfPage')||'erpDashboard',d=q.get('cfDesign');
  document.documentElement.dataset.cfRoute=p;
@@ -228,30 +228,38 @@ body.cf-sb-left #app>aside.cf-sb-runtime>*{position:relative;z-index:1}
 #cfSidebar[data-cf-sidebar-state="collapsed"] .nav.on .cf-nav-icon{color:inherit!important}
 #cfSidebar[data-cf-sidebar-state="collapsed"] .cf-sidebar-profile-slot{min-height:44px}
 
-/* v1.4.1 DUAL-LAYER SIDEBAR — stable rail + smooth overlay panel */
+/* v1.4.2 STABLE RAIL EXPANSION — rail never swaps or moves */
 #cfSidebarRail{display:none}
 body.cf-dual-collapsed #cfSidebarRail{
- display:flex;position:fixed;z-index:1200;left:0;top:0;bottom:0;
+ display:flex;position:fixed;z-index:1202;left:0;top:0;bottom:0;
  width:var(--cf-sb-collapsed-width,58px);box-sizing:border-box;
  flex-direction:column;align-items:center;overflow:hidden;
  background:var(--cf-theme-sidebar,#123f52);color:var(--cf-theme-side-text,#fff);
 }
 body.cf-dual-collapsed #cfSidebar{
  display:flex!important;position:fixed!important;z-index:1201!important;
- left:0!important;top:0!important;bottom:0!important;
- width:var(--cf-sb-expanded-width,220px)!important;
- margin:0!important;
- transform:translate3d(calc(-100% - 2px),0,0);
- opacity:1!important;visibility:visible!important;pointer-events:none;
- will-change:transform;
+ left:var(--cf-sb-collapsed-width,58px)!important;top:0!important;bottom:0!important;
+ width:calc(var(--cf-sb-expanded-width,220px) - var(--cf-sb-collapsed-width,58px))!important;
+ min-width:0!important;margin:0!important;
+ transform:translate3d(-100%,0,0);opacity:1!important;visibility:visible!important;
+ pointer-events:none;overflow:hidden!important;will-change:transform;
  transition:transform var(--cf-sb-speed,250ms) cubic-bezier(.22,.61,.36,1)!important;
+ border-radius:0!important;
 }
 body.cf-dual-collapsed.cf-dual-open #cfSidebar{
  transform:translate3d(0,0,0);pointer-events:auto;
  box-shadow:12px 0 30px rgba(15,35,55,.18);
 }
-/* Rail never disappears while the overlay is moving. */
-body.cf-dual-collapsed.cf-dual-open #cfSidebarRail{display:flex!important;visibility:visible!important;opacity:1!important}
+/* Expanded layer supplies details only; rail owns brand + icons permanently. */
+body.cf-dual-collapsed #cfSidebar .cf-sidebar-brand-slot{visibility:hidden!important;pointer-events:none!important;height:61px!important;min-height:61px!important;padding:0!important;overflow:hidden!important}
+body.cf-dual-collapsed #cfSidebar .cf-sidebar-nav-slot{padding-left:0!important;padding-right:6px!important}
+body.cf-dual-collapsed #cfSidebar .nav{justify-content:flex-start!important;padding-left:8px!important;overflow:hidden!important;white-space:nowrap!important}
+body.cf-dual-collapsed #cfSidebar .nav .cf-nav-icon{display:none!important}
+body.cf-dual-collapsed #cfSidebar .nav .cf-nav-label{display:block!important;opacity:1!important;visibility:visible!important;white-space:nowrap!important}
+body.cf-dual-collapsed #cfSidebar #cfSidebarTimeCollapsed,
+body.cf-dual-collapsed #cfSidebar .cf-up-collapsed{display:none!important}
+body.cf-dual-collapsed #cfSidebar #cfSidebarTimeExpanded,
+body.cf-dual-collapsed #cfSidebar .cf-up-expanded{display:block!important}
 body:not(.cf-dual-collapsed) #cfSidebarRail{display:none!important}
 body:not(.cf-dual-collapsed) #cfSidebar{transform:none!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
 
@@ -1713,15 +1721,19 @@ function cfDualOpen(){
 }
 function cfDualScheduleClose(){
  clearTimeout(cfDualCloseTimer);
- cfDualCloseTimer=setTimeout(()=>document.body.classList.remove('cf-dual-open'),90);
+ cfDualCloseTimer=setTimeout(()=>{
+   const rail=document.getElementById('cfSidebarRail'),side=document.getElementById('cfSidebar');
+   if(rail?.matches(':hover')||side?.matches(':hover'))return;
+   document.body.classList.remove('cf-dual-open');
+ },110);
 }
 function cfBindDualSidebarHover(){
  if(cfDualHoverBound)return;cfDualHoverBound=true;
  const rail=document.getElementById('cfSidebarRail'),side=document.getElementById('cfSidebar');if(!rail||!side)return;
  rail.addEventListener('mouseenter',cfDualOpen);
- rail.addEventListener('mouseleave',e=>{if(side.contains(e.relatedTarget))return;cfDualScheduleClose()});
- side.addEventListener('mouseenter',()=>clearTimeout(cfDualCloseTimer));
- side.addEventListener('mouseleave',e=>{if(rail.contains(e.relatedTarget))return;cfDualScheduleClose()});
+ rail.addEventListener('mouseleave',cfDualScheduleClose);
+ side.addEventListener('mouseenter',cfDualOpen);
+ side.addEventListener('mouseleave',cfDualScheduleClose);
  rail.addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(!b)return;document.querySelector(`#cfSidebar .nav[data-page="${b.dataset.page}"]`)?.click()});
 }
 function cfSidebarUI(){cfSidebarEnsureDraft();cfRenderSidebarGallery();cfRenderSidebarControls();cfSidebarPreview()}
@@ -1735,6 +1747,10 @@ function cfBuildCollapsedRail(){
  const nav=rail.querySelector('.cf-rail-nav');nav.innerHTML='';
  source.querySelectorAll('.nav').forEach(btn=>{const b=document.createElement('button');b.type='button';b.dataset.page=btn.dataset.page||'';if(btn.classList.contains('on'))b.classList.add('on');const i=document.createElement('span');i.className='cf-rail-icon';b.appendChild(i);nav.appendChild(b)});
 }
+function cfSyncRailActive(){
+ const page=CoreFlow?.state?.page||new URLSearchParams(location.search).get('cfPage')||'home';
+ document.querySelectorAll('#cfSidebarRail button[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
+}
 function cfRenderCollapsedRailOwners(){
  const rail=document.getElementById('cfSidebarRail');if(!rail)return;
  const ic=(typeof cfIconSaved==='function'&&cfIconSaved())||CF_ICON_DEFAULT,set=cfIconSet(ic.collapsedSet);
@@ -1742,6 +1758,7 @@ function cfRenderCollapsedRailOwners(){
  const p=(typeof cfUpSaved==='function'&&cfUpSaved())||CF_UP_DEFAULT,ph=document.getElementById('cfRailProfile');
  if(ph){const src=p.image||p.photo||p.avatar||document.getElementById('cfAbUserImg')?.getAttribute('src')||'',name=p.name||p.fullName||'User',radius=p.shape==='circle'?'50%':p.shape==='rounded'?'10px':'3px';ph.innerHTML=src?`<img src="${src}" alt="${name}" style="border-radius:${radius}">`:`<span style="display:flex;width:32px;height:32px;margin:auto;align-items:center;justify-content:center;background:#ffffff22;border-radius:${radius};font-weight:900">${name.trim().charAt(0).toUpperCase()}</span>`;ph.style.display=p.showCollapsed===false?'none':'block'}
  const d=(typeof cfTimeSaved==='function'&&cfTimeSaved())||CF_TIME_DEFAULT,tm=document.getElementById('cfRailTime');if(tm&&d){tm.innerHTML=cfTimeMarkup(d,true);tm.style.display=d.targets&&d.targets.sidebarCollapsed===false?'none':'block'}
+cfSyncRailActive();
 }
 function cfSetDualSidebarMode(collapsed,d){
  const side=document.getElementById('cfSidebar');if(!side)return;
