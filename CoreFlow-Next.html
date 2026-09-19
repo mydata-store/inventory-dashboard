@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Next v1.3.5 — New Design Creator</title>
+<title>CoreFlow Next v1.3.6 — New Design Creator</title>
 <script>
 /* CoreFlow Next v1.3.2 — URL-first synchronous first paint */
 (function(){try{
@@ -1812,7 +1812,7 @@ function cfApplySidebarToSystem(d){
  document.documentElement.style.setProperty('--cf-sb-surface-opacity',Math.max(.05,d.opacity/100));
  document.documentElement.style.setProperty('--cf-sb-blur',d.blur+'px');
  document.documentElement.style.setProperty('--cf-sb-bar-height',Math.max(54,d.itemHeight+16)+'px');
- side.classList.add('cf-sb-runtime');cfCommitSidebarVisualState(side,collapsed,d);side.dataset.cfSidebarStyle=d.style;side.dataset.cfSidebarPosition=d.position||'left';side.dataset.cfAutoHide=d.autoHide?'1':'0';side.dataset.cfHoverExpand=d.hoverExpand===false?'0':'1';
+ side.classList.add('cf-sb-runtime');cfBindSidebarHoverBoundary();cfCommitSidebarVisualState(side,collapsed,d);side.dataset.cfSidebarStyle=d.style;side.dataset.cfSidebarPosition=d.position||'left';side.dataset.cfAutoHide=d.autoHide?'1':'0';side.dataset.cfHoverExpand=d.hoverExpand===false?'0':'1';
  side.style.opacity='1';side.style.borderRadius=(d.position==='left'?d.borderRadius:0)+'px';side.style.marginLeft=(d.position==='left'?g.gap:0)+'px';side.style.boxShadow=d.shadow?`0 10px 30px rgba(15,23,42,${(d.shadowIntensity/100)*.38})`:'none';side.style.backdropFilter='none';
  side.style.borderStyle=d.borderStyle==='none'?'none':d.borderStyle;side.style.borderWidth=d.borderStyle==='none'?'0':d.borderWidth+'px';side.style.borderColor='color-mix(in srgb,var(--primary) 35%,transparent)';
  let surface='var(--cf-theme-sidebar,var(--nav))';
@@ -1825,8 +1825,36 @@ function cfApplySidebarToSystem(d){
  document.querySelectorAll('#cfSidebar .nav').forEach(n=>{n.style.borderRadius=d.menuRadius+'px';n.style.minHeight=d.itemHeight+'px';n.style.marginTop=d.compactGap+'px';n.style.marginBottom=d.compactGap+'px'});
  /* Color/text/icon assets remain owned by Theme/Fonts/Icon Studios. */
 }
-document.addEventListener('pointerenter',e=>{const side=e.target.closest&&e.target.closest('#app>aside.cf-sb-runtime');if(!side)return;const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{});if(d.position==='left'&&d.collapsible&&(d.autoHide||d.hoverExpand))cfSetSidebarRuntimeState(false)},true);
-document.addEventListener('pointerleave',e=>{const side=e.target.closest&&e.target.closest('#app>aside.cf-sb-runtime');if(!side)return;const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{});if(d.position==='left'&&d.collapsible&&d.autoHide)cfSetSidebarRuntimeState(true)},true);
+/* v1.3.6 — one hover owner: ONLY the sidebar outer boundary may open/close it.
+   Child menu/icon/time/profile pointer transitions are ignored completely. */
+let cfSidebarExitTimer=0;
+function cfSidebarBoundaryEnter(e){
+ const side=e.currentTarget;
+ clearTimeout(cfSidebarExitTimer);
+ const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{});
+ if(d.position==='left'&&d.collapsible&&(d.autoHide||d.hoverExpand)){
+   if(side.dataset.cfMotionTarget!=='expanded')cfSetSidebarRuntimeState(false);
+ }
+}
+function cfSidebarBoundaryLeave(e){
+ const side=e.currentTarget;
+ /* relatedTarget still inside the sidebar means this was not a real outer-boundary exit. */
+ if(e.relatedTarget&&side.contains(e.relatedTarget))return;
+ const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{});
+ if(!(d.position==='left'&&d.collapsible&&d.autoHide))return;
+ clearTimeout(cfSidebarExitTimer);
+ cfSidebarExitTimer=setTimeout(()=>{
+   if(side.matches(':hover'))return;
+   if(side.dataset.cfMotionTarget!=='collapsed')cfSetSidebarRuntimeState(true);
+ },140);
+}
+function cfBindSidebarHoverBoundary(){
+ const side=document.getElementById('cfSidebar');
+ if(!side||side.dataset.cfBoundaryBound==='1')return;
+ side.dataset.cfBoundaryBound='1';
+ side.addEventListener('pointerenter',cfSidebarBoundaryEnter);
+ side.addEventListener('pointerleave',cfSidebarBoundaryLeave);
+}
 
 document.addEventListener('click',e=>{
  const st=e.target.closest('[data-sb-style]');if(st){const x=CF_SIDEBAR_STYLES.find(v=>v.id===st.dataset.sbStyle);if(!x)return;const d=cfSidebarEnsureDraft();Object.assign(d,x.preset||{}, {style:x.id});cfRenderSidebarGallery();cfRenderSidebarControls();cfSidebarPreview();return}
