@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Next v1.0.0 — New Design Creator</title>
+<title>CoreFlow Next v1.1.0 — New Design Creator</title>
 <script>
-/* CoreFlow Next v1.0.0 — URL-first synchronous first paint */
+/* CoreFlow Next v1.1.0 — URL-first synchronous first paint */
 (function(){try{
  var q=new URLSearchParams(location.search),p=q.get('cfPage')||'erpDashboard',d=q.get('cfDesign');
  document.documentElement.dataset.cfRoute=p;
@@ -1661,6 +1661,162 @@ function cfNextFlushSnapshot(){try{CoreFlow.writeBootSnapshot(CoreFlow.state)}ca
 window.addEventListener('pagehide',cfNextFlushSnapshot);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')cfNextFlushSnapshot()});
 
+
+/* =========================================================
+   CoreFlow Next v1.1 — Studio Architecture Foundation
+   Single registry/engine owner. Presentation only; ERP data untouched.
+   Priority: Base Design Default -> Studio Package -> Page Role -> Specific Page
+   ========================================================= */
+window.CoreFlowStudioArchitecture=(function(){
+ const PAGE_ROLES=Object.freeze({
+  dashboard:'Dashboard', mainModule:'Main Module', subPage:'Sub Page',
+  dataEntry:'Data Entry', listHistory:'List/History', detailReport:'Detail/Report',
+  masters:'Masters', studio:'Studio', login:'Login'
+ });
+
+ const PAGE_REGISTRY={
+  erpDashboard:{role:'dashboard',label:'ERP Dashboard'},
+  home:{role:'studio',label:'Design Studio'},
+  gallery:{role:'studio',label:'Design Gallery'},
+  theme:{role:'studio',label:'Theme Studio'},
+  sidebar:{role:'studio',label:'Sidebar Studio'},
+  icons:{role:'studio',label:'Icon Studio'},
+  wallpaper:{role:'studio',label:'Wallpaper Studio'},
+  clock:{role:'studio',label:'Time & Date Studio'},
+  user:{role:'studio',label:'User Profile Studio'},
+  company:{role:'studio',label:'Company Profile Studio'},
+  banner:{role:'studio',label:'Banner Studio'},
+  dashboard:{role:'studio',label:'Dashboard Studio'},
+  login:{role:'login',label:'Login Page Studio'},
+  settings:{role:'studio',label:'Settings'}
+ };
+
+ const COMPONENTS=Object.freeze({
+  theme:{label:'Theme Tokens',owner:'theme'},
+  banner:{label:'Banner',owner:'banner'},
+  kpi:{label:'KPI',owner:'banner'},
+  navigationCard:{label:'Navigation Card',owner:'banner'},
+  button:{label:'Button',owner:'banner'},
+  icon:{label:'Icon',owner:'icons'},
+  table:{label:'Table',owner:'theme'},
+  form:{label:'Form',owner:'theme'},
+  panel:{label:'Panel',owner:'theme'},
+  wallpaper:{label:'Wallpaper',owner:'wallpaper'},
+  sidebar:{label:'Sidebar',owner:'sidebar'},
+  timeDate:{label:'Time & Date',owner:'clock'},
+  userProfile:{label:'User Profile',owner:'user'},
+  companyProfile:{label:'Company Profile',owner:'company'},
+  dashboardLayout:{label:'Dashboard Layout',owner:'dashboard'},
+  loginLayout:{label:'Login Layout',owner:'login'}
+ });
+
+ const STUDIOS=Object.freeze({
+  theme:{label:'Theme Studio',owns:['theme','table','form','panel'],properties:['palette','surface','text','border','stateColors']},
+  banner:{label:'Banner Studio',owns:['banner','kpi','navigationCard','button'],properties:['layout','shape','spacing','typography','effects']},
+  icons:{label:'Icon Studio',owns:['icon'],properties:['set','size','stroke','weight','placement']},
+  sidebar:{label:'Sidebar Studio',owns:['sidebar'],properties:['layout','width','behavior','animation','menuPresentation']},
+  wallpaper:{label:'Wallpaper Studio',owns:['wallpaper'],properties:['background','image','overlay','position']},
+  clock:{label:'Time & Date Studio',owns:['timeDate'],properties:['design','format','placement']},
+  user:{label:'User Profile Studio',owns:['userProfile'],properties:['card','avatar','typography','placement']},
+  company:{label:'Company Profile Studio',owns:['companyProfile'],properties:['logo','identity','card','placement']},
+  dashboard:{label:'Dashboard Studio',owns:['dashboardLayout'],properties:['layout','widgets','charts','sections']},
+  login:{label:'Login Studio',owns:['loginLayout'],properties:['layout','formPresentation','branding']}
+ });
+
+ const DEFAULT_PAGE_COMPONENTS={
+  dashboard:['theme','banner','kpi','button','icon','panel','table','wallpaper','sidebar','timeDate','userProfile','companyProfile','dashboardLayout'],
+  mainModule:['theme','banner','kpi','navigationCard','button','icon','panel','wallpaper','sidebar','timeDate','userProfile','companyProfile'],
+  subPage:['theme','kpi','navigationCard','button','icon','panel','table','wallpaper','sidebar'],
+  dataEntry:['theme','button','icon','form','table','panel','wallpaper','sidebar'],
+  listHistory:['theme','kpi','button','icon','table','panel','wallpaper','sidebar'],
+  detailReport:['theme','kpi','button','icon','table','panel','wallpaper','sidebar'],
+  masters:['theme','banner','kpi','navigationCard','button','icon','table','form','panel','wallpaper','sidebar'],
+  studio:['theme','banner','kpi','navigationCard','button','icon','panel','wallpaper','sidebar'],
+  login:['theme','button','icon','wallpaper','companyProfile','loginLayout']
+ };
+
+ const PACKAGE_LIBRARY={
+  theme:{},
+  banner:{},
+  icons:{},
+  sidebar:{},
+  wallpaper:{},
+  clock:{},
+  user:{},
+  company:{},
+  dashboard:{},
+  login:{}
+ };
+
+ function ensureState(){
+  CoreFlow.state.design=CoreFlow.state.design||{};
+  const d=CoreFlow.state.design;
+  d.studioPackages=d.studioPackages||{};
+  d.studioPackages.selections=d.studioPackages.selections||{};
+  d.studioPackages.custom=d.studioPackages.custom||{};
+  return d.studioPackages;
+ }
+ function registerPage(id,def){
+  if(!id||!def||!PAGE_ROLES[def.role])return false;
+  PAGE_REGISTRY[id]=Object.assign({},def);
+  return true;
+ }
+ function page(id){return PAGE_REGISTRY[id]||{role:'subPage',label:id||'Unknown Page'};}
+ function role(id){return page(id).role;}
+ function components(id){const p=page(id);return (p.components||DEFAULT_PAGE_COMPONENTS[p.role]||[]).slice();}
+ function owner(component){return COMPONENTS[component]?COMPONENTS[component].owner:null;}
+ function registerPackage(studio,pkg){
+  if(!STUDIOS[studio]||!pkg||!pkg.id)return false;
+  PACKAGE_LIBRARY[studio][pkg.id]=Object.assign({},pkg,{studio:studio});
+  return true;
+ }
+ function setSelection(studio,packageId,scope='studio',target='all'){
+  if(!STUDIOS[studio])return false;
+  const s=ensureState().selections;
+  s[studio]=s[studio]||{studio:null,roles:{},pages:{}};
+  if(scope==='page')s[studio].pages[target]=packageId;
+  else if(scope==='role')s[studio].roles[target]=packageId;
+  else s[studio].studio=packageId;
+  return true;
+ }
+ function baseDefault(studio){
+  const base=CoreFlow.state.design&&CoreFlow.state.design.base||'analytics';
+  const p=PACKAGE_LIBRARY[studio];
+  return p[base+'Default']?base+'Default':(p.default?'default':null);
+ }
+ function resolve(studio,pageId){
+  const s=ensureState().selections[studio]||{studio:null,roles:{},pages:{}};
+  const r=role(pageId);
+  const id=(s.pages&&s.pages[pageId])||(s.roles&&s.roles[r])||s.studio||baseDefault(studio);
+  return id&&PACKAGE_LIBRARY[studio][id]?PACKAGE_LIBRARY[studio][id]:null;
+ }
+ function resolvePage(pageId){
+  const result={page:pageId,role:role(pageId),roleLabel:PAGE_ROLES[role(pageId)],components:components(pageId),studios:{}};
+  Object.keys(STUDIOS).forEach(s=>result.studios[s]=resolve(s,pageId));
+  return result;
+ }
+ function diagnose(){
+  const conflicts=[];
+  Object.keys(COMPONENTS).forEach(c=>{
+   const owners=Object.keys(STUDIOS).filter(s=>(STUDIOS[s].owns||[]).includes(c));
+   if(owners.length!==1)conflicts.push({component:c,owners});
+  });
+  return {ok:conflicts.length===0,conflicts,pages:Object.keys(PAGE_REGISTRY).length,components:Object.keys(COMPONENTS).length,studios:Object.keys(STUDIOS).length};
+ }
+
+ /* Existing Theme Studio becomes first package-aware controller.
+    It keeps its current working theme engine; this only exposes it through the common resolver. */
+ registerPackage('theme',{id:'analyticsDefault',name:'Analytics Default Theme',source:'base-design',adapter:'existing-theme-engine'});
+ registerPackage('theme',{id:'studioBlueDefault',name:'Design Studio Blue Default Theme',source:'base-design',adapter:'existing-theme-engine'});
+ registerPackage('theme',{id:'default',name:'Current Theme',source:'existing-theme-studio',adapter:'existing-theme-engine'});
+
+ return {
+  PAGE_ROLES,PAGE_REGISTRY,COMPONENTS,STUDIOS,DEFAULT_PAGE_COMPONENTS,PACKAGE_LIBRARY,
+  ensureState,registerPage,page,role,components,owner,registerPackage,setSelection,resolve,resolvePage,diagnose,
+  priority:['baseDesignDefault','studioPackage','pageRoleOverride','specificPageOverride']
+ };
+})();
+
 /* Browser History Controller — route only */
 window.addEventListener('popstate',function(){
  const u=new URL(location.href),page=u.searchParams.get('cfPage'),design=u.searchParams.get('cfDesign');
@@ -1936,6 +2092,7 @@ document.getElementById('cfModuleBack')?.addEventListener('click',()=>{
    const savedIcons=CoreFlow.state.targets&&CoreFlow.state.targets.icons;if(savedIcons)cfApplyIconsToSystem(savedIcons);else cfApplyIconsToSystem(CF_ICON_DEFAULT);
    const savedWallpaper=CoreFlow.state.targets&&CoreFlow.state.targets.wallpaper;if(savedWallpaper)cfApplyWallpaperToSystem(savedWallpaper);
    const savedTimeDate=CoreFlow.state.targets&&CoreFlow.state.targets.timeDate;if(savedTimeDate)cfApplyTimeToSystem(savedTimeDate);
+   if(window.CoreFlowStudioArchitecture)CoreFlowStudioArchitecture.ensureState();
    CoreFlow.renderRoute();updateGalleryUI();cfThemeUI();
     cfUpUI();if(dbChanged){const savedProfile=cfUpSaved();if(savedProfile)cfApplyUserProfile(savedProfile);}cfSidebarUI();cfIconUI();cfWallpaperUI();cfTimeUI();
    document.documentElement.dataset.cfNavReady='1';document.body.classList.add('ready');updateDiagnostics();
