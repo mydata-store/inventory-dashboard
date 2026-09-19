@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoreFlow Next v1.3.1 — New Design Creator</title>
+<title>CoreFlow Next v1.3.2 — New Design Creator</title>
 <script>
-/* CoreFlow Next v1.3.1 — URL-first synchronous first paint */
+/* CoreFlow Next v1.3.2 — URL-first synchronous first paint */
 (function(){try{
  var q=new URLSearchParams(location.search),p=q.get('cfPage')||'erpDashboard',d=q.get('cfDesign');
  document.documentElement.dataset.cfRoute=p;
@@ -227,6 +227,11 @@ body.cf-sb-left #app>aside.cf-sb-runtime>*{position:relative;z-index:1}
 }
 #cfSidebar[data-cf-sidebar-state="collapsed"] .nav.on .cf-nav-icon{color:inherit!important}
 #cfSidebar[data-cf-sidebar-state="collapsed"] .cf-sidebar-profile-slot{min-height:44px}
+
+/* v1.3.2 no-blink phased transition */
+#cfSidebar .cf-nav-label,#cfSidebar .cf-brand-expanded,#cfSidebar #cfSidebarTimeExpanded,#cfSidebar .cf-up-expanded{transition:opacity 120ms ease!important}
+#cfSidebar[data-cf-sidebar-phase="expanding"] .cf-nav-label,#cfSidebar[data-cf-sidebar-phase="expanding"] .cf-brand-expanded,#cfSidebar[data-cf-sidebar-phase="expanding"] #cfSidebarTimeExpanded,#cfSidebar[data-cf-sidebar-phase="expanding"] .cf-up-expanded,
+#cfSidebar[data-cf-sidebar-phase="collapsing"] .cf-nav-label,#cfSidebar[data-cf-sidebar-phase="collapsing"] .cf-brand-expanded,#cfSidebar[data-cf-sidebar-phase="collapsing"] #cfSidebarTimeExpanded,#cfSidebar[data-cf-sidebar-phase="collapsing"] .cf-up-expanded{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 
 /* v1.9 Icon Studio — isolated module */
 .ic-gallery{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:11px;margin-top:14px}.ic-set{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}.ic-set.selected{border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 12%,transparent)}.ic-strip{display:flex;gap:9px;align-items:center;font-size:20px;min-height:34px}.ic-set small{display:block;color:var(--muted);margin-top:7px}.ic-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,.72fr);gap:16px}.ic-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ic-field{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}.ic-field label{display:block;font-size:11px;font-weight:700;margin-bottom:6px}.ic-field input[type=range],.ic-field select{width:100%}.ic-field input[type=color]{width:100%;height:34px;border:0;background:none}.ic-preview{background:#eef3f8;border:1px solid var(--line);border-radius:12px;padding:12px}.ic-preview-side{width:230px;max-width:100%;min-height:360px;border-radius:11px;padding:13px 10px;background:var(--nav);color:#dbe8ff;transition:width .25s ease}.ic-preview-side.collapsed{width:72px}.ic-preview-logo{font-weight:800;padding:6px 8px 14px}.ic-preview-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;margin:4px 0;white-space:nowrap;overflow:hidden}.ic-preview-row.on{background:#ffffff18}.ic-preview-row .ip-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;flex:0 0 24px}.ic-preview-side.collapsed .ip-text{display:none}.ic-message{font-size:12px;color:var(--muted);margin-top:10px}.cf-nav-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;margin-right:2px;vertical-align:middle}@media(max-width:1000px){.ic-gallery{grid-template-columns:repeat(2,1fr)}.ic-layout{grid-template-columns:1fr}}@media(max-width:600px){.ic-gallery,.ic-controls{grid-template-columns:1fr}}
@@ -1673,16 +1678,10 @@ function cfSidebarGeometry(d,collapsed){
  return {width,gap,offset:width+gap};
 }
 function cfSyncSidebarOwnedComponents(collapsed){const side=document.getElementById('cfSidebar');if(!side)return;const ic=(typeof cfIconSaved==='function'&&cfIconSaved())||CF_ICON_DEFAULT,set=cfIconSet(collapsed?ic.collapsedSet:ic.expandedSet);side.querySelectorAll('.nav').forEach((n,i)=>{const sp=n.querySelector('.cf-nav-icon');if(!sp)return;sp.textContent=set.icons[i]||'•';sp.style.fontSize=(collapsed?ic.collapsedSize:ic.size)+'px';sp.style.opacity=Math.max(.4,(ic.opacity??100)/100);sp.style.marginRight=collapsed?'0':(ic.gap??8)+'px'});side.dataset.cfIconCollapsed=collapsed?'1':'0';if(typeof cfRefreshTimeBindings==='function')cfRefreshTimeBindings();if(typeof cfApplyUserProfile==='function')cfApplyUserProfile((typeof cfUpSaved==='function'&&cfUpSaved())||CF_UP_DEFAULT)}
-function cfRenderSidebarState(side,collapsed,d){if(!side)return;side.dataset.cfSidebarState=collapsed?'collapsed':'expanded';side.setAttribute('aria-expanded',collapsed?'false':'true');cfSyncSidebarOwnedComponents(collapsed)}
-function cfSetSidebarRuntimeState(collapsed,persist=false){
- const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||cfSidebarDraft||{}),side=document.getElementById('cfSidebar'),main=document.querySelector('#app>main');
- if(!side||!main||d.position!=='left'||!d.collapsible)return;
- const g=cfSidebarGeometry(d,collapsed);
- cfRenderSidebarState(side,collapsed,d);
- document.documentElement.style.setProperty('--cf-sb-current-width',g.width+'px');
- document.documentElement.style.setProperty('--cf-sb-workspace-offset',(d.keepFixed?g.offset:0)+'px');
- if(persist&&d.rememberLastState){d.defaultState=collapsed?'collapsed':'expanded';CoreFlow.state.targets.sidebar=CoreFlow.clone(d);CoreFlow.writeBootSnapshot(CoreFlow.state)}
-}
+function cfRenderSidebarState(side,collapsed,d){cfCommitSidebarVisualState(side,collapsed,d||Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||{}))}
+function cfCommitSidebarVisualState(side,collapsed,d){if(!side)return;side.dataset.cfSidebarState=collapsed?'collapsed':'expanded';side.dataset.cfSidebarPhase=collapsed?'collapsed':'expanded';side.setAttribute('aria-expanded',collapsed?'false':'true');cfSyncSidebarOwnedComponents(collapsed)}
+function cfTransitionSidebarState(collapsed,d){const side=document.getElementById('cfSidebar');if(!side)return;clearTimeout(cfSidebarTransitionTimer);const duration=d.animation==='none'?0:Math.max(0,+d.speed||0);if(!duration){cfCommitSidebarVisualState(side,collapsed,d);return}if(collapsed){side.dataset.cfSidebarPhase='collapsing';requestAnimationFrame(()=>requestAnimationFrame(()=>{side.dataset.cfSidebarState='collapsed';cfSyncSidebarOwnedComponents(true)}));cfSidebarTransitionTimer=setTimeout(()=>cfCommitSidebarVisualState(side,true,d),duration+30)}else{side.dataset.cfSidebarPhase='expanding';side.dataset.cfSidebarState='expanded';cfSyncSidebarOwnedComponents(true);cfSidebarTransitionTimer=setTimeout(()=>cfCommitSidebarVisualState(side,false,d),Math.max(40,duration-20))}}
+function cfSetSidebarRuntimeState(collapsed,persist=false){const d=Object.assign({},CF_SIDEBAR_DEFAULT,cfSidebarSaved()||cfSidebarDraft||{}),side=document.getElementById('cfSidebar'),main=document.querySelector('#app>main');if(!side||!main||d.position!=='left'||!d.collapsible)return;const g=cfSidebarGeometry(d,collapsed);document.documentElement.style.setProperty('--cf-sb-current-width',g.width+'px');document.documentElement.style.setProperty('--cf-sb-workspace-offset',(d.keepFixed?g.offset:0)+'px');cfTransitionSidebarState(collapsed,d);if(persist&&d.rememberLastState){d.defaultState=collapsed?'collapsed':'expanded';CoreFlow.state.targets.sidebar=CoreFlow.clone(d);CoreFlow.writeBootSnapshot(CoreFlow.state)}}
 function cfApplySidebarToSystem(d){
  if(!d)return;d=Object.assign({},CF_SIDEBAR_DEFAULT,d);
  const app=document.getElementById('app'),side=document.getElementById('cfSidebar'),main=document.querySelector('#app>main');if(!app||!side||!main)return;
@@ -1696,7 +1695,7 @@ function cfApplySidebarToSystem(d){
  document.documentElement.style.setProperty('--cf-sb-surface-opacity',Math.max(.05,d.opacity/100));
  document.documentElement.style.setProperty('--cf-sb-blur',d.blur+'px');
  document.documentElement.style.setProperty('--cf-sb-bar-height',Math.max(54,d.itemHeight+16)+'px');
- side.classList.add('cf-sb-runtime');cfRenderSidebarState(side,collapsed,d);side.dataset.cfSidebarStyle=d.style;side.dataset.cfSidebarPosition=d.position||'left';side.dataset.cfAutoHide=d.autoHide?'1':'0';side.dataset.cfHoverExpand=d.hoverExpand===false?'0':'1';
+ side.classList.add('cf-sb-runtime');cfCommitSidebarVisualState(side,collapsed,d);side.dataset.cfSidebarStyle=d.style;side.dataset.cfSidebarPosition=d.position||'left';side.dataset.cfAutoHide=d.autoHide?'1':'0';side.dataset.cfHoverExpand=d.hoverExpand===false?'0':'1';
  side.style.opacity='1';side.style.borderRadius=(d.position==='left'?d.borderRadius:0)+'px';side.style.marginLeft=(d.position==='left'?g.gap:0)+'px';side.style.boxShadow=d.shadow?`0 10px 30px rgba(15,23,42,${(d.shadowIntensity/100)*.38})`:'none';side.style.backdropFilter='none';
  side.style.borderStyle=d.borderStyle==='none'?'none':d.borderStyle;side.style.borderWidth=d.borderStyle==='none'?'0':d.borderWidth+'px';side.style.borderColor='color-mix(in srgb,var(--primary) 35%,transparent)';
  let surface='var(--cf-theme-sidebar,var(--nav))';
