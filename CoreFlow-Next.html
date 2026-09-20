@@ -1742,7 +1742,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')dgCloseResponsive()}
 window.addEventListener('resize',()=>{clearTimeout(dgRpResizeTimer);dgRpResizeTimer=setTimeout(()=>{if(document.getElementById('dgRpModal')?.classList.contains('open')){if(dgRpMode==='auto')dgSetResponsiveDevice('auto');else dgApplyResponsive()}},80)});
 
 
-/* v1.4.8 — Theme custom library persistence + dual reset ownership */
+/* v1.4.9 — Theme custom library persistence + dual reset ownership */
 const CF_THEME_FIELDS=[
  ['workspace','Workspace'],['surface','Surface Cards'],['primary','Primary'],['accent','Accent'],
  ['sidebar','Sidebar Background'],['activeMenu','Active Menu'],['activeText','Active Text']
@@ -1890,7 +1890,37 @@ document.addEventListener('click',e=>{
  if(e.target.closest('#themeResetOriginal')){const ok=cfResetSelectedThemeOriginal();const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Selected theme restored to its original/saved colors. Preview only — press Save & Apply to apply it.':'This new unsaved theme has no saved original yet.';return}
  if(e.target.closest('#themeSaveAsNew')){cfSaveCustomTheme(true).then(ok=>{const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Custom theme saved to this base design.':'Theme save failed: '+CoreFlow.dbError});return}
  if(e.target.closest('#themeDeleteCustom')){if(!cfThemeDraft||cfThemeDraft.builtin){const m=document.getElementById('themeMessage');if(m)m.textContent='Built-in themes are protected. Select a custom theme to delete.';return}const store=cfThemeStore(),i=store.findIndex(x=>x.id===cfThemeDraft.id);if(i<0)return;store.splice(i,1);if(cfThemeApplied()?.id===cfThemeDraft.id)cfSetAppliedTheme(null);cfThemeDraft=null;cfThemeSelected=null;CoreFlow.save().then(()=>{CoreFlow.applyDesign();cfThemeUI();const m=document.getElementById('themeMessage');if(m)m.textContent='Custom theme deleted.'});return}
- if(e.target.closest('#themeSaveApply')){if(!cfThemeDraft)return;cfThemeDraft.name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name);if(!cfThemeDraft.builtin)cfCommitThemeDraftToLibrary();cfSetAppliedTheme(cfThemeDraft);const m=document.getElementById('themeMessage');if(m)m.textContent='Saving theme library + applied theme to CoreFlow Local Database…';CoreFlow.save().then(ok=>{if(ok){cfApplyThemeToSystem(cfThemeApplied());cfThemeUI();if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name+' — custom theme persistence verified.'}else if(m)m.textContent='Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
+ if(e.target.closest('#themeSaveApply')){
+   if(!cfThemeDraft)return;
+   const m=document.getElementById('themeMessage');
+   cfThemeDraft.name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name);
+   // Custom themes must be committed to their design library first, then the
+   // exact committed object becomes the active global theme.  This avoids the
+   // old draft/library split where a custom card could save but not apply.
+   let activeTheme=cfThemeDraft.builtin?cfThemeClone(cfThemeDraft):cfThemeClone(cfCommitThemeDraftToLibrary());
+   cfThemeDraft=cfThemeClone(activeTheme);cfThemeSelected=activeTheme.id;
+   cfSetAppliedTheme(activeTheme);
+   // Apply synchronously so the user sees the custom theme immediately.
+   cfApplyThemeToSystem(activeTheme);
+   cfRenderThemeLibrary();cfRenderThemeControls();cfThemePreviewOnly();cfThemeUI();
+   if(m)m.textContent='Applying '+activeTheme.name+' and saving it to CoreFlow Local Database…';
+   CoreFlow.save().then(ok=>{
+     if(ok){
+       // Re-run the normal design owner after persistence; it now reads the
+       // saved custom theme through cfThemeApplied(), so refresh/navigation
+       // use the same tokens as the immediate apply above.
+       CoreFlow.applyDesign();
+       const saved=cfThemeApplied();
+       if(saved){cfThemeDraft=cfThemeClone(saved);cfThemeSelected=saved.id;cfApplyThemeToSystem(saved)}
+       cfThemeUI();
+       if(m)m.textContent='Saved & Applied: '+(saved?.name||activeTheme.name)+' — active across CoreFlow.';
+     }else{
+       if(m)m.textContent='Local database save failed: '+CoreFlow.dbError;
+     }
+     updateDiagnostics();
+   });
+   return
+ }
  if(e.target.closest('#themeRestoreDefault')){cfSetAppliedTheme(null);CoreFlow.save().then(ok=>{if(ok){cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI()}const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Base design default theme restored.':'Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
 });
 document.addEventListener('input',e=>{
