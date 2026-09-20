@@ -1058,6 +1058,7 @@ body[data-cf-wp-surfaces="1"] #wallpaper .wp-add-card{background:rgba(255,255,25
    if(raw.route&&PAGES.includes(raw.route.page))s.route.page=raw.route.page;
    if(raw.design&&['analytics','studioBlue'].includes(raw.design.base))s.design.base=raw.design.base;
    if(raw.design&&raw.design.overrides&&typeof raw.design.overrides==='object')s.design.overrides=raw.design.overrides;
+   if(raw.design&&raw.design.customThemes&&typeof raw.design.customThemes==='object')s.design.customThemes=raw.design.customThemes;
    if(raw.targets&&typeof raw.targets==='object')s.targets=raw.targets;
    s.updatedAt=raw.updatedAt||null;return s;
  }
@@ -1351,7 +1352,7 @@ body[data-design="analytics"].cf-theme-active #cfSidebar .nav:not(.on){color:var
 <div class="banner"><div class="gallery-head"><div><div>CoreFlow</div><h1>Theme Studio</h1><p>Theme controls appearance tokens only. Base design structure remains unchanged.</p></div><div class="gallery-tools"><button class="dg-btn" id="themeRestoreDefault">Reset to Design Default</button><button class="dg-btn primary" id="themeSaveApply">Save & Apply</button></div></div></div>
 <div class="kpis"><div class="kpi">Theme Library<strong>40</strong></div><div class="kpi">Selected Theme<strong id="themeSelectedKpi">Default</strong></div><div class="kpi">Base Design<strong id="themeBaseKpi">—</strong></div><div class="kpi">Override Status<strong id="themeOverrideKpi">OFF</strong></div></div>
 <div class="panel"><div class="theme-toolbar"><div><b>Theme Library</b><div style="font-size:12px;color:var(--muted);margin-top:4px">Built-in and your saved themes. Preview first; nothing changes permanently until Save & Apply.</div></div><div class="gallery-tools"><button class="dg-btn" id="themeNew">+ New Theme</button><button class="dg-btn" id="themeDuplicate">Duplicate</button><button class="dg-btn" id="themeDeleteCustom">Delete Custom</button></div></div><div class="theme-library" id="themeLibrary"></div></div>
-<div class="panel"><div class="theme-toolbar"><div><b>Power Theme Editor</b><div style="font-size:12px;color:var(--muted);margin-top:4px">Edit colors with picker or HEX value, rename a custom theme, preview live, and save it to this base design.</div></div><div class="theme-name-edit"><label>Theme Name <input id="themeNameInput" maxlength="32" placeholder="Theme name"></label><button class="dg-btn" id="themeSaveAsNew">Save as New Theme</button></div></div>
+<div class="panel"><div class="theme-toolbar"><div><b>Power Theme Editor</b><div style="font-size:12px;color:var(--muted);margin-top:4px">Edit colors with picker or HEX value, rename a custom theme, preview live, and save it to this base design.</div></div><div class="theme-name-edit"><label>Theme Name <input id="themeNameInput" maxlength="32" placeholder="Theme name"></label><button class="dg-btn" id="themeResetOriginal">Reset Original Theme</button><button class="dg-btn" id="themeSaveAsNew">Save as New Theme</button></div></div>
 <div class="theme-editor" style="margin-top:14px"><div class="theme-controls" id="themeControls"></div><div class="theme-live"><div class="theme-live-shell"><div class="theme-live-side" id="tlSide"><i></i><i></i><i></i><i></i></div><div class="theme-live-main" id="tlMain"><div class="theme-live-top" id="tlTop"></div><div class="theme-live-banner" id="tlBanner"></div><div class="theme-live-grid"><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div><div class="theme-live-box"></div></div></div></div><div class="theme-message" id="themeMessage">Select a theme to preview.</div></div></div></div>
 </section>
 <section class="page" id="sidebar" data-title="Sidebar Studio">
@@ -1741,6 +1742,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')dgCloseResponsive()}
 window.addEventListener('resize',()=>{clearTimeout(dgRpResizeTimer);dgRpResizeTimer=setTimeout(()=>{if(document.getElementById('dgRpModal')?.classList.contains('open')){if(dgRpMode==='auto')dgSetResponsiveDevice('auto');else dgApplyResponsive()}},80)});
 
 
+/* v1.4.8 — Theme custom library persistence + dual reset ownership */
 const CF_THEME_FIELDS=[
  ['workspace','Workspace'],['surface','Surface Cards'],['primary','Primary'],['accent','Accent'],
  ['sidebar','Sidebar Background'],['activeMenu','Active Menu'],['activeText','Active Text']
@@ -1856,6 +1858,24 @@ function cfThemeUI(){
  if(a)a.textContent=cfThemeDraft?.name||applied?.name||'Default';if(b)b.textContent=base==='analytics'?'Analytics':'Studio Blue';if(o)o.textContent=applied?'ON':'OFF';
  cfRenderThemeLibrary();if(!cfThemeDraft&&applied){cfThemeDraft=cfThemeClone(applied);cfThemeSelected=applied.id}if(cfThemeDraft){cfRenderThemeControls();cfThemePreviewOnly()}
 }
+function cfCommitThemeDraftToLibrary(){
+ if(!cfThemeDraft||cfThemeDraft.builtin)return cfThemeDraft;
+ const store=cfThemeStore();
+ const name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name);
+ let target=store.find(x=>x.id===cfThemeDraft.id);
+ if(target)Object.assign(target,cfThemeClone(cfThemeDraft),{name,builtin:false});
+ else{target=Object.assign(cfThemeClone(cfThemeDraft),{name,builtin:false});store.push(target)}
+ cfThemeDraft=cfThemeClone(target);cfThemeSelected=target.id;return target;
+}
+function cfResetSelectedThemeOriginal(){
+ if(!cfThemeDraft)return false;
+ let original=null;
+ if(cfThemeDraft.builtin)original=CF_THEMES.find(x=>x.id===cfThemeDraft.id)||null;
+ else original=cfThemeStore().find(x=>x.id===cfThemeDraft.id)||null;
+ if(!original)return false;
+ cfThemeDraft=cfThemeClone(original);cfThemeSelected=original.id;
+ cfRenderThemeControls();cfThemePreviewOnly();cfRenderThemeLibrary();cfThemeUI();return true;
+}
 async function cfSaveCustomTheme(forceNew){
  if(!cfThemeDraft)return false;const name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name),store=cfThemeStore();
  let target=!forceNew&&!cfThemeDraft.builtin?store.find(x=>x.id===cfThemeDraft.id):null;
@@ -1867,9 +1887,10 @@ document.addEventListener('click',e=>{
  const card=e.target.closest('[data-theme-id]');if(card){cfPreviewTheme(cfThemeById(card.dataset.themeId));return}
  if(e.target.closest('#themeNew')){cfThemeDraft={id:cfThemeNewId(),name:'New Custom Theme',workspace:'#f5f8fc',surface:'#ffffff',primary:'#2563eb',accent:'#14b8a6',sidebar:'#10284b',activeMenu:'#315985',activeText:'#ffffff',builtin:false};cfThemeSelected=cfThemeDraft.id;cfRenderThemeControls();cfThemePreviewOnly();cfRenderThemeLibrary();document.getElementById('themeNameInput')?.focus();return}
  if(e.target.closest('#themeDuplicate')){if(!cfThemeDraft)return;cfThemeDraft=Object.assign(cfThemeClone(cfThemeDraft),{id:cfThemeNewId(),name:cfThemeDraft.name+' Copy',builtin:false});cfThemeSelected=cfThemeDraft.id;cfRenderThemeControls();cfThemePreviewOnly();cfRenderThemeLibrary();return}
+ if(e.target.closest('#themeResetOriginal')){const ok=cfResetSelectedThemeOriginal();const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Selected theme restored to its original/saved colors. Preview only — press Save & Apply to apply it.':'This new unsaved theme has no saved original yet.';return}
  if(e.target.closest('#themeSaveAsNew')){cfSaveCustomTheme(true).then(ok=>{const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Custom theme saved to this base design.':'Theme save failed: '+CoreFlow.dbError});return}
  if(e.target.closest('#themeDeleteCustom')){if(!cfThemeDraft||cfThemeDraft.builtin){const m=document.getElementById('themeMessage');if(m)m.textContent='Built-in themes are protected. Select a custom theme to delete.';return}const store=cfThemeStore(),i=store.findIndex(x=>x.id===cfThemeDraft.id);if(i<0)return;store.splice(i,1);if(cfThemeApplied()?.id===cfThemeDraft.id)cfSetAppliedTheme(null);cfThemeDraft=null;cfThemeSelected=null;CoreFlow.save().then(()=>{CoreFlow.applyDesign();cfThemeUI();const m=document.getElementById('themeMessage');if(m)m.textContent='Custom theme deleted.'});return}
- if(e.target.closest('#themeSaveApply')){if(!cfThemeDraft)return;cfThemeDraft.name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name);cfSetAppliedTheme(cfThemeDraft);const m=document.getElementById('themeMessage');if(m)m.textContent='Saving to CoreFlow Local Database…';CoreFlow.save().then(ok=>{if(ok){cfApplyThemeToSystem(cfThemeApplied());cfThemeUI();if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name+' — verified.'}else if(m)m.textContent='Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
+ if(e.target.closest('#themeSaveApply')){if(!cfThemeDraft)return;cfThemeDraft.name=cfThemeSafeName(document.getElementById('themeNameInput')?.value||cfThemeDraft.name);if(!cfThemeDraft.builtin)cfCommitThemeDraftToLibrary();cfSetAppliedTheme(cfThemeDraft);const m=document.getElementById('themeMessage');if(m)m.textContent='Saving theme library + applied theme to CoreFlow Local Database…';CoreFlow.save().then(ok=>{if(ok){cfApplyThemeToSystem(cfThemeApplied());cfThemeUI();if(m)m.textContent='Saved & Applied: '+cfThemeDraft.name+' — custom theme persistence verified.'}else if(m)m.textContent='Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
  if(e.target.closest('#themeRestoreDefault')){cfSetAppliedTheme(null);CoreFlow.save().then(ok=>{if(ok){cfThemeDraft=null;cfThemeSelected=null;CoreFlow.applyDesign();cfThemeUI()}const m=document.getElementById('themeMessage');if(m)m.textContent=ok?'Base design default theme restored.':'Local database save failed: '+CoreFlow.dbError;updateDiagnostics()});return}
 });
 document.addEventListener('input',e=>{
