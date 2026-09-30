@@ -1554,4 +1554,85 @@ if(location.hash==='#local-purchase')openLP();
  // registered last, so it wins over legacy boot handlers
  window.addEventListener('load',()=>setTimeout(restore,80));
 })();
+</script><script id="coreflow-final-boot-authority-5b3">
+(()=>{
+ const S=window.CoreFlowState;
+ const body=document.body;
+
+ function exists(k){return !!document.getElementById('page-'+k)}
+ function parentOf(k){
+   const p={
+    'design-gallery':'design-studio','theme-studio':'design-studio','component-library':'design-studio',
+    'sidebar-studio':'design-studio','icon-studio':'design-studio','wallpaper-studio':'design-studio',
+    'time-date-studio':'design-studio','user-profile':'design-studio','company-profile':'design-studio',
+    'banner-studio':'design-studio','dashboard-studio':'design-studio','login-studio':'design-studio',
+    'local-purchase':'purchasing','zafar-purchase':'purchasing','board-purchase':'purchasing','purchase-history':'purchasing',
+    'stock-ledger':'inventory','current-stock':'inventory','supplier-analysis':'inventory','stock-summary':'inventory',
+    'issue-entry':'issue-stock','issue-history':'issue-stock','consumption':'issue-stock','department-usage':'issue-stock',
+    'rgp':'gate-pass','ogp':'gate-pass','cgp':'gate-pass','gate-history':'gate-pass',
+    'stock-reports':'reports','purchase-reports':'reports','issue-reports':'reports','gate-reports':'reports',
+    'item-master':'masters','supplier-master':'masters','department-master':'masters','all-masters':'masters'
+   }; return p[k]||k;
+ }
+ function activate(k,{hash=true,save=true}={}){
+   if(!exists(k))return false;
+   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+   document.getElementById('page-'+k).classList.add('active');
+   const par=parentOf(k);
+   document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===par));
+   if(hash && location.hash!=='#'+k) history.replaceState(null,'','#'+k);
+   if(save) S?.set('activePage',k);
+   return true;
+ }
+
+ function desktop(){
+   body.classList.remove('cf-rp-tablet','cf-rp-mobile','cf-mobile-menu-open');
+   // Clear legacy inline preview sizing if an older controller left it behind.
+   const shell=document.querySelector('.app-shell');
+   if(shell){shell.style.removeProperty('width');shell.style.removeProperty('max-width');shell.style.removeProperty('margin')}
+ }
+ function tablet(){desktop();body.classList.add('cf-rp-tablet')}
+ function mobile(){desktop();body.classList.add('cf-rp-mobile')}
+
+ // Responsive preview is temporary by design: every full reload starts clean Desktop/Auto.
+ desktop();
+
+ // Capture navigation before legacy handlers can redirect to dashboard.
+ document.addEventListener('click',e=>{
+   const nav=e.target.closest('[data-page]');
+   if(nav && nav.dataset.page && exists(nav.dataset.page)){
+     e.preventDefault();e.stopImmediatePropagation();activate(nav.dataset.page);return;
+   }
+   const studio=e.target.closest('[data-studio-route]');
+   if(studio && !studio.disabled && exists(studio.dataset.studioRoute)){
+     e.preventDefault();e.stopImmediatePropagation();activate(studio.dataset.studioRoute);return;
+   }
+ },true);
+
+ // Authoritative responsive buttons.
+ document.addEventListener('click',e=>{
+   const b=e.target.closest('button');if(!b)return;
+   const s=((b.id||'')+' '+(b.title||'')+' '+(b.getAttribute('aria-label')||'')+' '+(b.textContent||'')).toLowerCase();
+   if(s.includes('desktop')){e.stopImmediatePropagation();desktop()}
+   else if(s.includes('tablet')){e.stopImmediatePropagation();tablet()}
+   else if(s.includes('mobile')){e.stopImmediatePropagation();mobile()}
+ },true);
+
+ window.addEventListener('hashchange',()=>{
+   const k=location.hash.slice(1);
+   if(exists(k))activate(k,{hash:false,save:true});
+ });
+
+ function finalBoot(){
+   desktop();
+   // URL hash is the strongest source. Saved page is fallback only.
+   const hash=location.hash.slice(1);
+   const saved=S?.get('activePage','dashboard')||'dashboard';
+   const target=exists(hash)?hash:(exists(saved)?saved:'dashboard');
+   activate(target,{hash:!exists(hash),save:true});
+ }
+ // Run after all legacy load handlers.
+ window.addEventListener('load',()=>setTimeout(finalBoot,220));
+ window.CoreFlowNavigation={activate,desktop,tablet,mobile,restore:finalBoot};
+})();
 </script></body></html>
