@@ -1493,28 +1493,31 @@ if(location.hash==='#local-purchase')openLP();
 </div>
 <script id="theme-studio-5c-js">
 (()=>{
- const KEY='coreflow.theme.custom.v2';
+ const STATE='studio.themeCustom';
  const defaults={accent:'#1684ef',bg:'#f5f8fc',surface:'#ffffff',ink:'#17324a',muted:'#718397',line:'#dfe7ef',radius:14,shadow:10,font:'system'};
  const fontMap={system:'Inter,system-ui,-apple-system,"Segoe UI",sans-serif',modern:'"Segoe UI",Inter,system-ui,sans-serif',compact:'Arial,Helvetica,sans-serif',classic:'Georgia,"Times New Roman",serif'};
- let draft={...defaults}, saved=null, applying=false;
- const $=s=>document.querySelector(s);
- const validHex=v=>/^#[0-9a-f]{6}$/i.test(v);
- function loadSaved(){try{const x=JSON.parse(localStorage.getItem(KEY)||'null');return x?{...defaults,...x}:null}catch(e){return null}}
- function writeSaved(v){localStorage.setItem(KEY,JSON.stringify(v));saved={...v};return saved}
+ let draft={...defaults}, applying=false;
+ const $=s=>document.querySelector(s), validHex=v=>/^#[0-9a-f]{6}$/i.test(v);
+ function getSaved(){
+   const v=window.CoreFlowState?.get(STATE,null);
+   return v&&v.saved===true?{...defaults,...v.values}:null;
+ }
+ function save(v){
+   window.CoreFlowState?.set(STATE,{saved:true,values:{...v}});
+   return getSaved();
+ }
  function apply(v){
    if(!v)return; applying=true;
    const r=document.documentElement.style;
-   r.setProperty('--accent',v.accent);r.setProperty('--primary',v.accent);r.setProperty('--brand',v.accent);
-   r.setProperty('--bg',v.bg);r.setProperty('--page-bg',v.bg);r.setProperty('--workspace',v.bg);
-   r.setProperty('--surface',v.surface);r.setProperty('--card',v.surface);
-   r.setProperty('--ink',v.ink);r.setProperty('--text',v.ink);
-   r.setProperty('--muted',v.muted);r.setProperty('--line',v.line);r.setProperty('--border',v.line);
-   r.setProperty('--radius',v.radius+'px');r.setProperty('--card-radius',v.radius+'px');
-   r.setProperty('--shadow','0 '+Math.max(2,Math.round(v.shadow/2))+'px '+Math.max(4,v.shadow*2)+'px rgba(15,35,55,'+(0.02+v.shadow/120).toFixed(3)+')');
-   r.setProperty('--font-ui',fontMap[v.font]||fontMap.system);
+   [['--accent',v.accent],['--primary',v.accent],['--brand',v.accent],
+    ['--bg',v.bg],['--page-bg',v.bg],['--workspace',v.bg],
+    ['--surface',v.surface],['--card',v.surface],['--ink',v.ink],['--text',v.ink],
+    ['--muted',v.muted],['--line',v.line],['--border',v.line],
+    ['--radius',v.radius+'px'],['--card-radius',v.radius+'px'],
+    ['--shadow','0 '+Math.max(2,Math.round(v.shadow/2))+'px '+Math.max(4,v.shadow*2)+'px rgba(15,35,55,'+(0.02+v.shadow/120).toFixed(3)+')'],
+    ['--font-ui',fontMap[v.font]||fontMap.system]].forEach(([k,x])=>r.setProperty(k,x));
    document.body.style.fontFamily=fontMap[v.font]||fontMap.system;
-   document.documentElement.dataset.themeCustom='saved';
-   applying=false;
+   document.documentElement.dataset.themeCustom='saved'; applying=false;
  }
  function fill(v){
    draft={...v};
@@ -1522,57 +1525,48 @@ if(location.hash==='#local-purchase')openLP();
      const k=el.dataset.cfCustom;el.value=v[k];
      if(el.type==='color'){const t=$(`[data-cf-hex="${k}"]`);if(t)t.value=v[k]}
    });
-   const rv=$('[data-cf-value="radius"]'),sv=$('[data-cf-value="shadow"]');
-   if(rv)rv.textContent=v.radius+' px';if(sv)sv.textContent=v.shadow===0?'None':v.shadow+'/24';
+   const a=$('[data-cf-value="radius"]'),b=$('[data-cf-value="shadow"]');
+   if(a)a.textContent=v.radius+' px';if(b)b.textContent=v.shadow===0?'None':v.shadow+'/24';
  }
- function restore(){saved=loadSaved();if(saved){draft={...saved};apply(saved);fill(saved)}}
+ function restore(){const v=getSaved();if(v){fill(v);apply(v)}}
+ function onSave(e){
+   e?.preventDefault();e?.stopPropagation();
+   const v=save(draft); if(v){fill(v);apply(v)}
+   const b=$('#ts5cSave');if(b){const old='Save & Apply';b.textContent='Applied ✓';setTimeout(()=>b.textContent=old,1200)}
+ }
  function bind(){
-   saved=loadSaved();fill(saved||defaults);if(saved)apply(saved);
-
+   const v=getSaved();fill(v||defaults);if(v)apply(v);
    document.querySelectorAll('[data-cf-custom]').forEach(el=>el.addEventListener('input',()=>{
      const k=el.dataset.cfCustom;draft[k]=el.type==='range'?Number(el.value):el.value;
      if(el.type==='color'){const t=$(`[data-cf-hex="${k}"]`);if(t)t.value=el.value}
      if(k==='radius')$('[data-cf-value="radius"]').textContent=draft.radius+' px';
      if(k==='shadow')$('[data-cf-value="shadow"]').textContent=draft.shadow===0?'None':draft.shadow+'/24';
-     apply(draft); // preview only; persistence happens on Save
+     apply(draft);
    }));
-
    document.querySelectorAll('[data-cf-hex]').forEach(el=>el.addEventListener('change',()=>{
      const k=el.dataset.cfHex;if(!validHex(el.value)){el.value=draft[k];return}
      draft[k]=el.value;const c=$(`[data-cf-custom="${k}"]`);if(c)c.value=el.value;apply(draft);
    }));
-
-   // Own Save in capture phase so no legacy handler can swallow it.
-   document.getElementById('ts5cSave')?.addEventListener('click',e=>{
-     e.preventDefault();e.stopImmediatePropagation();
-     writeSaved(draft);apply(saved);fill(saved);
-     const b=e.currentTarget,txt=b.textContent;b.textContent='Applied ✓';
-     setTimeout(()=>b.textContent=txt||'Save & Apply',1200);
-   },true);
-
-   document.getElementById('ts5cPreview')?.addEventListener('click',e=>{e.preventDefault();apply(draft)},true);
-
-   document.getElementById('ts5cReset')?.addEventListener('click',e=>{
-     e.preventDefault();e.stopImmediatePropagation();localStorage.removeItem(KEY);saved=null;
+   $('#ts5cSave').onclick=onSave;
+   $('#ts5cPreview').onclick=e=>{e.preventDefault();apply(draft)};
+   $('#ts5cReset').onclick=e=>{
+     e.preventDefault();
+     window.CoreFlowState?.set(STATE,{saved:false,values:null});
      document.documentElement.removeAttribute('data-theme-custom');
-     const applied=window.CoreFlowThemeEngine?.getApplied?.();
-     if(applied)window.CoreFlowThemeEngine?.applyTokens(applied,{persist:false});
+     const t=window.CoreFlowThemeEngine?.getApplied?.();
+     if(t)window.CoreFlowThemeEngine?.applyTokens(t,{persist:false});
      fill(defaults);
-   },true);
+   };
  }
-
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 
- // Theme engine is lower priority. Re-assert a SAVED custom layer whenever it rewrites root tokens.
- const obs=new MutationObserver(()=>{
-   if(applying||!saved)return;
-   clearTimeout(obs.t);obs.t=setTimeout(()=>apply(saved),0);
- });
+ // Restore only from CoreFlow's own persistent state owner.
+ window.addEventListener('pageshow',()=>setTimeout(restore,0));
+ window.addEventListener('hashchange',()=>setTimeout(restore,0));
+ const obs=new MutationObserver(()=>{if(applying)return;const v=getSaved();if(v){clearTimeout(obs.t);obs.t=setTimeout(()=>apply(v),0)}});
  obs.observe(document.documentElement,{attributes:true,attributeFilter:['style','data-theme']});
 
- window.addEventListener('pageshow',restore);
- window.addEventListener('hashchange',()=>setTimeout(restore,0));
- window.CoreFlowThemeCustom={get:()=>loadSaved(),apply,restore,reset:()=>{localStorage.removeItem(KEY);saved=null}};
+ window.CoreFlowThemeCustom={get:getSaved,apply,restore,save:()=>save(draft)};
 })();
 </script>
 <script id="cf-single-preview-route-controller-5b6">
