@@ -587,6 +587,19 @@ body.cf-preview-tablet .ml-kpis,body.cf-preview-tablet .ml-module-kpis{grid-temp
 body.cf-preview-tablet .ml-nav,body.cf-preview-tablet .ml-module-grid{grid-template-columns:repeat(2,1fr)!important}
 /* Old 5B.3 experimental preview classes must never compete with the real emulator. */
 body.cf-rp-mobile .app-shell,body.cf-rp-tablet .app-shell{width:auto!important;margin:0!important;box-shadow:none!important}
+</style><style id="true-device-preview-5b5-css">
+#cfTruePreview{position:fixed;inset:0;z-index:20000;background:rgba(7,25,43,.72);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:18px}
+#cfTruePreview.open{display:flex}
+#cfTruePreview .tp-frame{height:calc(100vh - 36px);background:#fff;border-radius:15px;box-shadow:0 24px 70px rgba(0,0,0,.34);overflow:hidden;display:flex;flex-direction:column;transition:width .18s ease}
+#cfTruePreview[data-mode="mobile"] .tp-frame{width:min(430px,calc(100vw - 24px))}
+#cfTruePreview[data-mode="tablet"] .tp-frame{width:min(820px,calc(100vw - 24px))}
+#cfTruePreview .tp-head{height:44px;flex:0 0 44px;background:#082541;color:#fff;display:flex;align-items:center;padding:0 10px;gap:7px;font:700 11px Segoe UI,Arial}
+#cfTruePreview .tp-head b{margin-right:auto}
+#cfTruePreview .tp-head button{border:1px solid #31516d;background:#123653;color:#dff1ff;border-radius:7px;padding:6px 9px;font:700 9px Segoe UI,Arial;cursor:pointer}
+#cfTruePreview .tp-head button.active{background:#1684ef;border-color:#1684ef;color:#fff}
+#cfTruePreview iframe{border:0;width:100%;flex:1;background:#f3f8fc}
+body.cf-device-child #cfPreviewSwitch{display:none!important}
+body.cf-device-child #cfTruePreview{display:none!important}
 </style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂ &nbsp; Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒 &nbsp; Purchasing</span></button><button data-page="inventory"><span class="txt">▦ &nbsp; Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄ &nbsp; Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣ &nbsp; Gate Pass</span></button><button data-page="reports"><span class="txt">▤ &nbsp; Reports</span></button><button data-page="masters"><span class="txt">◆ &nbsp; Masters</span></button><button data-page="design-studio"><span class="txt">✦ &nbsp; Design Studio</span></button><button data-page="settings"><span class="txt">⚙ &nbsp; Settings</span></button></div><div class="profile">MW &nbsp; <b>Muhammad Waqas</b><br><small>Administrator</small></div></aside>
@@ -1760,5 +1773,111 @@ if(location.hash==='#local-purchase')openLP();
  // Run later than every legacy load/route controller.
  window.addEventListener('load',()=>setTimeout(boot,420));
  window.CoreFlowPreview={device,applyThemePreview,clearThemePreview};
+})();
+</script><div id="cfTruePreview" data-mode="mobile" aria-hidden="true">
+  <div class="tp-frame">
+    <div class="tp-head">
+      <b id="cfTpTitle">Mobile Preview · 430px</b>
+      <button data-tp-mode="tablet">Tablet</button>
+      <button data-tp-mode="mobile" class="active">Mobile</button>
+      <button id="cfTpClose">Close Preview</button>
+    </div>
+    <iframe id="cfTpFrame" title="CoreFlow Responsive Preview"></iframe>
+  </div>
+</div><script id="true-preview-route-authority-5b5">
+(()=>{
+ const S=window.CoreFlowState, SS=sessionStorage, body=document.body;
+ const child=new URLSearchParams(location.search).get('cf_device_preview')==='1';
+ const PKEY='cf.themePreview.active', IKEY='cf.themePreview.index';
+
+ function exists(k){return !!document.getElementById('page-'+k)}
+ function parent(k){
+   const p={'design-gallery':'design-studio','theme-studio':'design-studio','component-library':'design-studio',
+   'local-purchase':'purchasing','zafar-purchase':'purchasing','board-purchase':'purchasing','purchase-history':'purchasing',
+   'stock-ledger':'inventory','current-stock':'inventory','supplier-analysis':'inventory','stock-summary':'inventory',
+   'issue-entry':'issue-stock','issue-history':'issue-stock','consumption':'issue-stock','department-usage':'issue-stock',
+   'rgp':'gate-pass','ogp':'gate-pass','cgp':'gate-pass','gate-history':'gate-pass'}; return p[k]||k;
+ }
+ function openPage(k,write=true){
+   if(!exists(k))return false;
+   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+   document.getElementById('page-'+k).classList.add('active');
+   const par=parent(k);
+   document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===par));
+   if(write && location.hash!=='#'+k)history.replaceState(null,'','#'+k);
+   if(!child)S?.set('activePage',k);
+   return true;
+ }
+
+ // Critical refresh rule:
+ // Theme-preview session may restore ONLY while the URL itself is #dashboard.
+ // If user has returned to Theme Studio/Design Studio/any other page, stale preview state is discarded.
+ function sanitizePreviewState(){
+   const hash=location.hash.slice(1);
+   if(hash!=='dashboard'){
+     SS.removeItem(PKEY);SS.removeItem(IKEY);
+     body.classList.remove('theme-preview-active');
+   }
+ }
+
+ if(child){
+   body.classList.add('cf-device-child');
+   // Child iframe is a real 430/820 CSS viewport, so native @media rules do the work.
+   SS.removeItem(PKEY); SS.removeItem(IKEY);
+ } else sanitizePreviewState();
+
+ const box=document.getElementById('cfTruePreview'), frame=document.getElementById('cfTpFrame'), title=document.getElementById('cfTpTitle');
+ function frameUrl(){
+   const u=new URL(location.href);
+   u.searchParams.set('cf_device_preview','1');
+   u.hash=location.hash||'#dashboard';
+   return u.toString();
+ }
+ function preview(mode){
+   if(child)return;
+   mode=mode==='tablet'?'tablet':'mobile';
+   // remove all old fake preview classes first
+   body.classList.remove('cf-preview-mobile','cf-preview-tablet','cf-rp-mobile','cf-rp-tablet','cf-mobile-menu-open');
+   box.dataset.mode=mode;box.classList.add('open');box.setAttribute('aria-hidden','false');
+   title.textContent=(mode==='mobile'?'Mobile Preview · 430px':'Tablet Preview · 820px');
+   box.querySelectorAll('[data-tp-mode]').forEach(b=>b.classList.toggle('active',b.dataset.tpMode===mode));
+   frame.src=frameUrl();
+ }
+ function closePreview(){
+   box.classList.remove('open');box.setAttribute('aria-hidden','true');frame.src='about:blank';
+   document.querySelectorAll('#cfPreviewSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.preview==='auto'));
+ }
+
+ // Capture the existing top responsive controls. Auto/Desktop = normal page; Tablet/Mobile = true iframe viewport.
+ document.addEventListener('click',e=>{
+   const b=e.target.closest('#cfPreviewSwitch button[data-preview]'); if(!b||child)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   const m=b.dataset.preview;
+   if(m==='tablet'||m==='mobile')preview(m); else closePreview();
+ },true);
+ document.getElementById('cfTpClose')?.addEventListener('click',closePreview);
+ document.querySelectorAll('#cfTruePreview [data-tp-mode]').forEach(b=>b.addEventListener('click',()=>preview(b.dataset.tpMode)));
+
+ // Any real navigation away from Dashboard means theme preview has ended.
+ document.addEventListener('click',e=>{
+   if(child)return;
+   const n=e.target.closest('[data-page],[data-studio-route]');
+   if(!n)return;
+   const k=n.dataset.page||n.dataset.studioRoute;
+   if(k && k!=='dashboard'){SS.removeItem(PKEY);SS.removeItem(IKEY)}
+ },true);
+ window.addEventListener('hashchange',sanitizePreviewState);
+
+ function finalBoot(){
+   // No fake preview state survives reload.
+   body.classList.remove('cf-preview-mobile','cf-preview-tablet','cf-rp-mobile','cf-rp-tablet','cf-mobile-menu-open');
+   sanitizePreviewState();
+   const hash=location.hash.slice(1), saved=S?.get('activePage','dashboard')||'dashboard';
+   // In child, hash is always authoritative. In parent, hash first then saved.
+   const target=exists(hash)?hash:(exists(saved)?saved:'dashboard');
+   openPage(target,!hash);
+ }
+ window.addEventListener('load',()=>setTimeout(finalBoot,700));
+ window.CoreFlowTruePreview={preview,close:closePreview};
 })();
 </script></body></html>
