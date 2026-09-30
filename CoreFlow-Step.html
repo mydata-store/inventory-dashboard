@@ -555,6 +555,38 @@ body.cf-theme-engine[data-theme="midnight"] .ml-toolbar,
 body.cf-theme-engine[data-theme="midnight"] .ml-sheet,
 body.cf-theme-engine[data-theme="midnight"] .ml-sheet-foot{color:var(--cf-text)!important}
 body.cf-theme-engine[data-theme="midnight"] .ml-status{background:#123e32!important;color:#69e2b3!important}
+</style><style id="preview-emulation-5b4-css">
+/* 5B.4 — device preview must emulate the REAL responsive layout, not shrink only .work */
+body.cf-preview-mobile,body.cf-preview-tablet{background:#e8eef4!important}
+body.cf-preview-mobile .side,body.cf-preview-tablet .side{transform:translateX(-100%)!important}
+body.cf-preview-mobile .shell{
+ width:430px!important;max-width:calc(100vw - 24px)!important;min-height:calc(100vh - 24px)!important;
+ margin:12px auto!important;background:var(--cf-bg,#f3f8fc)!important;overflow:hidden!important;
+ box-shadow:0 18px 50px rgba(15,35,55,.20)!important;border-radius:12px!important
+}
+body.cf-preview-tablet .shell{
+ width:820px!important;max-width:calc(100vw - 36px)!important;min-height:calc(100vh - 36px)!important;
+ margin:18px auto!important;background:var(--cf-bg,#f3f8fc)!important;overflow:hidden!important;
+ box-shadow:0 18px 50px rgba(15,35,55,.18)!important;border-radius:12px!important
+}
+body.cf-preview-mobile .work,body.cf-preview-tablet .work{max-width:none!important;width:100%!important;margin:0!important}
+body.cf-preview-mobile .top{height:54px!important;padding:0 8px!important;gap:8px!important}
+body.cf-preview-mobile .search,body.cf-preview-mobile .quick{display:none!important}
+body.cf-preview-mobile .company{margin-left:auto!important;max-width:125px!important}
+body.cf-preview-mobile .work{padding:7px!important}
+body.cf-preview-mobile .page,body.cf-preview-mobile .stage{border-radius:9px!important;padding:11px!important}
+body.cf-preview-mobile .ml-kpis,body.cf-preview-mobile .ml-entry-kpis,body.cf-preview-mobile .ml-module-kpis{grid-template-columns:1fr 1fr!important}
+body.cf-preview-mobile .ml-nav,body.cf-preview-mobile .ml-module-grid,body.cf-preview-mobile .ml-subgrid,
+body.cf-preview-mobile .ml-bottom,body.cf-preview-mobile .ts5-gallery,body.cf-preview-mobile .dsnav-grid{grid-template-columns:1fr!important}
+body.cf-preview-mobile .mobile-bottom{
+ display:flex!important;position:absolute!important;left:0;right:0;bottom:0;height:58px;background:#fff;
+ border-top:1px solid #dbe7f1;z-index:950;align-items:center;justify-content:space-around
+}
+body.cf-preview-mobile .foot{display:none!important}
+body.cf-preview-tablet .ml-kpis,body.cf-preview-tablet .ml-module-kpis{grid-template-columns:repeat(3,1fr)!important}
+body.cf-preview-tablet .ml-nav,body.cf-preview-tablet .ml-module-grid{grid-template-columns:repeat(2,1fr)!important}
+/* Old 5B.3 experimental preview classes must never compete with the real emulator. */
+body.cf-rp-mobile .app-shell,body.cf-rp-tablet .app-shell{width:auto!important;margin:0!important;box-shadow:none!important}
 </style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂ &nbsp; Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒 &nbsp; Purchasing</span></button><button data-page="inventory"><span class="txt">▦ &nbsp; Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄ &nbsp; Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣ &nbsp; Gate Pass</span></button><button data-page="reports"><span class="txt">▤ &nbsp; Reports</span></button><button data-page="masters"><span class="txt">◆ &nbsp; Masters</span></button><button data-page="design-studio"><span class="txt">✦ &nbsp; Design Studio</span></button><button data-page="settings"><span class="txt">⚙ &nbsp; Settings</span></button></div><div class="profile">MW &nbsp; <b>Muhammad Waqas</b><br><small>Administrator</small></div></aside>
@@ -1634,5 +1666,99 @@ if(location.hash==='#local-purchase')openLP();
  // Run after all legacy load handlers.
  window.addEventListener('load',()=>setTimeout(finalBoot,220));
  window.CoreFlowNavigation={activate,desktop,tablet,mobile,restore:finalBoot};
+})();
+</script><script id="preview-refresh-authority-5b4">
+(()=>{
+ const body=document.body, S=window.CoreFlowState;
+ const SS=sessionStorage;
+ const PKEY='cf.themePreview.active', IKEY='cf.themePreview.index';
+ const themeKeys=['default-blue','ocean-blue','emerald','royal-purple','amber-gold','graphite','ice-blue','midnight'];
+ const themeNames=['Default Blue','Ocean Blue','Emerald','Royal Purple','Amber Gold','Graphite','Ice Blue','Midnight'];
+
+ function pageExists(k){return !!document.getElementById('page-'+k)}
+ function open(k){
+   if(!pageExists(k))return;
+   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+   document.getElementById('page-'+k).classList.add('active');
+   const parents={'theme-studio':'design-studio','design-gallery':'design-studio','component-library':'design-studio'};
+   const par=parents[k]||k;
+   document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===par));
+   history.replaceState(null,'','#'+k); S?.set('activePage',k);
+ }
+ function clearDevice(){
+   body.classList.remove('cf-preview-mobile','cf-preview-tablet','cf-rp-mobile','cf-rp-tablet','cf-mobile-menu-open','mobile-menu-open');
+   const shell=document.querySelector('.shell');
+   if(shell){['width','max-width','margin','min-height','box-shadow','border-radius','overflow'].forEach(x=>shell.style.removeProperty(x))}
+ }
+ function device(m){
+   clearDevice();
+   if(m==='mobile')body.classList.add('cf-preview-mobile');
+   if(m==='tablet')body.classList.add('cf-preview-tablet');
+   document.querySelectorAll('#cfPreviewSwitch button[data-preview]').forEach(b=>b.classList.toggle('active',(b.dataset.preview||'auto')===m));
+   // Preview mode is intentionally not persisted across a full reload.
+   try{S?.set('responsive.previewMode','auto')}catch(_){}
+ }
+ function applyThemePreview(i){
+   i=((Number(i)||0)%themeKeys.length+themeKeys.length)%themeKeys.length;
+   SS.setItem(PKEY,'1');SS.setItem(IKEY,String(i));
+   body.classList.add('theme-preview-active');
+   window.CoreFlowThemeEngine?.applyTokens(themeKeys[i],{persist:false});
+   const n=document.getElementById('cftpName');if(n)n.textContent=themeNames[i];
+   open('dashboard');
+ }
+ function clearThemePreview(goTheme=true){
+   SS.removeItem(PKEY);SS.removeItem(IKEY);
+   body.classList.remove('theme-preview-active');
+   const saved=window.CoreFlowThemeEngine?.getApplied?.()||'default-blue';
+   window.CoreFlowThemeEngine?.applyTokens(saved,{persist:false});
+   if(goTheme)open('theme-studio');
+ }
+
+ // Exact device controls: use the same classes that already target the real .side/.shell/.work structure.
+ document.addEventListener('click',e=>{
+   const b=e.target.closest('#cfPreviewSwitch button[data-preview]');
+   if(!b)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   device(b.dataset.preview||'auto');
+ },true);
+
+ // Theme preview: session-persist preview state so F5 stays INSIDE preview instead of becoming normal Dashboard.
+ document.addEventListener('click',e=>{
+   const b=e.target.closest('.ts5-preview-btn');
+   if(!b)return;
+   const cards=[...document.querySelectorAll('[data-theme-card]')];
+   const i=Math.max(0,cards.indexOf(b.closest('[data-theme-card]')));
+   SS.setItem(PKEY,'1');SS.setItem(IKEY,String(i));
+   // legacy handler may run too; final state below remains authoritative
+   setTimeout(()=>applyThemePreview(i),0);
+ },true);
+
+ document.getElementById('cftpPrev')?.addEventListener('click',e=>{
+   e.stopImmediatePropagation();let i=Number(SS.getItem(IKEY)||0)-1;applyThemePreview(i);
+ },true);
+ document.getElementById('cftpNext')?.addEventListener('click',e=>{
+   e.stopImmediatePropagation();let i=Number(SS.getItem(IKEY)||0)+1;applyThemePreview(i);
+ },true);
+ document.getElementById('cftpBack')?.addEventListener('click',e=>{
+   e.stopImmediatePropagation();clearThemePreview(true);
+ },true);
+ document.getElementById('cftpExit')?.addEventListener('click',e=>{
+   e.stopImmediatePropagation();clearThemePreview(true);
+ },true);
+
+ function boot(){
+   clearDevice(); // real page reload always returns to Auto; no stale narrow desktop.
+   try{S?.set('responsive.previewMode','auto')}catch(_){}
+   if(SS.getItem(PKEY)==='1'){
+     applyThemePreview(Number(SS.getItem(IKEY)||0));
+     return;
+   }
+   // Normal refresh: exact hash first, saved page second.
+   const hash=location.hash.slice(1), saved=S?.get('activePage','dashboard')||'dashboard';
+   open(pageExists(hash)?hash:(pageExists(saved)?saved:'dashboard'));
+ }
+ // Run later than every legacy load/route controller.
+ window.addEventListener('load',()=>setTimeout(boot,420));
+ window.CoreFlowPreview={device,applyThemePreview,clearThemePreview};
 })();
 </script></body></html>
