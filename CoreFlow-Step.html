@@ -1540,16 +1540,19 @@ if(location.hash==='#local-purchase')openLP();
  // Theme preview owns only theme preview; no responsive behavior here.
  const themeKeys=['default-blue','ocean-blue','emerald','royal-purple','amber-gold','graphite','ice-blue','midnight'];
  const themeNames=['Default Blue','Ocean Blue','Emerald','Royal Purple','Amber Gold','Graphite','Ice Blue','Midnight'];
+ const TP_ACTIVE='coreflow.themePreview.active', TP_INDEX='coreflow.themePreview.index';
  let themeIndex=0, themePreview=false;
- function previewTheme(i){
+ function previewTheme(i,{navigate=true,store=true}={}){
    themeIndex=(i+themeKeys.length)%themeKeys.length;themePreview=true;
    body.classList.add('theme-preview-active');
    window.CoreFlowThemeEngine?.applyTokens(themeKeys[themeIndex],{persist:false});
    const n=document.getElementById('cftpName');if(n)n.textContent=themeNames[themeIndex];
-   route('dashboard');
+   if(store){sessionStorage.setItem(TP_ACTIVE,'1');sessionStorage.setItem(TP_INDEX,String(themeIndex))}
+   if(navigate) route('dashboard');
  }
  function exitTheme(){
    themePreview=false;body.classList.remove('theme-preview-active');
+   sessionStorage.removeItem(TP_ACTIVE);sessionStorage.removeItem(TP_INDEX);
    const saved=window.CoreFlowThemeEngine?.getApplied?.()||'default-blue';
    window.CoreFlowThemeEngine?.applyTokens(saved,{persist:false});
    route('theme-studio');
@@ -1570,7 +1573,14 @@ if(location.hash==='#local-purchase')openLP();
  window.addEventListener('hashchange',()=>{const k=location.hash.slice(1);if(exists(k))route(k,{writeHash:false,save:!isChild})});
 
  // Resolve BEFORE revealing the app.
- restoreExact();
+ // A live Theme Preview is a session state: F5 must restore the same preview,
+ // not silently turn it into an ordinary Dashboard page.
+ if(!isChild && sessionStorage.getItem(TP_ACTIVE)==='1'){
+   const i=Number(sessionStorage.getItem(TP_INDEX)||0);
+   previewTheme(i,{navigate:true,store:false});
+ }else{
+   restoreExact();
+ }
  requestAnimationFrame(()=>{
    root.classList.remove('cf-boot-pending');root.classList.add('cf-boot-ready');
  });
