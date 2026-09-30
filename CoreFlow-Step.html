@@ -851,9 +851,6 @@ function openPage(key,writeHash=true){
   if(writeHash && location.hash!=='#'+key) history.replaceState(null,'','#'+key);
 }
 buttons.forEach(b=>b.onclick=()=>openPage(b.dataset.page));
-window.addEventListener('hashchange',()=>openPage(location.hash.slice(1)||'dashboard',false));
-const first=(location.hash.slice(1)||CoreFlowState.get('activePage','dashboard')||'dashboard');
-openPage(first,true);
 </script>
 <div class="mobile-overlay" id="mobileOverlay"></div>
 <nav class="mobile-bottom" id="mobileBottom">
@@ -1001,8 +998,6 @@ if(location.hash==='#local-purchase')openLP();
    const parent=knownParents[key]||key;
    document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===parent));
  }
- window.addEventListener('load',activateFromState);
- window.addEventListener('hashchange',activateFromState);
 
  const switcher=document.getElementById('cfPreviewSwitch');
  function setPreview(mode,save=true){
@@ -1110,8 +1105,6 @@ if(location.hash==='#local-purchase')openLP();
    document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===parent));
    S?.set('activePage',key);
  }
- window.addEventListener('load',restore);
- window.addEventListener('hashchange',restore);
 
  // Accessibility + universal hand pointer semantics.
  document.querySelectorAll('.ab-navcard,.ml-module-card,.ml-navcard,.empty-card[data-open]').forEach(el=>{
@@ -1164,12 +1157,6 @@ if(location.hash==='#local-purchase')openLP();
  document.querySelector('.nav button[data-page="design-studio"]')?.addEventListener('click',e=>{
    e.preventDefault(); e.stopImmediatePropagation(); openGallery();
  },true);
-
- // Correct refresh routing.
- window.addEventListener('load',()=>{
-   if(location.hash==='#design-studio' || !location.hash && window.CoreFlowState?.get('activePage')==='design-studio') openGallery();
-   if(location.hash==='#component-library') openLibrary();
- });
 })();
 </script><script id="design-gallery-4b-js">
 (()=>{
@@ -1361,12 +1348,6 @@ if(location.hash==='#local-purchase')openLP();
      preview:true,apply:true,persistence:true,responsive:true
    });
  }
- // Run after all earlier scripts so final state wins.
- window.addEventListener('load',()=>setTimeout(boot,0));
- window.addEventListener('hashchange',()=>{
-   const key=location.hash.slice(1);
-   if(key) route(key);
- });
 })();
 </script><script id="theme-studio-5a-js">
 (()=>{
@@ -1390,7 +1371,6 @@ if(location.hash==='#local-purchase')openLP();
    if(count)count.textContent=visible+' theme preset'+(visible===1?'':'s');
  };
  search?.addEventListener('input',update); filter?.addEventListener('change',update);
- if(location.hash==='#theme-studio') setTimeout(open,0);
 })();
 </script><script id="design-studio-hub-js">
 (()=>{
@@ -1416,13 +1396,6 @@ if(location.hash==='#local-purchase')openLP();
  document.addEventListener('click',e=>{
    const b=e.target.closest('[data-studio-route]'); if(!b || b.disabled)return;
    e.preventDefault(); show(b.dataset.studioRoute);
- });
- window.addEventListener('hashchange',()=>{
-   const k=location.hash.slice(1); if(pages.includes(k))show(k,false);
- });
- window.addEventListener('load',()=>{
-   const k=location.hash.slice(1);
-   if(pages.includes(k))setTimeout(()=>show(k,false),20);
  });
 })();
 </script><div id="cfThemePreviewBar"><span class="cftp-name" id="cftpName">Theme Preview</span><button class="cftp-btn" id="cftpPrev">‹ Previous</button><button class="cftp-btn" id="cftpNext">Next ›</button><button class="cftp-btn" id="cftpBack">Theme Studio</button><button class="cftp-btn" id="cftpExit">Exit Preview</button></div><script id="master-theme-engine-5b1-js">
@@ -1543,6 +1516,14 @@ if(location.hash==='#local-purchase')openLP();
    // Child must not inherit any fake parent preview classes.
    body.classList.remove('cf-preview-mobile','cf-preview-tablet','cf-rp-mobile','cf-rp-tablet','cf-mobile-menu-open');
  }
+
+ // Single navigation owner for main sidebar routes.
+ document.addEventListener('click',e=>{
+   const b=e.target.closest('.nav button[data-page]');
+   if(!b || b.dataset.page==='design-studio') return;
+   e.preventDefault(); e.stopImmediatePropagation();
+   route(b.dataset.page);
+ },true);
 
  // Existing top responsive switch — now only this controller owns it.
  document.addEventListener('click',e=>{
