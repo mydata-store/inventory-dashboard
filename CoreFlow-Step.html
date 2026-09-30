@@ -1536,11 +1536,49 @@ if(location.hash==='#local-purchase')openLP();
      draft[k]=el.value;const c=$(`[data-cf-custom="${k}"]`);if(c)c.value=el.value;applyDraft();
    }));
    $('#ts5cPreview')?.addEventListener('click',applyDraft);
-   $('#ts5cSave')?.addEventListener('click',()=>{localStorage.setItem(KEY,JSON.stringify(draft));applyDraft();});
-   $('#ts5cReset')?.addEventListener('click',()=>{localStorage.removeItem(KEY);fill(defaults);applyDraft();});
+   $('#ts5cSave')?.addEventListener('click',()=>{
+     localStorage.setItem(KEY,JSON.stringify(draft));
+     cssVars(draft);
+     document.documentElement.dataset.themeCustom='saved';
+     const b=$('#ts5cSave'), old=b?.textContent;
+     if(b){b.textContent='Applied ✓';setTimeout(()=>b.textContent=old||'Save & Apply',1200)}
+   });
+   $('#ts5cReset')?.addEventListener('click',()=>{
+     localStorage.removeItem(KEY);
+     document.documentElement.removeAttribute('data-theme-custom');
+     // Reset to current master theme first, then reflect its effective tokens in controls.
+     const applied=window.CoreFlowThemeEngine?.getApplied?.();
+     if(applied) window.CoreFlowThemeEngine?.applyTokens(applied,{persist:false});
+     const cs=getComputedStyle(document.documentElement);
+     const current={...defaults,
+       accent:(cs.getPropertyValue('--accent')||defaults.accent).trim(),
+       bg:(cs.getPropertyValue('--bg')||defaults.bg).trim(),
+       surface:(cs.getPropertyValue('--surface')||defaults.surface).trim(),
+       ink:(cs.getPropertyValue('--ink')||defaults.ink).trim(),
+       muted:(cs.getPropertyValue('--muted')||defaults.muted).trim(),
+       line:(cs.getPropertyValue('--line')||defaults.line).trim()
+     };
+     fill(current);cssVars(current);
+   });
+ }
+ function restoreSavedOverride(){
+   if(!localStorage.getItem(KEY))return;
+   const saved=readSaved(); draft={...saved}; cssVars(saved);
+   document.documentElement.dataset.themeCustom='saved';
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
- window.CoreFlowThemeCustom={get:readSaved,apply:cssVars,reset:()=>{localStorage.removeItem(KEY);cssVars(defaults)}};
+
+ // Master Theme is the lower layer. Whenever it finishes/re-renders, restore the saved 5C override.
+ window.addEventListener('load',()=>setTimeout(restoreSavedOverride,750),{once:true});
+ window.addEventListener('hashchange',()=>setTimeout(restoreSavedOverride,0));
+ document.addEventListener('click',e=>{
+   if(e.target.closest('.ts5-preview-btn,[data-theme-card] button,.ts5c-btn')) setTimeout(restoreSavedOverride,40);
+ },true);
+
+ window.CoreFlowThemeCustom={
+   get:readSaved,apply:cssVars,restore:restoreSavedOverride,
+   reset:()=>{localStorage.removeItem(KEY);document.documentElement.removeAttribute('data-theme-custom')}
+ };
 })();
 </script>
 <script id="cf-single-preview-route-controller-5b6">
@@ -1638,6 +1676,7 @@ if(location.hash==='#local-purchase')openLP();
    themeIndex=(i+themeKeys.length)%themeKeys.length;themePreview=true;
    body.classList.add('theme-preview-active');
    window.CoreFlowThemeEngine?.applyTokens(themeKeys[themeIndex],{persist:false});
+   window.CoreFlowThemeCustom?.restore?.();
    const n=document.getElementById('cftpName');if(n)n.textContent=themeNames[themeIndex];
    if(store){sessionStorage.setItem(TP_ACTIVE,'1');sessionStorage.setItem(TP_INDEX,String(themeIndex))}
    if(navigate) route('dashboard');
