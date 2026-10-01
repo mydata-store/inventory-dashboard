@@ -786,7 +786,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
     </article></div>
 </div>
 <div class="ss6c ss6c1" id="ss6cRoot">
- <div class="ss6c-head"><div><h2>Sidebar Custom Controls</h2><p>Complete presentation controller. Every control below is bound directly to the real CoreFlow sidebar.</p></div><div class="ss6c-actions"><button data-ss6c1-action="undo">Undo</button><button data-ss6c1-action="redo">Redo</button><button data-ss6c1-action="reset">Restore Selected Design</button><button class="primary" data-ss6c1-action="preview">Dashboard Preview</button></div></div>
+ <div class="ss6c-head"><div><h2>Sidebar Custom Controls</h2><p>Complete presentation controller. Every control below is bound directly to the real CoreFlow sidebar.</p></div><div class="ss6c-actions"><button data-ss6c1-action="undo">Undo</button><button data-ss6c1-action="redo">Redo</button><button data-ss6d-action="reset-applied">Reset to Applied</button><button data-ss6c1-action="reset">Restore Selected Design</button><button data-ss6c1-action="preview">Dashboard Preview</button><button class="primary" data-ss6d-action="apply">Save &amp; Apply</button></div></div>
  <div class="ss6c-tabs">
   <button class="active" data-ss6c1-tab="layout">Structure & Size</button><button data-ss6c1-tab="colors">Colors</button><button data-ss6c1-tab="navigation">Navigation</button><button data-ss6c1-tab="collapsed">Collapsed</button><button data-ss6c1-tab="brand">Brand</button><button data-ss6c1-tab="profile">Profile</button><button data-ss6c1-tab="behaviour">Behaviour</button><button data-ss6c1-tab="responsive">Responsive</button>
  </div>
@@ -885,7 +885,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   <label class="check"><input id="scCloseNav" type="checkbox" checked> Close Drawer After Navigation</label>
   <label class="check"><input id="scMobileProfile" type="checkbox" checked> Show Profile in Mobile Drawer</label>
  </div>
- <div class="ss6c-foot"><span>Layer order: Design → Theme → Sidebar Design → <b>Sidebar Custom Controls</b> → later Icon / User Profile overrides</span><span>6C.3 • Horizontal Rail + Reserved Cards • Preview Only</span></div>
+ <div class="ss6c-foot"><span>Layer order: Design → Theme → Sidebar Design → <b>Sidebar Custom Controls</b> → later Icon / User Profile overrides</span><span id="ss6dStatus">6D • Save &amp; Apply • Ready</span></div>
 </div></section><section class="page ml-entry" id="page-local-purchase">
 <div class="ml-entry-head"><div><h1>Local Purchase Entry</h1><p>Modern Light • Universal form and Excel-style data table standard</p></div><div class="ab-form-status"><span><i></i> Live Entry</span><span>Analytics Blue • 3B</span></div><button class="ml-back" id="mlBackPurchase">← Purchasing</button></div>
 <div class="ml-entry-kpis"><div class="ml-ek" style="--c:#1684ef"><small>Today's Purchase</small><b id="mlToday">PKR 0</b></div><div class="ml-ek" style="--c:#16aa76"><small>Rows Entered</small><b id="mlRows">0</b></div><div class="ml-ek" style="--c:#ff9b22"><small>Suppliers Used</small><b id="mlSuppliers">0</b></div><div class="ml-ek" style="--c:#8057e8"><small>Grand Total</small><b id="mlKGrand">PKR 0</b></div></div>
@@ -2090,6 +2090,83 @@ body.sc61-live.sc63-hide-cprofile.sc61-collapsed:not(.sc61-top):not(.sc61-bottom
  document.getElementById('ss6cRoot')?.addEventListener('input',()=>requestAnimationFrame(sync));
  sync();
  window.CoreFlowSidebarCards63={sync};
+})();
+</script>
+
+
+<style id="sidebar-save-6d-css">
+#ss6dStatus{font-weight:800;color:#1684ef}
+body.ss6d-saved #ss6dStatus{color:#15936b}
+.ss6d-toast{position:fixed;right:22px;bottom:22px;z-index:12000;padding:11px 15px;border-radius:11px;background:#17324a;color:#fff;font:800 12px Inter,system-ui;box-shadow:0 12px 32px rgba(15,35,55,.22);opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s}
+.ss6d-toast.show{opacity:1;transform:none}
+</style>
+<script id="sidebar-save-6d-js">
+(()=>{
+ const KEY='coreflow.sidebar.applied.v6d';
+ const DESIGN_KEY='studio.sidebar.selected';
+ const BASE_IDS=['scWidth','scCollapsed','scPosition','scMode','scGap','scRadius','scShadow','scDivider','scBarHeight','scBarAlign','scBarItemGap','scBarBrandPos','scBarProfilePos','scBarOverflow','scBg','scText','scMuted','scActive','scActiveText','scHover','scBorder','scProfileBg','scItemH','scItemGap','scItemPad','scItemR','scFont','scWeight','scActiveStyle','scNavAlign','scCollapsePreview','scIconSize','scIconBox','scTooltips','scCollapsedBrand','scCollapsedProfile','scCollapsedActive','scIconAlign','scCollapsedOffset','scCollapsedGap','scCollapsedEdge','scTooltipSide','scBrandShow','scSubtitleShow','scBrandH','scBrandAlign','scBrandTitle','scBrandSub','scBrandPad','scProfileShow','scRoleShow','scInitialsShow','scProfileR','scProfilePad','scProfileName','scProfileAlign','scDefaultState','scAutoHide','scHoverExpand','scRemember','scSpeed','scHoverDelay','scOneMenu','scTablet','scMobile','scMobileW','scOverlay','scCloseNav','scMobileProfile'];
+ const EXTRA_IDS=['scExpandedBrandCard','scCollapsedBrandCard','scExpandedBrandRadius','scCollapsedBrandRadius','scHorizontalBrandW','scExpandedProfileCard','scCollapsedProfileCard','scExpandedProfileRadius','scCollapsedProfileRadius','scHorizontalProfileW'];
+ const DESIGN_CLASSES=['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10'].map(x=>'ss6b-'+x);
+ const $=id=>document.getElementById(id);
+ function selectedDesign(){try{return window.CoreFlowState?.get(DESIGN_KEY,'s1')||'s1'}catch(e){return 's1'}}
+ function readAll(){
+   const values={};
+   [...BASE_IDS,...EXTRA_IDS].forEach(id=>{const e=$(id);if(e)values[id]=e.type==='checkbox'?e.checked:e.value});
+   return {version:'6D',sidebarDesign:selectedDesign(),values};
+ }
+ function getSaved(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}}
+ function setControls(values){
+   Object.entries(values||{}).forEach(([id,v])=>{const e=$(id);if(e)e.type==='checkbox'?e.checked=!!v:e.value=v});
+ }
+ function applyDesign(id){
+   document.body.classList.remove(...DESIGN_CLASSES);
+   if(/^s(?:10|[1-9])$/.test(id||''))document.body.classList.add('ss6b-'+id);
+ }
+ function applySnapshot(s,{writeControls=true}={}){
+   if(!s)return;
+   if(writeControls)setControls(s.values);
+   // Reuse the authoritative 6C.1 controller, then synchronize 6C.3 reserved cards.
+   if(window.CoreFlowSidebarCustom61){
+     const current=window.CoreFlowSidebarCustom61.read();
+     window.CoreFlowSidebarCustom61.apply(current);
+   }
+   window.CoreFlowSidebarCards63?.sync?.();
+   applyDesign(s.sidebarDesign||'s1');
+   document.body.classList.add('ss6d-saved');
+   const st=$('ss6dStatus');if(st)st.textContent='6D • Applied & Persistent';
+ }
+ function toast(msg){
+   let t=$('ss6dToast');if(!t){t=document.createElement('div');t.id='ss6dToast';t.className='ss6d-toast';document.body.appendChild(t)}
+   t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),1800);
+ }
+ function save(){
+   const snap=readAll();
+   localStorage.setItem(KEY,JSON.stringify(snap));
+   sessionStorage.removeItem('cf.sidebarCustom.preview');
+   applySnapshot(snap,{writeControls:false});
+   toast('Sidebar saved & applied');
+ }
+ function resetApplied(){
+   const s=getSaved();
+   if(!s){toast('No applied sidebar saved yet');return}
+   sessionStorage.removeItem('cf.sidebarCustom.preview');
+   applySnapshot(s,{writeControls:true});
+   toast('Applied sidebar restored');
+ }
+ function restore(){
+   // During Sidebar Live Preview, preview owns the sidebar until Exit Preview.
+   if(sessionStorage.getItem('cf.sidebarPreview.active')==='1')return;
+   const s=getSaved();if(s)applySnapshot(s,{writeControls:true});
+ }
+ function bind(){
+   document.querySelector('[data-ss6d-action="apply"]')?.addEventListener('click',save);
+   document.querySelector('[data-ss6d-action="reset-applied"]')?.addEventListener('click',resetApplied);
+   restore();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+ window.addEventListener('pageshow',()=>setTimeout(restore,0));
+ window.addEventListener('hashchange',()=>setTimeout(restore,0));
+ window.CoreFlowSidebarApplied6D={save,restore,resetApplied,get:getSaved};
 })();
 </script>
 
