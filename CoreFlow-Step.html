@@ -1668,18 +1668,41 @@ if(location.hash==='#local-purchase')openLP();
 </script><script id="sidebar-preview-6b-js">
 (()=>{
  const ids=['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10'];
- const names={s1:'CoreFlow Classic',s2:'Soft Rounded',s3:'Clean Light',s4:'Gradient Executive',s5:'Emerald Pro',s6:'Graphite Office',s7:'Compact Rail',s8:'Minimal White',s9:'Fusion Dark',s10:'Midnight Tech'};let idx=0;
- function clear(){document.body.classList.remove('ss6b-preview',...ids.map(x=>'ss6b-'+x))}
- function show(id,nav=true){idx=ids.indexOf(id);if(idx<0)idx=0;clear();document.body.classList.add('ss6b-preview','ss6b-'+ids[idx]);const n=document.getElementById('ss6bName');if(n)n.textContent=names[ids[idx]];if(nav)window.CoreFlowRoute?.('dashboard')}
- function exit(){clear();window.CoreFlowRoute?.('sidebar-studio')}
+ const names={s1:'CoreFlow Classic',s2:'Soft Rounded',s3:'Clean Light',s4:'Gradient Executive',s5:'Emerald Pro',s6:'Graphite Office',s7:'Compact Rail',s8:'Minimal White',s9:'Fusion Dark',s10:'Midnight Tech'};
+ const A='cf.sidebarPreview.active', I='cf.sidebarPreview.id';
+ let idx=0, applying=false;
+ function clearVisual(){document.body.classList.remove('ss6b-preview',...ids.map(x=>'ss6b-'+x))}
+ function setState(id){sessionStorage.setItem(A,'1');sessionStorage.setItem(I,id)}
+ function clearState(){sessionStorage.removeItem(A);sessionStorage.removeItem(I)}
+ function apply(id,{navigate=false,persist=true}={}){
+   if(!ids.includes(id))id='s1'; idx=ids.indexOf(id); applying=true;
+   clearVisual();document.body.classList.add('ss6b-preview','ss6b-'+id);
+   const n=document.getElementById('ss6bName');if(n)n.textContent=names[id];
+   if(persist)setState(id);
+   if(navigate)window.CoreFlowRoute?.('dashboard');
+   applying=false;
+ }
+ function exit(goStudio=true){clearState();clearVisual();if(goStudio)window.CoreFlowRoute?.('sidebar-studio')}
+ function restore(){
+   if(sessionStorage.getItem(A)!=='1')return false;
+   const id=sessionStorage.getItem(I)||'s1';
+   // Preview is valid only on dashboard. Do not hijack a deliberate studio route.
+   if((location.hash||'#dashboard')!=='#dashboard'){clearState();clearVisual();return false}
+   apply(id,{navigate:false,persist:false});return true;
+ }
  function bind(){
-  document.querySelectorAll('[data-sidebar-preview]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();show(b.dataset.sidebarPreview,true)},true));
-  document.getElementById('ss6bPrev')?.addEventListener('click',()=>show(ids[(idx+9)%10],false));
-  document.getElementById('ss6bNext')?.addEventListener('click',()=>show(ids[(idx+1)%10],false));
-  document.getElementById('ss6bBack')?.addEventListener('click',exit);document.getElementById('ss6bExit')?.addEventListener('click',exit);
+   document.querySelectorAll('[data-sidebar-preview]').forEach(b=>b.addEventListener('click',e=>{
+     e.preventDefault();e.stopImmediatePropagation();apply(b.dataset.sidebarPreview,{navigate:true,persist:true});
+   },true));
+   document.getElementById('ss6bPrev')?.addEventListener('click',()=>apply(ids[(idx+ids.length-1)%ids.length],{persist:true}));
+   document.getElementById('ss6bNext')?.addEventListener('click',()=>apply(ids[(idx+1)%ids.length],{persist:true}));
+   document.getElementById('ss6bBack')?.addEventListener('click',()=>exit(true));
+   document.getElementById('ss6bExit')?.addEventListener('click',()=>exit(true));
+   restore();
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
- window.CoreFlowSidebarPreview={show,exit};
+ window.addEventListener('pageshow',()=>setTimeout(restore,0));
+ window.CoreFlowSidebarPreview={apply,exit,restore};
 })();
 </script><script id="cf-single-preview-route-controller-5b6">
 (()=>{
@@ -1711,6 +1734,11 @@ if(location.hash==='#local-purchase')openLP();
    target.classList.add('active');
    target.style.display='block';
    document.body.dataset.cfPage=k;
+   if(k!=='dashboard' && sessionStorage.getItem('cf.sidebarPreview.active')==='1'){
+     sessionStorage.removeItem('cf.sidebarPreview.active');
+     sessionStorage.removeItem('cf.sidebarPreview.id');
+     document.body.classList.remove('ss6b-preview','ss6b-s1','ss6b-s2','ss6b-s3','ss6b-s4','ss6b-s5','ss6b-s6','ss6b-s7','ss6b-s8','ss6b-s9','ss6b-s10');
+   }
    const par=parents[k]||k;
    document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===par));
    document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage===par));
@@ -1821,6 +1849,16 @@ if(location.hash==='#local-purchase')openLP();
  requestAnimationFrame(()=>{
    root.classList.remove('cf-boot-pending');root.classList.add('cf-boot-ready');
  });
+
+ // 6B.1: single navigation ownership for Design Studio hub cards.
+ document.addEventListener('click',e=>{
+   const card=e.target.closest('[data-studio-route]');
+   if(!card || card.disabled)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   const k=card.dataset.studioRoute;
+   if(exists(k))route(k,{writeHash:true,save:true});
+ },true);
+
  window.CoreFlowRoute=(k)=>route(k,{writeHash:true,save:true});
  window.CoreFlowNav={route,restore:restoreExact};
  window.CoreFlowDevicePreview={open:openDevice,close:closeDevice};
