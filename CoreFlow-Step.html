@@ -1261,10 +1261,8 @@ if(location.hash==='#local-purchase')openLP();
  document.getElementById('openComponentLibrary')?.addEventListener('click',openLibrary);
  document.getElementById('backToGallery')?.addEventListener('click',openGallery);
 
- // Override Design Studio nav landing so it always opens Gallery.
- document.querySelector('.nav button[data-page="design-studio"]')?.addEventListener('click',e=>{
-   e.preventDefault(); e.stopImmediatePropagation(); openGallery();
- },true);
+ // 6B.3: Design Studio sidebar landing is owned by design-studio-hub-js.
+ // The old Gallery landing capture handler is intentionally disabled.
 })();
 </script><script id="design-gallery-4b-js">
 (()=>{
@@ -1486,7 +1484,14 @@ if(location.hash==='#local-purchase')openLP();
  const pages=['design-studio','design-gallery','theme-studio','sidebar-studio'];
  function show(key,push=true){
    const p=document.getElementById('page-'+key); if(!p)return;
-   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active')); p.classList.add('active');
+   // 6B.3 surgical fix: legacy hub is an early capture listener, so it must
+   // perform the SAME visibility work as the canonical router.
+   document.querySelectorAll('.page').forEach(x=>{
+     const on=x===p;
+     x.classList.toggle('active',on);
+     x.style.display=on?'block':'none';
+   });
+   document.body.dataset.cfPage=key;
    document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page==='design-studio'));
    if(push) history.pushState(null,'','#'+key); else history.replaceState(null,'','#'+key);
    S?.set('activePage',key);
