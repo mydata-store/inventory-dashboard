@@ -1706,88 +1706,161 @@ if(location.hash==='#local-purchase')openLP();
 })();
 </script><script id="cf-single-preview-route-controller-5b6">
 (()=>{
- const STATE_KEY='activePage';
- const parents={
-  'local-purchase':'purchasing','zafar-purchase':'purchasing','board-purchase':'purchasing','purchase-history':'purchasing',
-  'design-gallery':'design-studio','theme-studio':'design-studio','sidebar-studio':'design-studio','component-library':'design-studio'
- };
- let internal=false;
- const pageKey=p=>(p.id||'').replace(/^page-/,'');
- const exists=k=>!!document.getElementById('page-'+k);
+ const S=window.CoreFlowState, body=document.body, root=document.documentElement;
+ const isChild=new URLSearchParams(location.search).get('cf_device_preview')==='1';
+ const overlay=document.getElementById('cfTruePreview');
+ const iframe=document.getElementById('cfTpFrame');
+ const title=document.getElementById('cfTpTitle');
+ const switcher=document.getElementById('cfPreviewSwitch');
 
- function savePage(k){try{window.CoreFlowState?.set(STATE_KEY,k)}catch(e){}}
- function clearSidebarPreviewIfNeeded(k){
-   if(k==='dashboard')return;
-   if(sessionStorage.getItem('cf.sidebarPreview.active')==='1'){
-     sessionStorage.removeItem('cf.sidebarPreview.active');sessionStorage.removeItem('cf.sidebarPreview.id');
-     document.body.classList.remove('ss6b-preview','ss6b-s1','ss6b-s2','ss6b-s3','ss6b-s4','ss6b-s5','ss6b-s6','ss6b-s7','ss6b-s8','ss6b-s9','ss6b-s10');
-   }
- }
+ const parents={
+  'design-gallery':'design-studio','theme-studio':'design-studio','component-library':'design-studio',
+  'sidebar-studio':'design-studio','icon-studio':'design-studio','wallpaper-studio':'design-studio',
+  'time-date-studio':'design-studio','user-profile':'design-studio','company-profile':'design-studio',
+  'banner-studio':'design-studio','dashboard-studio':'design-studio','login-studio':'design-studio',
+  'local-purchase':'purchasing','zafar-purchase':'purchasing','board-purchase':'purchasing','purchase-history':'purchasing',
+  'stock-ledger':'inventory','current-stock':'inventory','supplier-analysis':'inventory','stock-summary':'inventory',
+  'issue-entry':'issue-stock','issue-history':'issue-stock','consumption':'issue-stock','department-usage':'issue-stock',
+  'rgp':'gate-pass','ogp':'gate-pass','cgp':'gate-pass','gate-history':'gate-pass'
+ };
+ function exists(k){return !!document.getElementById('page-'+k)}
  function route(k,{writeHash=true,save=true}={}){
    if(!exists(k))return false;
    const target=document.getElementById('page-'+k);
    document.querySelectorAll('.page').forEach(p=>{
-     const on=p===target;
-     p.classList.toggle('active',on);
-     p.style.setProperty('display',on?'block':'none','important');
-     p.setAttribute('aria-hidden',on?'false':'true');
+     p.classList.remove('active');
+     p.style.display='none';
    });
+   target.classList.add('active');
+   target.style.display='block';
    document.body.dataset.cfPage=k;
-   clearSidebarPreviewIfNeeded(k);
-
-   const parent=parents[k]||k;
-   document.querySelectorAll('.side [data-page],.side [data-route]').forEach(el=>{
-     const v=el.dataset.page||el.dataset.route;
-     el.classList.toggle('active',v===parent);
-   });
-
-   if(save)savePage(k);
-   if(writeHash && location.hash!=='#'+k){
-     internal=true;history.pushState({cfPage:k},'', '#'+k);internal=false;
+   if(k!=='dashboard' && sessionStorage.getItem('cf.sidebarPreview.active')==='1'){
+     sessionStorage.removeItem('cf.sidebarPreview.active');
+     sessionStorage.removeItem('cf.sidebarPreview.id');
+     document.body.classList.remove('ss6b-preview','ss6b-s1','ss6b-s2','ss6b-s3','ss6b-s4','ss6b-s5','ss6b-s6','ss6b-s7','ss6b-s8','ss6b-s9','ss6b-s10');
    }
-   window.scrollTo({top:0,left:0,behavior:'auto'});
+   const par=parents[k]||k;
+   document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===par));
+   document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage===par));
+   if(writeHash && location.hash!=='#'+k) history.replaceState(null,'','#'+k);
+   if(save && !isChild) S?.set('activePage',k);
    return true;
  }
- function exact(){
-   const hash=(location.hash||'').slice(1);
-   if(hash && exists(hash))return hash;
-   const saved=window.CoreFlowState?.get(STATE_KEY,'dashboard');
-   return exists(saved)?saved:'dashboard';
+ function restoreExact(){
+   const hash=location.hash.slice(1);
+   const saved=S?.get('activePage','dashboard')||'dashboard';
+   const target=exists(hash)?hash:(exists(saved)?saved:'dashboard');
+   route(target,{writeHash:!exists(hash),save:!isChild});
  }
- function restore(){route(exact(),{writeHash:false,save:true})}
+ function childUrl(){
+   const u=new URL(location.href);
+   u.searchParams.set('cf_device_preview','1');
+   // exact current page, never force Dashboard
+   u.hash=location.hash||'#dashboard';
+   return u.toString();
+ }
+ function openDevice(mode){
+   if(isChild)return;
+   mode=mode==='tablet'?'tablet':'mobile';
+   overlay.dataset.mode=mode;
+   overlay.classList.add('open');
+   overlay.setAttribute('aria-hidden','false');
+   title.textContent=mode==='mobile'?'Mobile Preview · 430px':'Tablet Preview · 820px';
+   overlay.querySelectorAll('[data-tp-mode]').forEach(b=>b.classList.toggle('active',b.dataset.tpMode===mode));
+   iframe.src=childUrl();
+ }
+ function closeDevice(){
+   if(!overlay)return;
+   overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');
+   iframe.src='about:blank';
+   switcher?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.preview==='auto'));
+ }
+ if(isChild){
+   body.classList.add('cf-device-child');
+   // Child must not inherit any fake parent preview classes.
+   body.classList.remove('cf-preview-mobile','cf-preview-tablet','cf-rp-mobile','cf-rp-tablet','cf-mobile-menu-open');
+ }
 
- // ONE delegated click owner for all CoreFlow navigation.
+ // Single navigation owner for main sidebar routes.
  document.addEventListener('click',e=>{
-   let el=e.target.closest('[data-studio-route]');
-   if(el && !el.disabled){
-     const k=el.dataset.studioRoute;
-     if(exists(k)){e.preventDefault();e.stopImmediatePropagation();route(k);return}
-   }
-   el=e.target.closest('[data-page],[data-route]');
-   if(el){
-     const k=el.dataset.page||el.dataset.route;
-     if(exists(k)){e.preventDefault();e.stopImmediatePropagation();route(k);return}
-   }
-   el=e.target.closest('a[href^="#"]');
-   if(el){
-     const k=(el.getAttribute('href')||'').slice(1);
-     if(exists(k)){e.preventDefault();e.stopImmediatePropagation();route(k);return}
-   }
+   const b=e.target.closest('.nav button[data-page]');
+   if(!b || b.dataset.page==='design-studio') return;
+   e.preventDefault(); e.stopImmediatePropagation();
+   route(b.dataset.page);
  },true);
 
- window.addEventListener('hashchange',()=>{
-   if(internal)return;
-   const k=(location.hash||'').slice(1);
-   if(exists(k))route(k,{writeHash:false,save:true});
+ // Existing top responsive switch — now only this controller owns it.
+ document.addEventListener('click',e=>{
+   const b=e.target.closest('#cfPreviewSwitch button[data-preview]');
+   if(!b || isChild)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   const m=b.dataset.preview;
+   switcher.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
+   if(m==='mobile'||m==='tablet') openDevice(m); else closeDevice();
  },true);
- window.addEventListener('popstate',()=>{
-   const k=(location.hash||'').slice(1);
-   if(exists(k))route(k,{writeHash:false,save:true});
+ document.getElementById('cfTpClose')?.addEventListener('click',closeDevice);
+ document.querySelectorAll('#cfTruePreview [data-tp-mode]').forEach(b=>b.addEventListener('click',()=>openDevice(b.dataset.tpMode)));
+
+ // Theme preview owns only theme preview; no responsive behavior here.
+ const themeKeys=['default-blue','ocean-blue','emerald','royal-purple','amber-gold','graphite','ice-blue','midnight'];
+ const themeNames=['Default Blue','Ocean Blue','Emerald','Royal Purple','Amber Gold','Graphite','Ice Blue','Midnight'];
+ const TP_ACTIVE='coreflow.themePreview.active', TP_INDEX='coreflow.themePreview.index';
+ let themeIndex=0, themePreview=false;
+ function previewTheme(i,{navigate=true,store=true}={}){
+   themeIndex=(i+themeKeys.length)%themeKeys.length;themePreview=true;
+   body.classList.add('theme-preview-active');
+   window.CoreFlowThemeEngine?.applyTokens(themeKeys[themeIndex],{persist:false});
+   window.CoreFlowThemeCustom?.restore?.();
+   const n=document.getElementById('cftpName');if(n)n.textContent=themeNames[themeIndex];
+   if(store){sessionStorage.setItem(TP_ACTIVE,'1');sessionStorage.setItem(TP_INDEX,String(themeIndex))}
+   if(navigate) route('dashboard');
+ }
+ function exitTheme(){
+   themePreview=false;body.classList.remove('theme-preview-active');
+   sessionStorage.removeItem(TP_ACTIVE);sessionStorage.removeItem(TP_INDEX);
+   const saved=window.CoreFlowThemeEngine?.getApplied?.()||'default-blue';
+   window.CoreFlowThemeEngine?.applyTokens(saved,{persist:false});
+   route('theme-studio');
+ }
+ document.addEventListener('click',e=>{
+   const b=e.target.closest('.ts5-preview-btn');if(!b)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   const cards=[...document.querySelectorAll('[data-theme-card]')];
+   previewTheme(Math.max(0,cards.indexOf(b.closest('[data-theme-card]'))));
+ },true);
+ document.getElementById('cftpPrev')?.addEventListener('click',e=>{e.stopImmediatePropagation();previewTheme(themeIndex-1)},true);
+ document.getElementById('cftpNext')?.addEventListener('click',e=>{e.stopImmediatePropagation();previewTheme(themeIndex+1)},true);
+ document.getElementById('cftpBack')?.addEventListener('click',e=>{e.stopImmediatePropagation();exitTheme()},true);
+ document.getElementById('cftpExit')?.addEventListener('click',e=>{e.stopImmediatePropagation();exitTheme()},true);
+
+ // Exact refresh route. Theme preview itself is intentionally not persisted:
+ // F5 on #theme-studio stays Theme Studio; F5 on #dashboard stays Dashboard, with no intermediate flash.
+ window.addEventListener('hashchange',()=>{const k=location.hash.slice(1);if(exists(k))route(k,{writeHash:false,save:!isChild})});
+
+ // Resolve BEFORE revealing the app.
+ // A live Theme Preview is a session state: F5 must restore the same preview,
+ // not silently turn it into an ordinary Dashboard page.
+ if(!isChild && sessionStorage.getItem(TP_ACTIVE)==='1'){
+   const i=Number(sessionStorage.getItem(TP_INDEX)||0);
+   previewTheme(i,{navigate:true,store:false});
+ }else{
+   restoreExact();
+ }
+ requestAnimationFrame(()=>{
+   root.classList.remove('cf-boot-pending');root.classList.add('cf-boot-ready');
  });
- window.addEventListener('pageshow',()=>setTimeout(restore,0));
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',restore,{once:true});else restore();
+
+ // 6B.1: single navigation ownership for Design Studio hub cards.
+ document.addEventListener('click',e=>{
+   const card=e.target.closest('[data-studio-route]');
+   if(!card || card.disabled)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   const k=card.dataset.studioRoute;
+   if(exists(k))route(k,{writeHash:true,save:true});
+ },true);
 
  window.CoreFlowRoute=(k)=>route(k,{writeHash:true,save:true});
- window.CoreFlowNav={route,restore};
+ window.CoreFlowNav={route,restore:restoreExact};
+ window.CoreFlowDevicePreview={open:openDevice,close:closeDevice};
 })();
 </script><div id="ss6bBar"><span class="ss6b-name" id="ss6bName">CoreFlow Classic</span><button id="ss6bPrev">Previous</button><button id="ss6bNext">Next</button><button id="ss6bBack">Sidebar Studio</button><button class="primary" id="ss6bExit">Exit Preview</button></div></body></html>
