@@ -625,7 +625,48 @@ body.ss6c-live .side .brand{min-height:var(--ss6c-brand-h,68px);text-align:var(-
 body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side .profile,body.ss6c-hide-profile .side [class*=profile]{visibility:hidden}
 @media(max-width:1024px){body.ss6c-live .shell{margin-left:0!important}}
 @media(max-width:760px){.ss6c-pane.active{grid-template-columns:1fr}.ss6c-head{align-items:flex-start;flex-direction:column}.ss6c-foot{gap:8px;flex-direction:column}}
-</style></head><body>
+</style>
+<script id="cf-studio-navigation-owner-6d2">
+/* 6D.2: earliest single owner for Design Studio hub cards.
+   Registered before legacy navigation listeners so READY studio cards cannot be swallowed. */
+(()=>{
+ const valid=new Set(['design-gallery','theme-studio','sidebar-studio']);
+ function openStudio(key){
+   if(!valid.has(key))return false;
+   const target=document.getElementById('page-'+key);
+   if(!target)return false;
+   document.querySelectorAll('.page').forEach(p=>{
+     const on=p===target;
+     p.classList.toggle('active',on);
+     p.style.display=on?'block':'none';
+   });
+   document.body.dataset.cfPage=key;
+   document.querySelectorAll('.nav button[data-page]').forEach(b=>
+     b.classList.toggle('active',b.dataset.page==='design-studio')
+   );
+   if(location.hash!=='#'+key) history.replaceState(null,'','#'+key);
+   try{window.CoreFlowState?.set('activePage',key)}catch(e){}
+   if(key==='theme-studio'){
+     const n=document.getElementById('ts5DesignName');
+     const id=document.body.dataset.design||'modernLight';
+     if(n)n.textContent=id==='analyticsBlue'?'Analytics Blue':'Modern Light';
+   }
+   return true;
+ }
+ document.addEventListener('click',e=>{
+   const card=e.target.closest?.('[data-studio-route]');
+   if(!card || card.disabled)return;
+   const key=card.dataset.studioRoute;
+   if(!valid.has(key))return;
+   e.preventDefault();
+   e.stopImmediatePropagation();
+   openStudio(key);
+ },true);
+ window.CoreFlowOpenStudioSafe=openStudio;
+})();
+</script>
+
+</head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂ &nbsp; Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒 &nbsp; Purchasing</span></button><button data-page="inventory"><span class="txt">▦ &nbsp; Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄ &nbsp; Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣ &nbsp; Gate Pass</span></button><button data-page="reports"><span class="txt">▤ &nbsp; Reports</span></button><button data-page="masters"><span class="txt">◆ &nbsp; Masters</span></button><button data-page="design-studio"><span class="txt">✦ &nbsp; Design Studio</span></button><button data-page="settings"><span class="txt">⚙ &nbsp; Settings</span></button></div><div class="profile">MW &nbsp; <b>Muhammad Waqas</b><br><small>Administrator</small></div></aside>
 <div class="shell"><header class="top"><button class="menu" id="m">☰</button><input class="search" placeholder="Search CoreFlow..."><div class="sp"></div><div class="cf-preview-switch" id="cfPreviewSwitch" title="Responsive Preview">
@@ -885,7 +926,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   <label class="check"><input id="scCloseNav" type="checkbox" checked> Close Drawer After Navigation</label>
   <label class="check"><input id="scMobileProfile" type="checkbox" checked> Show Profile in Mobile Drawer</label>
  </div>
- <div class="ss6c-foot"><span>Layer order: Design → Theme → Sidebar Design → <b>Sidebar Custom Controls</b> → later Icon / User Profile overrides</span><span id="ss6dStatus">6D.1 • Save &amp; Apply • Route Safe</span></div>
+ <div class="ss6c-foot"><span>Layer order: Design → Theme → Sidebar Design → <b>Sidebar Custom Controls</b> → later Icon / User Profile overrides</span><span id="ss6dStatus">6D.2 • Save &amp; Apply • Studio Navigation Fixed</span></div>
 </div></section><section class="page ml-entry" id="page-local-purchase">
 <div class="ml-entry-head"><div><h1>Local Purchase Entry</h1><p>Modern Light • Universal form and Excel-style data table standard</p></div><div class="ab-form-status"><span><i></i> Live Entry</span><span>Analytics Blue • 3B</span></div><button class="ml-back" id="mlBackPurchase">← Purchasing</button></div>
 <div class="ml-entry-kpis"><div class="ml-ek" style="--c:#1684ef"><small>Today's Purchase</small><b id="mlToday">PKR 0</b></div><div class="ml-ek" style="--c:#16aa76"><small>Rows Entered</small><b id="mlRows">0</b></div><div class="ml-ek" style="--c:#ff9b22"><small>Suppliers Used</small><b id="mlSuppliers">0</b></div><div class="ml-ek" style="--c:#8057e8"><small>Grand Total</small><b id="mlKGrand">PKR 0</b></div></div>
@@ -2131,7 +2172,7 @@ body.ss6d-saved #ss6dStatus{color:#15936b}
    }
    window.CoreFlowSidebarCards63?.sync?.();
    document.body.classList.add('ss6d-saved');
-   const st=$('ss6dStatus');if(st)st.textContent='6D.1 • Applied & Persistent';
+   const st=$('ss6dStatus');if(st)st.textContent='6D.2 • Applied & Persistent';
  }
  function toast(msg){
    let t=$('ss6dToast');if(!t){t=document.createElement('div');t.id='ss6dToast';t.className='ss6d-toast';document.body.appendChild(t)}
