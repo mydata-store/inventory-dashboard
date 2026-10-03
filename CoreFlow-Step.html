@@ -819,7 +819,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   Universal Components is available separately from the Design Gallery.
 </div>
 </section><section class="page" id="page-icon-studio"><div class="is7a">
-  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7D.3 · ICON SET PERSISTENCE FIXED</span></div>
+  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7E · CLEAN SINGLE ICON STATE OWNER</span></div>
   <div class="is72-tabs" role="tablist">
     <button class="active" data-is72-tab="visual">Icon Sets <small>Genuinely different icon collections</small></button>
     <button data-is72-tab="library">Icon Library <small>Different actual icons</small></button>
@@ -3688,175 +3688,10 @@ body[data-is7a-preview] body>.side{}body[data-is7a-preview="filled"]>.side .nav 
   width:22px;min-width:22px;margin-right:8px;font-style:normal;line-height:1;
 }
 </style>
-<script id="cf-step-7b1-direct-sidebar-js">
-(()=>{
-  const KEY='coreflow.iconStudio.v7b';
-  const DEF={
-    Dashboard:{symbol:'⌂',name:'Home'},Purchasing:{symbol:'🛒',name:'Cart'},
-    Inventory:{symbol:'▦',name:'Grid'},Issue:{symbol:'⇄',name:'Transfer'},
-    'Gate Pass':{symbol:'▣',name:'Gate Pass'},Reports:{symbol:'▤',name:'Report'},
-    Masters:{symbol:'◆',name:'Master'},Settings:{symbol:'⚙',name:'Settings'}
-  };
-  const pageMap={
-    dashboard:'Dashboard',purchasing:'Purchasing',inventory:'Inventory',
-    'issue-stock':'Issue','gate-pass':'Gate Pass',reports:'Reports',
-    masters:'Masters',settings:'Settings'
-  };
-  function state(){
-    try{
-      const s=JSON.parse(localStorage.getItem(KEY)||'{}');
-      return Object.assign({},DEF,s.map||{});
-    }catch(e){return DEF}
-  }
-  function bindDesktop(){
-    const map=state();
-    document.querySelectorAll('.side button[data-page]').forEach(btn=>{
-      const mod=pageMap[btn.dataset.page]; if(!mod||!map[mod])return;
-      const txt=btn.querySelector('.txt'); if(!txt)return;
-      let ico=txt.querySelector('.cf7b1-side-icon');
-      let label=txt.querySelector('.cf7b1-side-label');
-      if(!ico || !label){
-        // Legacy markup stores icon and label in one text node. Split it once, structurally.
-        txt.textContent='';
-        ico=document.createElement('span');
-        ico.className='cf7b1-side-icon';
-        label=document.createElement('span');
-        label.className='cf7b1-side-label';
-        label.textContent = mod==='Issue' ? 'Issue / Stock' : mod;
-        txt.append(ico,label);
-      }
-      ico.textContent=map[mod].symbol;
-      ico.dataset.cfIconModule=mod;
-    });
-  }
-  function bindCards(){
-    const map=state();
-    const routeMap={purchasing:'Purchasing',inventory:'Inventory','issue-stock':'Issue','gate-pass':'Gate Pass',reports:'Reports',masters:'Masters',settings:'Settings'};
-    document.querySelectorAll('[data-go]').forEach(card=>{
-      const mod=routeMap[card.dataset.go];if(!mod||!map[mod])return;
-      const ico=card.querySelector('.ml-navicon,.ab-ni');
-      if(ico){ico.textContent=map[mod].symbol;ico.dataset.cfIconModule=mod}
-    });
-  }
-  function bindMobile(){
-    const map=state();
-    // Independent 6G6 drawer may be created dynamically. Match its navigation by route or visible label.
-    document.querySelectorAll('[class*="mobile"][class*="drawer"] [data-page], [id*="mobile"][class*="drawer"] [data-page], .cf-mobile-drawer [data-page]').forEach(btn=>{
-      const mod=pageMap[btn.dataset.page];if(!mod||!map[mod])return;
-      let ico=btn.querySelector('.cf7b1-side-icon,[class*="icon"],i');
-      if(!ico){
-        ico=document.createElement('span');ico.className='cf7b1-side-icon';btn.prepend(ico);
-      }
-      ico.textContent=map[mod].symbol;ico.dataset.cfIconModule=mod;
-    });
-  }
-  function bindAll(){bindDesktop();bindCards();bindMobile()}
-
-  // Live draft assignment: update real sidebar immediately, before Save.
-  document.getElementById('is72Assign')?.addEventListener('click',()=>{
-    requestAnimationFrame(()=>{
-      const active=document.querySelector('#is72Targets [data-target].active');
-      const mod=active?.dataset.target;if(!mod)return;
-      const chosen=document.querySelector('#is72Library button.selected');
-      const symbol=(chosen?.querySelector('i')?.textContent||document.getElementById('is72SelectedIcon')?.textContent||'').trim();
-      if(!symbol)return;
-      document.querySelectorAll('[data-cf-icon-module="'+CSS.escape(mod)+'"]').forEach(n=>n.textContent=symbol);
-      // Desktop direct fallback.
-      const page=Object.keys(pageMap).find(k=>pageMap[k]===mod);
-      const txt=page&&document.querySelector('.side button[data-page="'+page+'"] .txt');
-      if(txt){
-        let ico=txt.querySelector('.cf7b1-side-icon');
-        if(!ico){bindDesktop();ico=txt.querySelector('.cf7b1-side-icon')}
-        if(ico)ico.textContent=symbol;
-      }
-    });
-  },false);
-
-  document.getElementById('is7bSave')?.addEventListener('click',()=>setTimeout(bindAll,0));
-  document.getElementById('is7bReset')?.addEventListener('click',()=>setTimeout(bindAll,0));
-  document.getElementById('is7bDefault')?.addEventListener('click',()=>setTimeout(bindAll,0));
-
-  let q=false;
-  new MutationObserver(()=>{
-    if(q)return;q=true;requestAnimationFrame(()=>{q=false;bindAll()});
-  }).observe(document.body,{childList:true,subtree:true});
-
-  bindAll();
-})();
-</script>
 
 
-<script id="cf-step-7b2-authoritative-sidebar-fix">
-(()=>{
-  const KEY='coreflow.iconStudio.v7b';
-  const pageMap={dashboard:'Dashboard',purchasing:'Purchasing',inventory:'Inventory','issue-stock':'Issue','gate-pass':'Gate Pass',reports:'Reports',masters:'Masters',settings:'Settings'};
-  const defaults={Dashboard:'⌂',Purchasing:'🛒',Inventory:'▦',Issue:'⇄','Gate Pass':'▣',Reports:'▤',Masters:'◆',Settings:'⚙'};
 
-  function savedMap(){
-    try{
-      const s=JSON.parse(localStorage.getItem(KEY)||'{}').map||{};
-      const r={}; Object.keys(defaults).forEach(k=>r[k]=s[k]?.symbol||defaults[k]); return r;
-    }catch(e){return {...defaults}}
-  }
-  let live=savedMap();
 
-  function render(){
-    document.querySelectorAll('aside.side .nav button[data-page]').forEach(btn=>{
-      const mod=pageMap[btn.dataset.page]; if(!mod)return;
-      const txt=btn.querySelector(':scope > .txt'); if(!txt)return;
-      txt.innerHTML='';
-      const ico=document.createElement('span');
-      ico.className='cf7b2-icon';
-      ico.setAttribute('aria-hidden','true');
-      ico.textContent=live[mod]||defaults[mod];
-      const label=document.createElement('span');
-      label.className='cf7b2-label';
-      label.textContent=mod==='Issue'?'Issue / Stock':mod;
-      txt.append(ico,label);
-    });
-  }
-
-  // Strongly scoped styling; does not touch Sidebar Studio geometry.
-  const st=document.createElement('style');
-  st.textContent=`
-    aside.side .nav button>.txt{display:flex!important;align-items:center!important}
-    aside.side .nav button>.txt>.cf7b2-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:24px!important;min-width:24px!important;margin-right:8px!important;line-height:1!important;font-style:normal!important}
-    aside.side .nav button>.txt>.cf7b2-label{display:inline!important}
-  `;
-  document.head.appendChild(st);
-
-  document.getElementById('is72Assign')?.addEventListener('click',()=>{
-    const mod=document.querySelector('#is72Targets [data-target].active')?.dataset.target;
-    const selected=document.querySelector('#is72Library button.selected');
-    const symbol=(selected?.querySelector('i')?.textContent||document.getElementById('is72SelectedIcon')?.textContent||'').trim();
-    if(mod&&symbol){live[mod]=symbol;render()}
-  },true);
-
-  document.getElementById('is7bSave')?.addEventListener('click',()=>{
-    // Existing 7B saves its draft. Reconcile the exact symbols visible in this authoritative layer.
-    setTimeout(()=>{
-      let s={};try{s=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
-      s.map=s.map||{};
-      Object.keys(live).forEach(k=>s.map[k]={symbol:live[k],name:s.map[k]?.name||k});
-      localStorage.setItem(KEY,JSON.stringify(s));
-      render();
-    },30);
-  },true);
-
-  document.getElementById('is7bReset')?.addEventListener('click',()=>{live=savedMap();setTimeout(render,40)},true);
-  document.getElementById('is7bDefault')?.addEventListener('click',()=>{live={...defaults};setTimeout(render,40)},true);
-
-  // Earlier generic observers may rewrite .txt. Reassert only when sidebar itself changes.
-  let busy=false;
-  const side=document.querySelector('aside.side');
-  if(side)new MutationObserver(()=>{
-    if(busy)return;busy=true;
-    requestAnimationFrame(()=>{render();busy=false});
-  }).observe(side,{childList:true,subtree:true,characterData:true});
-
-  render();
-})();
-</script>
 
 
 <style id="cf7d1-css">
@@ -3889,265 +3724,134 @@ body[data-is7a-preview] body>.side{}body[data-is7a-preview="filled"]>.side .nav 
 @media(max-width:620px){.cf7d1-head{align-items:stretch;flex-direction:column}.cf7d1-head input{width:100%}.cf7d1-icons{grid-template-columns:repeat(4,1fr)}}
 </style>
 
-<script id="cf7d1-js">
-(()=>{
- const panel=document.querySelector('[data-is72-panel="visual"]'); if(!panel)return;
- const host=document.createElement('div');host.innerHTML=`
-<div id="cf7d1Library">
-  <div class="cf7d1-head"><div><h2>Icon Sets</h2><p>Preview a complete set on the real sidebar, then Select and Save & Apply to keep it.</p></div><input id="cf7d1Search" placeholder="Search icon sets..."></div>
-  <div class="cf7d1-grid"><div class="cf7d1-card" data-set="classic" data-theme="outline">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.5 11h10l2-7H7"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4z"/><path d="M4 11h16M9 7v13"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13"/><path d="m14 5 3 3-3 3"/><path d="M20 16H7"/><path d="m10 13-3 3 3 3"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M9 4v4h6V4"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9M10 19V5M15 19v-7M20 19V3"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1A7 7 0 0 0 15 6l-.3-2.5h-4L10.4 6A7 7 0 0 0 8 7L5.6 6 3.6 9.5 5.7 11a7 7 0 0 0 0 2l-2.1 1.5 2 3.5L8 17a7 7 0 0 0 2.4 1l.3 2.5h4L15 18a7 7 0 0 0 1.5-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.7.1-1Z"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">OUTLINE</span><h3>01. Classic ERP</h3><p>Traditional ERP navigation</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="business" data-theme="soft">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9l8-5 8 5v10"/><path d="M8 19v-6h8v6"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-2-1-2 1-2-1-2 1-2-1-2 1V3Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v11H4z"/><path d="M7 9V5h10v4M8 14h8"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m15 8 4 4-4 4"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l2 4v12H5V8l2-4Z"/><path d="M5 9h14M9 13h6"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 16l4-5 3 3 5-8"/><circle cx="18" cy="6" r="1"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c0-4 2-7 6-7s6 3 6 7M15 14c3 0 5 2 5 6"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z"/><path d="M8 9h8M8 12h8M8 15h5"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">SOFT</span><h3>02. Business Pro</h3><p>Finance and office oriented</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="factory" data-theme="industrial">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l6 4V9l6 4V5h6v16H3Z"/><path d="M7 17h2M12 17h2M17 17h2"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h13V8h3l2 5v4h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M16 12h5"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8 12 4l8 4-8 4-8-4Z"/><path d="M4 8v9l8 4 8-4V8M12 12v9"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11"/><path d="m12 4 3 3-3 3"/><path d="M20 17H9"/><path d="m12 14-3 3 3 3"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 17V8h3v9M11 17V4h3v13M16 17v-6h3v6"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 2 3 3 7 3s7-1 7-3V6M5 12v6c0 2 3 3 7 3s7-1 7-3v-6"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6 4 4M6 18l7-7M5 6l3-3 3 3-3 3-3-3ZM13 18l3-3 3 3-3 3-3-3Z"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">INDUSTRIAL</span><h3>03. Factory / Mill</h3><p>Industrial production language</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="logistics" data-theme="outline">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12M8 20v-7h8v7"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16h12V8h3l3 4v4h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v11H4z"/><path d="m4 9 8-5 8 5M9 14h6"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h15"/><path d="m14 8 4 4-4 4"/><path d="M8 18H4V6h4"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M5 14l4-4 3 3 6-7"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 9h16M8 13h8M8 16h5"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l4 2"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">OUTLINE</span><h3>04. Logistics</h3><p>Gate, transport and movement</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="documents" data-theme="soft">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h4M9 12h6M9 16h6"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v4H7z"/><path d="M5 6h14v15H5z"/><path d="M8 11h8M8 15h8"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4-4 3 3 7-7"/><path d="M19 4v6h-6"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6z"/><path d="M9 4v5h6V4"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9M10 19V5M15 19v-7M20 19V3"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 3v6M17 3v6M5 10h14v10H5z"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">SOFT</span><h3>05. Documents Pro</h3><p>Reports and records focused</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="modern" data-theme="circle">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10.5 12 5l7 5.5V20H5V10.5Z"/><path d="M9 20v-6h6v6"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14l-1 9H7L5 6Z"/><path d="M3 3h2l1 3"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8 12 4l8 4-8 4-8-4Z"/><path d="M6 11v7l6 3 6-3v-7"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M15 4l4 4-4 4M19 16H5M9 12l-4 4 4 4"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h6"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h14M7 16V9h3v7M12 16V5h3v11M17 16v-4h3v4"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 7 4-7 4-7-4 7-4Z"/><path d="m5 13 7 4 7-4M5 17l7 4 7-4"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">CIRCLE</span><h3>06. Modern App</h3><p>Contemporary app symbols</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="executive" data-theme="executive">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V8l8-5 8 5v10"/><path d="M8 18h8M10 14h4"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z"/><path d="M8 9h8M8 13h5"/><path d="m15 16 2 2 4-5"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4z"/><path d="M8 4h8v3M8 11h8M8 15h5"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="m16 8 4 4-4 4M8 16l-4-4 4-4"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><circle cx="12" cy="12" r="4"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16l3-5 4 3 5-8"/><path d="m16 6 2 0 0 2"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4z"/><path d="M8 10h8M8 14h8M8 18h4"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3 8 8 9 5-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">EXECUTIVE</span><h3>07. Executive Dark</h3><p>Premium management symbols</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="data" data-theme="soft">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V8h14v11H5Z"/><path d="M8 8V5h8v3M8 13h8"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 2 3 3 7 3s7-1 7-3V6M5 12v6c0 2 3 3 7 3s7-1 7-3v-6"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M15 7l5 5-5 5M9 17l-5-5 5-5"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h6"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M5 15l4-4 3 2 6-7"/><circle cx="18" cy="6" r="1"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z"/><path d="M5 10h14M10 5v14"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 14 0 7 7 0 1 0-14 0"/><path d="M12 8v4l3 2"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">SOFT</span><h3>08. Data & Analytics</h3><p>Analytics-first icon language</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="people" data-theme="outline">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M5 21c0-5 2-8 7-8s7 3 7 8"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c0-4 2-7 6-7s6 3 6 7M15 14c3 0 5 2 5 6"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M15 7l5 5-5 5"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="m9 12 2 2 4-4"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 17V9h3v8M11 17V5h3v12M16 17v-4h3v4"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h4"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3Z"/><path d="M9 12h6"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">OUTLINE</span><h3>09. People & Admin</h3><p>Users and approvals focused</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div><div class="cf7d1-card" data-set="premium" data-theme="color">
-      <div class="cf7d1-icons"><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4l8 7v9H4v-9Z"/><path d="M9 20v-6h6v6"/></svg></div><small>Dash</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-2 10H7L5 6Z"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg></div><small>Purchase</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8 12 4l8 4-8 4-8-4Z"/><path d="M4 8v9l8 4 8-4V8"/></svg></div><small>Inventory</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M15 7l5 5-5 5M9 17l-5-5 5-5"/></svg></div><small>Issue</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></div><small>Gate</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16l3-5 4 3 5-8"/></svg></div><small>Reports</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4"/></svg></div><small>Masters</small></div><div class="cf7d1-icon"><div class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.5 5.5l2 2M16.5 16.5l2 2M18.5 5.5l-2 2M7.5 16.5l-2 2"/></svg></div><small>Settings</small></div></div>
-      <div class="cf7d1-meta"><div><span class="cf7d1-tag">COLOR</span><h3>10. Premium Color</h3><p>Distinct colorful collection</p></div>
-      <div class="cf7d1-actions"><button type="button">Preview</button><button type="button" class="primary">Select</button></div></div>
-    </div></div>
-  <div class="cf7d1-note"><b>Step 7D.2:</b> Preview is temporary. Select chooses the complete set; Save & Apply stores it for refresh.</div>
-</div>
-`;panel.prepend(host.firstElementChild);
- const root=document.getElementById('cf7d1Library');
- root.querySelector('#cf7d1Search').addEventListener('input',e=>{
-   const q=e.target.value.toLowerCase();
-   root.querySelectorAll('.cf7d1-card').forEach(c=>c.style.display=c.textContent.toLowerCase().includes(q)?'':'none');
- });
-
-})();
-</script>
 
 
-<style id="cf7d2-css">
-.cf7d1-card.previewing{border-color:#7bbcff;box-shadow:0 0 0 2px rgba(22,132,239,.08)}
-.cf7d1-card.applied:after{content:"APPLIED";float:right;margin-top:-24px;font-size:7px;font-weight:900;color:#1684ef;background:#eaf5ff;border-radius:999px;padding:4px 7px}
+
+<style id="cf7e-style">
+aside.side .nav button>.txt{display:flex!important;align-items:center!important}
+aside.side .nav .cf7e-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:24px!important;min-width:24px!important;height:22px!important;margin-right:8px!important}
+aside.side .nav .cf7e-icon svg{width:17px!important;height:17px!important;display:block!important;stroke:currentColor!important;fill:none!important;stroke-width:1.9}
+.cf7d1-card.cf7e-preview{border-color:#78baff!important}
+.cf7d1-card.cf7e-selected{border-color:#1684ef!important;box-shadow:0 0 0 2px rgba(22,132,239,.12)!important}
+.cf7d1-card.cf7e-applied:after{content:"APPLIED";display:inline-block;float:right;margin-top:-27px;font-size:7px;font-weight:900;color:#1684ef;background:#e9f5ff;padding:4px 7px;border-radius:999px}
 </style>
-<script id="cf7d2-controller">
+<script id="cf7e-single-owner">
 (()=>{
- const KEY='coreflow.iconStudio.v7b', SETKEY='coreflow.iconStudio.appliedSet.v7d2';
- const mods=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
- const pageByMod={Dashboard:'dashboard',Purchasing:'purchasing',Inventory:'inventory',Issue:'issue-stock','Gate Pass':'gate-pass',Reports:'reports',Masters:'masters',Settings:'settings'};
- const root=document.getElementById('cf7d1Library'); if(!root)return;
+  const STORAGE='coreflow.iconStudio.singleOwner.v7e';
+  const modules=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
+  const pages=['dashboard','purchasing','inventory','issue-stock','gate-pass','reports','masters','settings'];
+  const root=document.getElementById('cf7d1Library');
+  if(!root) return;
 
- function svgMarkup(card){
-   return [...card.querySelectorAll('.cf7d1-icon svg')].map(svg=>svg.outerHTML);
- }
- function setName(card){return card.querySelector('h3')?.textContent?.replace(/^\d+\.\s*/,'').trim()||card.dataset.set}
- function readApplied(){
-   try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return {}}
- }
- function writeMap(card,persist){
-   const svgs=svgMarkup(card); if(svgs.length!==8)return;
-   const s=readApplied();s.map=s.map||{};
-   mods.forEach((m,i)=>s.map[m]={symbol:'',name:setName(card)+' '+m,svg:svgs[i]});
-   s.iconSet={id:card.dataset.set,name:setName(card)};
-   if(persist){
-     localStorage.setItem(KEY,JSON.stringify(s));
-     localStorage.setItem(SETKEY,card.dataset.set);
-   }
-   return {state:s,svgs};
- }
- function iconSpan(mod,svg){
-   const span=document.createElement('span');
-   span.className='cf7d2-real-icon';
-   span.dataset.cfIconModule=mod;
-   span.innerHTML=svg;
-   return span;
- }
- function renderSidebar(card){
-   const svgs=svgMarkup(card);
-   mods.forEach((mod,i)=>{
-     const page=pageByMod[mod];
-     const txt=document.querySelector('aside.side .nav button[data-page="'+page+'"] > .txt');
-     if(!txt)return;
-     const label=mod==='Issue'?'Issue / Stock':mod;
-     txt.innerHTML='';
-     txt.append(iconSpan(mod,svgs[i]),Object.assign(document.createElement('span'),{className:'cf7d2-label',textContent:label}));
-   });
- }
- function renderMobile(card){
-   const svgs=svgMarkup(card);
-   mods.forEach((mod,i)=>{
-     const page=pageByMod[mod];
-     document.querySelectorAll('[class*="mobile"][class*="drawer"] [data-page="'+page+'"], .cf-mobile-drawer [data-page="'+page+'"]').forEach(btn=>{
-       let ico=btn.querySelector('.cf7d2-real-icon,[class*="icon"],i');
-       if(!ico){ico=iconSpan(mod,svgs[i]);btn.prepend(ico)}
-       else{ico.classList.add('cf7d2-real-icon');ico.innerHTML=svgs[i]}
-     });
-   });
- }
- function render(card){renderSidebar(card);renderMobile(card)}
- function mark(mode,id){
-   root.querySelectorAll('.cf7d1-card').forEach(c=>{
-     c.classList.toggle('previewing',mode==='preview'&&c.dataset.set===id);
-     c.classList.toggle('selected',mode==='selected'&&c.dataset.set===id);
-     c.classList.toggle('applied',c.dataset.set===localStorage.getItem(SETKEY));
-   });
- }
- // SVG styling: preserve Sidebar Studio geometry, only replace the icon artwork.
- const st=document.createElement('style');
- st.textContent=`
- aside.side .nav button>.txt{display:flex!important;align-items:center!important}
- aside.side .nav .cf7d2-real-icon{width:24px!important;min-width:24px!important;height:22px!important;margin-right:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
- aside.side .nav .cf7d2-real-icon svg{width:17px!important;height:17px!important;display:block!important;stroke:currentColor!important}
- .cf-mobile-drawer .cf7d2-real-icon svg,[class*="mobile"][class*="drawer"] .cf7d2-real-icon svg{width:18px;height:18px;stroke:currentColor}
- `;
- document.head.appendChild(st);
+  let saved=null, selected=null, preview=null;
+  try{ saved=JSON.parse(localStorage.getItem(STORAGE)||'null'); }catch(e){}
 
- let selectedId=localStorage.getItem(SETKEY)||null;
- root.addEventListener('click',e=>{
-   const b=e.target.closest('.cf7d1-actions button');if(!b)return;
-   const card=b.closest('.cf7d1-card');if(!card)return;
-   const isSelect=b.classList.contains('primary');
-   if(isSelect){
-     selectedId=card.dataset.set;
-     // Select changes live preview, but persistence remains with main Save & Apply.
-     render(card);mark('selected',selectedId);
-     const status=document.getElementById('is7bStatus');
-     if(status)status.textContent=setName(card)+' selected · press Save & Apply to keep it';
-   }else{
-     render(card);mark('preview',card.dataset.set);
-     const status=document.getElementById('is7bStatus');
-     if(status)status.textContent='Previewing '+setName(card)+' · not saved';
-   }
- },true);
+  const cards=()=>[...root.querySelectorAll('.cf7d1-card[data-set]')];
+  const getCard=id=>id ? root.querySelector('.cf7d1-card[data-set="'+CSS.escape(id)+'"]') : null;
+  const artwork=c=>c ? [...c.querySelectorAll('.cf7d1-icon svg')].map(x=>x.outerHTML) : [];
+  const title=c=>c?.querySelector('h3')?.textContent?.replace(/^\d+\.\s*/,'').trim()||'Icon Set';
 
- document.getElementById('is7bSave')?.addEventListener('click',()=>{
-   const card=root.querySelector('.cf7d1-card[data-set="'+(selectedId||'')+'"]');
-   if(!card)return;
-   writeMap(card,true);render(card);mark('selected',selectedId);
-   const status=document.getElementById('is7bStatus');
-   if(status)status.textContent=setName(card)+' saved & applied · refresh safe';
- },true);
+  function renderArt(art){
+    if(!art || art.length!==8) return;
+    pages.forEach((page,i)=>{
+      const txt=document.querySelector('aside.side .nav button[data-page="'+page+'"] > .txt');
+      if(!txt) return;
+      const label=modules[i]==='Issue'?'Issue / Stock':modules[i];
+      txt.innerHTML='<span class="cf7e-icon" data-cf-icon-module="'+modules[i]+'">'+art[i]+'</span><span class="cf7e-label">'+label+'</span>';
+    });
+  }
 
- document.getElementById('is7bReset')?.addEventListener('click',()=>{
-   const id=localStorage.getItem(SETKEY),card=id&&root.querySelector('.cf7d1-card[data-set="'+id+'"]');
-   if(card){selectedId=id;render(card);mark('selected',id)}
- },true);
+  function renderCard(c){ renderArt(artwork(c)); }
 
- // Restore the applied SVG set on boot/refresh.
- const appliedId=localStorage.getItem(SETKEY);
- const appliedCard=appliedId&&root.querySelector('.cf7d1-card[data-set="'+appliedId+'"]');
- if(appliedCard){selectedId=appliedId;setTimeout(()=>{render(appliedCard);mark('selected',appliedId)},0)}
+  function mark(){
+    cards().forEach(c=>{
+      c.classList.toggle('cf7e-preview', !!preview && c.dataset.set===preview);
+      c.classList.toggle('cf7e-selected', !!selected && c.dataset.set===selected);
+      c.classList.toggle('cf7e-applied', !!saved && c.dataset.set===saved.id);
+    });
+  }
 
- // Reassert after legacy sidebar renderer runs, but only if an SVG set is applied/selected.
- let q=false;
- const side=document.querySelector('aside.side');
- if(side)new MutationObserver(()=>{
-   if(q||!selectedId)return;q=true;
-   requestAnimationFrame(()=>{const c=root.querySelector('.cf7d1-card[data-set="'+selectedId+'"]');if(c)render(c);q=false});
- }).observe(side,{childList:true,subtree:true,characterData:true});
-})();
-</script>
+  function status(msg){
+    const el=document.getElementById('is7bStatus');
+    if(el) el.textContent=msg;
+  }
 
+  // Search
+  const search=root.querySelector('#cf7d1Search');
+  search?.addEventListener('input',()=>{
+    const q=search.value.toLowerCase();
+    cards().forEach(c=>c.style.display=c.textContent.toLowerCase().includes(q)?'':'none');
+  });
 
-<script id="cf7d3-persistence-owner">
-(()=>{
- const SETKEY='coreflow.iconStudio.appliedSet.v7d2';
- const root=document.getElementById('cf7d1Library'); if(!root)return;
- const mods=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
- const pages=['dashboard','purchasing','inventory','issue-stock','gate-pass','reports','masters','settings'];
- let selected=localStorage.getItem(SETKEY)||'';
+  // Gallery Preview / Select
+  root.addEventListener('click',e=>{
+    const b=e.target.closest('.cf7d1-actions button');
+    if(!b) return;
+    const c=b.closest('.cf7d1-card');
+    if(!c) return;
+    if(b.classList.contains('primary')){
+      selected=c.dataset.set;
+      preview=null;
+      renderCard(c);
+      status(title(c)+' selected · press Save & Apply to keep it');
+    }else{
+      preview=c.dataset.set;
+      renderCard(c);
+      status('Previewing '+title(c)+' · not saved');
+    }
+    mark();
+  });
 
- function card(id){return id&&root.querySelector('.cf7d1-card[data-set="'+CSS.escape(id)+'"]')}
- function svgs(c){return c?[...c.querySelectorAll('.cf7d1-icon svg')].map(x=>x.outerHTML):[]}
- function render(c){
-   const art=svgs(c);if(art.length!==8)return;
-   pages.forEach((p,i)=>{
-     const txt=document.querySelector('aside.side .nav button[data-page="'+p+'"] > .txt');if(!txt)return;
-     const label=mods[i]==='Issue'?'Issue / Stock':mods[i];
-     txt.innerHTML='<span class="cf7d3-icon" data-cf-icon-module="'+mods[i]+'">'+art[i]+'</span><span class="cf7d3-label">'+label+'</span>';
-   });
- }
- function mark(){
-   root.querySelectorAll('.cf7d1-card').forEach(c=>{
-     c.classList.toggle('selected',c.dataset.set===selected);
-     c.classList.toggle('applied',c.dataset.set===localStorage.getItem(SETKEY));
-   });
- }
- const st=document.createElement('style');
- st.textContent=`
- aside.side .nav button>.txt{display:flex!important;align-items:center!important}
- aside.side .nav .cf7d3-icon{display:inline-flex!important;width:24px!important;min-width:24px!important;height:22px!important;margin-right:8px!important;align-items:center!important;justify-content:center!important}
- aside.side .nav .cf7d3-icon svg{display:block!important;width:17px!important;height:17px!important;stroke:currentColor!important;fill:none}
- `;
- document.head.appendChild(st);
+  // Save & Apply owns persistence synchronously.
+  document.getElementById('is7bSave')?.addEventListener('click',e=>{
+    const id=selected || preview;
+    const c=getCard(id);
+    if(!c) return;
+    saved={id, name:title(c), artwork:artwork(c), savedAt:Date.now()};
+    localStorage.setItem(STORAGE,JSON.stringify(saved));
+    selected=id; preview=null;
+    renderArt(saved.artwork); mark();
+    status(saved.name+' saved & applied · refresh safe');
+  },true);
 
- // SELECT: choose + live render. Do not persist yet.
- root.addEventListener('click',e=>{
-   const b=e.target.closest('.cf7d1-actions .primary');if(!b)return;
-   const c=b.closest('.cf7d1-card');if(!c)return;
-   selected=c.dataset.set;render(c);mark();
-   const s=document.getElementById('is7bStatus');if(s)s.textContent=(c.querySelector('h3')?.textContent||selected)+' selected · press Save & Apply';
- },true);
+  // Reset to Applied
+  document.getElementById('is7bReset')?.addEventListener('click',()=>{
+    if(!saved) return;
+    selected=saved.id; preview=null;
+    renderArt(saved.artwork); mark();
+    status(saved.name+' restored from applied state');
+  },true);
 
- // SAVE: this listener runs in capture phase and writes the set ID synchronously.
- // It is independent from the older v7b map saver, so refresh always has an authoritative set ID.
- document.getElementById('is7bSave')?.addEventListener('click',()=>{
-   if(!selected)return;
-   const c=card(selected);if(!c)return;
-   localStorage.setItem(SETKEY,selected);
-   localStorage.setItem('coreflow.iconStudio.appliedSetMarkup.v7d3',JSON.stringify({
-     id:selected, svgs:svgs(c), savedAt:Date.now()
-   }));
-   render(c);mark();
-   const s=document.getElementById('is7bStatus');if(s)s.textContent=(c.querySelector('h3')?.textContent||selected)+' saved & applied · refresh safe';
- },true);
+  // Restore Default = first set, but only becomes permanent after Save & Apply.
+  document.getElementById('is7bDefault')?.addEventListener('click',()=>{
+    const c=cards()[0]; if(!c)return;
+    selected=c.dataset.set;preview=null;renderCard(c);mark();
+    status(title(c)+' default preview · press Save & Apply to keep it');
+  },true);
 
- // BOOT: restore from dedicated persisted payload before generic icon state can visually win.
- function boot(){
-   let payload=null;
-   try{payload=JSON.parse(localStorage.getItem('coreflow.iconStudio.appliedSetMarkup.v7d3')||'null')}catch(e){}
-   const id=payload?.id||localStorage.getItem(SETKEY);
-   const c=card(id);
-   if(c){
-     selected=id;
-     render(c);mark();
-     const s=document.getElementById('is7bStatus');if(s)s.textContent=(c.querySelector('h3')?.textContent||id)+' restored from saved icon set';
-   }
- }
- boot();
- setTimeout(boot,50);
- setTimeout(boot,250);
+  // BOOT: only this storage key is authoritative for complete Icon Sets.
+  if(saved?.artwork?.length===8){
+    selected=saved.id;
+    renderArt(saved.artwork);
+    mark();
+    status(saved.name+' loaded from saved icon set');
+  }else{
+    mark();
+    status('No saved Icon Set yet · select a set and press Save & Apply');
+  }
 
- // Legacy renderers can run after route/boot. Keep the persisted/selected set authoritative.
- let busy=false;
- const side=document.querySelector('aside.side');
- if(side)new MutationObserver(()=>{
-   if(busy||!selected)return;
-   busy=true;requestAnimationFrame(()=>{const c=card(selected);if(c)render(c);busy=false});
- }).observe(side,{childList:true,subtree:true,characterData:true});
+  // Route/sidebar re-renders: reapply current live state, with saved state as fallback.
+  let busy=false;
+  const side=document.querySelector('aside.side');
+  if(side) new MutationObserver(()=>{
+    if(busy)return;
+    const id=preview||selected||saved?.id;
+    const c=getCard(id);
+    const art=c?artwork(c):saved?.artwork;
+    if(!art?.length)return;
+    busy=true;
+    requestAnimationFrame(()=>{renderArt(art);busy=false});
+  }).observe(side,{childList:true,subtree:true,characterData:true});
 })();
 </script>
 
