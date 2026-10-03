@@ -819,7 +819,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   Universal Components is available separately from the Design Gallery.
 </div>
 </section><section class="page" id="page-icon-studio"><div class="is7a">
-  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Two-layer icon system: choose the visual treatment separately from the actual icon symbol used for each ERP function.</p></div><span>STEP 7B.1 · DIRECT SIDEBAR BINDING FIXED</span></div>
+  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Two-layer icon system: choose the visual treatment separately from the actual icon symbol used for each ERP function.</p></div><span>STEP 7B.2 · SIDEBAR LIVE BINDING FIXED</span></div>
   <div class="is72-tabs" role="tablist">
     <button class="active" data-is72-tab="visual">Visual Sets <small>Same icons · different look</small></button>
     <button data-is72-tab="library">Icon Library <small>Different actual icons</small></button>
@@ -3782,6 +3782,79 @@ body[data-is7a-preview] body>.side{}body[data-is7a-preview="filled"]>.side .nav 
   }).observe(document.body,{childList:true,subtree:true});
 
   bindAll();
+})();
+</script>
+
+
+<script id="cf-step-7b2-authoritative-sidebar-fix">
+(()=>{
+  const KEY='coreflow.iconStudio.v7b';
+  const pageMap={dashboard:'Dashboard',purchasing:'Purchasing',inventory:'Inventory','issue-stock':'Issue','gate-pass':'Gate Pass',reports:'Reports',masters:'Masters',settings:'Settings'};
+  const defaults={Dashboard:'⌂',Purchasing:'🛒',Inventory:'▦',Issue:'⇄','Gate Pass':'▣',Reports:'▤',Masters:'◆',Settings:'⚙'};
+
+  function savedMap(){
+    try{
+      const s=JSON.parse(localStorage.getItem(KEY)||'{}').map||{};
+      const r={}; Object.keys(defaults).forEach(k=>r[k]=s[k]?.symbol||defaults[k]); return r;
+    }catch(e){return {...defaults}}
+  }
+  let live=savedMap();
+
+  function render(){
+    document.querySelectorAll('aside.side .nav button[data-page]').forEach(btn=>{
+      const mod=pageMap[btn.dataset.page]; if(!mod)return;
+      const txt=btn.querySelector(':scope > .txt'); if(!txt)return;
+      txt.innerHTML='';
+      const ico=document.createElement('span');
+      ico.className='cf7b2-icon';
+      ico.setAttribute('aria-hidden','true');
+      ico.textContent=live[mod]||defaults[mod];
+      const label=document.createElement('span');
+      label.className='cf7b2-label';
+      label.textContent=mod==='Issue'?'Issue / Stock':mod;
+      txt.append(ico,label);
+    });
+  }
+
+  // Strongly scoped styling; does not touch Sidebar Studio geometry.
+  const st=document.createElement('style');
+  st.textContent=`
+    aside.side .nav button>.txt{display:flex!important;align-items:center!important}
+    aside.side .nav button>.txt>.cf7b2-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:24px!important;min-width:24px!important;margin-right:8px!important;line-height:1!important;font-style:normal!important}
+    aside.side .nav button>.txt>.cf7b2-label{display:inline!important}
+  `;
+  document.head.appendChild(st);
+
+  document.getElementById('is72Assign')?.addEventListener('click',()=>{
+    const mod=document.querySelector('#is72Targets [data-target].active')?.dataset.target;
+    const selected=document.querySelector('#is72Library button.selected');
+    const symbol=(selected?.querySelector('i')?.textContent||document.getElementById('is72SelectedIcon')?.textContent||'').trim();
+    if(mod&&symbol){live[mod]=symbol;render()}
+  },true);
+
+  document.getElementById('is7bSave')?.addEventListener('click',()=>{
+    // Existing 7B saves its draft. Reconcile the exact symbols visible in this authoritative layer.
+    setTimeout(()=>{
+      let s={};try{s=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+      s.map=s.map||{};
+      Object.keys(live).forEach(k=>s.map[k]={symbol:live[k],name:s.map[k]?.name||k});
+      localStorage.setItem(KEY,JSON.stringify(s));
+      render();
+    },30);
+  },true);
+
+  document.getElementById('is7bReset')?.addEventListener('click',()=>{live=savedMap();setTimeout(render,40)},true);
+  document.getElementById('is7bDefault')?.addEventListener('click',()=>{live={...defaults};setTimeout(render,40)},true);
+
+  // Earlier generic observers may rewrite .txt. Reassert only when sidebar itself changes.
+  let busy=false;
+  const side=document.querySelector('aside.side');
+  if(side)new MutationObserver(()=>{
+    if(busy)return;busy=true;
+    requestAnimationFrame(()=>{render();busy=false});
+  }).observe(side,{childList:true,subtree:true,characterData:true});
+
+  render();
 })();
 </script>
 
