@@ -819,7 +819,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   Universal Components is available separately from the Design Gallery.
 </div>
 </section><section class="page" id="page-icon-studio"><div class="is7a">
-  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7D.2 · ICON SET PREVIEW + APPLY</span></div>
+  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7D.3 · ICON SET PERSISTENCE FIXED</span></div>
   <div class="is72-tabs" role="tablist">
     <button class="active" data-is72-tab="visual">Icon Sets <small>Genuinely different icon collections</small></button>
     <button data-is72-tab="library">Icon Library <small>Different actual icons</small></button>
@@ -4067,6 +4067,86 @@ body[data-is7a-preview] body>.side{}body[data-is7a-preview="filled"]>.side .nav 
  if(side)new MutationObserver(()=>{
    if(q||!selectedId)return;q=true;
    requestAnimationFrame(()=>{const c=root.querySelector('.cf7d1-card[data-set="'+selectedId+'"]');if(c)render(c);q=false});
+ }).observe(side,{childList:true,subtree:true,characterData:true});
+})();
+</script>
+
+
+<script id="cf7d3-persistence-owner">
+(()=>{
+ const SETKEY='coreflow.iconStudio.appliedSet.v7d2';
+ const root=document.getElementById('cf7d1Library'); if(!root)return;
+ const mods=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
+ const pages=['dashboard','purchasing','inventory','issue-stock','gate-pass','reports','masters','settings'];
+ let selected=localStorage.getItem(SETKEY)||'';
+
+ function card(id){return id&&root.querySelector('.cf7d1-card[data-set="'+CSS.escape(id)+'"]')}
+ function svgs(c){return c?[...c.querySelectorAll('.cf7d1-icon svg')].map(x=>x.outerHTML):[]}
+ function render(c){
+   const art=svgs(c);if(art.length!==8)return;
+   pages.forEach((p,i)=>{
+     const txt=document.querySelector('aside.side .nav button[data-page="'+p+'"] > .txt');if(!txt)return;
+     const label=mods[i]==='Issue'?'Issue / Stock':mods[i];
+     txt.innerHTML='<span class="cf7d3-icon" data-cf-icon-module="'+mods[i]+'">'+art[i]+'</span><span class="cf7d3-label">'+label+'</span>';
+   });
+ }
+ function mark(){
+   root.querySelectorAll('.cf7d1-card').forEach(c=>{
+     c.classList.toggle('selected',c.dataset.set===selected);
+     c.classList.toggle('applied',c.dataset.set===localStorage.getItem(SETKEY));
+   });
+ }
+ const st=document.createElement('style');
+ st.textContent=`
+ aside.side .nav button>.txt{display:flex!important;align-items:center!important}
+ aside.side .nav .cf7d3-icon{display:inline-flex!important;width:24px!important;min-width:24px!important;height:22px!important;margin-right:8px!important;align-items:center!important;justify-content:center!important}
+ aside.side .nav .cf7d3-icon svg{display:block!important;width:17px!important;height:17px!important;stroke:currentColor!important;fill:none}
+ `;
+ document.head.appendChild(st);
+
+ // SELECT: choose + live render. Do not persist yet.
+ root.addEventListener('click',e=>{
+   const b=e.target.closest('.cf7d1-actions .primary');if(!b)return;
+   const c=b.closest('.cf7d1-card');if(!c)return;
+   selected=c.dataset.set;render(c);mark();
+   const s=document.getElementById('is7bStatus');if(s)s.textContent=(c.querySelector('h3')?.textContent||selected)+' selected · press Save & Apply';
+ },true);
+
+ // SAVE: this listener runs in capture phase and writes the set ID synchronously.
+ // It is independent from the older v7b map saver, so refresh always has an authoritative set ID.
+ document.getElementById('is7bSave')?.addEventListener('click',()=>{
+   if(!selected)return;
+   const c=card(selected);if(!c)return;
+   localStorage.setItem(SETKEY,selected);
+   localStorage.setItem('coreflow.iconStudio.appliedSetMarkup.v7d3',JSON.stringify({
+     id:selected, svgs:svgs(c), savedAt:Date.now()
+   }));
+   render(c);mark();
+   const s=document.getElementById('is7bStatus');if(s)s.textContent=(c.querySelector('h3')?.textContent||selected)+' saved & applied · refresh safe';
+ },true);
+
+ // BOOT: restore from dedicated persisted payload before generic icon state can visually win.
+ function boot(){
+   let payload=null;
+   try{payload=JSON.parse(localStorage.getItem('coreflow.iconStudio.appliedSetMarkup.v7d3')||'null')}catch(e){}
+   const id=payload?.id||localStorage.getItem(SETKEY);
+   const c=card(id);
+   if(c){
+     selected=id;
+     render(c);mark();
+     const s=document.getElementById('is7bStatus');if(s)s.textContent=(c.querySelector('h3')?.textContent||id)+' restored from saved icon set';
+   }
+ }
+ boot();
+ setTimeout(boot,50);
+ setTimeout(boot,250);
+
+ // Legacy renderers can run after route/boot. Keep the persisted/selected set authoritative.
+ let busy=false;
+ const side=document.querySelector('aside.side');
+ if(side)new MutationObserver(()=>{
+   if(busy||!selected)return;
+   busy=true;requestAnimationFrame(()=>{const c=card(selected);if(c)render(c);busy=false});
  }).observe(side,{childList:true,subtree:true,characterData:true});
 })();
 </script>
