@@ -819,7 +819,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   Universal Components is available separately from the Design Gallery.
 </div>
 </section><section class="page" id="page-icon-studio"><div class="is7a">
-  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Two-layer icon system: choose the visual treatment separately from the actual icon symbol used for each ERP function.</p></div><span>STEP 7B · ICON BINDING + SAVE & APPLY</span></div>
+  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Two-layer icon system: choose the visual treatment separately from the actual icon symbol used for each ERP function.</p></div><span>STEP 7B.1 · DIRECT SIDEBAR BINDING FIXED</span></div>
   <div class="is72-tabs" role="tablist">
     <button class="active" data-is72-tab="visual">Visual Sets <small>Same icons · different look</small></button>
     <button data-is72-tab="library">Icon Library <small>Different actual icons</small></button>
@@ -3675,6 +3675,113 @@ body[data-is7a-preview] body>.side{}body[data-is7a-preview="filled"]>.side .nav 
   // Initial persistent application.
   applyPreview();
   say(localStorage.getItem(KEY)?'Saved icon configuration restored':'Default icon configuration loaded');
+})();
+</script>
+
+
+<style id="cf-step-7b1-direct-sidebar-css">
+/* 7B.1: dedicated icon span injected into legacy .side .txt rows */
+.side button .cf7b1-side-icon,
+.cf-mobile-drawer button .cf7b1-side-icon,
+.cf-mobile-drawer a .cf7b1-side-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;min-width:22px;margin-right:8px;font-style:normal;line-height:1;
+}
+</style>
+<script id="cf-step-7b1-direct-sidebar-js">
+(()=>{
+  const KEY='coreflow.iconStudio.v7b';
+  const DEF={
+    Dashboard:{symbol:'⌂',name:'Home'},Purchasing:{symbol:'🛒',name:'Cart'},
+    Inventory:{symbol:'▦',name:'Grid'},Issue:{symbol:'⇄',name:'Transfer'},
+    'Gate Pass':{symbol:'▣',name:'Gate Pass'},Reports:{symbol:'▤',name:'Report'},
+    Masters:{symbol:'◆',name:'Master'},Settings:{symbol:'⚙',name:'Settings'}
+  };
+  const pageMap={
+    dashboard:'Dashboard',purchasing:'Purchasing',inventory:'Inventory',
+    'issue-stock':'Issue','gate-pass':'Gate Pass',reports:'Reports',
+    masters:'Masters',settings:'Settings'
+  };
+  function state(){
+    try{
+      const s=JSON.parse(localStorage.getItem(KEY)||'{}');
+      return Object.assign({},DEF,s.map||{});
+    }catch(e){return DEF}
+  }
+  function bindDesktop(){
+    const map=state();
+    document.querySelectorAll('.side button[data-page]').forEach(btn=>{
+      const mod=pageMap[btn.dataset.page]; if(!mod||!map[mod])return;
+      const txt=btn.querySelector('.txt'); if(!txt)return;
+      let ico=txt.querySelector('.cf7b1-side-icon');
+      let label=txt.querySelector('.cf7b1-side-label');
+      if(!ico || !label){
+        // Legacy markup stores icon and label in one text node. Split it once, structurally.
+        txt.textContent='';
+        ico=document.createElement('span');
+        ico.className='cf7b1-side-icon';
+        label=document.createElement('span');
+        label.className='cf7b1-side-label';
+        label.textContent = mod==='Issue' ? 'Issue / Stock' : mod;
+        txt.append(ico,label);
+      }
+      ico.textContent=map[mod].symbol;
+      ico.dataset.cfIconModule=mod;
+    });
+  }
+  function bindCards(){
+    const map=state();
+    const routeMap={purchasing:'Purchasing',inventory:'Inventory','issue-stock':'Issue','gate-pass':'Gate Pass',reports:'Reports',masters:'Masters',settings:'Settings'};
+    document.querySelectorAll('[data-go]').forEach(card=>{
+      const mod=routeMap[card.dataset.go];if(!mod||!map[mod])return;
+      const ico=card.querySelector('.ml-navicon,.ab-ni');
+      if(ico){ico.textContent=map[mod].symbol;ico.dataset.cfIconModule=mod}
+    });
+  }
+  function bindMobile(){
+    const map=state();
+    // Independent 6G6 drawer may be created dynamically. Match its navigation by route or visible label.
+    document.querySelectorAll('[class*="mobile"][class*="drawer"] [data-page], [id*="mobile"][class*="drawer"] [data-page], .cf-mobile-drawer [data-page]').forEach(btn=>{
+      const mod=pageMap[btn.dataset.page];if(!mod||!map[mod])return;
+      let ico=btn.querySelector('.cf7b1-side-icon,[class*="icon"],i');
+      if(!ico){
+        ico=document.createElement('span');ico.className='cf7b1-side-icon';btn.prepend(ico);
+      }
+      ico.textContent=map[mod].symbol;ico.dataset.cfIconModule=mod;
+    });
+  }
+  function bindAll(){bindDesktop();bindCards();bindMobile()}
+
+  // Live draft assignment: update real sidebar immediately, before Save.
+  document.getElementById('is72Assign')?.addEventListener('click',()=>{
+    requestAnimationFrame(()=>{
+      const active=document.querySelector('#is72Targets [data-target].active');
+      const mod=active?.dataset.target;if(!mod)return;
+      const chosen=document.querySelector('#is72Library button.selected');
+      const symbol=(chosen?.querySelector('i')?.textContent||document.getElementById('is72SelectedIcon')?.textContent||'').trim();
+      if(!symbol)return;
+      document.querySelectorAll('[data-cf-icon-module="'+CSS.escape(mod)+'"]').forEach(n=>n.textContent=symbol);
+      // Desktop direct fallback.
+      const page=Object.keys(pageMap).find(k=>pageMap[k]===mod);
+      const txt=page&&document.querySelector('.side button[data-page="'+page+'"] .txt');
+      if(txt){
+        let ico=txt.querySelector('.cf7b1-side-icon');
+        if(!ico){bindDesktop();ico=txt.querySelector('.cf7b1-side-icon')}
+        if(ico)ico.textContent=symbol;
+      }
+    });
+  },false);
+
+  document.getElementById('is7bSave')?.addEventListener('click',()=>setTimeout(bindAll,0));
+  document.getElementById('is7bReset')?.addEventListener('click',()=>setTimeout(bindAll,0));
+  document.getElementById('is7bDefault')?.addEventListener('click',()=>setTimeout(bindAll,0));
+
+  let q=false;
+  new MutationObserver(()=>{
+    if(q)return;q=true;requestAnimationFrame(()=>{q=false;bindAll()});
+  }).observe(document.body,{childList:true,subtree:true});
+
+  bindAll();
 })();
 </script>
 
