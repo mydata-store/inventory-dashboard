@@ -852,7 +852,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   Universal Components is available separately from the Design Gallery.
 </div>
 </section><section class="page" id="page-icon-studio"><div class="is7a">
-  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7G.2 · ICON STUDIO WIDTH CORRECTED</span></div>
+  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7H · MANUAL ICON LIBRARY INTEGRATED</span></div>
   <div class="is72-tabs" role="tablist">
     <button class="active" data-is72-tab="visual">Icon Sets <small>Genuinely different icon collections</small></button>
     <button data-is72-tab="library">Icon Library <small>Different actual icons</small></button>
@@ -3819,6 +3819,113 @@ aside.side .nav .cf7g-real-icon svg{
     repairing=true;
     requestAnimationFrame(()=>{render(art);repairing=false});
   }).observe(side,{childList:true,subtree:true});
+})();
+</script>
+
+
+<script id="cf7h-manual-icon-library-bridge">
+(()=>{
+  const S=window.CoreFlowState;
+  if(!S)return;
+
+  const STATE='studio.iconStudio.applied';
+  const modules=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
+  const pages=['dashboard','purchasing','inventory','issue-stock','gate-pass','reports','masters','settings'];
+  const labels=['Dashboard','Purchasing','Inventory','Issue / Stock','Gate Pass','Reports','Masters','Settings'];
+
+  let draft=null;
+
+  function current(){
+    const saved=S.get(STATE,null);
+    if(saved?.artwork?.length===8)return JSON.parse(JSON.stringify(saved));
+    return {id:'custom',name:'Custom Icons',artwork:new Array(8).fill(''),savedAt:0};
+  }
+  function render(art){
+    if(!Array.isArray(art)||art.length!==8)return;
+    pages.forEach((page,i)=>{
+      if(!art[i])return;
+      const txt=document.querySelector('aside.side .nav button[data-page="'+page+'"] > .txt');
+      if(!txt)return;
+      txt.innerHTML='<span class="cf7g-real-icon" data-cf-icon-module="'+modules[i]+'">'+art[i]+'</span>'+
+                    '<span class="cf7g-label">'+labels[i]+'</span>';
+    });
+  }
+  function status(t){
+    const e=document.getElementById('is7bStatus');
+    if(e)e.textContent=t;
+  }
+  function svgFromChoice(el){
+    const svg=el.querySelector('svg');
+    return svg ? svg.outerHTML : null;
+  }
+  function selectedModule(){
+    // Existing library target buttons/cards use data-module in the 7A.2 UI.
+    const active=document.querySelector(
+      '#page-icon-studio [data-module].active,'+
+      '#page-icon-studio [data-module][aria-selected="true"],'+
+      '#page-icon-studio .selected[data-module]'
+    );
+    return active?.getAttribute('data-module')||null;
+  }
+  function moduleIndex(name){
+    if(!name)return -1;
+    const n=name.toLowerCase().replace(/\s*\/\s*/g,' ').trim();
+    return modules.findIndex(m=>{
+      const x=m.toLowerCase();
+      return x===n || (m==='Issue' && (n==='issue stock'||n==='issue'));
+    });
+  }
+
+  // Capture existing Icon Library icon choices without replacing its UI/controller.
+  document.addEventListener('click',e=>{
+    const library=document.querySelector('#page-icon-studio');
+    if(!library || !library.contains(e.target))return;
+
+    // Only operate when Icon Library tab/panel is active.
+    const iconChoice=e.target.closest(
+      '.cf7a2-icon-card,.cf7a2-icon,.icon-choice,.icon-card,[data-icon-key],[data-icon]'
+    );
+    if(!iconChoice)return;
+
+    const svg=svgFromChoice(iconChoice);
+    if(!svg)return;
+
+    let mod=selectedModule();
+    // Some existing choices/containers may carry module directly.
+    mod=iconChoice.getAttribute('data-module')||mod;
+    const idx=moduleIndex(mod);
+    if(idx<0)return;
+
+    draft=current();
+    draft.id='custom-manual';
+    draft.name='Manual Custom Icons';
+    draft.artwork[idx]=svg;
+    draft.baseSet=draft.baseSet||S.get(STATE,null)?.id||null;
+    render(draft.artwork);
+    status(mod+' icon changed manually · press Save & Apply to keep it');
+  },true);
+
+  // Save manual draft into THE SAME state owner used by Icon Sets.
+  const save=document.getElementById('is7bSave');
+  save?.addEventListener('click',()=>{
+    if(!draft?.artwork?.length)return;
+    draft.savedAt=Date.now();
+    S.set(STATE,draft);
+    render(draft.artwork);
+    status('Manual icon combination saved & applied');
+    draft=null;
+  },false);
+
+  // Reset discards unsaved manual edits and restores applied CoreFlow state.
+  document.getElementById('is7bReset')?.addEventListener('click',()=>{
+    if(!draft)return;
+    draft=null;
+    const saved=S.get(STATE,null);
+    if(saved?.artwork?.length===8){
+      render(saved.artwork);
+      status((saved.name||'Applied icons')+' restored');
+    }
+  },false);
 })();
 </script>
 
