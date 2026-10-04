@@ -819,7 +819,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   Universal Components is available separately from the Design Gallery.
 </div>
 </section><section class="page" id="page-icon-studio"><div class="is7a">
-  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7E.1 · ICON SETS RESTORED + SINGLE OWNER</span></div>
+  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7E.2 · SINGLE OWNER CONFLICT REMOVED</span></div>
   <div class="is72-tabs" role="tablist">
     <button class="active" data-is72-tab="visual">Icon Sets <small>Genuinely different icon collections</small></button>
     <button data-is72-tab="library">Icon Library <small>Different actual icons</small></button>
@@ -3507,187 +3507,10 @@ body[data-is7a-preview] body>.side{}body[data-is7a-preview="filled"]>.side .nav 
 @media(max-width:700px){.is7b-actions{flex-wrap:wrap}.is7b-status{width:100%;margin:0 0 3px}.is7b-actions button{flex:1}}
 </style>
 
-<script id="cf-step-7b-js">
-(()=>{
-  const KEY='coreflow.iconStudio.v7b';
-  const DEFAULTS={
-    visual:'CoreFlow Outline',
-    map:{
-      Dashboard:{symbol:'⌂',name:'Home'},
-      Purchasing:{symbol:'🛒',name:'Cart'},
-      Inventory:{symbol:'▦',name:'Grid'},
-      Issue:{symbol:'⇄',name:'Transfer'},
-      'Gate Pass':{symbol:'▣',name:'Gate Pass'},
-      Reports:{symbol:'▤',name:'Report'},
-      Masters:{symbol:'◆',name:'Master'},
-      Settings:{symbol:'⚙',name:'Settings'}
-    }
-  };
-  const clone=o=>JSON.parse(JSON.stringify(o));
-  const safeParse=(v,f)=>{try{return JSON.parse(v)||f}catch(e){return f}};
-  let applied=safeParse(localStorage.getItem(KEY),clone(DEFAULTS));
-  if(!applied.map) applied=clone(DEFAULTS);
-  let draft=clone(applied);
-
-  const status=document.getElementById('is7bStatus');
-  const say=t=>{if(status)status.textContent=t};
-
-  function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
-  function moduleFromText(txt){
-    const t=norm(txt);
-    if(/\bdashboard\b|\bhome\b/.test(t)) return 'Dashboard';
-    if(/\bpurchas/.test(t)) return 'Purchasing';
-    if(/\binventory\b|\bstock\b/.test(t)) return 'Inventory';
-    if(/\bissue\b/.test(t)) return 'Issue';
-    if(/\bgate pass\b|\brgp\b|\bogp\b|\bcgp\b/.test(t)) return 'Gate Pass';
-    if(/\breport/.test(t)) return 'Reports';
-    if(/\bmaster/.test(t)) return 'Masters';
-    if(/\bsetting/.test(t)) return 'Settings';
-    return null;
-  }
-
-  function candidateIcon(el){
-    if(!el) return null;
-    const selectors=[
-      '[class*="icon"]','i','svg','.nav-ico','.ico','.menu-icon',
-      '.card-icon','.quick-icon','.studio-icon','.mobile-icon'
-    ];
-    for(const s of selectors){
-      const n=el.querySelector?.(s);
-      if(n) return n;
-    }
-    // Many legacy CoreFlow nav rows use a first small span/div as icon.
-    const kids=[...(el.children||[])];
-    return kids.find(n=>{
-      const tx=(n.textContent||'').trim();
-      return tx && tx.length<=4 && !/^[A-Za-z]{3,}$/.test(tx);
-    })||null;
-  }
-
-  function setIcon(node,mod){
-    if(!node||!draft.map[mod]) return;
-    const val=draft.map[mod].symbol;
-    // Do not destroy SVG containers or structural buttons: replace with a safe text icon span.
-    if(node.tagName?.toLowerCase()==='svg'){
-      const span=document.createElement('span');
-      span.className=(node.getAttribute('class')||'')+' cf-icon7b';
-      span.dataset.cfIconModule=mod;
-      span.textContent=val;
-      node.replaceWith(span);
-      return;
-    }
-    node.classList?.add('cf-icon7b');
-    node.dataset.cfIconModule=mod;
-    node.textContent=val;
-  }
-
-  function bindArea(root){
-    if(!root) return;
-    const selectors=[
-      '.side a','.side button','.sidebar a','.sidebar button','aside a','aside button',
-      'nav a','nav button','[class*="nav-card"]','[class*="navigation-card"]',
-      '[class*="menu-item"]','[class*="module-card"]','[class*="quick-card"]',
-      '[class*="mobile-drawer"] a','[class*="mobile-drawer"] button',
-      '[id*="mobile"][class*="drawer"] a','[id*="mobile"][class*="drawer"] button'
-    ];
-    const seen=new Set();
-    selectors.forEach(sel=>{
-      root.querySelectorAll?.(sel).forEach(el=>{
-        if(seen.has(el))return; seen.add(el);
-        // Never touch Icon Studio's own library/controls.
-        if(el.closest('#page-icon-studio,.is72-panel,.is72-tabs,.is7b-actions')) return;
-        const mod=moduleFromText(el.textContent||el.getAttribute('aria-label')||el.getAttribute('title')||'');
-        if(!mod) return;
-        const icon=candidateIcon(el);
-        if(icon)setIcon(icon,mod);
-      });
-    });
-  }
-
-  function applyPreview(){
-    bindArea(document);
-    // Re-apply already tagged icons, useful after changing a draft mapping.
-    document.querySelectorAll('[data-cf-icon-module]').forEach(n=>{
-      const m=n.dataset.cfIconModule;if(draft.map[m])n.textContent=draft.map[m].symbol;
-    });
-    syncTargets();
-  }
-
-  function syncTargets(){
-    document.querySelectorAll('#is72Targets [data-target]').forEach(b=>{
-      const m=b.dataset.target,v=draft.map[m]; if(!v)return;
-      // Preserve label span and only replace leading text node.
-      let textNode=[...b.childNodes].find(n=>n.nodeType===3);
-      if(!textNode){textNode=document.createTextNode('');b.insertBefore(textNode,b.firstChild)}
-      textNode.nodeValue=v.symbol+' ';
-    });
-  }
-
-  // Capture Icon Library assignment before the old 7A.2 handler bubbles to document.
-  document.getElementById('is72Assign')?.addEventListener('click',()=>{
-    const active=document.querySelector('#is72Targets [data-target].active');
-    const target=active?.dataset.target||'Dashboard';
-    const chosenBtn=document.querySelector('#is72Library button.selected');
-    const symbol=(chosenBtn?.querySelector('i')?.textContent||document.getElementById('is72SelectedIcon')?.textContent||'◇').trim();
-    const name=(chosenBtn?.querySelector('b')?.textContent||document.getElementById('is72SelectedName')?.textContent||'Icon').trim();
-    draft.map[target]={symbol,name};
-    applyPreview();
-    say(target+' preview changed · Save & Apply to keep it');
-  },true);
-
-  // Visual Set selection is kept as a separate layer. Detect existing gallery Select buttons/cards.
-  document.addEventListener('click',e=>{
-    const btn=e.target.closest('button');
-    if(!btn||btn.closest('.is7b-actions'))return;
-    const txt=(btn.textContent||'').trim().toLowerCase();
-    if(txt!=='select')return;
-    const card=btn.closest('[class*="is7a"],[class*="icon-set"],[data-set],[data-icon-set]');
-    if(!card)return;
-    const name=(card.querySelector('h3,h4,b')?.textContent||card.dataset.set||card.dataset.iconSet||'Visual Set').trim();
-    draft.visual=name;
-    say(name+' visual set previewed · Save & Apply to keep it');
-  },true);
-
-  document.getElementById('is7bSave')?.addEventListener('click',()=>{
-    applied=clone(draft);
-    localStorage.setItem(KEY,JSON.stringify(applied));
-    applyPreview();
-    say('Saved & applied · refresh safe');
-    const b=document.getElementById('is7bSave'),old=b.textContent;b.textContent='Saved ✓';setTimeout(()=>b.textContent=old,1000);
-  });
-
-  document.getElementById('is7bReset')?.addEventListener('click',()=>{
-    draft=clone(applied);applyPreview();say('Preview reset to last applied configuration');
-  });
-  document.getElementById('is7bDefault')?.addEventListener('click',()=>{
-    draft=clone(DEFAULTS);applyPreview();say('Default preview loaded · Save & Apply to keep it');
-  });
-
-  // Pages/routes are rendered dynamically in CoreFlow, so bind after navigation/render without
-  // replacing any existing route controller.
-  let queued=false;
-  const observer=new MutationObserver(()=>{
-    if(queued)return;queued=true;
-    requestAnimationFrame(()=>{queued=false;applyPreview()});
-  });
-  observer.observe(document.body,{childList:true,subtree:true});
-
-  // Initial persistent application.
-  applyPreview();
-  say(localStorage.getItem(KEY)?'Saved icon configuration restored':'Default icon configuration loaded');
-})();
-</script>
 
 
-<style id="cf-step-7b1-direct-sidebar-css">
-/* 7B.1: dedicated icon span injected into legacy .side .txt rows */
-.side button .cf7b1-side-icon,
-.cf-mobile-drawer button .cf7b1-side-icon,
-.cf-mobile-drawer a .cf7b1-side-icon{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:22px;min-width:22px;margin-right:8px;font-style:normal;line-height:1;
-}
-</style>
+
+
 
 
 
@@ -3909,6 +3732,27 @@ aside.side .nav .cf7e-icon svg{width:17px!important;height:17px!important;displa
     busy=true;
     requestAnimationFrame(()=>{renderArt(art);busy=false});
   }).observe(side,{childList:true,subtree:true,characterData:true});
+})();
+</script>
+
+
+<script id="cf7e2-boot-guard">
+(()=>{
+ const K='coreflow.iconStudio.singleOwner.v7e';
+ function reapply(){
+   let s=null;try{s=JSON.parse(localStorage.getItem(K)||'null')}catch(e){}
+   if(!s?.artwork?.length)return;
+   const pages=['dashboard','purchasing','inventory','issue-stock','gate-pass','reports','masters','settings'];
+   const mods=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
+   pages.forEach((p,i)=>{
+     const txt=document.querySelector('aside.side .nav button[data-page="'+p+'"] > .txt');
+     if(!txt)return;
+     txt.innerHTML='<span class="cf7e-icon" data-cf-icon-module="'+mods[i]+'">'+s.artwork[i]+'</span><span class="cf7e-label">'+(mods[i]==='Issue'?'Issue / Stock':mods[i])+'</span>';
+   });
+   const status=document.getElementById('is7bStatus');
+   if(status)status.textContent=s.name+' loaded from saved icon set';
+ }
+ window.addEventListener('load',()=>setTimeout(reapply,80),{once:true});
 })();
 </script>
 
