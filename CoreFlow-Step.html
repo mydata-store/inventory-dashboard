@@ -852,7 +852,7 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
   Universal Components is available separately from the Design Gallery.
 </div>
 </section><section class="page" id="page-icon-studio"><div class="is7a">
-  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7H · MANUAL ICON LIBRARY INTEGRATED</span></div>
+  <div class="is7a-head"><div><h1>Icon Studio</h1><p>Choose a complete icon collection or customize individual icons for your ERP.</p></div><span>STEP 7H.1 · MANUAL ICON ASSIGN FIXED</span></div>
   <div class="is72-tabs" role="tablist">
     <button class="active" data-is72-tab="visual">Icon Sets <small>Genuinely different icon collections</small></button>
     <button data-is72-tab="library">Icon Library <small>Different actual icons</small></button>
@@ -3482,43 +3482,7 @@ body[data-is7a-preview] body>.side{}body[data-is7a-preview="filled"]>.side .nav 
 @media(max-width:440px){.is72-library{grid-template-columns:repeat(3,1fr)}.is72-targets{grid-template-columns:repeat(2,1fr)}}
 </style>
 
-<script id="cf-step-7a2-icon-library-js">
-(()=>{
-  const tabs=[...document.querySelectorAll('[data-is72-tab]')], panels=[...document.querySelectorAll('[data-is72-panel]')];
-  function openTab(id){tabs.forEach(b=>b.classList.toggle('active',b.dataset.is72Tab===id));panels.forEach(p=>p.classList.toggle('active',p.dataset.is72Panel===id))}
-  tabs.forEach(b=>b.addEventListener('click',()=>openTab(b.dataset.is72Tab)));
 
-  let target='Dashboard', chosen={symbol:'⌂',name:'Home'};
-  const targetLabel=document.getElementById('is72TargetLabel'), selectionTarget=document.getElementById('is72SelectionTarget');
-  document.getElementById('is72Targets')?.addEventListener('click',e=>{
-    const b=e.target.closest('[data-target]'); if(!b)return;
-    target=b.dataset.target;
-    document.querySelectorAll('#is72Targets [data-target]').forEach(x=>x.classList.toggle('active',x===b));
-    if(targetLabel)targetLabel.textContent=target;if(selectionTarget)selectionTarget.textContent=target;
-  });
-  document.getElementById('is72Library')?.addEventListener('click',e=>{
-    const b=e.target.closest('button[data-cat]');if(!b)return;
-    document.querySelectorAll('#is72Library button').forEach(x=>x.classList.toggle('selected',x===b));
-    chosen={symbol:b.querySelector('i')?.textContent||'◇',name:b.querySelector('b')?.textContent||'Icon'};
-    const si=document.getElementById('is72SelectedIcon'),sn=document.getElementById('is72SelectedName');
-    if(si)si.textContent=chosen.symbol;if(sn)sn.textContent=chosen.name;
-  });
-  const search=document.getElementById('is72IconSearch'),cat=document.getElementById('is72IconCategory'),count=document.getElementById('is72IconCount');
-  function filter(){
-    const q=(search?.value||'').toLowerCase(), c=cat?.value||'all';let n=0;
-    document.querySelectorAll('#is72Library button[data-cat]').forEach(b=>{
-      const ok=(c==='all'||b.dataset.cat===c)&&((b.dataset.key||'')+' '+b.textContent).toLowerCase().includes(q);
-      b.style.display=ok?'':'none';if(ok)n++;
-    });if(count)count.textContent=n+' icon'+(n===1?'':'s');
-  }
-  search?.addEventListener('input',filter);cat?.addEventListener('change',filter);
-  document.getElementById('is72Assign')?.addEventListener('click',()=>{
-    const btn=document.querySelector('#is72Targets [data-target="'+target+'"]');
-    if(btn){btn.childNodes[0].nodeValue=chosen.symbol+' ';btn.dataset.assigned=chosen.name}
-    const a=document.getElementById('is72Assign');if(a){const old=a.textContent;a.textContent='Assigned ✓';setTimeout(()=>a.textContent=old,900)}
-  });
-})();
-</script>
 
 
 <style id="cf-step-7b-css">
@@ -3823,110 +3787,92 @@ aside.side .nav .cf7g-real-icon svg{
 </script>
 
 
-<script id="cf7h-manual-icon-library-bridge">
+<script id="cf7h1-icon-library-controller">
 (()=>{
-  const S=window.CoreFlowState;
-  if(!S)return;
+ const S=window.CoreFlowState;if(!S)return;
+ const STATE='studio.iconStudio.applied';
+ const mods=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
+ const pages=['dashboard','purchasing','inventory','issue-stock','gate-pass','reports','masters','settings'];
+ const labels=['Dashboard','Purchasing','Inventory','Issue / Stock','Gate Pass','Reports','Masters','Settings'];
+ const tabs=[...document.querySelectorAll('[data-is72-tab]')],panels=[...document.querySelectorAll('[data-is72-panel]')];
+ let target='Dashboard',chosen={symbol:'⌂',name:'Home'},draft=null;
 
-  const STATE='studio.iconStudio.applied';
-  const modules=['Dashboard','Purchasing','Inventory','Issue','Gate Pass','Reports','Masters','Settings'];
-  const pages=['dashboard','purchasing','inventory','issue-stock','gate-pass','reports','masters','settings'];
-  const labels=['Dashboard','Purchasing','Inventory','Issue / Stock','Gate Pass','Reports','Masters','Settings'];
+ function openTab(id){tabs.forEach(b=>b.classList.toggle('active',b.dataset.is72Tab===id));panels.forEach(p=>p.classList.toggle('active',p.dataset.is72Panel===id))}
+ tabs.forEach(b=>b.addEventListener('click',()=>openTab(b.dataset.is72Tab)));
 
-  let draft=null;
+ const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ function symbolArt(symbol){
+   return '<span class="cf7h1-symbol" aria-hidden="true">'+esc(symbol)+'</span>';
+ }
+ function state(){
+   const x=S.get(STATE,null);
+   return x?.artwork?.length===8?JSON.parse(JSON.stringify(x)):{id:'custom-manual',name:'Manual Custom Icons',artwork:new Array(8).fill(''),savedAt:0};
+ }
+ function render(art){
+   if(!Array.isArray(art)||art.length!==8)return;
+   pages.forEach((p,i)=>{
+     if(!art[i])return;
+     const txt=document.querySelector('aside.side .nav button[data-page="'+p+'"] > .txt');if(!txt)return;
+     txt.innerHTML='<span class="cf7g-real-icon" data-cf-icon-module="'+mods[i]+'">'+art[i]+'</span><span class="cf7g-label">'+labels[i]+'</span>';
+   });
+ }
+ function status(t){const e=document.getElementById('is7bStatus');if(e)e.textContent=t}
 
-  function current(){
-    const saved=S.get(STATE,null);
-    if(saved?.artwork?.length===8)return JSON.parse(JSON.stringify(saved));
-    return {id:'custom',name:'Custom Icons',artwork:new Array(8).fill(''),savedAt:0};
-  }
-  function render(art){
-    if(!Array.isArray(art)||art.length!==8)return;
-    pages.forEach((page,i)=>{
-      if(!art[i])return;
-      const txt=document.querySelector('aside.side .nav button[data-page="'+page+'"] > .txt');
-      if(!txt)return;
-      txt.innerHTML='<span class="cf7g-real-icon" data-cf-icon-module="'+modules[i]+'">'+art[i]+'</span>'+
-                    '<span class="cf7g-label">'+labels[i]+'</span>';
-    });
-  }
-  function status(t){
-    const e=document.getElementById('is7bStatus');
-    if(e)e.textContent=t;
-  }
-  function svgFromChoice(el){
-    const svg=el.querySelector('svg');
-    return svg ? svg.outerHTML : null;
-  }
-  function selectedModule(){
-    // Existing library target buttons/cards use data-module in the 7A.2 UI.
-    const active=document.querySelector(
-      '#page-icon-studio [data-module].active,'+
-      '#page-icon-studio [data-module][aria-selected="true"],'+
-      '#page-icon-studio .selected[data-module]'
-    );
-    return active?.getAttribute('data-module')||null;
-  }
-  function moduleIndex(name){
-    if(!name)return -1;
-    const n=name.toLowerCase().replace(/\s*\/\s*/g,' ').trim();
-    return modules.findIndex(m=>{
-      const x=m.toLowerCase();
-      return x===n || (m==='Issue' && (n==='issue stock'||n==='issue'));
-    });
-  }
+ const targetLabel=document.getElementById('is72TargetLabel'),selectionTarget=document.getElementById('is72SelectionTarget');
+ document.getElementById('is72Targets')?.addEventListener('click',e=>{
+   const b=e.target.closest('button[data-target]');if(!b)return;
+   target=b.dataset.target;
+   document.querySelectorAll('#is72Targets button[data-target]').forEach(x=>x.classList.toggle('active',x===b));
+   if(targetLabel)targetLabel.textContent=target;if(selectionTarget)selectionTarget.textContent=target;
+ });
 
-  // Capture existing Icon Library icon choices without replacing its UI/controller.
-  document.addEventListener('click',e=>{
-    const library=document.querySelector('#page-icon-studio');
-    if(!library || !library.contains(e.target))return;
+ document.getElementById('is72Library')?.addEventListener('click',e=>{
+   const b=e.target.closest('button[data-cat]');if(!b)return;
+   document.querySelectorAll('#is72Library button[data-cat]').forEach(x=>x.classList.toggle('selected',x===b));
+   chosen={symbol:b.querySelector('i')?.textContent||'◇',name:b.querySelector('b')?.textContent||'Icon'};
+   const si=document.getElementById('is72SelectedIcon'),sn=document.getElementById('is72SelectedName');
+   if(si)si.textContent=chosen.symbol;if(sn)sn.textContent=chosen.name;
+ });
 
-    // Only operate when Icon Library tab/panel is active.
-    const iconChoice=e.target.closest(
-      '.cf7a2-icon-card,.cf7a2-icon,.icon-choice,.icon-card,[data-icon-key],[data-icon]'
-    );
-    if(!iconChoice)return;
+ const search=document.getElementById('is72IconSearch'),cat=document.getElementById('is72IconCategory'),count=document.getElementById('is72IconCount');
+ function filter(){
+   const q=(search?.value||'').toLowerCase(),c=cat?.value||'all';let n=0;
+   document.querySelectorAll('#is72Library button[data-cat]').forEach(b=>{
+     const ok=(c==='all'||b.dataset.cat===c)&&((b.dataset.key||'')+' '+b.textContent).toLowerCase().includes(q);
+     b.style.display=ok?'':'none';if(ok)n++;
+   });if(count)count.textContent=n+' icon'+(n===1?'':'s');
+ }
+ search?.addEventListener('input',filter);cat?.addEventListener('change',filter);
 
-    const svg=svgFromChoice(iconChoice);
-    if(!svg)return;
+ // Exact existing Assign button is now the live binding action.
+ document.getElementById('is72Assign')?.addEventListener('click',()=>{
+   const idx=mods.indexOf(target);if(idx<0)return;
+   draft=state();
+   draft.id='custom-manual';draft.name='Manual Custom Icons';
+   draft.artwork[idx]=symbolArt(chosen.symbol);
+   draft.manual=draft.manual||{};draft.manual[target]={symbol:chosen.symbol,name:chosen.name};
+   render(draft.artwork);
 
-    let mod=selectedModule();
-    // Some existing choices/containers may carry module directly.
-    mod=iconChoice.getAttribute('data-module')||mod;
-    const idx=moduleIndex(mod);
-    if(idx<0)return;
+   const btn=document.querySelector('#is72Targets button[data-target="'+target+'"]');
+   if(btn){btn.childNodes[0].nodeValue=chosen.symbol+' ';btn.dataset.assigned=chosen.name}
+   status(target+' → '+chosen.name+' assigned · press Save & Apply');
+   const a=document.getElementById('is72Assign');if(a){a.textContent='Assigned ✓';setTimeout(()=>a.textContent='Assign Icon',900)}
+ });
 
-    draft=current();
-    draft.id='custom-manual';
-    draft.name='Manual Custom Icons';
-    draft.artwork[idx]=svg;
-    draft.baseSet=draft.baseSet||S.get(STATE,null)?.id||null;
-    render(draft.artwork);
-    status(mod+' icon changed manually · press Save & Apply to keep it');
-  },true);
+ // Run after 7G's Save handler. If a manual draft exists, it becomes the same authoritative state.
+ document.getElementById('is7bSave')?.addEventListener('click',()=>{
+   if(!draft?.artwork?.length)return;
+   draft.savedAt=Date.now();S.set(STATE,draft);render(draft.artwork);
+   status('Manual icon combination saved & applied');draft=null;
+ },false);
 
-  // Save manual draft into THE SAME state owner used by Icon Sets.
-  const save=document.getElementById('is7bSave');
-  save?.addEventListener('click',()=>{
-    if(!draft?.artwork?.length)return;
-    draft.savedAt=Date.now();
-    S.set(STATE,draft);
-    render(draft.artwork);
-    status('Manual icon combination saved & applied');
-    draft=null;
-  },false);
-
-  // Reset discards unsaved manual edits and restores applied CoreFlow state.
-  document.getElementById('is7bReset')?.addEventListener('click',()=>{
-    if(!draft)return;
-    draft=null;
-    const saved=S.get(STATE,null);
-    if(saved?.artwork?.length===8){
-      render(saved.artwork);
-      status((saved.name||'Applied icons')+' restored');
-    }
-  },false);
+ document.getElementById('is7bReset')?.addEventListener('click',()=>{
+   draft=null;const x=S.get(STATE,null);if(x?.artwork?.length===8)render(x.artwork);
+ },false);
 })();
 </script>
+<style id="cf7h1-manual-symbol-css">
+aside.side .nav .cf7g-real-icon .cf7h1-symbol{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;font-size:16px;line-height:1;font-family:Arial,"Segoe UI Symbol","Noto Sans Symbols",sans-serif}
+</style>
 
 </body></html>
