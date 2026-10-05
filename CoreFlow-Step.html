@@ -1003,7 +1003,7 @@ body.cf8e3-wallpaper.cf8e3-surfaces #page-dashboard :is(
   <div class="cf8a-wrap">
     <div class="cf8a-head">
       <div><h2>Wallpaper Studio</h2><p>Choose a professional wallpaper or add your own image. Application binding remains isolated for the next step.</p></div>
-      <span>STEP 8E.3 · VISIBLE DASHBOARD LAYER FIX</span>
+      <span>STEP 8E.4 · DELEGATED CONTROLS FIX</span>
     </div>
     <div class="cf8a-targets">
       <button class="active" data-cf8-target="dashboard">Dashboard Wallpaper</button>
@@ -4210,114 +4210,163 @@ aside.side .nav .cf7g-real-icon svg{
 
 
 
-<script id="cf8e3-visible-dashboard-layer-controller">
+
+<script id="cf8e4-delegated-controls">
 (()=>{
- const grid=document.getElementById('cf8aGrid'), status=document.getElementById('cf8eStatus');
- const dash=document.getElementById('page-dashboard');
- if(!grid||!status||!dash)return;
- const $=id=>document.getElementById(id);
- const KEY='coreflow.wallpaper.dashboard.v8e3', GKEY='coreflow.wallpaper.gallery.v8e3';
- let current=null;
- const shadows={None:'none',Soft:'0 6px 18px rgba(15,23,42,.10)',Medium:'0 10px 28px rgba(15,23,42,.18)',Strong:'0 14px 38px rgba(15,23,42,.28)'};
+/*
+ Step 8E.4 fault fix:
+ The Wallpaper Studio page can be re-rendered by CoreFlow routing/state code.
+ Direct onclick/addEventListener bindings attached to the old button nodes are then lost.
+ This controller uses ONE document-level delegated listener, so controls keep working
+ even when the page DOM is replaced.
+*/
+const KEY='coreflow.wallpaper.dashboard.v8e4';
+const GKEY='coreflow.wallpaper.gallery.v8e4';
+const $=id=>document.getElementById(id);
+const shadows={None:'none',Soft:'0 6px 18px rgba(15,23,42,.10)',Medium:'0 10px 28px rgba(15,23,42,.18)',Strong:'0 14px 38px rgba(15,23,42,.28)'};
+let selected=null;
 
- function readCard(card){
-   if(!card)return null;
-   const art=card.querySelector('.cf8a-art'); if(!art)return null;
-   const cs=getComputedStyle(art);
-   let bg='none';
-   if(!art.classList.contains('none')){
-     bg=(art.style.backgroundImage&&art.style.backgroundImage!=='none')?art.style.backgroundImage:
-        (cs.backgroundImage&&cs.backgroundImage!=='none')?cs.backgroundImage:cs.backgroundColor;
-   }
-   return {id:card.dataset.id||'',name:card.querySelector('h3')?.textContent||'Wallpaper',background:bg,card};
+function status(msg){
+ const a=$('cf8eStatus'), b=$('cf8aStatus');
+ if(a)a.textContent=msg;if(b)b.textContent=msg;
+}
+function selectedCard(){
+ return document.querySelector('#cf8aGrid .cf8a-card.selected') || selected;
+}
+function readCard(card){
+ if(!card)return null;
+ const art=card.querySelector('.cf8a-art'); if(!art)return null;
+ const cs=getComputedStyle(art);
+ let bg='none';
+ if(!art.classList.contains('none')){
+   bg=(art.style.backgroundImage&&art.style.backgroundImage!=='none')?art.style.backgroundImage:
+      (cs.backgroundImage&&cs.backgroundImage!=='none')?cs.backgroundImage:cs.backgroundColor;
  }
- function state(base){
-   const x=Object.assign({},base||current||{});
-   x.overlay=(+($('cf8dOverlay')?.value||0))/100;
-   x.position=$('cf8dPosition')?.value||'center'; x.size=$('cf8dSize')?.value||'cover';
-   x.repeat=$('cf8dRepeat')?.value||'no-repeat'; x.attachment=$('cf8dAttach')?.value||'fixed';
-   x.alpha=1-(+($('seAlpha')?.value||15))/100; x.glass=+($('seBlur')?.value||8);
-   x.border=(+($('seBorder')?.value||55))/100; x.shadow=shadows[$('seShadow')?.value||'Soft'];
-   return x;
+ return {id:card.dataset.id||'',name:card.querySelector('h3')?.textContent||'Wallpaper',background:bg};
+}
+function readState(){
+ const c=readCard(selectedCard()); if(!c)return null;
+ return Object.assign(c,{
+  overlay:(+($('cf8dOverlay')?.value||0))/100,
+  opacity:(+($('cf8dOpacity')?.value||100))/100,
+  blur:+($('cf8dBlur')?.value||0),
+  brightness:(+($('cf8dBright')?.value||100))/100,
+  position:$('cf8dPosition')?.value||'center',
+  size:$('cf8dSize')?.value||'cover',
+  repeat:$('cf8dRepeat')?.value||'no-repeat',
+  attachment:$('cf8dAttach')?.value||'fixed',
+  alpha:1-(+($('seAlpha')?.value||15))/100,
+  glass:+($('seBlur')?.value||8),
+  border:(+($('seBorder')?.value||55))/100,
+  shadow:shadows[$('seShadow')?.value||'Soft']||shadows.Soft
+ });
+}
+function apply(st){
+ if(!st||!st.background||st.background==='none'){
+  document.body.classList.remove('cf8e3-wallpaper','cf8e3-surfaces');return false;
  }
- function composed(st){
-   if(!st||!st.background||st.background==='none')return 'none';
-   const d=Math.max(0,Math.min(.8,st.overlay||0));
-   return d?`linear-gradient(rgba(0,0,0,${d}),rgba(0,0,0,${d})),${st.background}`:st.background;
+ const dark=Math.max(0,Math.min(.8,st.overlay||0));
+ const bg=dark?`linear-gradient(rgba(0,0,0,${dark}),rgba(0,0,0,${dark})),${st.background}`:st.background;
+ const r=document.documentElement.style;
+ r.setProperty('--cf8e3-bg',bg);r.setProperty('--cf8e3-size',st.size);r.setProperty('--cf8e3-position',st.position);
+ r.setProperty('--cf8e3-repeat',st.repeat);r.setProperty('--cf8e3-attachment',st.attachment);
+ r.setProperty('--cf8e3-alpha',st.alpha);r.setProperty('--cf8e3-glass',st.glass+'px');
+ r.setProperty('--cf8e3-border',st.border);r.setProperty('--cf8e3-shadow',st.shadow);
+ document.body.classList.add('cf8e3-wallpaper','cf8e3-surfaces');return true;
+}
+function previewControls(){
+ const bg=$('cf8dPreviewBg'),ov=$('cf8dPreviewOverlay'),card=selectedCard(), st=readState();
+ if(!bg||!ov)return;
+ if(st){
+   bg.style.background=st.background;bg.style.backgroundSize=st.size;bg.style.backgroundPosition=st.position;
+   bg.style.backgroundRepeat=st.repeat;bg.style.backgroundAttachment=st.attachment;bg.style.opacity=st.opacity;
+   bg.style.filter=`blur(${st.blur}px) brightness(${st.brightness})`;bg.style.transform=st.blur?'scale(1.06)':'none';
+   ov.style.opacity=st.overlay;
  }
- function apply(st){
-   if(!st||!st.background||st.background==='none'){
-     document.body.classList.remove('cf8e3-wallpaper','cf8e3-surfaces'); return false;
-   }
-   const r=document.documentElement.style;
-   r.setProperty('--cf8e3-bg',composed(st)); r.setProperty('--cf8e3-size',st.size);
-   r.setProperty('--cf8e3-position',st.position); r.setProperty('--cf8e3-repeat',st.repeat);
-   r.setProperty('--cf8e3-attachment',st.attachment); r.setProperty('--cf8e3-alpha',st.alpha);
-   r.setProperty('--cf8e3-glass',st.glass+'px'); r.setProperty('--cf8e3-border',st.border);
-   r.setProperty('--cf8e3-shadow',st.shadow);
-   document.body.classList.add('cf8e3-wallpaper','cf8e3-surfaces'); return true;
- }
- function load(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}}
+ [['cf8dOpacityOut','cf8dOpacity','%'],['cf8dOverlayOut','cf8dOverlay','%'],['cf8dBlurOut','cf8dBlur','px'],['cf8dBrightOut','cf8dBright','%']].forEach(([o,i,u])=>{if($(o)&&$(i))$(o).value=$(i).value+u});
+}
+function resetControls(){
+ const vals={cf8dOpacity:100,cf8dOverlay:0,cf8dBlur:0,cf8dBright:100,cf8dPosition:'center',cf8dSize:'cover',cf8dRepeat:'no-repeat',cf8dAttach:'fixed'};
+ Object.entries(vals).forEach(([id,v])=>{if($(id))$(id).value=v});
+ previewControls();status('Wallpaper controls reset.');
+}
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}}
 
- grid.addEventListener('click',e=>{
-   const card=e.target.closest('.cf8a-card'); if(!card)return;
-   current=readCard(card);
-   grid.querySelectorAll('.cf8a-card').forEach(c=>c.classList.toggle('selected',c===card));
-   status.textContent=current.name+' selected · ready for Dashboard preview.';
- },true);
+function renderSaved(){
+ const grid=$('cf8aGrid');if(!grid)return;
+ grid.querySelectorAll('[data-e4saved]').forEach(x=>x.remove());
+ let arr=[];try{arr=JSON.parse(localStorage.getItem(GKEY)||'[]')}catch(e){}
+ arr.slice().reverse().forEach(w=>{
+  const c=document.createElement('div');c.className='cf8a-card';c.dataset.id=w.id;c.dataset.cat=w.category;c.dataset.e4saved='1';
+  c.innerHTML='<div class="cf8a-thumb"><div class="cf8a-art custom-img"></div></div><div class="cf8a-body"><span class="cf8a-tag"></span><h3></h3><p>Saved custom wallpaper</p><button type="button">Select Preview</button></div>';
+  c.querySelector('.custom-img').style.backgroundImage=`url("${w.data}")`;
+  c.querySelector('.cf8a-tag').textContent=w.category.toUpperCase();c.querySelector('h3').textContent=w.name;grid.prepend(c);
+ });
+}
+function customData(card){
+ const art=card?.querySelector('.custom-img');if(!art)return '';
+ const m=(art.style.backgroundImage||'').match(/url\(["']?(data:image\/[^"']+)["']?\)/);return m?m[1]:'';
+}
 
- $('cf8ePreview').onclick=()=>{
-   if(!current)current=readCard(grid.querySelector('.cf8a-card.selected'));
-   if(!current){status.textContent='Select a wallpaper card first.';return}
-   const st=state(current);
-   if(apply(st))status.textContent=st.name+' preview is active on the visible Dashboard layer.';
-   else status.textContent='No Wallpaper preview selected.';
- };
- $('cf8eSave').onclick=()=>{
-   if(!current)current=readCard(grid.querySelector('.cf8a-card.selected'));
-   if(!current){status.textContent='Select a wallpaper card first.';return}
-   const st=state(current);
-   if(st.background==='none'){
-     localStorage.removeItem(KEY);document.body.classList.remove('cf8e3-wallpaper','cf8e3-surfaces');
-     status.textContent='Dashboard wallpaper removed.';return;
-   }
-   try{localStorage.setItem(KEY,JSON.stringify(st));apply(load());status.textContent=st.name+' saved & applied · F5 restore enabled.'}
-   catch(e){status.textContent='Could not save wallpaper in browser storage.'}
- };
- $('cf8eReset').onclick=()=>{
-   const st=load();
-   if(st){current=st;apply(st);status.textContent='Last saved Dashboard wallpaper restored.'}
-   else status.textContent='No saved Dashboard wallpaper yet.';
- };
+/* Delegated click owner: survives CoreFlow page re-rendering. */
+document.addEventListener('click',e=>{
+ const card=e.target.closest('#cf8aGrid .cf8a-card');
+ if(card){
+   selected=card;
+   const grid=$('cf8aGrid');if(grid)grid.querySelectorAll('.cf8a-card').forEach(c=>c.classList.toggle('selected',c===card));
+   const st=readCard(card);if(st)status(st.name+' selected.');
+   setTimeout(previewControls,0);
+ }
+ const b=e.target.closest('button');if(!b)return;
+ switch(b.id){
+  case 'cf8dReset':
+   e.preventDefault();resetControls();break;
+  case 'cf8dPreviewOnly':
+   e.preventDefault();previewControls();status('Wallpaper settings preview updated.');break;
+  case 'cf8eReset':{
+   e.preventDefault();const st=load();
+   if(st){apply(st);status('Last applied Dashboard wallpaper restored.')}
+   else status('No applied Dashboard wallpaper is saved yet.');
+   break;
+  }
+  case 'cf8ePreview':{
+   e.preventDefault();const st=readState();
+   if(!st){status('Select a wallpaper card first.');break}
+   if(apply(st))status(st.name+' previewed on Dashboard · not saved yet.');
+   else status('No Wallpaper selected.');
+   break;
+  }
+  case 'cf8eSave':{
+   e.preventDefault();const st=readState();
+   if(!st){status('Select a wallpaper card first.');break}
+   if(st.background==='none'){localStorage.removeItem(KEY);document.body.classList.remove('cf8e3-wallpaper','cf8e3-surfaces');status('Dashboard wallpaper removed.');break}
+   try{localStorage.setItem(KEY,JSON.stringify(st));apply(load());status(st.name+' saved & applied · refresh persistence active.')}
+   catch(err){status('Could not save wallpaper state.');}
+   break;
+  }
+  case 'cf8eSaveGallery':{
+   e.preventDefault();const card=selectedCard(),data=customData(card);
+   if(!data){status('Choose Image first, then select My Wallpaper before Save to Gallery.');break}
+   const name=($('cf8eGalleryName')?.value||'My Wallpaper').trim(),category=$('cf8eGalleryCategory')?.value||'Custom';
+   let arr=[];try{arr=JSON.parse(localStorage.getItem(GKEY)||'[]')}catch(err){}
+   arr.unshift({id:'saved-'+Date.now(),name,category,data});
+   try{localStorage.setItem(GKEY,JSON.stringify(arr.slice(0,12)));renderSaved();status(name+' saved to Custom Wallpaper Gallery.')}
+   catch(err){status('Image is too large for browser gallery storage.');}
+   break;
+  }
+ }
+},true);
 
- // Keep Custom Gallery save functional.
- function customData(card){
-   const art=card?.querySelector('.custom-img');if(!art)return '';
-   const m=(art.style.backgroundImage||'').match(/url\(["']?(data:image\/[^"']+)["']?\)/);return m?m[1]:'';
- }
- $('cf8eSaveGallery').onclick=()=>{
-   const card=current?.card||grid.querySelector('.cf8a-card.selected'), data=customData(card);
-   if(!data){status.textContent='Choose Image first, then save that custom wallpaper to Gallery.';return}
-   const name=($('cf8eGalleryName').value||'My Wallpaper').trim(),category=$('cf8eGalleryCategory').value||'Custom';
-   let a=[];try{a=JSON.parse(localStorage.getItem(GKEY)||'[]')}catch(e){}
-   a.unshift({id:'saved-'+Date.now(),name,category,data});
-   try{localStorage.setItem(GKEY,JSON.stringify(a.slice(0,12)));renderSaved();status.textContent=name+' saved to Custom Wallpaper Gallery.'}
-   catch(e){status.textContent='Image too large for browser storage; use a smaller/compressed image.'}
- };
- function renderSaved(){
-   grid.querySelectorAll('[data-e3saved]').forEach(x=>x.remove());
-   let a=[];try{a=JSON.parse(localStorage.getItem(GKEY)||'[]')}catch(e){}
-   a.slice().reverse().forEach(w=>{
-     const c=document.createElement('div');c.className='cf8a-card';c.dataset.id=w.id;c.dataset.cat=w.category;c.dataset.e3saved='1';
-     c.innerHTML='<div class="cf8a-thumb"><div class="cf8a-art custom-img"></div></div><div class="cf8a-body"><span class="cf8a-tag"></span><h3></h3><p>Saved custom wallpaper</p><button type="button">Select Preview</button></div>';
-     c.querySelector('.custom-img').style.backgroundImage=`url("${w.data}")`;
-     c.querySelector('.cf8a-tag').textContent=w.category.toUpperCase();c.querySelector('h3').textContent=w.name;grid.prepend(c);
-   });
- }
+/* Delegated control preview also survives re-render. */
+document.addEventListener('input',e=>{
+ if(e.target.closest('#page-wallpaper-studio') && /^(cf8d|se)/.test(e.target.id||''))previewControls();
+},true);
+
+function boot(){
  renderSaved();
- const st=load();
- if(st){current=st;apply(st);status.textContent='Saved Dashboard wallpaper restored · Step 8E.3 ready.'}
- else status.textContent='Select a wallpaper card first.';
+ const st=load();if(st){apply(st);status('Saved Dashboard wallpaper restored · Step 8E.4 ready.')}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
 </body></html>
