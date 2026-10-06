@@ -767,16 +767,19 @@ body.ss6c-hide-brand .side .brand{visibility:hidden}body.ss6c-hide-profile .side
 .cf8e-clean-actions button:hover,.cf8e-clean-gallery button:hover{border-color:#1684ef}.cf8e-clean-actions .primary,.cf8e-clean-gallery button{background:#1684ef;border-color:#1684ef;color:#fff}
 .cf8e-clean-gallery{display:grid;grid-template-columns:minmax(240px,1fr) 220px 150px auto}.cf8e-clean-gallery input,.cf8e-clean-gallery select{height:36px;border:1px solid #d5e2ed;border-radius:9px;padding:0 10px;background:#fff;color:#30475b;font-size:10px}
 #page-wallpaper-studio button,#page-wallpaper-studio input,#page-wallpaper-studio select{pointer-events:auto!important}
-body.cf8e-applied #page-dashboard{background:transparent!important}
-body.cf8e-applied #page-dashboard .ml-dashboard-content,
-body.cf8e-applied #page-dashboard .ab-dash{
+/* 8E.2: wallpaper belongs to the PAGE surface, never to an inner dashboard block. */
+body.cf8e-applied #page-dashboard,
+body.cf8e-scope-main.cf8e-applied .page:not(#page-wallpaper-studio):not(#page-design-studio),
+body.cf8e-scope-all.cf8e-applied .page:not(#page-wallpaper-studio){
  background-image:var(--cf8e-bg)!important;
  background-size:var(--cf8e-size,cover)!important;
  background-position:var(--cf8e-pos,center)!important;
  background-repeat:var(--cf8e-repeat,no-repeat)!important;
  background-attachment:var(--cf8e-attach,fixed)!important;
- background-color:transparent!important
+ background-color:transparent!important;
+ min-height:calc(100vh - 64px)!important
 }
+body.cf8e-applied #page-dashboard .ml-dashboard-content,body.cf8e-applied #page-dashboard .ab-dash{background:transparent!important}
 body.cf8e-applied.cf8e-surface #page-dashboard :is(.ml-kpi,.ml-nav-card,.ml-panel,.ab-kpi,.ab-card,.ab-panel,.kpi,.kpi-card,.nav-card,.navigation-card,.dash-card){
  background:rgba(255,255,255,var(--cf8e-alpha,.85))!important;
  backdrop-filter:blur(var(--cf8e-glass,8px))!important;-webkit-backdrop-filter:blur(var(--cf8e-glass,8px))!important;
@@ -981,7 +984,7 @@ body.cf8e-applied.cf8e-surface #page-dashboard :is(.ml-kpi,.ml-nav-card,.ml-pane
   <div class="cf8a-wrap">
     <div class="cf8a-head">
       <div><h2>Wallpaper Studio</h2><p>Choose a professional wallpaper or add your own image. Application binding remains isolated for the next step.</p></div>
-      <span>STEP 8E.1 · SINGLE OWNER STORAGE FIX</span>
+      <span>STEP 8E.2 · INDEXEDDB APPLY + FULL PAGE</span>
     </div>
     <div class="cf8a-targets">
       <button class="active" data-cf8-target="dashboard">Dashboard Wallpaper</button>
@@ -4072,161 +4075,46 @@ aside.side .nav .cf7g-real-icon svg{
 <script id="cf8e-clean-single-owner">
 (()=>{
  const page=document.getElementById('page-wallpaper-studio'); if(!page)return;
- const $=id=>document.getElementById(id), grid=$('cf8aGrid'), galleryStatus=$('cf8aStatus'), appStatus=$('cf8eStatus');
- if(!grid)return;
- const APPLY_KEY='coreflow.wallpaper.dashboard.clean8e', GALLERY_KEY='coreflow.wallpaper.gallery.clean8e';
- // Wallpaper Studio owns only wallpaper-prefixed storage. Old Step-E builds could leave
- // large Base64 wallpaper keys behind and exhaust localStorage, making even tiny built-in
- // presets fail to save. Purge ONLY obsolete wallpaper keys; never touch Theme/Sidebar/Icon.
- function purgeObsoleteWallpaperStorage(){
-   const keep=new Set([APPLY_KEY]);
-   const remove=[];
-   for(let i=0;i<localStorage.length;i++){
-     const k=localStorage.key(i)||'';
-     const low=k.toLowerCase();
-     if((low.includes('wallpaper') || low.includes('cf8e')) && !keep.has(k)) remove.push(k);
-   }
-   remove.forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
-   return remove;
- }
-
- 
- const DB_NAME='CoreFlowWallpaperDB', STORE='gallery';
- function openWallpaperDB(){
-   return new Promise((resolve,reject)=>{
-     const q=indexedDB.open(DB_NAME,1);
-     q.onupgradeneeded=()=>{const db=q.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'})};
-     q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);
-   });
- }
- async function idbGetAll(){const db=await openWallpaperDB();return new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readonly').objectStore(STORE).getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error)})}
- async function idbPut(v){const db=await openWallpaperDB();return new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readwrite').objectStore(STORE).put(v);q.onsuccess=()=>resolve();q.onerror=()=>reject(q.error)})}
-
- const state={target:'Dashboard',card:null,name:'No Wallpaper',background:'none'};
+ const $=id=>document.getElementById(id), grid=$('cf8aGrid'), galleryStatus=$('cf8aStatus'), appStatus=$('cf8eStatus'); if(!grid)return;
+ const META_KEY='coreflow.wallpaper.applied.ref.v8e2';
+ const DB_NAME='CoreFlowWallpaperDB', GALLERY='gallery', APPLIED='applied';
+ const state={target:'Dashboard',card:null,id:'none',name:'No Wallpaper',background:'none',assetData:null};
  const shadows={None:'none',Soft:'0 6px 18px rgba(15,23,42,.10)',Medium:'0 10px 26px rgba(15,23,42,.18)',Strong:'0 14px 34px rgba(15,23,42,.28)'};
  const data=[
- ['none','No Wallpaper','Minimal','Keep the normal CoreFlow background','none'],
- ['aurora','Aurora Flow','Abstract','Luminous abstract blue layers','abstract'],
- ['executiveBlue','Executive Blue','Corporate','Professional corporate workspace','corporate'],
- ['paperMill','Paper Mill','Industrial','Production and mill inspired','mill'],
- ['graphite','Graphite','Dark','Dark technical atmosphere','dark'],
- ['spectrum','Spectrum','Gradient','Premium modern gradient','gradient'],
- ['greenHorizon','Green Horizon','Nature','Calm landscape direction','nature'],
- ['paperRolls','Paper Rolls','Industrial','Paper production inspired','paper'],
- ['factoryBlueprint','Factory Blueprint','Industrial','Engineering grid direction','blueprint'],
- ['ocean','Ocean Abstract','Abstract','Cool blue visual surface','abstract'],
- ['midnight','Midnight Office','Dark','Deep office-friendly background','dark'],
- ['cleanMist','Clean Mist','Minimal','Light distraction-free surface','paper'],
- ['corporateOffice','Corporate Office','Corporate','Deep blue executive workspace','office'],
- ['blueMesh','Blue Mesh','Abstract','Layered premium blue atmosphere','mesh'],
- ['paperPlantPro','Paper Plant Pro','Industrial','Mill, production and paper-roll direction','paperplant'],
- ['softWhite','Soft White','Minimal','Bright professional workspace','softwhite'],
- ['navyGrid','Navy Grid','Dark','Subtle engineering grid','navygrid'],
- ['sunrisePlant','Sunrise Field','Nature','Warm industrial landscape direction','sunrise']
- ];
+ ['none','No Wallpaper','Minimal','Keep the normal CoreFlow background','none'],['aurora','Aurora Flow','Abstract','Luminous abstract blue layers','abstract'],['executiveBlue','Executive Blue','Corporate','Professional corporate workspace','corporate'],['paperMill','Paper Mill','Industrial','Production and mill inspired','mill'],['graphite','Graphite','Dark','Dark technical atmosphere','dark'],['spectrum','Spectrum','Gradient','Premium modern gradient','gradient'],['greenHorizon','Green Horizon','Nature','Calm landscape direction','nature'],['paperRolls','Paper Rolls','Industrial','Paper production inspired','paper'],['factoryBlueprint','Factory Blueprint','Industrial','Engineering grid direction','blueprint'],['ocean','Ocean Abstract','Abstract','Cool blue visual surface','abstract'],['midnight','Midnight Office','Dark','Deep office-friendly background','dark'],['cleanMist','Clean Mist','Minimal','Light distraction-free surface','paper'],['corporateOffice','Corporate Office','Corporate','Deep blue executive workspace','office'],['blueMesh','Blue Mesh','Abstract','Layered premium blue atmosphere','mesh'],['paperPlantPro','Paper Plant Pro','Industrial','Mill, production and paper-roll direction','paperplant'],['softWhite','Soft White','Minimal','Bright professional workspace','softwhite'],['navyGrid','Navy Grid','Dark','Subtle engineering grid','navygrid'],['sunrisePlant','Sunrise Field','Nature','Warm industrial landscape direction','sunrise']];
  function say(t){if(galleryStatus)galleryStatus.textContent=t;if(appStatus)appStatus.textContent=t}
- function makeCard(id,n,c,d,a,bg){
-   const x=document.createElement('div');x.className='cf8a-card';x.dataset.cat=c;x.dataset.id=id;
-   x.innerHTML='<div class="cf8a-thumb"><div class="cf8a-art '+(a||'')+'">'+(a==='none'?'NO WALLPAPER':'')+'</div></div><div class="cf8a-body"><span class="cf8a-tag">'+c.toUpperCase()+'</span><h3>'+n+'</h3><p>'+d+'</p><button type="button">Select Preview</button></div>';
-   if(bg)x.querySelector('.cf8a-art').style.backgroundImage='url("'+bg+'")';
-   return x;
- }
- async function renderGallery(){
-   grid.innerHTML='';
-   let custom=[];try{custom=await idbGetAll()}catch(e){}
-   custom.sort((a,b)=>(b.created||0)-(a.created||0)).forEach(w=>grid.appendChild(makeCard(w.id,w.name,w.category,'Saved custom wallpaper','custom-img',w.data)));
-   data.forEach(v=>grid.appendChild(makeCard(...v)));
- }
- function cardBg(card){
-   const art=card?.querySelector('.cf8a-art');if(!art)return 'none';
-   if(art.classList.contains('none'))return 'none';
-   const cs=getComputedStyle(art);
-   return art.style.backgroundImage&&art.style.backgroundImage!=='none'?art.style.backgroundImage:(cs.backgroundImage!=='none'?cs.backgroundImage:cs.backgroundColor);
- }
- function select(card){
-   if(!card)return;grid.querySelectorAll('.cf8a-card').forEach(x=>x.classList.toggle('selected',x===card));
-   state.card=card;state.name=card.querySelector('h3')?.textContent||'Wallpaper';state.background=cardBg(card);
-   if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · '+state.target;
-   renderWallpaperPreview();say(state.name+' selected for '+state.target+'.');
- }
- function renderWallpaperPreview(){
-   const bg=$('cf8dPreviewBg'),ov=$('cf8dPreviewOverlay');if(!bg||!ov)return;
-   bg.style.background=state.background;bg.style.backgroundSize=$('cf8dSize').value;bg.style.backgroundPosition=$('cf8dPosition').value;
-   bg.style.backgroundRepeat=$('cf8dRepeat').value;bg.style.backgroundAttachment=$('cf8dAttach').value;
-   bg.style.opacity=+$('cf8dOpacity').value/100;bg.style.filter='blur('+$('cf8dBlur').value+'px) brightness('+$('cf8dBright').value+'%)';
-   bg.style.transform=+$('cf8dBlur').value?'scale(1.06)':'none';ov.style.opacity=+$('cf8dOverlay').value/100;
-   $('cf8dOpacityOut').value=$('cf8dOpacity').value+'%';$('cf8dOverlayOut').value=$('cf8dOverlay').value+'%';
-   $('cf8dBlurOut').value=$('cf8dBlur').value+'px';$('cf8dBrightOut').value=$('cf8dBright').value+'%';
- }
- function renderSurface(){
-   const cards=[...page.querySelectorAll('.cf8d3-demo-card')],a=+$('seAlpha').value,b=+$('seBlur').value,o=+$('seBorder').value;
-   $('seAlphaOut').value=a+'%';$('seBlurOut').value=b+'px';$('seBorderOut').value=o+'%';
-   let mode=$('seKpi').value,aa=mode==='Solid'?0:mode==='Clear Glass'?Math.min(75,a+25):a;
-   cards.forEach(c=>{c.style.background='rgba(255,255,255,'+(1-aa/100)+')';c.style.backdropFilter='blur('+b+'px)';c.style.borderColor='rgba(255,255,255,'+(o/100)+')';c.style.boxShadow=shadows[$('seShadow').value];c.style.color=$('seText').value==='Light Text'?'#fff':'#263d51'})
- }
- function applicationState(){
-   return {name:state.name,background:state.background,overlay:+$('cf8dOverlay').value/100,position:$('cf8dPosition').value,size:$('cf8dSize').value,repeat:$('cf8dRepeat').value,attach:$('cf8dAttach').value,alpha:1-(+$('seAlpha').value/100),glass:+$('seBlur').value,border:+$('seBorder').value/100,shadow:shadows[$('seShadow').value]};
- }
- function apply(st){
-   if(!st||!st.background||st.background==='none'){document.body.classList.remove('cf8e-applied','cf8e-surface');return false}
-   const dark=Math.max(0,Math.min(.8,st.overlay||0));
-   const bg=dark?'linear-gradient(rgba(0,0,0,'+dark+'),rgba(0,0,0,'+dark+')),'+st.background:st.background;
-   const r=document.documentElement.style;r.setProperty('--cf8e-bg',bg);r.setProperty('--cf8e-size',st.size);r.setProperty('--cf8e-pos',st.position);r.setProperty('--cf8e-repeat',st.repeat);r.setProperty('--cf8e-attach',st.attach);r.setProperty('--cf8e-alpha',st.alpha);r.setProperty('--cf8e-glass',st.glass+'px');r.setProperty('--cf8e-border',st.border);r.setProperty('--cf8e-shadow',st.shadow);
-   document.body.classList.add('cf8e-applied','cf8e-surface');return true;
- }
- function loadApplied(){try{return JSON.parse(localStorage.getItem(APPLY_KEY)||'null')}catch(e){return null}}
- function resetControls(){
-   $('cf8dOpacity').value=100;$('cf8dOverlay').value=0;$('cf8dBlur').value=0;$('cf8dBright').value=100;$('cf8dPosition').value='center';$('cf8dSize').value='cover';$('cf8dRepeat').value='no-repeat';$('cf8dAttach').value='fixed';renderWallpaperPreview();say('Wallpaper controls reset.');
- }
- // Build gallery before binding anything.
+ function openDB(){return new Promise((res,rej)=>{const q=indexedDB.open(DB_NAME,2);q.onupgradeneeded=()=>{const db=q.result;if(!db.objectStoreNames.contains(GALLERY))db.createObjectStore(GALLERY,{keyPath:'id'});if(!db.objectStoreNames.contains(APPLIED))db.createObjectStore(APPLIED,{keyPath:'id'})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+ async function dbGetAll(store=GALLERY){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction(store,'readonly').objectStore(store).getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error)})}
+ async function dbGet(id,store=GALLERY){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction(store,'readonly').objectStore(store).get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error)})}
+ async function dbPut(v,store=GALLERY){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction(store,'readwrite').objectStore(store).put(v);q.onsuccess=()=>res(v);q.onerror=()=>rej(q.error)})}
+ async function dbDel(id,store=APPLIED){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction(store,'readwrite').objectStore(store).delete(id);q.onsuccess=()=>res();q.onerror=()=>rej(q.error)})}
+ function makeCard(id,n,c,d,a,bg){const x=document.createElement('div');x.className='cf8a-card';x.dataset.cat=c;x.dataset.id=id;x.innerHTML='<div class="cf8a-thumb"><div class="cf8a-art '+(a||'')+'">'+(a==='none'?'NO WALLPAPER':'')+'</div></div><div class="cf8a-body"><span class="cf8a-tag">'+c.toUpperCase()+'</span><h3>'+n+'</h3><p>'+d+'</p><button type="button">Select Preview</button></div>';if(bg)x.querySelector('.cf8a-art').style.backgroundImage='url("'+bg+'")';return x}
+ async function renderGallery(){grid.innerHTML='';let custom=[];try{custom=await dbGetAll()}catch(e){}custom.sort((a,b)=>(b.created||0)-(a.created||0)).forEach(w=>grid.appendChild(makeCard(w.id,w.name,w.category,'Saved custom wallpaper','custom-img',w.data)));data.forEach(v=>grid.appendChild(makeCard(...v)))}
+ function cardBg(card){const art=card?.querySelector('.cf8a-art');if(!art)return 'none';if(art.classList.contains('none'))return 'none';const cs=getComputedStyle(art);return art.style.backgroundImage&&art.style.backgroundImage!=='none'?art.style.backgroundImage:(cs.backgroundImage!=='none'?cs.backgroundImage:cs.backgroundColor)}
+ function extractData(bg){const m=(bg||'').match(/url\(["']?(data:image\/[^"')]+)["']?\)/);return m?m[1]:null}
+ function select(card){if(!card)return;grid.querySelectorAll('.cf8a-card').forEach(x=>x.classList.toggle('selected',x===card));state.card=card;state.id=card.dataset.id||'none';state.name=card.querySelector('h3')?.textContent||'Wallpaper';state.background=cardBg(card);state.assetData=extractData(state.background);if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · '+state.target;renderWallpaperPreview();say(state.name+' selected for '+state.target+'.')}
+ function renderWallpaperPreview(){const bg=$('cf8dPreviewBg'),ov=$('cf8dPreviewOverlay');if(!bg||!ov)return;bg.style.background=state.background;bg.style.backgroundSize=$('cf8dSize').value;bg.style.backgroundPosition=$('cf8dPosition').value;bg.style.backgroundRepeat=$('cf8dRepeat').value;bg.style.backgroundAttachment=$('cf8dAttach').value;bg.style.opacity=+$('cf8dOpacity').value/100;bg.style.filter='blur('+$('cf8dBlur').value+'px) brightness('+$('cf8dBright').value+'%)';bg.style.transform=+$('cf8dBlur').value?'scale(1.06)':'none';ov.style.opacity=+$('cf8dOverlay').value/100;$('cf8dOpacityOut').value=$('cf8dOpacity').value+'%';$('cf8dOverlayOut').value=$('cf8dOverlay').value+'%';$('cf8dBlurOut').value=$('cf8dBlur').value+'px';$('cf8dBrightOut').value=$('cf8dBright').value+'%'}
+ function renderSurface(){const cards=[...page.querySelectorAll('.cf8d3-demo-card')],a=+$('seAlpha').value,b=+$('seBlur').value,o=+$('seBorder').value;$('seAlphaOut').value=a+'%';$('seBlurOut').value=b+'px';$('seBorderOut').value=o+'%';let mode=$('seKpi').value,aa=mode==='Solid'?0:mode==='Clear Glass'?Math.min(75,a+25):a;cards.forEach(c=>{c.style.background='rgba(255,255,255,'+(1-aa/100)+')';c.style.backdropFilter='blur('+b+'px)';c.style.borderColor='rgba(255,255,255,'+(o/100)+')';c.style.boxShadow=shadows[$('seShadow').value];c.style.color=$('seText').value==='Light Text'?'#fff':'#263d51'})}
+ function applicationState(){return {id:'dashboard',wallpaperId:state.id,name:state.name,background:state.assetData?'asset':state.background,assetData:state.assetData||null,overlay:+$('cf8dOverlay').value/100,position:$('cf8dPosition').value,size:$('cf8dSize').value,repeat:$('cf8dRepeat').value,attach:$('cf8dAttach').value,alpha:1-(+$('seAlpha').value/100),glass:+$('seBlur').value,border:+$('seBorder').value/100,shadow:shadows[$('seShadow').value],scope:$('seScope').value,updated:Date.now()}}
+ async function resolveState(st){if(!st)return null;if(st.background==='asset'){let asset=st.assetData;if(!asset&&st.wallpaperId){const w=await dbGet(st.wallpaperId);asset=w?.data||null}return {...st,background:asset?'url("'+asset+'")':'none',assetData:null}}return st}
+ function apply(st){document.body.classList.remove('cf8e-scope-main','cf8e-scope-all');if(!st||!st.background||st.background==='none'){document.body.classList.remove('cf8e-applied','cf8e-surface');return false}const dark=Math.max(0,Math.min(.8,st.overlay||0));const bg=dark?'linear-gradient(rgba(0,0,0,'+dark+'),rgba(0,0,0,'+dark+')),'+st.background:st.background;const r=document.documentElement.style;r.setProperty('--cf8e-bg',bg);r.setProperty('--cf8e-size',st.size||'cover');r.setProperty('--cf8e-pos',st.position||'center');r.setProperty('--cf8e-repeat',st.repeat||'no-repeat');r.setProperty('--cf8e-attach',st.attach||'fixed');r.setProperty('--cf8e-alpha',st.alpha??.85);r.setProperty('--cf8e-glass',(st.glass??8)+'px');r.setProperty('--cf8e-border',st.border??.55);r.setProperty('--cf8e-shadow',st.shadow||shadows.Soft);document.body.classList.add('cf8e-applied','cf8e-surface');if(st.scope==='Dashboard + Main Pages')document.body.classList.add('cf8e-scope-main');if(st.scope==='All Compatible Pages')document.body.classList.add('cf8e-scope-all');return true}
+ async function loadApplied(){try{return await dbGet('dashboard',APPLIED)}catch(e){return null}}
+ function resetControls(){ $('cf8dOpacity').value=100;$('cf8dOverlay').value=0;$('cf8dBlur').value=0;$('cf8dBright').value=100;$('cf8dPosition').value='center';$('cf8dSize').value='cover';$('cf8dRepeat').value='no-repeat';$('cf8dAttach').value='fixed';renderWallpaperPreview();say('Wallpaper controls reset.') }
+ async function restoreAppliedToStudio(st){if(!st)return;const rs=await resolveState(st);apply(rs);state.id=st.wallpaperId||'none';state.name=st.name||'Wallpaper';state.background=rs.background;state.assetData=st.assetData||null;if($('seScope')&&st.scope)$('seScope').value=st.scope;await renderGallery();const c=grid.querySelector('[data-id="'+CSS.escape(state.id)+'"]');if(c){state.card=c;c.classList.add('selected')}if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · Dashboard';renderWallpaperPreview();say('Saved Dashboard wallpaper restored · IndexedDB persistence ready.')}
  renderGallery();
-
- // ONE click owner for this entire studio.
- page.addEventListener('click',async e=>{
-   const target=e.target.closest('[data-cf8-target]');if(target){state.target=target.dataset.cf8Target==='sidebar'?'Sidebar':'Dashboard';page.querySelectorAll('[data-cf8-target]').forEach(x=>x.classList.toggle('active',x===target));if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · '+state.target;say(state.target+' Wallpaper selected.');return}
-   const card=e.target.closest('#cf8aGrid .cf8a-card');if(card){select(card);return}
-   const id=e.target.closest('button')?.id;if(!id)return;
-   if(id==='cf8dReset'){resetControls();return}
-   if(id==='cf8dPreviewOnly'){renderWallpaperPreview();renderSurface();say(state.name+' settings preview updated.');return}
-   if(id==='cf8eReset'){const st=loadApplied();if(st){apply(st);say('Last applied Dashboard wallpaper restored.')}else say('No saved Dashboard wallpaper yet.');return}
-   if(id==='cf8ePreview'){const st=applicationState();if(apply(st))say(st.name+' previewed on real Dashboard · not saved.');else say('Select a wallpaper first.');return}
-   if(id==='cf8eSave'){
-      const st=applicationState();
-      if(st.background==='none'){localStorage.removeItem(APPLY_KEY);apply(st);say('Dashboard wallpaper removed.');return}
-      try{
-        const removed=purgeObsoleteWallpaperStorage();
-        const payload=JSON.stringify(st);
-        localStorage.setItem(APPLY_KEY,payload);
-        const verify=localStorage.getItem(APPLY_KEY);
-        if(!verify) throw new Error('Applied state write verification failed');
-        const saved=JSON.parse(verify);
-        apply(saved);
-        say(st.name+' saved & applied · refresh persistence active.'+(removed.length?' · old wallpaper cache cleaned':''));
-      }catch(err){
-        say('Save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)));
-      }
-      return
-   }
-   if(id==='cf8eSaveGallery'){
-      if(!state.card||!state.card.querySelector('.custom-img')){say('Choose Image first, then select My Wallpaper.');return}
-      const art=state.card.querySelector('.custom-img'),m=(art.style.backgroundImage||'').match(/url\(["']?(data:image\/[^"']+)["']?\)/);if(!m){say('Custom image data not found.');return}
-      const name=($('cf8eGalleryName').value||'My Wallpaper').trim(),category=$('cf8eGalleryCategory').value||'Custom';
-      try{
-        await idbPut({id:'custom-'+Date.now(),name,category,data:m[1],created:Date.now()});
-        await renderGallery();
-        say(name+' saved to Wallpaper Gallery.');
-      }catch(err){say('Gallery save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)));}
-      return;
-   }
+ page.addEventListener('click',async e=>{const target=e.target.closest('[data-cf8-target]');if(target){state.target=target.dataset.cf8Target==='sidebar'?'Sidebar':'Dashboard';page.querySelectorAll('[data-cf8-target]').forEach(x=>x.classList.toggle('active',x===target));if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · '+state.target;say(state.target+' Wallpaper selected.');return}const card=e.target.closest('#cf8aGrid .cf8a-card');if(card){select(card);return}const id=e.target.closest('button')?.id;if(!id)return;
+  if(id==='cf8dReset'){resetControls();return}
+  if(id==='cf8dPreviewOnly'){renderWallpaperPreview();renderSurface();say(state.name+' settings preview updated.');return}
+  if(id==='cf8eReset'){const st=await loadApplied();if(st){const rs=await resolveState(st);apply(rs);say('Last applied Dashboard wallpaper restored.')}else say('No saved Dashboard wallpaper yet.');return}
+  if(id==='cf8ePreview'){const st=await resolveState(applicationState());if(apply(st))say(st.name+' previewed on real Dashboard · not saved.');else say('Select a wallpaper first.');return}
+  if(id==='cf8eSave'){const st=applicationState();try{if(st.background==='none'){await dbDel('dashboard');localStorage.removeItem(META_KEY);apply(await resolveState(st));say('Dashboard wallpaper removed and saved.');return}if(st.assetData&&state.id==='customUpload'){const assetId='applied-custom-'+Date.now();await dbPut({id:assetId,name:state.name,category:'Custom',data:st.assetData,created:Date.now()});st.wallpaperId=assetId;st.assetData=null}await dbPut(st,APPLIED);localStorage.setItem(META_KEY,JSON.stringify({id:'dashboard',updated:st.updated}));const verify=await loadApplied();if(!verify)throw new Error('IndexedDB write verification failed');apply(await resolveState(verify));say(st.name+' saved & applied · refresh persistence active.')}catch(err){say('Save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)))}return}
+  if(id==='cf8eSaveGallery'){if(!state.card||!state.assetData){say('Choose Image first, then select the uploaded wallpaper.');return}const name=($('cf8eGalleryName').value||'My Wallpaper').trim(),category=$('cf8eGalleryCategory').value||'Custom';try{const wid='custom-'+Date.now();await dbPut({id:wid,name,category,data:state.assetData,created:Date.now()});await renderGallery();const c=grid.querySelector('[data-id="'+wid+'"]');if(c)select(c);say(name+' saved to Wallpaper Gallery.')}catch(err){say('Gallery save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)))}return}
  });
- ['cf8dOpacity','cf8dOverlay','cf8dBlur','cf8dBright','cf8dPosition','cf8dSize','cf8dRepeat','cf8dAttach'].forEach(id=>$(id).addEventListener('input',renderWallpaperPreview));
- ['seAlpha','seBlur','seBorder','seShadow','seKpi','seNav','seButton','seText','seScope'].forEach(id=>$(id).addEventListener('input',renderSurface));
- $('cf8aSearch').addEventListener('input',filter);$('cf8aCat').addEventListener('change',filter);
- function filter(){const q=$('cf8aSearch').value.toLowerCase(),cat=$('cf8aCat').value;grid.querySelectorAll('.cf8a-card').forEach(c=>c.style.display=((cat==='all'||c.dataset.cat===cat)&&c.textContent.toLowerCase().includes(q))?'':'none')}
- $('cf8cUpload').addEventListener('change',()=>{const f=$('cf8cUpload').files?.[0];if(!f)return;if(!f.type.startsWith('image/')){say('Please choose an image file.');return}const rd=new FileReader();rd.onload=()=>{let c=grid.querySelector('[data-id="customUpload"]');if(!c){c=makeCard('customUpload','My Wallpaper','Custom','Image selected from this device','custom-img');grid.prepend(c)}c.querySelector('.custom-img').style.backgroundImage='url("'+rd.result+'")';select(c);say('Custom image loaded · ready to preview or save to Gallery.')};rd.readAsDataURL(f)});
+ ['cf8dOpacity','cf8dOverlay','cf8dBlur','cf8dBright','cf8dPosition','cf8dSize','cf8dRepeat','cf8dAttach'].forEach(id=>$(id)?.addEventListener('input',renderWallpaperPreview));['seAlpha','seBlur','seBorder','seShadow','seKpi','seNav','seButton','seText','seScope'].forEach(id=>$(id)?.addEventListener('input',renderSurface));
+ function filter(){const q=$('cf8aSearch').value.toLowerCase(),cat=$('cf8aCat').value;grid.querySelectorAll('.cf8a-card').forEach(c=>c.style.display=((cat==='all'||c.dataset.cat===cat)&&c.textContent.toLowerCase().includes(q))?'':'none')}$('cf8aSearch')?.addEventListener('input',filter);$('cf8aCat')?.addEventListener('change',filter);
+ $('cf8cUpload')?.addEventListener('change',()=>{const f=$('cf8cUpload').files?.[0];if(!f)return;if(!f.type.startsWith('image/')){say('Please choose an image file.');return}const rd=new FileReader();rd.onload=()=>{let c=grid.querySelector('[data-id="customUpload"]');if(!c){c=makeCard('customUpload','My Wallpaper','Custom','Image selected from this device','custom-img');grid.prepend(c)}c.querySelector('.custom-img').style.backgroundImage='url("'+rd.result+'")';select(c);say('Custom image loaded · ready to preview, apply or save to Gallery.')};rd.readAsDataURL(f)});
  renderWallpaperPreview();renderSurface();
- const cleaned=purgeObsoleteWallpaperStorage();
- const saved=loadApplied();if(saved){apply(saved);say('Saved Dashboard wallpaper restored · single owner ready.'+(cleaned.length?' · obsolete wallpaper cache cleaned':''))}
+ loadApplied().then(st=>st&&restoreAppliedToStudio(st));
 })();
 </script>
 </body></html>
