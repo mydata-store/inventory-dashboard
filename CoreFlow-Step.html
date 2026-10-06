@@ -981,7 +981,7 @@ body.cf8e-applied.cf8e-surface #page-dashboard :is(.ml-kpi,.ml-nav-card,.ml-pane
   <div class="cf8a-wrap">
     <div class="cf8a-head">
       <div><h2>Wallpaper Studio</h2><p>Choose a professional wallpaper or add your own image. Application binding remains isolated for the next step.</p></div>
-      <span>STEP 8E · CLEAN SINGLE OWNER</span>
+      <span>STEP 8E.1 · SINGLE OWNER STORAGE FIX</span>
     </div>
     <div class="cf8a-targets">
       <button class="active" data-cf8-target="dashboard">Dashboard Wallpaper</button>
@@ -4075,6 +4075,33 @@ aside.side .nav .cf7g-real-icon svg{
  const $=id=>document.getElementById(id), grid=$('cf8aGrid'), galleryStatus=$('cf8aStatus'), appStatus=$('cf8eStatus');
  if(!grid)return;
  const APPLY_KEY='coreflow.wallpaper.dashboard.clean8e', GALLERY_KEY='coreflow.wallpaper.gallery.clean8e';
+ // Wallpaper Studio owns only wallpaper-prefixed storage. Old Step-E builds could leave
+ // large Base64 wallpaper keys behind and exhaust localStorage, making even tiny built-in
+ // presets fail to save. Purge ONLY obsolete wallpaper keys; never touch Theme/Sidebar/Icon.
+ function purgeObsoleteWallpaperStorage(){
+   const keep=new Set([APPLY_KEY]);
+   const remove=[];
+   for(let i=0;i<localStorage.length;i++){
+     const k=localStorage.key(i)||'';
+     const low=k.toLowerCase();
+     if((low.includes('wallpaper') || low.includes('cf8e')) && !keep.has(k)) remove.push(k);
+   }
+   remove.forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+   return remove;
+ }
+
+ 
+ const DB_NAME='CoreFlowWallpaperDB', STORE='gallery';
+ function openWallpaperDB(){
+   return new Promise((resolve,reject)=>{
+     const q=indexedDB.open(DB_NAME,1);
+     q.onupgradeneeded=()=>{const db=q.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'})};
+     q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);
+   });
+ }
+ async function idbGetAll(){const db=await openWallpaperDB();return new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readonly').objectStore(STORE).getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error)})}
+ async function idbPut(v){const db=await openWallpaperDB();return new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readwrite').objectStore(STORE).put(v);q.onsuccess=()=>resolve();q.onerror=()=>reject(q.error)})}
+
  const state={target:'Dashboard',card:null,name:'No Wallpaper',background:'none'};
  const shadows={None:'none',Soft:'0 6px 18px rgba(15,23,42,.10)',Medium:'0 10px 26px rgba(15,23,42,.18)',Strong:'0 14px 34px rgba(15,23,42,.28)'};
  const data=[
@@ -4104,10 +4131,10 @@ aside.side .nav .cf7g-real-icon svg{
    if(bg)x.querySelector('.cf8a-art').style.backgroundImage='url("'+bg+'")';
    return x;
  }
- function renderGallery(){
+ async function renderGallery(){
    grid.innerHTML='';
-   let custom=[];try{custom=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]')}catch(e){}
-   custom.forEach(w=>grid.appendChild(makeCard(w.id,w.name,w.category,'Saved custom wallpaper','custom-img',w.data)));
+   let custom=[];try{custom=await idbGetAll()}catch(e){}
+   custom.sort((a,b)=>(b.created||0)-(a.created||0)).forEach(w=>grid.appendChild(makeCard(w.id,w.name,w.category,'Saved custom wallpaper','custom-img',w.data)));
    data.forEach(v=>grid.appendChild(makeCard(...v)));
  }
  function cardBg(card){
@@ -4155,7 +4182,7 @@ aside.side .nav .cf7g-real-icon svg{
  renderGallery();
 
  // ONE click owner for this entire studio.
- page.addEventListener('click',e=>{
+ page.addEventListener('click',async e=>{
    const target=e.target.closest('[data-cf8-target]');if(target){state.target=target.dataset.cf8Target==='sidebar'?'Sidebar':'Dashboard';page.querySelectorAll('[data-cf8-target]').forEach(x=>x.classList.toggle('active',x===target));if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · '+state.target;say(state.target+' Wallpaper selected.');return}
    const card=e.target.closest('#cf8aGrid .cf8a-card');if(card){select(card);return}
    const id=e.target.closest('button')?.id;if(!id)return;
@@ -4163,14 +4190,33 @@ aside.side .nav .cf7g-real-icon svg{
    if(id==='cf8dPreviewOnly'){renderWallpaperPreview();renderSurface();say(state.name+' settings preview updated.');return}
    if(id==='cf8eReset'){const st=loadApplied();if(st){apply(st);say('Last applied Dashboard wallpaper restored.')}else say('No saved Dashboard wallpaper yet.');return}
    if(id==='cf8ePreview'){const st=applicationState();if(apply(st))say(st.name+' previewed on real Dashboard · not saved.');else say('Select a wallpaper first.');return}
-   if(id==='cf8eSave'){const st=applicationState();if(st.background==='none'){localStorage.removeItem(APPLY_KEY);apply(st);say('Dashboard wallpaper removed.');return}try{localStorage.setItem(APPLY_KEY,JSON.stringify(st));apply(loadApplied());say(st.name+' saved & applied · refresh persistence active.')}catch(err){say('Could not save wallpaper state.')}return}
+   if(id==='cf8eSave'){
+      const st=applicationState();
+      if(st.background==='none'){localStorage.removeItem(APPLY_KEY);apply(st);say('Dashboard wallpaper removed.');return}
+      try{
+        const removed=purgeObsoleteWallpaperStorage();
+        const payload=JSON.stringify(st);
+        localStorage.setItem(APPLY_KEY,payload);
+        const verify=localStorage.getItem(APPLY_KEY);
+        if(!verify) throw new Error('Applied state write verification failed');
+        const saved=JSON.parse(verify);
+        apply(saved);
+        say(st.name+' saved & applied · refresh persistence active.'+(removed.length?' · old wallpaper cache cleaned':''));
+      }catch(err){
+        say('Save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)));
+      }
+      return
+   }
    if(id==='cf8eSaveGallery'){
       if(!state.card||!state.card.querySelector('.custom-img')){say('Choose Image first, then select My Wallpaper.');return}
       const art=state.card.querySelector('.custom-img'),m=(art.style.backgroundImage||'').match(/url\(["']?(data:image\/[^"']+)["']?\)/);if(!m){say('Custom image data not found.');return}
       const name=($('cf8eGalleryName').value||'My Wallpaper').trim(),category=$('cf8eGalleryCategory').value||'Custom';
-      let arr=[];try{arr=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]')}catch(err){}
-      arr.unshift({id:'custom-'+Date.now(),name,category,data:m[1]});
-      try{localStorage.setItem(GALLERY_KEY,JSON.stringify(arr.slice(0,12)));renderGallery();say(name+' saved to Wallpaper Gallery.')}catch(err){say('Image too large for browser gallery storage.')}return;
+      try{
+        await idbPut({id:'custom-'+Date.now(),name,category,data:m[1],created:Date.now()});
+        await renderGallery();
+        say(name+' saved to Wallpaper Gallery.');
+      }catch(err){say('Gallery save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)));}
+      return;
    }
  });
  ['cf8dOpacity','cf8dOverlay','cf8dBlur','cf8dBright','cf8dPosition','cf8dSize','cf8dRepeat','cf8dAttach'].forEach(id=>$(id).addEventListener('input',renderWallpaperPreview));
@@ -4179,7 +4225,8 @@ aside.side .nav .cf7g-real-icon svg{
  function filter(){const q=$('cf8aSearch').value.toLowerCase(),cat=$('cf8aCat').value;grid.querySelectorAll('.cf8a-card').forEach(c=>c.style.display=((cat==='all'||c.dataset.cat===cat)&&c.textContent.toLowerCase().includes(q))?'':'none')}
  $('cf8cUpload').addEventListener('change',()=>{const f=$('cf8cUpload').files?.[0];if(!f)return;if(!f.type.startsWith('image/')){say('Please choose an image file.');return}const rd=new FileReader();rd.onload=()=>{let c=grid.querySelector('[data-id="customUpload"]');if(!c){c=makeCard('customUpload','My Wallpaper','Custom','Image selected from this device','custom-img');grid.prepend(c)}c.querySelector('.custom-img').style.backgroundImage='url("'+rd.result+'")';select(c);say('Custom image loaded · ready to preview or save to Gallery.')};rd.readAsDataURL(f)});
  renderWallpaperPreview();renderSurface();
- const saved=loadApplied();if(saved){apply(saved);say('Saved Dashboard wallpaper restored · clean Step E ready.')}
+ const cleaned=purgeObsoleteWallpaperStorage();
+ const saved=loadApplied();if(saved){apply(saved);say('Saved Dashboard wallpaper restored · single owner ready.'+(cleaned.length?' · obsolete wallpaper cache cleaned':''))}
 })();
 </script>
 </body></html>
