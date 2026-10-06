@@ -779,6 +779,26 @@ body.cf8e-scope-all.cf8e-applied .page:not(#page-wallpaper-studio){
  background-color:transparent!important;
  min-height:calc(100vh - 64px)!important
 }
+
+/* 8E.3 authoritative workspace surface: removes the .work gutter/white strip and follows active route scope. */
+body.cf8e-route-wallpaper .work{
+ background-image:var(--cf8e-bg)!important;
+ background-size:var(--cf8e-size,cover)!important;
+ background-position:var(--cf8e-pos,center)!important;
+ background-repeat:var(--cf8e-repeat,no-repeat)!important;
+ background-attachment:var(--cf8e-attach,fixed)!important;
+ background-color:transparent!important;
+ min-height:calc(100vh - 62px)!important;
+}
+body.cf8e-route-wallpaper .work>.page.active{
+ background:transparent!important;
+ min-height:calc(100vh - 62px - 26px)!important;
+}
+body.cf8e-route-wallpaper .work>.page.active :is(.ml-dashboard-content,.ab-dash){background:transparent!important}
+/* Non-dashboard compatible pages keep their content surfaces readable while the page canvas shows wallpaper. */
+body.cf8e-route-wallpaper.cf8e-nondashboard .work>.page.active> :is(.stage,.ml-subhead,.ml-subbody,.panel,.content-card,.card,.table-wrap){
+ position:relative;
+}
 body.cf8e-applied #page-dashboard .ml-dashboard-content,body.cf8e-applied #page-dashboard .ab-dash{background:transparent!important}
 body.cf8e-applied.cf8e-surface #page-dashboard :is(.ml-kpi,.ml-nav-card,.ml-panel,.ab-kpi,.ab-card,.ab-panel,.kpi,.kpi-card,.nav-card,.navigation-card,.dash-card){
  background:rgba(255,255,255,var(--cf8e-alpha,.85))!important;
@@ -984,7 +1004,7 @@ body.cf8e-applied.cf8e-surface #page-dashboard :is(.ml-kpi,.ml-nav-card,.ml-pane
   <div class="cf8a-wrap">
     <div class="cf8a-head">
       <div><h2>Wallpaper Studio</h2><p>Choose a professional wallpaper or add your own image. Application binding remains isolated for the next step.</p></div>
-      <span>STEP 8E.2 · INDEXEDDB APPLY + FULL PAGE</span>
+      <span>STEP 8E.3 · FULL WORKSPACE + SCOPE BINDING</span>
     </div>
     <div class="cf8a-targets">
       <button class="active" data-cf8-target="dashboard">Dashboard Wallpaper</button>
@@ -4097,7 +4117,20 @@ aside.side .nav .cf7g-real-icon svg{
  function renderSurface(){const cards=[...page.querySelectorAll('.cf8d3-demo-card')],a=+$('seAlpha').value,b=+$('seBlur').value,o=+$('seBorder').value;$('seAlphaOut').value=a+'%';$('seBlurOut').value=b+'px';$('seBorderOut').value=o+'%';let mode=$('seKpi').value,aa=mode==='Solid'?0:mode==='Clear Glass'?Math.min(75,a+25):a;cards.forEach(c=>{c.style.background='rgba(255,255,255,'+(1-aa/100)+')';c.style.backdropFilter='blur('+b+'px)';c.style.borderColor='rgba(255,255,255,'+(o/100)+')';c.style.boxShadow=shadows[$('seShadow').value];c.style.color=$('seText').value==='Light Text'?'#fff':'#263d51'})}
  function applicationState(){return {id:'dashboard',wallpaperId:state.id,name:state.name,background:state.assetData?'asset':state.background,assetData:state.assetData||null,overlay:+$('cf8dOverlay').value/100,position:$('cf8dPosition').value,size:$('cf8dSize').value,repeat:$('cf8dRepeat').value,attach:$('cf8dAttach').value,alpha:1-(+$('seAlpha').value/100),glass:+$('seBlur').value,border:+$('seBorder').value/100,shadow:shadows[$('seShadow').value],scope:$('seScope').value,updated:Date.now()}}
  async function resolveState(st){if(!st)return null;if(st.background==='asset'){let asset=st.assetData;if(!asset&&st.wallpaperId){const w=await dbGet(st.wallpaperId);asset=w?.data||null}return {...st,background:asset?'url("'+asset+'")':'none',assetData:null}}return st}
- function apply(st){document.body.classList.remove('cf8e-scope-main','cf8e-scope-all');if(!st||!st.background||st.background==='none'){document.body.classList.remove('cf8e-applied','cf8e-surface');return false}const dark=Math.max(0,Math.min(.8,st.overlay||0));const bg=dark?'linear-gradient(rgba(0,0,0,'+dark+'),rgba(0,0,0,'+dark+')),'+st.background:st.background;const r=document.documentElement.style;r.setProperty('--cf8e-bg',bg);r.setProperty('--cf8e-size',st.size||'cover');r.setProperty('--cf8e-pos',st.position||'center');r.setProperty('--cf8e-repeat',st.repeat||'no-repeat');r.setProperty('--cf8e-attach',st.attach||'fixed');r.setProperty('--cf8e-alpha',st.alpha??.85);r.setProperty('--cf8e-glass',(st.glass??8)+'px');r.setProperty('--cf8e-border',st.border??.55);r.setProperty('--cf8e-shadow',st.shadow||shadows.Soft);document.body.classList.add('cf8e-applied','cf8e-surface');if(st.scope==='Dashboard + Main Pages')document.body.classList.add('cf8e-scope-main');if(st.scope==='All Compatible Pages')document.body.classList.add('cf8e-scope-all');return true}
+ function activePageId(){const p=document.querySelector('.work > .page.active');return p?.id||''}
+ function routeAllowed(st){
+  const id=activePageId(); if(!id||id==='page-wallpaper-studio')return false;
+  if(id==='page-dashboard')return true;
+  if(st?.scope==='All Compatible Pages')return true;
+  if(st?.scope==='Dashboard + Main Pages')return ['page-purchasing','page-inventory','page-issue-stock','page-gate-pass','page-reports','page-masters','page-design-studio'].includes(id);
+  return false
+ }
+ function syncRouteSurface(st){
+  const ok=!!(st&&st.background&&st.background!=='none'&&routeAllowed(st));
+  document.body.classList.toggle('cf8e-route-wallpaper',ok);
+  document.body.classList.toggle('cf8e-nondashboard',ok&&activePageId()!=='page-dashboard');
+ }
+ function apply(st){document.body.classList.remove('cf8e-scope-main','cf8e-scope-all');if(!st||!st.background||st.background==='none'){document.body.classList.remove('cf8e-applied','cf8e-surface','cf8e-route-wallpaper','cf8e-nondashboard');return false}const dark=Math.max(0,Math.min(.8,st.overlay||0));const bg=dark?'linear-gradient(rgba(0,0,0,'+dark+'),rgba(0,0,0,'+dark+')),'+st.background:st.background;const r=document.documentElement.style;r.setProperty('--cf8e-bg',bg);r.setProperty('--cf8e-size',st.size||'cover');r.setProperty('--cf8e-pos',st.position||'center');r.setProperty('--cf8e-repeat',st.repeat||'no-repeat');r.setProperty('--cf8e-attach',st.attach||'fixed');r.setProperty('--cf8e-alpha',st.alpha??.85);r.setProperty('--cf8e-glass',(st.glass??8)+'px');r.setProperty('--cf8e-border',st.border??.55);r.setProperty('--cf8e-shadow',st.shadow||shadows.Soft);document.body.classList.add('cf8e-applied','cf8e-surface');if(st.scope==='Dashboard + Main Pages')document.body.classList.add('cf8e-scope-main');if(st.scope==='All Compatible Pages')document.body.classList.add('cf8e-scope-all');syncRouteSurface(st);return true}
  async function loadApplied(){try{return await dbGet('dashboard',APPLIED)}catch(e){return null}}
  function resetControls(){ $('cf8dOpacity').value=100;$('cf8dOverlay').value=0;$('cf8dBlur').value=0;$('cf8dBright').value=100;$('cf8dPosition').value='center';$('cf8dSize').value='cover';$('cf8dRepeat').value='no-repeat';$('cf8dAttach').value='fixed';renderWallpaperPreview();say('Wallpaper controls reset.') }
  async function restoreAppliedToStudio(st){if(!st)return;const rs=await resolveState(st);apply(rs);state.id=st.wallpaperId||'none';state.name=st.name||'Wallpaper';state.background=rs.background;state.assetData=st.assetData||null;if($('seScope')&&st.scope)$('seScope').value=st.scope;await renderGallery();const c=grid.querySelector('[data-id="'+CSS.escape(state.id)+'"]');if(c){state.card=c;c.classList.add('selected')}if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · Dashboard';renderWallpaperPreview();say('Saved Dashboard wallpaper restored · IndexedDB persistence ready.')}
@@ -4105,16 +4138,20 @@ aside.side .nav .cf7g-real-icon svg{
  page.addEventListener('click',async e=>{const target=e.target.closest('[data-cf8-target]');if(target){state.target=target.dataset.cf8Target==='sidebar'?'Sidebar':'Dashboard';page.querySelectorAll('[data-cf8-target]').forEach(x=>x.classList.toggle('active',x===target));if($('cf8dSelected'))$('cf8dSelected').textContent=state.name+' · '+state.target;say(state.target+' Wallpaper selected.');return}const card=e.target.closest('#cf8aGrid .cf8a-card');if(card){select(card);return}const id=e.target.closest('button')?.id;if(!id)return;
   if(id==='cf8dReset'){resetControls();return}
   if(id==='cf8dPreviewOnly'){renderWallpaperPreview();renderSurface();say(state.name+' settings preview updated.');return}
-  if(id==='cf8eReset'){const st=await loadApplied();if(st){const rs=await resolveState(st);apply(rs);say('Last applied Dashboard wallpaper restored.')}else say('No saved Dashboard wallpaper yet.');return}
-  if(id==='cf8ePreview'){const st=await resolveState(applicationState());if(apply(st))say(st.name+' previewed on real Dashboard · not saved.');else say('Select a wallpaper first.');return}
-  if(id==='cf8eSave'){const st=applicationState();try{if(st.background==='none'){await dbDel('dashboard');localStorage.removeItem(META_KEY);apply(await resolveState(st));say('Dashboard wallpaper removed and saved.');return}if(st.assetData&&state.id==='customUpload'){const assetId='applied-custom-'+Date.now();await dbPut({id:assetId,name:state.name,category:'Custom',data:st.assetData,created:Date.now()});st.wallpaperId=assetId;st.assetData=null}await dbPut(st,APPLIED);localStorage.setItem(META_KEY,JSON.stringify({id:'dashboard',updated:st.updated}));const verify=await loadApplied();if(!verify)throw new Error('IndexedDB write verification failed');apply(await resolveState(verify));say(st.name+' saved & applied · refresh persistence active.')}catch(err){say('Save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)))}return}
+  if(id==='cf8eReset'){const st=await loadApplied();if(st){const rs=await resolveState(st);cf8eCurrentApplied=rs;apply(rs);say('Last applied Dashboard wallpaper restored.')}else say('No saved Dashboard wallpaper yet.');return}
+  if(id==='cf8ePreview'){const st=await resolveState(applicationState());if(apply(st))say(st.name+' previewed on real workspace · not saved.');else say('Select a wallpaper first.');return}
+  if(id==='cf8eSave'){const st=applicationState();try{if(st.background==='none'){await dbDel('dashboard');localStorage.removeItem(META_KEY);apply(await resolveState(st));say('Dashboard wallpaper removed and saved.');return}if(st.assetData&&state.id==='customUpload'){const assetId='applied-custom-'+Date.now();await dbPut({id:assetId,name:state.name,category:'Custom',data:st.assetData,created:Date.now()});st.wallpaperId=assetId;st.assetData=null}await dbPut(st,APPLIED);localStorage.setItem(META_KEY,JSON.stringify({id:'dashboard',updated:st.updated}));const verify=await loadApplied();if(!verify)throw new Error('IndexedDB write verification failed');cf8eCurrentApplied=await resolveState(verify);apply(cf8eCurrentApplied);say(st.name+' saved & applied · refresh + page scope persistence active.')}catch(err){say('Save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)))}return}
   if(id==='cf8eSaveGallery'){if(!state.card||!state.assetData){say('Choose Image first, then select the uploaded wallpaper.');return}const name=($('cf8eGalleryName').value||'My Wallpaper').trim(),category=$('cf8eGalleryCategory').value||'Custom';try{const wid='custom-'+Date.now();await dbPut({id:wid,name,category,data:state.assetData,created:Date.now()});await renderGallery();const c=grid.querySelector('[data-id="'+wid+'"]');if(c)select(c);say(name+' saved to Wallpaper Gallery.')}catch(err){say('Gallery save failed: '+(err?.name||'Error')+' · '+(err?.message||String(err)))}return}
  });
  ['cf8dOpacity','cf8dOverlay','cf8dBlur','cf8dBright','cf8dPosition','cf8dSize','cf8dRepeat','cf8dAttach'].forEach(id=>$(id)?.addEventListener('input',renderWallpaperPreview));['seAlpha','seBlur','seBorder','seShadow','seKpi','seNav','seButton','seText','seScope'].forEach(id=>$(id)?.addEventListener('input',renderSurface));
  function filter(){const q=$('cf8aSearch').value.toLowerCase(),cat=$('cf8aCat').value;grid.querySelectorAll('.cf8a-card').forEach(c=>c.style.display=((cat==='all'||c.dataset.cat===cat)&&c.textContent.toLowerCase().includes(q))?'':'none')}$('cf8aSearch')?.addEventListener('input',filter);$('cf8aCat')?.addEventListener('change',filter);
  $('cf8cUpload')?.addEventListener('change',()=>{const f=$('cf8cUpload').files?.[0];if(!f)return;if(!f.type.startsWith('image/')){say('Please choose an image file.');return}const rd=new FileReader();rd.onload=()=>{let c=grid.querySelector('[data-id="customUpload"]');if(!c){c=makeCard('customUpload','My Wallpaper','Custom','Image selected from this device','custom-img');grid.prepend(c)}c.querySelector('.custom-img').style.backgroundImage='url("'+rd.result+'")';select(c);say('Custom image loaded · ready to preview, apply or save to Gallery.')};rd.readAsDataURL(f)});
  renderWallpaperPreview();renderSurface();
- loadApplied().then(st=>st&&restoreAppliedToStudio(st));
+ let cf8eCurrentApplied=null;
+ loadApplied().then(async st=>{if(st){cf8eCurrentApplied=await resolveState(st);await restoreAppliedToStudio(st);syncRouteSurface(cf8eCurrentApplied)}});
+ window.addEventListener('hashchange',()=>{if(cf8eCurrentApplied)requestAnimationFrame(()=>syncRouteSurface(cf8eCurrentApplied))});
+ const cf8eRouteObserver=new MutationObserver(()=>{if(cf8eCurrentApplied)syncRouteSurface(cf8eCurrentApplied)});
+ document.querySelectorAll('.work > .page').forEach(p=>cf8eRouteObserver.observe(p,{attributes:true,attributeFilter:['class']}));
 })();
 </script>
 </body></html>
