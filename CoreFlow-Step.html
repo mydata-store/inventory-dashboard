@@ -4533,6 +4533,21 @@ syncCardLive()}
 @media(max-width:850px){.top .td9g-topbar-clock{max-width:75px!important}.top .td9g-compact strong{font-size:11px}}
 @media(max-width:600px){.top .td9g-topbar-clock{display:none!important}}
 </style>
+<style id="td9h-sidebar-scroll-reveal">
+/* Vertical sidebar stays fixed; its navigation alone scrolls to reveal the clock. */
+@media(min-width:641px){
+body:not(.sc61-top):not(.sc61-bottom) .side{min-height:0!important;}
+body:not(.sc61-top):not(.sc61-bottom) .side>.nav{
+ flex:1 1 auto!important;min-height:0!important;max-height:100%!important;
+ overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain;
+ scrollbar-width:thin;scrollbar-color:rgba(145,181,221,.65) transparent;
+}
+body:not(.sc61-top):not(.sc61-bottom) .side>.nav::-webkit-scrollbar{width:5px}
+body:not(.sc61-top):not(.sc61-bottom) .side>.nav::-webkit-scrollbar-thumb{background:rgba(145,181,221,.65);border-radius:9px}
+body:not(.sc61-top):not(.sc61-bottom) .side>.nav>.td9g-sidebar-clock{flex-shrink:0!important;min-height:70px!important;margin-bottom:12px!important;scroll-margin-block:14px}
+}
+@media(max-width:640px){.side>.nav{min-height:0;overflow-y:auto;overscroll-behavior:contain}}
+</style>
 <script id="td9f-placement-binding">
 (()=>{'use strict';const key='coreflow.clock.placements.v9c5c';const targets=['dashboard','sidebar','collapsed','topbar','profile'];let current='dashboard',saved={};const $=id=>document.getElementById(id);try{const a=JSON.parse(localStorage.getItem(key)||'{}');if(a&&typeof a==='object')saved=a}catch(e){}
 function source(){return $('td9cCard')}
@@ -4569,10 +4584,20 @@ function mount(t){
  if(t==='sidebar'||t==='collapsed'){host.style.minHeight='0';}
  if(t==='topbar'){host.style.minHeight='0';}
 }
+function revealSidebarClock(){
+ const nav=document.querySelector('.side > .nav');
+ const clock=nav?.querySelector('.td9f-installed[data-target="sidebar"]:not([style*="display: none"]),.td9f-installed[data-target="collapsed"]:not([style*="display: none"])');
+ if(!nav||!clock)return;
+ const navBox=nav.getBoundingClientRect(),clockBox=clock.getBoundingClientRect();
+ if(clockBox.bottom>navBox.bottom-8||clockBox.top<navBox.top+8){
+   const delta=clockBox.bottom-navBox.bottom+16;
+   nav.scrollTo({top:Math.max(0,nav.scrollTop+delta),behavior:'smooth'});
+ }
+}
 function tickCompact(host){const now=new Date(),tm=host.querySelector('.td9g-live-time'),dt=host.querySelector('.td9g-live-date');if(tm)tm.textContent=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'});if(dt)dt.textContent=now.toLocaleDateString('en-PK',{day:'2-digit',month:'short'});}
 function updateTime(){const original=source();if(!original)return;const live=original.querySelectorAll('.td9-digital,.td9c-gallery-clock,.td9b-needle,.td9c-card-date,.td9c-card-time');document.querySelectorAll('.td9f-installed').forEach(host=>{const t=host.dataset.target,cfg=saved[t];if(!cfg||!cfg.enabled)return;if(t==='topbar'&&cfg.topStyle!=='clock'){tickCompact(host);return;}mount(t)});if(document.querySelector('[data-td9-view="preview"].active, [data-td9-view="preview"].on'))preview()}
 $('td9fTargets').addEventListener('click',e=>{const b=e.target.closest('button[data-target]');if(b)loadTarget(b.dataset.target)});['td9fWidth','td9fScale','td9fAlign','td9fEnabled','td9fOffset','td9fTopHeight','td9fTopStyle'].forEach(id=>$(id).addEventListener('input',preview));$('td9fMulti').addEventListener('change',()=>{$('td9fMultiTargets').hidden=!$('td9fMulti').checked});
-$('td9fApply').addEventListener('click',()=>{const list=$('td9fMulti').checked?[...document.querySelectorAll('#td9fMultiTargets input:checked')].map(x=>x.value):[current];if(!list.length){$('td9fStatus').textContent='Select at least one placement.';return}const card=cloneCard();if(!card){$('td9fStatus').textContent='Open Card Designer and select a clock first.';return}const cfg=settings();for(const t of list){saved[t]={...cfg,html:card.outerHTML};mount(t)}try{localStorage.setItem(key,JSON.stringify(saved));$('td9fStatus').textContent='Applied to '+list.join(', ')+'. Settings saved for refresh.'}catch(e){$('td9fStatus').textContent='Applied temporarily, but persistence failed: '+e.message}});
+$('td9fApply').addEventListener('click',()=>{const list=$('td9fMulti').checked?[...document.querySelectorAll('#td9fMultiTargets input:checked')].map(x=>x.value):[current];if(!list.length){$('td9fStatus').textContent='Select at least one placement.';return}const card=cloneCard();if(!card){$('td9fStatus').textContent='Open Card Designer and select a clock first.';return}const cfg=settings();for(const t of list){saved[t]={...cfg,html:card.outerHTML};mount(t)}if(list.includes('sidebar')||list.includes('collapsed'))setTimeout(revealSidebarClock,180);try{localStorage.setItem(key,JSON.stringify(saved));$('td9fStatus').textContent='Applied to '+list.join(', ')+'. Settings saved for refresh.'}catch(e){$('td9fStatus').textContent='Applied temporarily, but persistence failed: '+e.message}});
 $('td9fRemove').addEventListener('click',()=>{delete saved[current];document.querySelector('.td9f-installed[data-target="'+current+'"]')?.remove();try{localStorage.setItem(key,JSON.stringify(saved));$('td9fStatus').textContent='Removed '+current+' placement.'}catch(e){$('td9fStatus').textContent='Removed temporarily; save failed.'}loadTarget(current)});
 $('td9fReset').addEventListener('click',()=>{delete saved[current];loadTarget(current);$('td9fStatus').textContent='Preview controls reset. Click Save & Apply to commit.'});
 document.querySelector('[data-td9-tab="preview"]')?.addEventListener('click',()=>setTimeout(preview,50));document.querySelectorAll('#td9cCard, #td9cClock').forEach(el=>el.addEventListener('change',preview));
