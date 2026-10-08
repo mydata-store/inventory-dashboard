@@ -4208,4 +4208,57 @@ aside.side .nav .cf7g-real-icon svg{
  (async()=>{await renderGallery();renderWallpaperPreview();renderSurface();try{const st=await get(APPLIED_ID,A);if(st){const rs=await resolve(st);apply(rs);loadDraft(rs);say(state.name+' restored from saved system wallpaper.')}const sideSt=await get(SIDEBAR_ID,A);if(sideSt)applySidebar(await resolve(sideSt));}catch(e){say('Wallpaper system ready.')}})();
 })();
 </script>
+
+<style id="cf8g-unified-studio-css">
+#page-wallpaper-studio .cf8a-targets,#page-wallpaper-studio .cf8d-panel,#page-wallpaper-studio .cf8d3-surface{display:none!important}
+#page-wallpaper-studio .cf8a-head p{max-width:780px}
+#page-wallpaper-studio .cf8c-custom{margin-bottom:14px}
+#page-wallpaper-studio .cf8a-grid [data-id],#page-wallpaper-studio .cf8a-grid button{cursor:pointer}
+.cf8g-targets{display:flex;gap:8px;align-items:center;margin:8px 0 12px;flex-wrap:wrap}
+.cf8g-targets button{border:1px solid #cfe0ef;background:white;padding:10px 15px;border-radius:9px;font-weight:800;cursor:pointer}
+.cf8g-targets button.active{background:#1688ef;color:white;border-color:#1688ef}
+.cf8g-target-note{font-size:11px;color:#5c7088;margin-bottom:9px}
+.cf8g-gallery-save{border-top:1px solid #dce8f2;padding:12px;margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cf8g-gallery-save input,.cf8g-gallery-save select{min-height:35px;border:1px solid #cbdcec;border-radius:7px;padding:5px}
+.cf8g-gallery-save button{border:0;border-radius:8px;background:#1688ef;color:white;padding:10px;font-weight:800;cursor:pointer}
+</style>
+<script id="cf8g-unified-studio-js">
+(function(){
+ function init(){
+ const page=document.getElementById('page-wallpaper-studio'), modal=document.getElementById('cf8ePreviewModal');
+ if(!page||!modal||page.dataset.cf8gReady)return;
+ page.dataset.cf8gReady='1';
+ const heading=page.querySelector('.cf8a-head p');if(heading)heading.textContent='Choose a wallpaper from one gallery. Open Advanced Live Preview to customize Dashboard or Sidebar independently.';
+ const title=page.querySelector('.cf8a-head span');if(title)title.textContent='STEP 8G · UNIFIED WALLPAPER STUDIO';
+ const custom=page.querySelector('.cf8c-custom strong');if(custom)custom.textContent='Add New Wallpaper';
+ const small=page.querySelector('.cf8c-custom small');if(small)small.textContent='Upload an image once, then choose its destination and settings in Advanced Live Preview.';
+ const upload=page.querySelector('.cf8c-upload');if(upload)upload.childNodes.forEach(n=>{if(n.nodeType===3&&n.textContent.trim())n.textContent='Add New Wallpaper '});
+ const top=modal.querySelector('.cf8f-controls');
+ const tabs=document.createElement('div');tabs.className='cf8g-targets';tabs.innerHTML='<button type="button" data-cf8g-target="dashboard" class="active">Dashboard Wallpaper</button><button type="button" data-cf8g-target="sidebar">Sidebar Wallpaper</button>';
+ const note=document.createElement('div');note.className='cf8g-target-note';note.textContent='Select the target. Settings and Save & Apply stay independent.';
+ top.insertBefore(note,top.firstChild);top.insertBefore(tabs,note);
+ const save=page.querySelector('.cf8e-clean-gallery');if(save){save.classList.add('cf8g-gallery-save');top.appendChild(save)}
+ const applyRow=page.querySelector('.cf8e-clean-actions');if(applyRow)applyRow.style.display='none';
+ const pages=document.getElementById('cf8fPages');
+ function target(t){
+   page.querySelector('[data-cf8-target="'+t+'"]')?.click();
+   tabs.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.cf8gTarget===t));
+   const dest=t==='sidebar'?'Sidebar':'Dashboard';
+   pages?.querySelector('[data-p="'+dest+'"]')?.click();
+ }
+ tabs.addEventListener('click',e=>{const b=e.target.closest('[data-cf8g-target]');if(b)target(b.dataset.cf8gTarget)});
+ const previewBtn=document.getElementById('cf8dPreviewOnly');
+ page.querySelector('#cf8aGrid')?.addEventListener('click',e=>{
+   if(e.target.closest('button')?.textContent.trim().toLowerCase().includes('delete'))return;
+   if(e.target.closest('button')?.textContent.trim().toLowerCase().includes('preview')){
+     setTimeout(()=>{previewBtn?.click();target(tabs.querySelector('.active')?.dataset.cf8gTarget||'dashboard')},70);
+   }
+ });
+ const open=document.getElementById('cf8dPreviewOnly');if(open)open.addEventListener('click',()=>setTimeout(()=>target(tabs.querySelector('.active')?.dataset.cf8gTarget||'dashboard'),30));
+ const galleryName=document.getElementById('cf8eGalleryName');if(galleryName)galleryName.placeholder='Wallpaper name';
+ const saveBtn=document.getElementById('cf8eSave');if(saveBtn)saveBtn.textContent='Save & Apply Selected Target';
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
 </body></html>
