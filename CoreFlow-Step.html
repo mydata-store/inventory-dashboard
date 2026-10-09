@@ -4560,7 +4560,26 @@ function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
 function settings(){return {width:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value}}
 function applySettings(node,s){node.style.width=s.width+'%';node.style.justifyContent=s.align==='left'?'flex-start':s.align==='right'?'flex-end':'center';const card=node.querySelector(':scope > *');if(card){const factor=(s.scale/100)*Math.min(1,(node.clientWidth||300)/(parseFloat(card.style.width)||440));card.style.transform='scale('+factor+')';card.style.transformOrigin=s.align==='left'?'left center':s.align==='right'?'right center':'center';node.style.minHeight=Math.max(44,Math.round((parseFloat(card.style.height)||270)*factor))+'px'}}
-function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);applySettings(r,current==='sidebar'||current==='collapsed'?{...settings(),width:100,scale:85}:settings());$('td9fWidthVal').textContent=$('td9fWidth').value+'%';$('td9fScaleVal').textContent=$('td9fScale').value+'%';$('td9fOffsetVal').textContent=$('td9fOffset').value+'px';$('td9fTopHeightVal').textContent=$('td9fTopHeight').value+'px'}
+function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);applySettings(r,current==='sidebar'||current==='collapsed'?{...settings(),width:100,scale:85}:settings());
+if(current==='sidebar'||current==='collapsed'){
+ const narrow=current==='collapsed';
+ const maxW=narrow?64:174,maxH=narrow?62:110;
+ const w=parseFloat(c.style.width)||440,h=parseFloat(c.style.height)||270;
+ const f=Math.min(maxW/w,maxH/h,1);
+ r.style.setProperty('width',(narrow?90:200)+'px','important');
+ r.style.setProperty('height',(Math.ceil(h*f)+16)+'px','important');
+ r.style.setProperty('min-height','0','important');
+ r.style.setProperty('margin','14px auto','important');
+ r.style.setProperty('position','relative','important');
+ c.style.setProperty('position','absolute','important');
+ c.style.setProperty('left','50%','important');c.style.setProperty('top','50%','important');
+ c.style.setProperty('width',w+'px','important');c.style.setProperty('height',h+'px','important');
+ c.style.setProperty('transform','translate(-50%,-50%) scale('+f+')','important');
+ c.style.setProperty('transform-origin','center','important');
+}else{
+ r.style.removeProperty('width');r.style.removeProperty('height');r.style.removeProperty('position');r.style.removeProperty('margin');
+}
+$('td9fWidthVal').textContent=$('td9fWidth').value+'%';$('td9fScaleVal').textContent=$('td9fScale').value+'%';$('td9fOffsetVal').textContent=$('td9fOffset').value+'px';$('td9fTopHeightVal').textContent=$('td9fTopHeight').value+'px'}
 function loadTarget(t){current=t;document.querySelectorAll('#td9fTargets button').forEach(b=>b.classList.toggle('on',b.dataset.target===t));const s=saved[t]||{width:100,scale:t==='collapsed'?40:t==='topbar'?45:t==='sidebar'?55:t==='profile'?45:100,align:'center',enabled:true};$('td9fWidth').value=s.width;$('td9fScale').value=s.scale;$('td9fAlign').value=s.align;$('td9fEnabled').checked=s.enabled;$('td9fOffset').value=s.offset??0;$('td9fTopHeight').value=s.topHeight??38;$('td9fTopStyle').value=s.topStyle||'compact';preview()}
 function mount(t){
  const selector={dashboard:'#page-dashboard .ml-hero-side, #page-dashboard .ab-hero-side, #page-dashboard .ml-hero',sidebar:'.side .nav',collapsed:'.side .nav',topbar:'.top .sp',profile:'.side .profile'}[t];
@@ -4629,9 +4648,34 @@ function revealSidebarClock(){
  }
 }
 function tickCompact(host){const now=new Date(),tm=host.querySelector('.td9g-live-time'),dt=host.querySelector('.td9g-live-date');if(tm)tm.textContent=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'});if(dt)dt.textContent=now.toLocaleDateString('en-PK',{day:'2-digit',month:'short'});}
-function updateTime(){const original=source();if(!original)return;const live=original.querySelectorAll('.td9-digital,.td9c-gallery-clock,.td9b-needle,.td9c-card-date,.td9c-card-time');document.querySelectorAll('.td9f-installed').forEach(host=>{const t=host.dataset.target,cfg=saved[t];if(!cfg||!cfg.enabled)return;if(t==='topbar'&&cfg.topStyle!=='clock'){tickCompact(host);return;}mount(t)});if(document.querySelector('[data-td9-view="preview"].active, [data-td9-view="preview"].on'))preview()}
-$('td9fTargets').addEventListener('click',e=>{const b=e.target.closest('button[data-target]');if(b)loadTarget(b.dataset.target)});['td9fWidth','td9fScale','td9fAlign','td9fEnabled','td9fOffset','td9fTopHeight','td9fTopStyle'].forEach(id=>$(id).addEventListener('input',preview));$('td9fMulti').addEventListener('change',()=>{$('td9fMultiTargets').hidden=!$('td9fMulti').checked});
-$('td9fApply').addEventListener('click',async()=>{const list=$('td9fMulti').checked?[...document.querySelectorAll('#td9fMultiTargets input:checked')].map(x=>x.value):[current];if(!list.length){$('td9fStatus').textContent='Select at least one placement.';return}const card=cloneCard();if(!card){$('td9fStatus').textContent='Open Card Designer and select a clock first.';return}const cfg=settings();for(const t of list){saved[t]={...cfg,html:card.outerHTML};mount(t)}if(list.includes('sidebar')||list.includes('collapsed'))setTimeout(revealSidebarClock,180);$('td9fStatus').textContent='Saving placements…';try{await persistPlacements();$('td9fStatus').textContent='Saved and applied to '+list.join(', ')+'. Settings will remain after refresh.'}catch(e){$('td9fStatus').textContent='Applied for this session, but save failed: '+(e?.message||e)}});
+function updateTime(){const original=source();if(!original)return;const live=original.querySelectorAll('.td9-digital,.td9c-gallery-clock,.td9b-needle,.td9c-card-date,.td9c-card-time');document.querySelectorAll('.td9f-installed').forEach(host=>{const t=host.dataset.target,cfg=saved[t];if(!cfg||!cfg.enabled)return;if(draftActive&&draftTarget===t)return;if(t==='topbar'&&cfg.topStyle!=='clock'){tickCompact(host);return;}mount(t)});if(document.querySelector('[data-td9-view="preview"].active, [data-td9-view="preview"].on'))preview()}
+$('td9fTargets').addEventListener('click',e=>{const b=e.target.closest('button[data-target]');if(b){restoreDraft();loadTarget(b.dataset.target)}});let draftActive=false,draftTarget=null;
+function restoreDraft(){if(draftActive&&draftTarget){mount(draftTarget);draftActive=false;draftTarget=null}}
+function livePlacement(){
+ preview();
+ if(current==='sidebar'||current==='collapsed'){
+   restoreDraft();
+   const t=current,previous=saved[t];
+   const draft=cloneCard();
+   if(!draft)return;
+   saved[t]={...settings(),html:draft.outerHTML};
+   mount(t);
+   if(previous)saved[t]=previous;else delete saved[t];
+   draftActive=true;draftTarget=t;
+   $('td9fStatus').textContent='Live sidebar preview — click Save & Apply Selected to keep changes.';
+ }
+}
+['td9fWidth','td9fScale','td9fAlign','td9fEnabled','td9fOffset','td9fTopHeight','td9fTopStyle'].forEach(id=>$(id).addEventListener('input',livePlacement));$('td9fMulti').addEventListener('change',()=>{$('td9fMultiTargets').hidden=!$('td9fMulti').checked});
+const applyBtn=$('td9fApply');
+const applyOriginal=applyBtn.textContent;
+function applyFeedback(state,message){
+ applyBtn.style.background=state==='success'?'#16834a':state==='error'?'#b91c1c':'#d97706';
+ applyBtn.style.borderColor=applyBtn.style.background;
+ applyBtn.style.color='#fff';
+ applyBtn.textContent=state==='success'?'✓ Saved & Applied':state==='error'?'⚠ Save Failed':'Saving…';
+ $('td9fStatus').textContent=message;
+}
+$('td9fApply').addEventListener('click',async()=>{const list=$('td9fMulti').checked?[...document.querySelectorAll('#td9fMultiTargets input:checked')].map(x=>x.value):[current];if(!list.length){applyFeedback('error','Select at least one placement.');return}const card=cloneCard();if(!card){applyFeedback('error','Open Card Designer and select a clock first.');return}restoreDraft();const cfg=settings();for(const t of list){saved[t]={...cfg,html:card.outerHTML};mount(t)}if(list.includes('sidebar')||list.includes('collapsed'))setTimeout(revealSidebarClock,180);applyFeedback('saving','Saving placements…');applyBtn.disabled=true;try{await persistPlacements();applyFeedback('success','Saved and applied to '+list.join(', ')+'. Settings will remain after refresh.')}catch(e){applyFeedback('error','Applied for this session, but save failed: '+(e?.message||e))}finally{applyBtn.disabled=false}});
 $('td9fRemove').addEventListener('click',async()=>{delete saved[current];document.querySelector('.td9f-installed[data-target="'+current+'"]')?.remove();try{await persistPlacements();$('td9fStatus').textContent='Removed '+current+' placement and saved.'}catch(e){$('td9fStatus').textContent='Removed temporarily; save failed: '+(e?.message||e)}loadTarget(current)});
 $('td9fReset').addEventListener('click',()=>{delete saved[current];loadTarget(current);$('td9fStatus').textContent='Preview controls reset. Click Save & Apply to commit.'});
 document.querySelector('[data-td9-tab="preview"]')?.addEventListener('click',()=>setTimeout(preview,50));document.querySelectorAll('#td9cCard, #td9cClock').forEach(el=>el.addEventListener('change',preview));
