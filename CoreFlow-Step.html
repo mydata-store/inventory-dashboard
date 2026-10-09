@@ -4549,7 +4549,7 @@ body:not(.sc61-top):not(.sc61-bottom) .side>.nav>.td9g-sidebar-clock{flex-shrink
 @media(max-width:640px){.side>.nav{min-height:0;overflow-y:auto;overscroll-behavior:contain}}
 </style>
 <script id="td9f-placement-binding">
-(()=>{'use strict';const key='coreflow.clock.placements.v9c5c';const targets=['dashboard','sidebar','collapsed','topbar','profile'];let current='dashboard',saved={};const $=id=>document.getElementById(id);try{const a=JSON.parse(localStorage.getItem(key)||'{}');if(a&&typeof a==='object')saved=a}catch(e){}
+(()=>{'use strict';const key='coreflow.clock.placements.v9c5c';const targets=['dashboard','sidebar','collapsed','topbar','profile'];let current='dashboard',saved={},draftConfig=null;const $=id=>document.getElementById(id);try{const a=JSON.parse(localStorage.getItem(key)||'{}');if(a&&typeof a==='object')saved=a}catch(e){}
 // Placement records use IndexedDB because cloned clock artwork can exceed localStorage quota.
 const placementDB='coreflow-clock-placement-store',placementStore='snapshots';
 function placementOpen(){return new Promise((resolve,reject)=>{const req=indexedDB.open(placementDB,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(placementStore))db.createObjectStore(placementStore)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
@@ -4560,7 +4560,7 @@ function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
 function settings(){return {width:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value}}
 function applySettings(node,s){node.style.width=s.width+'%';node.style.justifyContent=s.align==='left'?'flex-start':s.align==='right'?'flex-end':'center';const card=node.querySelector(':scope > *');if(card){const factor=(s.scale/100)*Math.min(1,(node.clientWidth||300)/(parseFloat(card.style.width)||440));card.style.transform='scale('+factor+')';card.style.transformOrigin=s.align==='left'?'left center':s.align==='right'?'right center':'center';node.style.minHeight=Math.max(44,Math.round((parseFloat(card.style.height)||270)*factor))+'px'}}
-function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);applySettings(r,current==='sidebar'||current==='collapsed'?{...settings(),width:100,scale:85}:settings());
+function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);tickClockDOM(r,new Date());applySettings(r,current==='sidebar'||current==='collapsed'?{...settings(),width:100,scale:85}:settings());
 if(current==='sidebar'||current==='collapsed'){
  const narrow=current==='collapsed';
  const maxW=narrow?64:174,maxH=narrow?62:110;
@@ -4569,7 +4569,7 @@ if(current==='sidebar'||current==='collapsed'){
  r.style.setProperty('width',(narrow?90:200)+'px','important');
  r.style.setProperty('height',(Math.ceil(h*f)+16)+'px','important');
  r.style.setProperty('min-height','0','important');
- r.style.setProperty('margin','14px auto','important');
+ r.style.setProperty('margin',(14+(+$('td9fOffset').value||0))+'px auto 14px','important');
  r.style.setProperty('position','relative','important');
  c.style.setProperty('position','absolute','important');
  c.style.setProperty('left','50%','important');c.style.setProperty('top','50%','important');
@@ -4619,7 +4619,9 @@ function mount(t){
    host.style.setProperty('max-height',(renderedH+10)+'px','important');
    host.style.setProperty('height',(renderedH+10)+'px','important');
    host.style.setProperty('width','100%','important');
-   host.style.setProperty('margin','5px 0','important');host.style.setProperty('scroll-margin-top','12px','important');
+   const offset=Math.max(0,Math.min(120,+cfg.offset||0));
+   host.style.setProperty('margin',(5+offset)+'px 0 5px','important');
+   host.style.setProperty('scroll-margin-top','12px','important');
    host.style.setProperty('padding','0','important');
    host.style.setProperty('position','relative','important');
    host.style.removeProperty('bottom');
@@ -4636,6 +4638,7 @@ function mount(t){
    c.style.setProperty('transform-origin','center center','important');
  }
  if(t==='topbar'){host.style.minHeight='0';}
+ tickClockDOM(host,new Date());
 }
 function revealSidebarClock(){
  const nav=document.querySelector('.side > .nav');
@@ -4648,9 +4651,34 @@ function revealSidebarClock(){
  }
 }
 function tickCompact(host){const now=new Date(),tm=host.querySelector('.td9g-live-time'),dt=host.querySelector('.td9g-live-date');if(tm)tm.textContent=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'});if(dt)dt.textContent=now.toLocaleDateString('en-PK',{day:'2-digit',month:'short'});}
-function updateTime(){const original=source();if(!original)return;const live=original.querySelectorAll('.td9-digital,.td9c-gallery-clock,.td9b-needle,.td9c-card-date,.td9c-card-time');document.querySelectorAll('.td9f-installed').forEach(host=>{const t=host.dataset.target,cfg=saved[t];if(!cfg||!cfg.enabled)return;if(draftActive&&draftTarget===t)return;if(t==='topbar'&&cfg.topStyle!=='clock'){tickCompact(host);return;}mount(t)});if(document.querySelector('[data-td9-view="preview"].active, [data-td9-view="preview"].on'))preview()}
+function tickClockDOM(host,now){
+ const h=now.getHours(),m=now.getMinutes(),sec=now.getSeconds(),ms=now.getMilliseconds();
+ const hour=(h%12)*30+m*.5+sec/120,minute=m*6+sec*.1,second=(sec+ms/1000)*6;
+ host.querySelectorAll('.td9-clockface').forEach(f=>{
+  [['.td9-hour',hour],['.td9-minute',minute],['.td9-second',second]].forEach(([q,v])=>{const e=f.querySelector(q);if(e)e.style.transform='rotate('+v+'deg)'});
+ });
+ host.querySelectorAll('.td9b-dial').forEach(f=>{
+  [['.hour',hour],['.minute',minute],['.second',second]].forEach(([q,v])=>{const e=f.querySelector(q);if(e)e.style.transform='rotate('+v+'deg)'});
+ });
+ host.querySelectorAll('[data-td9-time]').forEach(e=>e.textContent=[h,m,sec].map(x=>String(x).padStart(2,'0')).join(':'));
+ host.querySelectorAll('[data-td9-date]').forEach(e=>e.textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long'}).toUpperCase());
+ const time=host.querySelector('.td9c-card-time,#td9cCardDate,.td9c-card-date');
+ if(time&&time.firstChild?.nodeType===3)time.firstChild.textContent=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ host.querySelectorAll('.td9c-card-date small').forEach(e=>e.textContent=now.toLocaleDateString('en-PK',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}));
+}
+function updateTime(){
+ const now=new Date();
+ document.querySelectorAll('.td9f-installed').forEach(host=>{
+  const t=host.dataset.target,cfg=(draftActive&&draftTarget===t&&draftConfig)||saved[t];
+  if(!cfg||!cfg.enabled)return;
+  if(t==='topbar'&&cfg.topStyle!=='clock'){tickCompact(host);return}
+  tickClockDOM(host,now);
+ });
+ const r=$('td9fRender');if(r)tickClockDOM(r,now);
+}
+
 $('td9fTargets').addEventListener('click',e=>{const b=e.target.closest('button[data-target]');if(b){restoreDraft();loadTarget(b.dataset.target);markDirty()}});let draftActive=false,draftTarget=null;
-function restoreDraft(){if(draftActive&&draftTarget){mount(draftTarget);draftActive=false;draftTarget=null}}
+function restoreDraft(){if(draftActive&&draftTarget){draftActive=false;draftConfig=null;const t=draftTarget;draftTarget=null;mount(t)}}
 function livePlacement(){
  markDirty();preview();
  if(current==='sidebar'||current==='collapsed'){
@@ -4660,6 +4688,7 @@ function livePlacement(){
    if(!draft)return;
    saved[t]={...settings(),html:draft.outerHTML};
    mount(t);
+   draftConfig=saved[t];
    if(previous)saved[t]=previous;else delete saved[t];
    draftActive=true;draftTarget=t;
    $('td9fStatus').textContent='Live sidebar preview — click Save & Apply Selected to keep changes.';
@@ -4690,6 +4719,6 @@ document.querySelector('[data-td9-tab="preview"]')?.addEventListener('click',()=
 loadTarget('dashboard');for(const t of targets)if(saved[t])mount(t);
 // Restore IndexedDB first; migrate previous localStorage records only if no DB record exists.
 (async()=>{try{const stored=await placementRead();if(stored&&typeof stored==='object'){saved=stored;for(const t of targets){document.querySelector('.td9f-installed[data-target="'+t+'"]')?.remove();if(saved[t])mount(t)}loadTarget(current)}else if(Object.keys(saved).length){await persistPlacements()}}catch(e){console.warn('Clock placement restore:',e)}})();
-setInterval(()=>{if(!document.hidden)updateTime()},1000);
+setInterval(()=>{if(!document.hidden)updateTime()},100);
 })();
 </script></body></html>
