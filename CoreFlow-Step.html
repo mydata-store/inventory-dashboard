@@ -1093,7 +1093,7 @@ body.cf8i-dashboard-only:has(.page.active:not(#page-dashboard)) .work{background
  <div class="td9-view" data-td9-view="preview"><div class="td9-sectionhead"><div><h2>Responsive Clock Placement Studio</h2><p>Preview and apply your clock card independently to each area.</p></div><button class="td9-primary" id="td9fApply">Save &amp; Apply Selected</button></div><div class="td9f-layout"><div class="td9b-panel"><h3>1. Select Clock Design</h3>
 <label>Saved Card Design<select id="td9fCardSource"><option value="current">Current Card Designer</option></select></label>
 <label>Clock Style<select id="td9fClockSource"><option value="">Loading clock gallery…</option></select></label>
-<p class="td9b-hint">Select a saved card or clock style first, then choose a placement below. Every placement can have its own saved clock.</p>
+<p class="td9b-hint">Choose a saved card (optional), then select the clock style. The preview updates immediately before you apply. Every placement can have its own saved clock.</p>
 <h3>2. Placement Targets</h3><div class="td9f-targets" id="td9fTargets"><button data-target="dashboard" class="on">Dashboard</button><button data-target="sidebar">Sidebar Expanded</button><button data-target="collapsed">Sidebar Collapsed</button><button data-target="topbar">Topbar</button><button data-target="profile">Profile Card</button></div><label class="td9f-check"><input type="checkbox" id="td9fMulti"> Apply to multiple selected targets</label><div id="td9fMultiTargets" class="td9f-multi" hidden><label><input type="checkbox" value="dashboard" checked> Dashboard</label><label><input type="checkbox" value="sidebar"> Sidebar Expanded</label><label><input type="checkbox" value="collapsed"> Sidebar Collapsed</label><label><input type="checkbox" value="topbar"> Topbar</label><label><input type="checkbox" value="profile"> Profile Card</label></div><label>Sidebar Position <output id="td9fOffsetVal">0px</output><input id="td9fOffset" type="range" min="0" max="120" value="0"></label><label>Topbar Clock Height <output id="td9fTopHeightVal">38px</output><input id="td9fTopHeight" type="range" min="24" max="58" value="38"></label><label>Topbar Style<select id="td9fTopStyle"><option value="compact">Compact (time + date)</option><option value="clock">Mini Clock</option></select></label><label>Placement Width <output id="td9fWidthVal">100%</output><input id="td9fWidth" type="range" min="35" max="100" value="100"></label><label>Placement Scale <output id="td9fScaleVal">100%</output><input id="td9fScale" type="range" min="30" max="110" value="100"></label><label>Placement Alignment<select id="td9fAlign"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select></label><label class="td9f-check"><input type="checkbox" id="td9fEnabled" checked> Show clock in this area</label><div class="td9b-actions"><button id="td9fReset" type="button">Reset Selected Placement</button><button id="td9fRemove" type="button">Remove Applied Clock</button></div><p id="td9fStatus" class="td9b-hint">Select an area, then Save &amp; Apply. Designs remain independent.</p></div><div class="td9b-panel"><h3>Live Responsive Preview</h3><div class="td9f-preview" id="td9fStage"><div class="td9f-preview-header">CoreFlow <span>ABC Paper Mills</span></div><div class="td9f-preview-content" id="td9fContent"><div class="td9f-render" id="td9fRender"></div></div></div><p class="td9b-hint">Preview uses the selected clock and card design. Save &amp; Apply stores the selected appearance for the chosen placement. The original clock artwork is unchanged.</p></div></div></div>
  <div class="td9-foot"><span>9C scope: Clock Builder and Card Designer remain independent. Global placement is reserved for Step 9F.</span><span>Future steps: 9B → 9G</span></div>
  </div></section>
@@ -4562,27 +4562,28 @@ async function placementRead(){const db=await placementOpen();try{return await n
 async function persistPlacements(){await placementWrite(saved);try{localStorage.removeItem(key)}catch(e){}}
 function refreshSources(){
  const card=$('td9fCardSource'),clock=$('td9fClockSource'),orig=$('td9cClock');
- const priorCard=card.value||'current',priorClock=clock.value;
- let cards=[];try{cards=JSON.parse(localStorage.getItem('coreflow.time.card-designs.v9c')||'[]')}catch(e){}
+ const oldCard=card.value||'current',oldClock=clock.value;
+ let cards=[];try{const v=JSON.parse(localStorage.getItem('coreflow.time.card-designs.v9c')||'[]');if(Array.isArray(v))cards=v}catch(e){}
  card.replaceChildren(new Option('Current Card Designer','current'));
- cards.forEach((v,i)=>card.add(new Option(v.Name||('Saved Card '+(i+1)),v.id)));
- card.value=[...card.options].some(o=>o.value===priorCard)?priorCard:'current';
+ cards.forEach((v,i)=>card.append(new Option(v.Name||('Saved Card '+(i+1)),v.id)));
+ card.value=Array.from(card.options).some(o=>o.value===oldCard)?oldCard:'current';
  clock.replaceChildren();
- if(orig){for(const item of orig.children){
-  if(item.tagName==='OPTGROUP'){const group=document.createElement('optgroup');group.label=item.label;for(const o of item.children)group.add(new Option(o.textContent,o.value));clock.add(group)}
-  else if(item.tagName==='OPTION')clock.add(new Option(item.textContent,item.value));
- }}
- clock.value=[...clock.options].some(o=>o.value===priorClock)?priorClock:(orig?.value||'gallery:analog');
+ // The original clock gallery is populated by the existing Card Designer owner.
+ // Clone its option groups rather than attempting optgroup.add(), which throws.
+ if(orig){Array.from(orig.children).forEach(node=>clock.append(node.cloneNode(true)))}
+ if(!clock.options.length){clock.append(new Option('Built-in Analog','gallery:analog'))}
+ clock.value=Array.from(clock.options).some(o=>o.value===oldClock)?oldClock:(orig?.value||clock.options[0].value);
+ if(clock.selectedIndex<0)clock.selectedIndex=0;
 }
 function selectedCard(){
  const card=$('td9fCardSource'),clock=$('td9fClockSource'),orig=$('td9cClock');
  if(card.value!=='current'){
-  const savedButtons=[...document.querySelectorAll('#td9cSaved article button')];
+  const savedButtons=[...document.querySelectorAll('#td9cSaved article button:first-of-type')];
   let cards=[];try{cards=JSON.parse(localStorage.getItem('coreflow.time.card-designs.v9c')||'[]')}catch(e){}
   const idx=cards.findIndex(c=>c.id===card.value);
-  if(idx>=0&&savedButtons[idx])savedButtons[idx].click();
+  if(idx>=0&&savedButtons[idx]){savedButtons[idx].click();clock.value=orig.value;}
  }
- if(orig&&clock.value&&orig.value!==clock.value){orig.value=clock.value;orig.dispatchEvent(new Event('change',{bubbles:true}))}
+ if(orig&&clock.value){orig.value=clock.value;orig.dispatchEvent(new Event('change',{bubbles:true}))}
 }
 function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
@@ -4744,8 +4745,8 @@ $('td9fApply').addEventListener('click',async()=>{const list=$('td9fMulti').chec
 $('td9fRemove').addEventListener('click',async()=>{delete saved[current];document.querySelector('.td9f-installed[data-target="'+current+'"]')?.remove();try{await persistPlacements();$('td9fStatus').textContent='Removed '+current+' placement and saved.'}catch(e){$('td9fStatus').textContent='Removed temporarily; save failed: '+(e?.message||e)}loadTarget(current)});
 $('td9fReset').addEventListener('click',()=>{delete saved[current];loadTarget(current);$('td9fStatus').textContent='Preview controls reset. Click Save & Apply to commit.'});
 document.querySelector('[data-td9-tab="preview"]')?.addEventListener('click',()=>setTimeout(preview,50));document.querySelectorAll('#td9cCard, #td9cClock').forEach(el=>el.addEventListener('change',preview));
-$('td9fCardSource').addEventListener('change',()=>{selectedCard();refreshSources();markDirty();preview()});
-$('td9fClockSource').addEventListener('change',()=>{selectedCard();markDirty();preview()});
+$('td9fCardSource').addEventListener('change',()=>{selectedCard();markDirty();preview()});
+$('td9fClockSource').addEventListener('change',()=>{const orig=$('td9cClock');orig.value=$('td9fClockSource').value;orig.dispatchEvent(new Event('change',{bubbles:true}));markDirty();preview()});
 document.querySelector('[data-td9-tab="preview"]')?.addEventListener('click',()=>setTimeout(()=>{refreshSources();preview()},80));
 refreshSources();
 loadTarget('dashboard');for(const t of targets)if(saved[t])mount(t);
