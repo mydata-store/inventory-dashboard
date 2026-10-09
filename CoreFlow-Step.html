@@ -4544,7 +4544,7 @@ body:not(.sc61-top):not(.sc61-bottom) .side>.nav{
 }
 body:not(.sc61-top):not(.sc61-bottom) .side>.nav::-webkit-scrollbar{width:5px}
 body:not(.sc61-top):not(.sc61-bottom) .side>.nav::-webkit-scrollbar-thumb{background:rgba(145,181,221,.65);border-radius:9px}
-body:not(.sc61-top):not(.sc61-bottom) .side>.nav>.td9g-sidebar-clock{flex-shrink:0!important;min-height:70px!important;margin-bottom:12px!important;scroll-margin-block:14px}
+body:not(.sc61-top):not(.sc61-bottom) .side>.nav>.td9g-sidebar-clock{flex-shrink:0!important;min-height:0!important;margin-bottom:5px!important;scroll-margin-block:8px;background:rgba(13,38,68,.92);border-radius:10px}
 }
 @media(max-width:640px){.side>.nav{min-height:0;overflow-y:auto;overscroll-behavior:contain}}
 </style>
@@ -4554,7 +4554,7 @@ function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
 function settings(){return {width:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value}}
 function applySettings(node,s){node.style.width=s.width+'%';node.style.justifyContent=s.align==='left'?'flex-start':s.align==='right'?'flex-end':'center';const card=node.querySelector(':scope > *');if(card){const factor=(s.scale/100)*Math.min(1,(node.clientWidth||300)/(parseFloat(card.style.width)||440));card.style.transform='scale('+factor+')';card.style.transformOrigin=s.align==='left'?'left center':s.align==='right'?'right center':'center';node.style.minHeight=Math.max(44,Math.round((parseFloat(card.style.height)||270)*factor))+'px'}}
-function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);applySettings(r,settings());$('td9fWidthVal').textContent=$('td9fWidth').value+'%';$('td9fScaleVal').textContent=$('td9fScale').value+'%';$('td9fOffsetVal').textContent=$('td9fOffset').value+'px';$('td9fTopHeightVal').textContent=$('td9fTopHeight').value+'px'}
+function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);applySettings(r,current==='sidebar'||current==='collapsed'?{...settings(),width:100,scale:85}:settings());$('td9fWidthVal').textContent=$('td9fWidth').value+'%';$('td9fScaleVal').textContent=$('td9fScale').value+'%';$('td9fOffsetVal').textContent=$('td9fOffset').value+'px';$('td9fTopHeightVal').textContent=$('td9fTopHeight').value+'px'}
 function loadTarget(t){current=t;document.querySelectorAll('#td9fTargets button').forEach(b=>b.classList.toggle('on',b.dataset.target===t));const s=saved[t]||{width:100,scale:t==='collapsed'?40:t==='topbar'?45:t==='sidebar'?55:t==='profile'?45:100,align:'center',enabled:true};$('td9fWidth').value=s.width;$('td9fScale').value=s.scale;$('td9fAlign').value=s.align;$('td9fEnabled').checked=s.enabled;$('td9fOffset').value=s.offset??0;$('td9fTopHeight').value=s.topHeight??38;$('td9fTopStyle').value=s.topStyle||'compact';preview()}
 function mount(t){
  const selector={dashboard:'#page-dashboard .ml-hero-side, #page-dashboard .ab-hero-side, #page-dashboard .ml-hero',sidebar:'.side .nav',collapsed:'.side .nav',topbar:'.top .sp',profile:'.side .profile'}[t];
@@ -4582,28 +4582,33 @@ function mount(t){
  applySettings(host,cfg);
  if(t==='dashboard'){host.style.maxHeight='100%';host.style.margin='0';host.style.minHeight='0';}
  if(t==='sidebar'||t==='collapsed'){
-   host.style.minHeight='0';
-   host.style.marginTop='4px';
-   host.style.marginBottom='6px';
-   host.style.padding='2px';
-   host.style.maxHeight=t==='collapsed'?'72px':'132px';
-   host.style.overflow='visible';
+   // Sidebar uses one bounded scale, not placement width * scale * auto-fit.
+   const collapsed=t==='collapsed';
    const naturalW=parseFloat(c.style.width)||440;
    const naturalH=parseFloat(c.style.height)||270;
-   const availableW=Math.max(85,Math.min((host.clientWidth||190)-12,t==='collapsed'?65:172));
-   const availableH=t==='collapsed'?60:118;
+   const availableW=collapsed?64:Math.min(174,Math.max(125,(anchor.clientWidth||195)-16));
+   const availableH=collapsed?62:110;
    const factor=Math.min(availableW/naturalW,availableH/naturalH,1);
-   c.style.transform='scale('+factor+')';
-   c.style.transformOrigin='center center';
-   c.style.position='absolute';
-   c.style.left='50%';
-   c.style.top='50%';
-   c.style.marginLeft=(-naturalW/2)+'px';
-   c.style.marginTop=(-naturalH/2)+'px';
-   host.style.position='relative';
-   host.style.height=Math.ceil(naturalH*factor+8)+'px';
-   host.style.width='100%';
-   host.style.flex='0 0 auto';
+   const renderedH=Math.ceil(naturalH*factor);
+   host.style.setProperty('min-height','0','important');
+   host.style.setProperty('max-height',(renderedH+10)+'px','important');
+   host.style.setProperty('height',(renderedH+10)+'px','important');
+   host.style.setProperty('width','100%','important');
+   host.style.setProperty('margin','5px 0','important');
+   host.style.setProperty('padding','0','important');
+   host.style.setProperty('position','sticky','important');
+   host.style.setProperty('bottom','4px','important');
+   host.style.setProperty('z-index','5','important');
+   host.style.setProperty('overflow','hidden','important');
+   host.style.setProperty('flex','0 0 auto','important');
+   c.style.setProperty('width',naturalW+'px','important');
+   c.style.setProperty('height',naturalH+'px','important');
+   c.style.setProperty('position','absolute','important');
+   c.style.setProperty('left','50%','important');
+   c.style.setProperty('top','50%','important');
+   c.style.setProperty('margin','0','important');
+   c.style.setProperty('transform','translate(-50%,-50%) scale('+factor+')','important');
+   c.style.setProperty('transform-origin','center center','important');
  }
  if(t==='topbar'){host.style.minHeight='0';}
 }
