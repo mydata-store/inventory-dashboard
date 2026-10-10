@@ -4898,20 +4898,20 @@ function applyDashboardLayout(card,cfg){
   face.style.setProperty('margin','0','important');
   const info=card.querySelector('.td9c-card-date');
   if(info)info.style.setProperty('display','none','important');
-  // Maintain a predictable viewport for standalone 450px-wide clock artwork.
-  // The entire document (including SVG/animation) stays unmodified.
-  const frameW=450,frameH=280;
-  const fit=Math.min(width/frameW,height/frameH);
+  // The imported document owns the complete clock composition. Fill the real
+  // dashboard card viewport directly; never scale an unrelated 450x280 iframe.
+  // The outer card is scaled ONCE by the existing dashboard placement controller.
   importedFrame.style.setProperty('position','absolute','important');
-  importedFrame.style.setProperty('left','50%','important');
-  importedFrame.style.setProperty('top','50%','important');
-  importedFrame.style.setProperty('width',frameW+'px','important');
-  importedFrame.style.setProperty('height',frameH+'px','important');
+  importedFrame.style.setProperty('inset','0','important');
+  importedFrame.style.setProperty('left','0','important');
+  importedFrame.style.setProperty('top','0','important');
+  importedFrame.style.setProperty('width','100%','important');
+  importedFrame.style.setProperty('height','100%','important');
+  importedFrame.style.setProperty('min-width','0','important');
   importedFrame.style.setProperty('max-width','none','important');
   importedFrame.style.setProperty('max-height','none','important');
   importedFrame.style.setProperty('border','0','important');
-  importedFrame.style.setProperty('transform','translate(-50%,-50%) scale('+fit+')','important');
-  importedFrame.style.setProperty('transform-origin','center center','important');
+  importedFrame.style.setProperty('transform','none','important');
   return;
  }
 
@@ -5473,13 +5473,16 @@ function cfRenderFourStylePackage(pkg){
  const p=cfNormalizeFourStylePackage(pkg),c=p.colors,st=p.clockStyle;
  const safe=str=>String(str||'').replace(/[&<>'"`]/g,'');
  const marks=[];for(let i=0;i<60;i++){const a=i*Math.PI/30-Math.PI/2,major=i%5===0,outer=major?82:81,inner=major?69:77;marks.push(`<line x1="${100+inner*Math.cos(a)}" y1="${100+inner*Math.sin(a)}" x2="${100+outer*Math.cos(a)}" y2="${100+outer*Math.sin(a)}" stroke="${major?c.marker:c.minuteMarker}" stroke-width="${major?3:1}" stroke-linecap="round"/>`);}
- const carbon=/carbon/i.test([st.dial,st.bezel,p.name].join(' ')),rose=/rose/i.test([st.dial,st.bezel,p.name].join(' '));
- const pattern=carbon?`<pattern id="texture" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(32)"><path d="M0 0V7" stroke="${c.minuteMarker}" opacity=".14" stroke-width="2"/></pattern>`:`<radialGradient id="shine"><stop stop-color="${c.backgroundSecondary}"/><stop offset=".73" stop-color="${c.face}"/><stop offset="1" stop-color="${c.background}"/></radialGradient>`;
- const dialfill=carbon?'url(#texture)':'url(#shine)';
+ const carbon=/carbon/i.test([st.dial,st.bezel].join(' ')),rose=/rose|satin|crystal/i.test([st.dial,st.bezel,st.hourMarkers].join(' '));
+ const pattern=carbon?`<pattern id="texture" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(32)"><path d="M0 0V7" stroke="${c.minuteMarker}" opacity=".20" stroke-width="2"/></pattern><radialGradient id="carbonDial" cx="34%" cy="23%" r="85%"><stop stop-color="${c.backgroundSecondary}"/><stop offset=".52" stop-color="${c.face}"/><stop offset="1" stop-color="${c.background}"/></radialGradient>`:`<radialGradient id="shine"><stop stop-color="${c.backgroundSecondary}"/><stop offset=".73" stop-color="${c.face}"/><stop offset="1" stop-color="${c.background}"/></radialGradient>`;
+ const dialfill=carbon?'url(#carbonDial)':'url(#shine)';
+ const bezelEffect= /brushed|silver/i.test(st.bezel||'') ? 'brushed' : (/polished|rose/i.test(st.bezel||'')?'polished':'metal');
+ const hourHandShape=/sword/i.test(st.hands?.hour||'')?'M96.3 113L96.3 70L100 48L103.7 70L103.7 113Z':'M97.2 113L96.4 66L100 52L103.6 66L102.8 113Z';
+ const minuteHandShape=/sword/i.test(st.hands?.minute||'')?'M98 116L97.4 43L100 25L102.6 43L102 116Z':'M98 115L98 42L100 29L102 42L102 115Z';
  const title=safe(p.name);
  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
  *{box-sizing:border-box}html,body{height:100%;width:100%;margin:0;overflow:hidden;font-family:Inter,'Segoe UI',Arial,sans-serif}body{background:transparent}.card{width:100%;height:100%;display:flex;gap:2%;justify-content:space-evenly;align-items:center;padding:2.5%;background:linear-gradient(135deg,${c.background},${c.backgroundSecondary});border-radius:14px;overflow:hidden;color:${c.time}}.clock{height:min(94%,94vh);width:auto;max-width:59%;aspect-ratio:1;min-width:0;flex-shrink:1;filter:drop-shadow(0 0 8px ${c.accent}70)}.info{min-width:0;flex:0 1 39%;text-align:center;white-space:nowrap}.time{font-size:clamp(11px,4vh,32px);font-weight:800;font-variant-numeric:tabular-nums}.day{font-size:clamp(10px,2.5vh,19px);margin-top:5px}.date{font-size:clamp(9px,2.2vh,16px);margin-top:5px;opacity:.88}@media(max-width:220px){.card{flex-direction:column;gap:0;padding:2%}.clock{height:min(75%,75vh);max-width:95%}.info{flex:0 0 auto}.time{font-size:11px}.day,.date{display:none}}
- </style></head><body><div class="card"><svg class="clock" viewBox="0 0 200 200" role="img" aria-label="${title}"><defs><linearGradient id="bezel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${c.hour}"/><stop offset=".5" stop-color="${c.accent}"/><stop offset="1" stop-color="${c.minute}"/></linearGradient>${pattern}</defs><circle cx="100" cy="100" r="98" fill="${c.background}" stroke="url(#bezel)" stroke-width="4"/><circle cx="100" cy="100" r="91" fill="${c.face}" stroke="${c.accent}" stroke-width="2"/><circle cx="100" cy="100" r="85" fill="${dialfill}" stroke="${c.minuteMarker}" stroke-width=".5"/>${marks.join('')}<path id="hour" d="M97.2 113L96.4 66L100 52L103.6 66L102.8 113Z" fill="${c.hour}"/><path id="minute" d="M98 115L98 42L100 29L102 42L102 115Z" fill="${c.minute}"/><path id="second" d="M99.2 125L99.2 25L100.8 25L100.8 125Z" fill="${c.second}"/><circle cx="100" cy="100" r="5" fill="${c.accent}" stroke="${c.hour}" stroke-width="1.3"/></svg><div class="info"><div class="time" id="time"></div><div class="day" id="day"></div><div class="date" id="date"></div></div></div><script>(function(){function tick(){const d=new Date(),s=d.getSeconds()+d.getMilliseconds()/1000,m=d.getMinutes()+s/60,h=d.getHours()%12+m/60;for(const [id,a] of [['hour',h*30],['minute',m*6],['second',s*6]])document.getElementById(id).setAttribute('transform','rotate('+a+' 100 100)');document.getElementById('time').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});document.getElementById('day').textContent=d.toLocaleDateString('en-GB',{weekday:'long'});document.getElementById('date').textContent=d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});}tick();setInterval(tick,80)})();<\/script></body></html>`;
+ </style></head><body><div class="card"><svg class="clock" viewBox="0 0 200 200" role="img" aria-label="${title}"><defs><linearGradient id="bezel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${c.hour}"/><stop offset=".21" stop-color="${c.accent}"/><stop offset=".42" stop-color="${c.minute}"/><stop offset=".67" stop-color="${c.accent}"/><stop offset=".83" stop-color="${c.hour}"/><stop offset="1" stop-color="${c.minute}"/></linearGradient><radialGradient id="gloss"><stop stop-color="${c.backgroundSecondary}" stop-opacity=".20"/><stop offset=".5" stop-color="${c.accent}" stop-opacity=".055"/><stop offset="1" stop-color="${c.background}" stop-opacity=".05"/></radialGradient>${pattern}</defs><circle cx="100" cy="100" r="98" fill="${c.background}" stroke="url(#bezel)" stroke-width="${bezelEffect==='polished'?6:4}"/><circle cx="100" cy="100" r="92" fill="${c.face}" stroke="${c.accent}" stroke-width="2"/><circle cx="100" cy="100" r="86" fill="${dialfill}" stroke="${c.minuteMarker}" stroke-width=".7"/><circle cx="100" cy="100" r="85" fill="url(#gloss)"/>${carbon?'<circle cx="100" cy="100" r="85" fill="url(#texture)"/>':''}${marks.join('')}<path id="hour" d="${hourHandShape}" fill="${c.hour}" stroke="${c.accent}" stroke-width=".6"/><path id="minute" d="${minuteHandShape}" fill="${c.minute}" stroke="${c.accent}" stroke-width=".45"/><path id="second" d="M99.2 125L99.2 25L100.8 25L100.8 125Z" fill="${c.second}"/><circle cx="100" cy="100" r="5" fill="${c.accent}" stroke="${c.hour}" stroke-width="1.3"/></svg><div class="info"><div class="time" id="time"></div><div class="day" id="day"></div><div class="date" id="date"></div></div></div><script>(function(){function tick(){const d=new Date(),s=d.getSeconds()+d.getMilliseconds()/1000,m=d.getMinutes()+s/60,h=d.getHours()%12+m/60;for(const [id,a] of [['hour',h*30],['minute',m*6],['second',s*6]])document.getElementById(id).setAttribute('transform','rotate('+a+' 100 100)');document.getElementById('time').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});document.getElementById('day').textContent=d.toLocaleDateString('en-GB',{weekday:'long'});document.getElementById('date').textContent=d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});}tick();setInterval(tick,80)})();<\/script></body></html>`;
 }
 async function cfImportCard(name,id,doc,base){
  const cardId='external-'+String(id||name).replace(/[^a-zA-Z0-9_.:-]/g,'-').slice(0,85);
