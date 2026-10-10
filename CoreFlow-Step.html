@@ -4673,6 +4673,7 @@ card.dataset.cardAnimation=c.Animation;card.style.setProperty('--td9c5b-duration
 syncCardLive()}
  function updateCardClockOptions(){let sel=document.getElementById('td9cClock'),current=cardClock;sel.replaceChildren();let built=document.createElement('optgroup');built.label='Built-in Clock Gallery';designs.forEach(d=>built.append(new Option(d[1],'gallery:'+d[0])));sel.append(built);let custom=document.createElement('optgroup');custom.label='My Custom Clocks';myClocks.forEach(c=>custom.append(new Option(c.name||'Custom Clock',c.id)));sel.append(custom);let dig=document.createElement('optgroup');dig.label='My Digital Clock Designs';digitalDesigns.forEach(v=>dig.append(new Option(v.Name||v.name,v.id)));sel.append(dig);if(current==='builtin')current='gallery:analog';cardClock=designs.some(d=>'gallery:'+d[0]===current)||myClocks.some(c=>c.id===current)||digitalDesigns.some(c=>c.id===current)?current:'gallery:analog';sel.value=cardClock;drawCard()}
  document.addEventListener('cf9gift:load-card',event=>{const c=event.detail;if(!c||!String(c.id||'').startsWith('cf9gift-'))return;activeCardId=null;loadCard(c);document.getElementById('td9cStatus').textContent='Built-in gift design loaded. Save only if you want your own editable copy.'});
+ document.addEventListener('cf9card:load-by-id',event=>{const id=String(event.detail?.id||'');const found=cardDesigns.find(c=>String(c.id)===id);if(!found)return;activeCardId=found.id;loadCard(found);document.getElementById('td9cStatus').textContent='Loaded saved design: '+(found.Name||'Untitled');});
  function refreshCardSaved(){let box=document.getElementById('td9cSaved');box.replaceChildren();cardDesigns.forEach(d=>{let art=document.createElement('article'),name=document.createElement('b');name.textContent=d.Name||'Untitled';let edit=document.createElement('button');edit.textContent='Edit';edit.onclick=()=>{activeCardId=d.id;loadCard(d);document.getElementById('td9cStatus').textContent='Editing saved card.'};let del=document.createElement('button');del.textContent='Delete';del.onclick=()=>{if(!confirm('Delete card design?'))return;cardDesigns=cardDesigns.filter(x=>x.id!==d.id);persistCardDesigns();refreshCardSaved()};art.append(name,edit,del);box.append(art)})}
  function persistCardDesigns(){try{localStorage.setItem(cardStoreKey,JSON.stringify(cardDesigns));return true}catch(e){document.getElementById('td9cStatus').textContent='Save failed: '+e.message;return false}}
  const presets=[['Modern Dark','#142b4b','#ffffff','solid'],['Light Minimal','#f0f6ff','#172b47','solid'],['Glass Blue','#2669a6','#ffffff','glass'],['Midnight Gradient','#12254b','#ffffff','gradient'],['Transparent','#182d4c','#ffffff','transparent'],['Executive','#334155','#ffffff','solid']];
@@ -4762,14 +4763,20 @@ function refreshSources(){
 }
 function selectedCard(){
  const card=$('td9fCardSource'),clock=$('td9fClockSource'),orig=$('td9cClock');
- if(card.value!=='current'){
-  const savedButtons=[...document.querySelectorAll('#td9cSaved article button:first-of-type')];
-  let cards=[];try{cards=JSON.parse(localStorage.getItem('coreflow.time.card-designs.v9c')||'[]')}catch(e){}
-  const idx=cards.findIndex(c=>c.id===card.value);
-  if(String(card.value).startsWith('cf9gift-')){const gift=window.cf9GiftCatalog?.cards?.find(c=>c.id===card.value);if(gift){document.dispatchEvent(new CustomEvent('cf9gift:load-card',{detail:gift}));clock.value=gift.clockId;}}else if(idx>=0&&savedButtons[idx]){savedButtons[idx].click();clock.value=orig.value;}
+ const id=card.value;
+ if(id!=='current'){
+  if(id.startsWith('cf9gift-')){
+   const gift=window.cf9GiftCatalog?.cards?.find(c=>String(c.id)===id);
+   if(gift){document.dispatchEvent(new CustomEvent('cf9gift:load-card',{detail:gift}));clock.value=gift.clockId;}
+  }else{
+   // Resolve by stable card ID; never rely on saved list DOM order or button index.
+   document.dispatchEvent(new CustomEvent('cf9card:load-by-id',{detail:{id}}));
+   if(orig)clock.value=orig.value;
+  }
  }
- if(orig&&clock.value){orig.value=clock.value;orig.dispatchEvent(new Event('change',{bubbles:true}))}
+ if(orig&&clock.value){orig.value=clock.value;orig.dispatchEvent(new Event('change',{bubbles:true}));}
 }
+
 function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
 function settings(){return {width:current==='dashboard'?100:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,position:+$('td10fPosition').value,vertical:+$('td10fVertical').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value,sidebarCard:+$('td9oCard').value,sidebarClock:+$('td9oClock').value,sidebarText:+$('td9oText').value,sidebarDate:+$('td9oDate').value,sidebarShowTime:$('td9oShowTime').checked,sidebarShowDate:$('td9oShowDate').checked,sidebarLayout:$('td11LayoutGallery').querySelector('button.on')?.dataset.layout||'below',sidebarGap:+$('td11Gap').value,showInfo:$('td10dInfoShow').checked,infoTime:+$('td10dInfoTime').value,infoDate:+$('td10dInfoDate').value,dashboardLayout:$('td12DashboardLayouts').querySelector('button.on')?.dataset.dlayout||'below',dashboardGap:+$('td12DashboardGap').value,dashboardCardWidth:+$('td12CardWidth').value,dashboardCardHeight:+$('td12CardHeight').value}}
@@ -5290,6 +5297,14 @@ const read=()=>{try{const v=JSON.parse(localStorage.getItem(store)||'[]');return
 const getCards=()=>[...builtin,...read().filter(c=>!builtin.some(b=>b.id===c.id))];
 window.cf9GiftCatalog=Object.freeze({cards:builtin});
 const toolbar=document.createElement('div');toolbar.className='td9p-toolbar';toolbar.innerHTML='<input id="td9pSearch" placeholder="Search 12 gift designs and your saved cards…"><select id="td9pType"><option value="all">All Designs</option><option value="analog">Analog</option><option value="digital">Digital</option></select><button class="td9-primary" type="button" id="td9pNew">+ Build New Design</button>';
+const exportSaved=document.createElement('button');
+exportSaved.type='button';exportSaved.className='td9-primary';exportSaved.textContent='Export Saved Cards JSON';
+exportSaved.title='Download a JSON backup of saved card designs on this browser';
+exportSaved.addEventListener('click',()=>{
+ const data=read();const pkg={type:'coreflow-saved-clock-cards',version:1,exportedAt:new Date().toISOString(),designs:data};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(pkg,null,2)],{type:'application/json'}));
+ const a=document.createElement('a');a.href=url;a.download='CoreFlow-Saved-Clock-Cards.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});toolbar.append(exportSaved);
 const head=gallery.querySelector('.td9-sectionhead');head.querySelector('h2').textContent='Complete Clock Design Gallery · 12 Gift Designs';head.querySelector('p').textContent='12 built-in live designs + your own saved cards. Select a design to preview and apply.';const oldButton=head.querySelector('button');if(oldButton)oldButton.style.display='none';oldGrid.style.display='none';const section=document.createElement('div');section.id='td9pGallery';head.after(toolbar,section);
 const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 function visual(c){const analog=c.giftType?c.giftType==='analog':!/dig|flip|lcd/i.test(c.clockId||c.Clock||'');const el=document.createElement('div');el.className='cf9gift-visual';el.style.cssText=`--bg:${/^#[0-9a-f]{6}$/i.test(c.Bg)?c.Bg:'#142b4b'};--fg:${/^#[0-9a-f]{6}$/i.test(c.Text)?c.Text:'#fff'};--accent:${/^#[0-9a-f]{6}$/i.test(c.Border)?c.Border:'#58b8ff'}`;
