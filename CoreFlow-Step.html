@@ -4869,6 +4869,52 @@ function setDashboardCardBox(card,cfg){
 }
 function applyDashboardLayout(card,cfg){
  if(!card)return;
+ // Imported clocks have their own complete layout inside srcdoc. Do NOT
+ // treat their full-page iframe as a tiny analogue-dial square: the normal
+ // clock/text flex layout compresses its viewport to a thin strip.
+ const importedFrame=card.querySelector('.td9c-card-clock iframe[srcdoc]');
+ if(importedFrame){
+  setDashboardCardBox(card,cfg);
+  const width=Math.max(180,Math.min(520,Number(cfg.dashboardCardWidth??340)));
+  const height=Math.max(100,Math.min(320,Number(cfg.dashboardCardHeight??160)));
+  card.dataset.cfExternalDashboard='1';
+  card.style.setProperty('display','block','important');
+  card.style.setProperty('position','relative','important');
+  card.style.setProperty('overflow','hidden','important');
+  card.style.setProperty('height',height+'px','important');
+  card.style.setProperty('min-height',height+'px','important');
+  card.style.setProperty('max-height',height+'px','important');
+  card.style.setProperty('padding','0','important');
+  card.style.setProperty('gap','0','important');
+  const face=card.querySelector('.td9c-card-clock');
+  face.style.setProperty('display','block','important');
+  face.style.setProperty('position','absolute','important');
+  face.style.setProperty('inset','0','important');
+  face.style.setProperty('width','100%','important');
+  face.style.setProperty('height','100%','important');
+  face.style.setProperty('max-width','none','important');
+  face.style.setProperty('max-height','none','important');
+  face.style.setProperty('overflow','hidden','important');
+  face.style.setProperty('margin','0','important');
+  const info=card.querySelector('.td9c-card-date');
+  if(info)info.style.setProperty('display','none','important');
+  // Maintain a predictable viewport for standalone 450px-wide clock artwork.
+  // The entire document (including SVG/animation) stays unmodified.
+  const frameW=450,frameH=280;
+  const fit=Math.min(width/frameW,height/frameH);
+  importedFrame.style.setProperty('position','absolute','important');
+  importedFrame.style.setProperty('left','50%','important');
+  importedFrame.style.setProperty('top','50%','important');
+  importedFrame.style.setProperty('width',frameW+'px','important');
+  importedFrame.style.setProperty('height',frameH+'px','important');
+  importedFrame.style.setProperty('max-width','none','important');
+  importedFrame.style.setProperty('max-height','none','important');
+  importedFrame.style.setProperty('border','0','important');
+  importedFrame.style.setProperty('transform','translate(-50%,-50%) scale('+fit+')','important');
+  importedFrame.style.setProperty('transform-origin','center center','important');
+  return;
+ }
+
  const clock=card.querySelector('.td9c-card-clock');
  const info=card.querySelector('.td9c-card-date');
  if(!clock||!info)return;
@@ -4903,7 +4949,7 @@ function updateDashboardLayoutLive(){
  applyDashboardLayout(c,cfg);
  // Stable dimensions: never use previously transformed/auto-collapsed width as the next baseline.
  c.dataset.td10BaseW=String(Math.max(180,+cfg.dashboardCardWidth||340));
- c.dataset.td10BaseH=String(Math.max(+cfg.dashboardCardHeight||160,c.scrollHeight||c.offsetHeight||160));
+ c.dataset.td10BaseH=String((c.dataset.cfExternalDashboard==='1'?Math.max(100,+cfg.dashboardCardHeight||160):Math.max(+cfg.dashboardCardHeight||160,c.scrollHeight||c.offsetHeight||160)));
  markDirty();updateDashboardClockGeometry();
 }
 function applyPlacementTextOptions(card,cfg,t){
@@ -5087,7 +5133,7 @@ function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dat
 if(current==='dashboard'){
  // Cache intrinsic measurements once; slider input only moves/resizes this SAME DOM.
  c.dataset.td10BaseW=String(Math.max(180,+settings().dashboardCardWidth||340));
- c.dataset.td10BaseH=String(Math.max(+settings().dashboardCardHeight||160,c.scrollHeight||c.offsetHeight||160));
+ c.dataset.td10BaseH=String((c.dataset.cfExternalDashboard==='1'?Math.max(100,+settings().dashboardCardHeight||160):Math.max(+settings().dashboardCardHeight||160,c.scrollHeight||c.offsetHeight||160)));
  updateDashboardClockGeometry();
 }
 
@@ -5161,7 +5207,7 @@ function loadTarget(t){current=t;refreshSources();document.querySelectorAll('#td
  c.style.setProperty('transform','none','important');
  c.style.setProperty('transform-origin','top left','important');
  const baseWidth=Math.max(180,Math.min(520,+cfg.dashboardCardWidth||340));
- const baseHeight=Math.max(+cfg.dashboardCardHeight||160,c.scrollHeight||c.offsetHeight||160);
+ const baseHeight=(c.dataset.cfExternalDashboard==='1'?Math.max(100,+cfg.dashboardCardHeight||160):Math.max(+cfg.dashboardCardHeight||160,c.scrollHeight||c.offsetHeight||160));
  const bannerWidth=Math.max(1,parent?.clientWidth||anchor.clientWidth||700);
  const bannerHeight=Math.max(1,parent?.clientHeight||anchor.clientHeight||180);
  const maxWidth=Math.max(75,Math.min(240,bannerWidth*.29));
@@ -5409,6 +5455,32 @@ function cfRenderSpecClock(spec,format){
  </style></head><body><div class="clock-card"><svg class="face" viewBox="0 0 200 200" aria-label="${title}"><defs><radialGradient id="dial"><stop stop-color="${c.face}"/><stop offset="1" stop-color="${c.background}"/></radialGradient></defs><circle cx="100" cy="100" r="96" fill="${c.accent}" opacity=".24"/><circle cx="100" cy="100" r="92" fill="${c.background}" stroke="${c.accent}" stroke-width="4"/><circle cx="100" cy="100" r="86" fill="url(#dial)" stroke="${c.accent}" stroke-width="1.5"/>${ticks}<line id="hour" x1="100" y1="111" x2="100" y2="58" stroke="${c.hour}" stroke-width="5" stroke-linecap="round"/><line id="minute" x1="100" y1="114" x2="100" y2="35" stroke="${c.minute}" stroke-width="3.4" stroke-linecap="round"/><line id="second" x1="100" y1="118" x2="100" y2="27" stroke="${c.second}" stroke-width="1.6" stroke-linecap="round"/><circle cx="100" cy="100" r="5" fill="${c.accent}"/></svg><div class="info"><div class="time" id="time"></div><div class="day" id="day"></div><div class="date" id="date"></div></div></div><script>(function(){function tick(){const d=new Date(),s=d.getSeconds()+d.getMilliseconds()/1000,m=d.getMinutes()+s/60,h=d.getHours()%12+m/60;[['hour',h*30],['minute',m*6],['second',s*6]].forEach(([id,a])=>document.getElementById(id).setAttribute('transform','rotate('+a+' 100 100)'));document.getElementById('time').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});document.getElementById('day').textContent=d.toLocaleDateString('en-GB',{weekday:'long'});document.getElementById('date').textContent=d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});}tick();setInterval(tick,60)})()<\/script></body></html>`;
  return template;
 }
+// Same schema for all new Rose Gold / Dark Carbon style packages. No name-specific branches.
+function cfNormalizeFourStylePackage(pkg){
+ if(!pkg||typeof pkg!=='object'||Array.isArray(pkg)||!pkg.sharedTheme||!pkg.clockStyle||!Array.isArray(pkg.placements))throw Error('Expected sharedTheme, clockStyle and placements array.');
+ const names=['dashboardBanner','sidebarExpanded','sidebarCollapsed','topbar'];
+ const byId=new Map(pkg.placements.map(x=>[x?.id,x]));
+ if(names.some(k=>!byId.has(k)))throw Error('Four required placements: '+names.filter(k=>!byId.has(k)).join(', '));
+ if(!pkg.id||!pkg.name)throw Error('Design id and name are required.');
+ const placements={};for(const key of names){const x=byId.get(key);const w=Number(x.size?.width),h=Number(x.size?.height),clock=Number(x.clock?.size);if(![w,h,clock].every(Number.isFinite)||w<40||h<40||clock<16)throw Error('Invalid dimensions in '+key);placements[key]={label:x.label||key,orientation:/left-time-right/.test(x.layout||'')?'horizontal':'vertical',width:w,height:h,clockSize:clock,layout:x.layout,digital:x.digital||{}};}
+ const theme=pkg.sharedTheme,cs=pkg.clockStyle;
+ const pick=(...keys)=>keys.map(k=>theme[k]).find(x=>/^#[0-9a-f]{6}$/i.test(String(x||'')));
+ const color={background:pick('backgroundPrimary','carbonDark')||'#11161d',backgroundSecondary:pick('backgroundSecondary','carbonMedium')||'#232a35',face:pick('carbonDark','backgroundPrimary')||'#1c2028',accent:pick('accentRoseGold','silverBright','accentRed','accentSoftGold')||'#c9a36d',marker:pick('accentSoftGold','silver','accentRoseGold')||'#c9a36d',minuteMarker:pick('accentRoseGoldDeep','silver','carbonLine')||'#b9bbc2',hour:pick('accentRoseGold','silverBright')||'#f2d9a6',minute:pick('accentRoseGoldDeep','silverBright')||'#e5c9a0',second:pick('accentRed','textDark','accentRoseGoldDeep')||'#e06c69',time:pick('textLight','textDark')||'#fff9f7',date:pick('textMuted','textLight')||'#eee3df'};
+ // Preserve the original source styles and placement definitions as metadata.
+ return {id:pkg.id,name:pkg.name,colors:color,clockStyle:cs,placements,raw:pkg};
+}
+function cfRenderFourStylePackage(pkg){
+ const p=cfNormalizeFourStylePackage(pkg),c=p.colors,st=p.clockStyle;
+ const safe=str=>String(str||'').replace(/[&<>'"`]/g,'');
+ const marks=[];for(let i=0;i<60;i++){const a=i*Math.PI/30-Math.PI/2,major=i%5===0,outer=major?82:81,inner=major?69:77;marks.push(`<line x1="${100+inner*Math.cos(a)}" y1="${100+inner*Math.sin(a)}" x2="${100+outer*Math.cos(a)}" y2="${100+outer*Math.sin(a)}" stroke="${major?c.marker:c.minuteMarker}" stroke-width="${major?3:1}" stroke-linecap="round"/>`);}
+ const carbon=/carbon/i.test([st.dial,st.bezel,p.name].join(' ')),rose=/rose/i.test([st.dial,st.bezel,p.name].join(' '));
+ const pattern=carbon?`<pattern id="texture" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(32)"><path d="M0 0V7" stroke="${c.minuteMarker}" opacity=".14" stroke-width="2"/></pattern>`:`<radialGradient id="shine"><stop stop-color="${c.backgroundSecondary}"/><stop offset=".73" stop-color="${c.face}"/><stop offset="1" stop-color="${c.background}"/></radialGradient>`;
+ const dialfill=carbon?'url(#texture)':'url(#shine)';
+ const title=safe(p.name);
+ return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+ *{box-sizing:border-box}html,body{height:100%;width:100%;margin:0;overflow:hidden;font-family:Inter,'Segoe UI',Arial,sans-serif}body{background:transparent}.card{width:100%;height:100%;display:flex;gap:2%;justify-content:space-evenly;align-items:center;padding:2.5%;background:linear-gradient(135deg,${c.background},${c.backgroundSecondary});border-radius:14px;overflow:hidden;color:${c.time}}.clock{height:min(94%,94vh);width:auto;max-width:59%;aspect-ratio:1;min-width:0;flex-shrink:1;filter:drop-shadow(0 0 8px ${c.accent}70)}.info{min-width:0;flex:0 1 39%;text-align:center;white-space:nowrap}.time{font-size:clamp(11px,4vh,32px);font-weight:800;font-variant-numeric:tabular-nums}.day{font-size:clamp(10px,2.5vh,19px);margin-top:5px}.date{font-size:clamp(9px,2.2vh,16px);margin-top:5px;opacity:.88}@media(max-width:220px){.card{flex-direction:column;gap:0;padding:2%}.clock{height:min(75%,75vh);max-width:95%}.info{flex:0 0 auto}.time{font-size:11px}.day,.date{display:none}}
+ </style></head><body><div class="card"><svg class="clock" viewBox="0 0 200 200" role="img" aria-label="${title}"><defs><linearGradient id="bezel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${c.hour}"/><stop offset=".5" stop-color="${c.accent}"/><stop offset="1" stop-color="${c.minute}"/></linearGradient>${pattern}</defs><circle cx="100" cy="100" r="98" fill="${c.background}" stroke="url(#bezel)" stroke-width="4"/><circle cx="100" cy="100" r="91" fill="${c.face}" stroke="${c.accent}" stroke-width="2"/><circle cx="100" cy="100" r="85" fill="${dialfill}" stroke="${c.minuteMarker}" stroke-width=".5"/>${marks.join('')}<path id="hour" d="M97.2 113L96.4 66L100 52L103.6 66L102.8 113Z" fill="${c.hour}"/><path id="minute" d="M98 115L98 42L100 29L102 42L102 115Z" fill="${c.minute}"/><path id="second" d="M99.2 125L99.2 25L100.8 25L100.8 125Z" fill="${c.second}"/><circle cx="100" cy="100" r="5" fill="${c.accent}" stroke="${c.hour}" stroke-width="1.3"/></svg><div class="info"><div class="time" id="time"></div><div class="day" id="day"></div><div class="date" id="date"></div></div></div><script>(function(){function tick(){const d=new Date(),s=d.getSeconds()+d.getMilliseconds()/1000,m=d.getMinutes()+s/60,h=d.getHours()%12+m/60;for(const [id,a] of [['hour',h*30],['minute',m*6],['second',s*6]])document.getElementById(id).setAttribute('transform','rotate('+a+' 100 100)');document.getElementById('time').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});document.getElementById('day').textContent=d.toLocaleDateString('en-GB',{weekday:'long'});document.getElementById('date').textContent=d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});}tick();setInterval(tick,80)})();<\/script></body></html>`;
+}
 async function cfImportCard(name,id,doc,base){
  const cardId='external-'+String(id||name).replace(/[^a-zA-Z0-9_.:-]/g,'-').slice(0,85);
  const data={...base,id:cardId,Name:String(name||'Imported Clock').slice(0,110),clockId:'gallery:analog',Clock:'gallery:analog',externalHtml:doc,Width:440,Height:230,ClockSize:390,DatePosition:'bottom',Padding:0,AutoFit:true,Style:'solid',Bg:'#0b1523',Border:'#33536b',Text:'#f1f6ff'};
@@ -5428,6 +5500,12 @@ importInput.addEventListener('change',async()=>{
   const json=JSON.parse(await file.text());
   if(json && !Array.isArray(json) && (json.type==='analog'||(json.face&&json.markers&&json.hands)) && json.face && json.hands && json.markers && json.theme){
    await cfImportCard(json.name,json.id,cfFrameDocFromAnalog(json),{...builtin[0],giftType:'analog'});
+   return;
+  }
+  // Standard four-style packages: IDs and style values can differ for future designs.
+  if(json && json.sharedTheme && json.clockStyle && Array.isArray(json.placements)){
+   const normalized=cfNormalizeFourStylePackage(json);
+   await cfImportCard(json.name,json.id,cfRenderFourStylePackage(json),{...builtin[0],giftType:'analog',sourceFormat:'coreflow-four-style',placementSpecs:normalized.placements,originalSpec:json});
    return;
   }
   // Package adapters: keep the user JSON unchanged; create one self-contained live clock document.
