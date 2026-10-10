@@ -896,7 +896,20 @@ body.cf8i-dashboard-only:has(.page.active:not(#page-dashboard)) .work{background
 @media(max-width:1100px){#page-time-date-studio .td10-layout{grid-template-columns:minmax(300px,390px) minmax(0,1fr)}#page-time-date-studio .td10-sliders{grid-template-columns:1fr}}
 @media(max-width:800px){#page-time-date-studio .td10-layout{grid-template-columns:minmax(0,1fr)}#page-time-date-studio .td10-preview-panel{position:static;min-height:0}#page-time-date-studio .td10-sliders{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){#page-time-date-studio .td10-controls,#page-time-date-studio .td10-preview-panel{padding:14px}#page-time-date-studio .td10-sliders{grid-template-columns:1fr}#page-time-date-studio .td10-preview-panel .td9f-preview-content{min-height:285px;padding:12px}#page-time-date-studio .td10-preview-panel .td9f-preview{min-height:330px}}
-</style></head><body>
+</style>
+<style id="td10-sidebar-placement-visibility-fix">
+/* Exactly one of the two independently saved sidebar placements is visible.
+   The other remains stored and will appear when the shell changes state. */
+@media (min-width:801px){
+ body:not(.collapsed) .side .nav > .td9f-installed[data-target="collapsed"]{display:none!important}
+ body.collapsed .side .nav > .td9f-installed[data-target="sidebar"]{display:none!important}
+}
+@media (max-width:800px){
+ body:not(.collapsed) .side .nav > .td9f-installed[data-target="collapsed"]{display:none!important}
+ body.collapsed .side .nav > .td9f-installed[data-target="sidebar"]{display:none!important}
+}
+</style>
+</head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂ &nbsp; Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒 &nbsp; Purchasing</span></button><button data-page="inventory"><span class="txt">▦ &nbsp; Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄ &nbsp; Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣ &nbsp; Gate Pass</span></button><button data-page="reports"><span class="txt">▤ &nbsp; Reports</span></button><button data-page="masters"><span class="txt">◆ &nbsp; Masters</span></button><button data-page="design-studio"><span class="txt">✦ &nbsp; Design Studio</span></button><button data-page="settings"><span class="txt">⚙ &nbsp; Settings</span></button></div><div class="profile">MW &nbsp; <b>Muhammad Waqas</b><br><small>Administrator</small></div></aside>
 <div class="shell"><header class="top"><button class="menu" id="m">☰</button><input class="search" placeholder="Search CoreFlow..."><div class="sp"></div><div class="cf-preview-switch" id="cfPreviewSwitch" title="Responsive Preview">
@@ -4681,9 +4694,9 @@ function applySettings(node,s){
  node.style.minHeight=Math.max(44,Math.ceil(baseH*factor))+'px';
 }
 function compactSidebarCard(card,cfg,collapsed){
- const cw=collapsed?62:Math.max(65,Math.min(145,+cfg.sidebarClock||110));
- const time=collapsed?10:Math.max(10,Math.min(22,+cfg.sidebarText||13));
- const date=collapsed?8:Math.max(8,Math.min(16,+cfg.sidebarDate||10));
+ const cw=collapsed?Math.max(38,Math.min(62,Math.round((+cfg.sidebarClock||110)*.5))):Math.max(65,Math.min(145,+cfg.sidebarClock||110));
+ const time=collapsed?Math.max(8,Math.min(12,Math.round((+cfg.sidebarText||13)*.8))):Math.max(10,Math.min(22,+cfg.sidebarText||13));
+ const date=collapsed?Math.max(7,Math.min(10,Math.round((+cfg.sidebarDate||10)*.8))):Math.max(8,Math.min(16,+cfg.sidebarDate||10));
  const cardW=collapsed?74:178;
  card.style.setProperty('width',cardW+'px','important');
  card.style.setProperty('height','auto','important');
@@ -4800,7 +4813,7 @@ function mount(t,previewConfig=null){
 }
 function revealSidebarClock(){
  const nav=document.querySelector('.side > .nav');
- const clock=nav?.querySelector('.td9f-installed[data-target="sidebar"]:not([style*="display: none"]),.td9f-installed[data-target="collapsed"]:not([style*="display: none"])');
+ const clock=[...(nav?.querySelectorAll('.td9f-installed[data-target="sidebar"],.td9f-installed[data-target="collapsed"]')||[])].find(el=>getComputedStyle(el).display!=='none');
  if(!nav||!clock)return;
  const navBox=nav.getBoundingClientRect(),clockBox=clock.getBoundingClientRect();
  if(clockBox.bottom>navBox.bottom-8||clockBox.top<navBox.top+8){
@@ -4848,7 +4861,7 @@ function livePlacement(){
    draftConfig={...settings(),cardSource:$('td9fCardSource').value,clockSource:$('td9fClockSource').value,html:draft.outerHTML};
    mount(t,draftConfig);
    draftActive=true;draftTarget=t;
-   $('td9fStatus').textContent='Live sidebar preview — click Save & Apply Selected to keep changes.';
+   $('td9fStatus').textContent='Live '+(t==='collapsed'?'collapsed':'expanded')+' sidebar preview — click Save & Apply Selected to keep changes.';
  }
 }
 ['td9fWidth','td9fScale','td9fAlign','td9fEnabled','td9fOffset','td9fTopHeight','td9fTopStyle','td9oClock','td9oText','td9oDate'].forEach(id=>$(id).addEventListener('input',livePlacement));$('td9fMulti').addEventListener('change',()=>{markDirty();$('td9fMultiTargets').hidden=!$('td9fMulti').checked});document.querySelectorAll('#td9fMultiTargets input').forEach(x=>x.addEventListener('change',markDirty));
