@@ -966,6 +966,16 @@ body.cf8i-dashboard-only:has(.page.active:not(#page-dashboard)) .work{background
 #page-time-date-studio:has(#td9fStage[data-area="dashboard"]) label:has(#td9fWidth){display:none!important}
 /* At 0% and 100% the outside edge of the scaled artwork may touch the banner boundary. */
 #td9fStage[data-area="dashboard"] .td10d-hero{position:relative;overflow:visible}
+</style><style id="td10h-center-anchor-fix">
+/* Only dashboard clock geometry: no alteration to builders/sidebar/save pipeline. */
+#page-time-date-studio #td9fStage[data-area="dashboard"] .td10d-hero > #td9fRender {
+  position:absolute!important; grid-area:auto!important; justify-self:auto!important;
+  align-self:auto!important; box-sizing:border-box!important; flex:0 0 auto!important;
+  min-width:0!important; min-height:0!important; transition:none!important;
+}
+#page-time-date-studio #td9fStage[data-area="dashboard"] .td10d-hero > #td9fRender > * {
+  transform-origin:top left!important; margin:0!important;
+}
 </style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂ &nbsp; Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒 &nbsp; Purchasing</span></button><button data-page="inventory"><span class="txt">▦ &nbsp; Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄ &nbsp; Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣ &nbsp; Gate Pass</span></button><button data-page="reports"><span class="txt">▤ &nbsp; Reports</span></button><button data-page="masters"><span class="txt">◆ &nbsp; Masters</span></button><button data-page="design-studio"><span class="txt">✦ &nbsp; Design Studio</span></button><button data-page="settings"><span class="txt">⚙ &nbsp; Settings</span></button></div><div class="profile">MW &nbsp; <b>Muhammad Waqas</b><br><small>Administrator</small></div></aside>
@@ -4829,14 +4839,22 @@ function updateDashboardClockGeometry(){
  render.style.setProperty('position','absolute','important');
  render.style.setProperty('display',cfg.enabled?'flex':'none','important');
  render.style.setProperty('overflow','visible','important');
+ render.style.setProperty('align-items','flex-start','important');
+ render.style.setProperty('justify-content','flex-start','important');
+ render.style.setProperty('padding','0','important');
  render.style.setProperty('margin','0','important');
  render.style.setProperty('max-width','none','important');
  render.style.setProperty('max-height','none','important');
  render.style.setProperty('width',w+'px','important');
  render.style.setProperty('height',h+'px','important');
- render.style.setProperty('left',(Math.max(0,hero.clientWidth-w)*x)+'px','important');
- render.style.setProperty('top',(Math.max(0,hero.clientHeight-h)*y)+'px','important');
- render.style.setProperty('translate','none','important');
+ // Position the CLOCK CENTER using the banner as coordinate space.
+ // Percent translate is relative to this clock's own scaled footprint.
+ // Thus 0/50/100 maps precisely to left/center/right and top/center/bottom.
+ render.style.setProperty('right','auto','important');
+ render.style.setProperty('bottom','auto','important');
+ render.style.setProperty('left',(x*100)+'%','important');
+ render.style.setProperty('top',(y*100)+'%','important');
+ render.style.setProperty('translate',(-x*100)+'% '+(-y*100)+'%','important');
  render.style.setProperty('transform','none','important');
  render.style.setProperty('z-index','4','important');
  c.style.setProperty('width',baseW+'px','important');
@@ -4912,11 +4930,22 @@ function mount(t,previewConfig=null){
  const pos=Math.max(0,Math.min(100,Number(cfg.position??(cfg.align==='left'?0:cfg.align==='center'?50:100))))/100;
  host.style.setProperty('position','absolute','important');
  const vpos=Math.max(0,Math.min(100,Number(cfg.vertical??50)))/100;
- // Position against the available banner area, accounting for the mounted clock footprint.
- host.style.setProperty('left',(Math.max(0,(parent?.clientWidth||0)-Math.min(210,host.offsetWidth||210))*pos)+'px','important');
- host.style.setProperty('top',(Math.max(0,(parent?.clientHeight||0)-Math.max(1,host.offsetHeight||90))*vpos)+'px','important');
- host.style.setProperty('translate','none','important');
- host.style.setProperty('width','min(100%, 210px)','important');
+ // Use one center-anchored coordinate system for real Dashboard and preview.
+ // Avoid the former 210px wrapper, which made 50% point to the wrong visual center.
+ const baseWidth=Math.max(1,c.offsetWidth||parseFloat(c.style.width)||170);
+ const baseHeight=Math.max(1,c.offsetHeight||parseFloat(c.style.height)||110);
+ const scaleMatch=(c.getBoundingClientRect().width||baseWidth)/baseWidth;
+ const visualWidth=baseWidth*scaleMatch,visualHeight=baseHeight*scaleMatch;
+ host.style.setProperty('width',visualWidth+'px','important');
+ host.style.setProperty('height',visualHeight+'px','important');
+ host.style.setProperty('max-width','none','important');
+ host.style.setProperty('max-height','none','important');
+ host.style.setProperty('overflow','visible','important');
+ host.style.setProperty('justify-content','flex-start','important');
+ host.style.setProperty('align-items','flex-start','important');
+ host.style.setProperty('left',(pos*100)+'%','important');
+ host.style.setProperty('top',(vpos*100)+'%','important');
+ host.style.setProperty('translate',(-pos*100)+'% '+(-vpos*100)+'%','important');
  host.style.setProperty('z-index','5','important');
 }
  if(t==='sidebar'||t==='collapsed'){
