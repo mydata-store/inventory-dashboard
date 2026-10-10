@@ -4636,7 +4636,18 @@ function selectedCard(){
 function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
 function settings(){return {width:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value,sidebarClock:+$('td9oClock').value,sidebarText:+$('td9oText').value,sidebarDate:+$('td9oDate').value}}
-function applySettings(node,s){node.style.width=s.width+'%';node.style.justifyContent=s.align==='left'?'flex-start':s.align==='right'?'flex-end':'center';const card=node.querySelector(':scope > *');if(card){const factor=(s.scale/100)*Math.min(1,(node.clientWidth||300)/(parseFloat(card.style.width)||440));card.style.transform='scale('+factor+')';card.style.transformOrigin=s.align==='left'?'left center':s.align==='right'?'right center':'center';node.style.minHeight=Math.max(44,Math.round((parseFloat(card.style.height)||270)*factor))+'px'}}
+function applySettings(node,s){
+ const width=Math.max(35,Math.min(100,+s.width||100));
+ node.style.width=width+'%';node.style.justifyContent=s.align==='left'?'flex-start':s.align==='right'?'flex-end':'center';
+ const card=node.querySelector(':scope > *');if(!card)return;
+ // Fit the ORIGINAL artwork without modifying its internal renderer or aspect ratio.
+ const baseW=Math.max(1,parseFloat(card.style.width)||440),baseH=Math.max(1,parseFloat(card.style.height)||270);
+ const available=node.clientWidth||node.parentElement?.clientWidth||440;
+ const factor=Math.min(1,available/baseW)*Math.max(.3,Math.min(1.1,(+s.scale||100)/100));
+ card.style.transform='scale('+factor+')';card.style.transformOrigin=s.align==='left'?'left top':s.align==='right'?'right top':'center top';
+ card.style.flexShrink='0';
+ node.style.minHeight=Math.max(44,Math.ceil(baseH*factor))+'px';
+}
 function compactSidebarCard(card,cfg,collapsed){
  const cw=collapsed?62:Math.max(65,Math.min(145,+cfg.sidebarClock||110));
  const time=collapsed?10:Math.max(10,Math.min(22,+cfg.sidebarText||13));
@@ -4663,15 +4674,28 @@ function compactSidebarCard(card,cfg,collapsed){
    clock.style.setProperty('border-radius','8px','important');
    const children=[...clock.children];
    children.forEach(child=>{
+     // An analogue face has a square coordinate space; digital/flip clocks do not.
+     const analog=child.matches('.td9b-dial,.td9-clockface')||!!child.querySelector('.td9b-dial,.td9-clockface');
      child.style.setProperty('position','absolute','important');
      child.style.setProperty('left','50%','important');
      child.style.setProperty('top','50%','important');
      child.style.setProperty('margin','0','important');
-     child.style.setProperty('width','170px','important');
-     child.style.setProperty('height','170px','important');
-     child.style.setProperty('max-width','none','important');
-     child.style.setProperty('max-height','none','important');
-     child.style.setProperty('transform','translate(-50%,-50%) scale('+(cw/170)+')','important');
+     if(analog){
+       child.style.setProperty('width','170px','important');
+       child.style.setProperty('height','170px','important');
+       child.style.setProperty('max-width','none','important');
+       child.style.setProperty('max-height','none','important');
+       child.style.setProperty('transform','translate(-50%,-50%) scale('+(cw/170)+')','important');
+     }else{
+       // Preserve the digital layout: scaling a square forced box clipped digits.
+       child.style.setProperty('width','170px','important');
+       child.style.setProperty('height','auto','important');
+       child.style.setProperty('min-height','70px','important');
+       child.style.setProperty('max-width','none','important');
+       child.style.setProperty('max-height','none','important');
+       child.style.setProperty('overflow','visible','important');
+       child.style.setProperty('transform','translate(-50%,-50%) scale('+(cw/170)+')','important');
+     }
      child.style.setProperty('transform-origin','center center','important');
    });
  }
@@ -4686,7 +4710,7 @@ function compactSidebarCard(card,cfg,collapsed){
  }
  return card;
 }
-function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);tickClockDOM(r,new Date());applySettings(r,current==='sidebar'||current==='collapsed'?{...settings(),width:100,scale:85}:settings());
+function preview(){const st=$('td9fStage'),r=$('td9fRender');if(!r)return;st.dataset.area=current;r.replaceChildren();const c=cloneCard();if(!c)return;r.append(c);tickClockDOM(r,new Date());if(current!=='sidebar'&&current!=='collapsed')applySettings(r,settings());
 if(current==='sidebar'||current==='collapsed'){
  const narrow=current==='collapsed';
  compactSidebarCard(c,settings(),narrow);
@@ -4829,6 +4853,21 @@ setInterval(()=>{if(!document.hidden)updateTime()},100);
 </script>
 <style id="td9p-gallery-workflow-style">
 #page-time-date-studio .td9p-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}#td9pSearch{flex:1;min-width:170px;border:1px solid #d4e2f2;border-radius:9px;padding:11px}#td9pType{border:1px solid #d4e2f2;border-radius:9px;padding:11px;background:#fff}#td9pGallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}#td9pGallery .td9p-item{background:white;border:1px solid #d5e2f3;border-radius:14px;overflow:hidden;min-width:0}#td9pGallery .td9p-face{height:158px;display:flex;align-items:center;justify-content:center;background:#eaf2fc;padding:12px;box-sizing:border-box}#td9pGallery .td9p-art{height:124px;max-width:100%;aspect-ratio:1.3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;border:1px solid #ffffff40;border-radius:14px;background:var(--bg,#142b4b);color:var(--fg,#fff);box-shadow:0 8px 17px #0c254020}#td9pGallery .td9p-art .td9p-symbol{font-size:57px;line-height:1}#td9pGallery .td9p-art .td9p-digits{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}#td9pGallery .td9p-info{padding:12px}#td9pGallery .td9p-info b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#td9pGallery .td9p-info small{display:block;color:#617993;margin:5px 0 11px}#td9pGallery .td9p-info button{background:#1678ee;color:#fff;border:0;border-radius:8px;padding:9px 11px;cursor:pointer;font-weight:750;width:100%}#td9pGallery .td9p-empty{padding:25px;border:1px dashed #cbdced;border-radius:12px;grid-column:1/-1;color:#526a85}#td9pGallery .td9p-info button:focus-visible{outline:3px solid #ffd166}
+</style>
+
+<style id="cf-clock-rendering-fix-v1">
+/* Render-only rules: never overwrite individual clock hands or designer data. */
+#page-time-date-studio .td9f-layout{grid-template-columns:minmax(290px,355px) minmax(0,1fr)}
+#page-time-date-studio .td9f-layout>.td9b-panel{min-width:0}
+#page-time-date-studio .td9f-preview-content{min-width:0;overflow:auto;justify-content:center}
+#page-time-date-studio .td9f-render{box-sizing:border-box;max-width:100%;align-items:flex-start}
+#page-time-date-studio .td9f-render>.td9c-card{flex-shrink:0;max-width:none!important}
+#page-time-date-studio .td9f-preview[data-area=sidebar] .td9f-render,
+#page-time-date-studio .td9f-preview[data-area=collapsed] .td9f-render{overflow:visible}
+#page-time-date-studio .td9f-preview[data-area=collapsed] .td9f-preview-content{max-width:none}
+.td9f-installed .td9c-card-clock{flex-shrink:0}
+.td9f-installed .td9c-card-clock .td9c-gallery-clock{overflow:visible}
+@media(max-width:800px){#page-time-date-studio .td9f-layout{grid-template-columns:1fr}}
 </style>
 <script id="td9p-gallery-workflow-binding">
 (()=>{'use strict';
