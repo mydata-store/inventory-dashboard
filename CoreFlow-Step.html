@@ -1206,12 +1206,15 @@ body.cf8i-dashboard-only:has(.page.active:not(#page-dashboard)) .work{background
 <label>Saved Card Design<select id="td9fCardSource"><option value="current">Current Card Designer</option></select></label>
 <label>Clock Style<select id="td9fClockSource"><option value="">Loading clock gallery…</option></select></label>
 <p class="td9b-hint">Choose a saved card (optional), then select the clock style. The preview updates immediately before you apply. Every placement can have its own saved clock.</p>
-</div><div id="td9oSidebarControls" style="border:1px solid #d6e4f5;border-radius:10px;padding:12px;margin:12px 0">
-<strong style="font-size:13px">Sidebar Clock Readability</strong>
+</div><div id="td9oSidebarControls" style="border:1px solid #d6e4f5;border-radius:10px;padding:12px;margin:12px 0;display:none">
+<strong style="font-size:13px">Sidebar Expanded Card Controls</strong>
+<label style="display:block;margin-top:10px">Card Size <span id="td9oCardVal">178px</span><input type="range" id="td9oCard" min="130" max="260" value="178"></label>
 <label style="display:block;margin-top:10px">Clock Size <span id="td9oClockVal">110px</span><input type="range" id="td9oClock" min="65" max="145" value="110"></label>
+<label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input type="checkbox" id="td9oShowTime" checked> Show time</label>
 <label style="display:block;margin-top:10px">Time Text Size <span id="td9oTextVal">13px</span><input type="range" id="td9oText" min="10" max="22" value="13"></label>
+<label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input type="checkbox" id="td9oShowDate" checked> Show date</label>
 <label style="display:block;margin-top:10px">Date Text Size <span id="td9oDateVal">10px</span><input type="range" id="td9oDate" min="8" max="16" value="10"></label>
-<p style="font-size:11px;color:#607b9d">Sidebar ki clock, time aur date ka size alag adjust karein.</p>
+<p style="font-size:11px;color:#607b9d">Sidebar Expanded mein card, clock, time aur date ko alag control karein. Time aur date ko separately hide bhi kar sakte hain.</p>
 </div>
 <div id="td10dInfoControls" style="border:1px solid #d6e4f5;border-radius:10px;padding:12px;margin:12px 0;display:none">
 <strong style="font-size:13px">Dashboard Time &amp; Date Text</strong>
@@ -4754,7 +4757,7 @@ function selectedCard(){
 }
 function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
-function settings(){return {width:current==='dashboard'?100:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,position:+$('td10fPosition').value,vertical:+$('td10fVertical').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value,sidebarClock:+$('td9oClock').value,sidebarText:+$('td9oText').value,sidebarDate:+$('td9oDate').value,showInfo:$('td10dInfoShow').checked,infoTime:+$('td10dInfoTime').value,infoDate:+$('td10dInfoDate').value}}
+function settings(){return {width:current==='dashboard'?100:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,position:+$('td10fPosition').value,vertical:+$('td10fVertical').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value,sidebarCard:+$('td9oCard').value,sidebarClock:+$('td9oClock').value,sidebarText:+$('td9oText').value,sidebarDate:+$('td9oDate').value,sidebarShowTime:$('td9oShowTime').checked,sidebarShowDate:$('td9oShowDate').checked,showInfo:$('td10dInfoShow').checked,infoTime:+$('td10dInfoTime').value,infoDate:+$('td10dInfoDate').value}}
 function applySettings(node,s){
  const width=Math.max(35,Math.min(100,+s.width||100));
  node.style.width=width+'%';node.style.justifyContent=s.align==='left'?'flex-start':s.align==='right'?'flex-end':'center';
@@ -4785,10 +4788,12 @@ function applyPlacementTextOptions(card,cfg,t){
  return card;
 }
 function compactSidebarCard(card,cfg,collapsed){
+ const cardW=collapsed?74:Math.max(130,Math.min(260,+cfg.sidebarCard||178));
  const cw=collapsed?Math.max(38,Math.min(62,Math.round((+cfg.sidebarClock||110)*.5))):Math.max(65,Math.min(145,+cfg.sidebarClock||110));
  const time=collapsed?Math.max(8,Math.min(12,Math.round((+cfg.sidebarText||13)*.8))):Math.max(10,Math.min(22,+cfg.sidebarText||13));
  const date=collapsed?Math.max(7,Math.min(10,Math.round((+cfg.sidebarDate||10)*.8))):Math.max(8,Math.min(16,+cfg.sidebarDate||10));
- const cardW=collapsed?74:178;
+ const showTime=cfg.sidebarShowTime!==false;
+ const showDate=cfg.sidebarShowDate!==false;
  card.style.setProperty('width',cardW+'px','important');
  card.style.setProperty('height','auto','important');
  card.style.setProperty('min-height','0','important');
@@ -4810,7 +4815,6 @@ function compactSidebarCard(card,cfg,collapsed){
    clock.style.setProperty('border-radius','8px','important');
    const children=[...clock.children];
    children.forEach(child=>{
-     // An analogue face has a square coordinate space; digital/flip clocks do not.
      const analog=child.matches('.td9b-dial,.td9-clockface')||!!child.querySelector('.td9b-dial,.td9-clockface');
      child.style.setProperty('position','absolute','important');
      child.style.setProperty('left','50%','important');
@@ -4823,7 +4827,6 @@ function compactSidebarCard(card,cfg,collapsed){
        child.style.setProperty('max-height','none','important');
        child.style.setProperty('transform','translate(-50%,-50%) scale('+(cw/170)+')','important');
      }else{
-       // Preserve the digital layout: scaling a square forced box clipped digits.
        child.style.setProperty('width','170px','important');
        child.style.setProperty('height','auto','important');
        child.style.setProperty('min-height','70px','important');
@@ -4837,21 +4840,30 @@ function compactSidebarCard(card,cfg,collapsed){
  }
  const label=card.querySelector('.td9c-card-date');
  if(label){
-  label.style.setProperty('font-size',time+'px','important');
+  let timeSpan=label.querySelector('.td9c-info-time');
+  const existingSmall=label.querySelector('small');
+  if(!timeSpan){
+   const raw=(label.childNodes[0] && label.childNodes[0].nodeType===3)?label.childNodes[0].textContent:'';
+   if(label.childNodes[0] && label.childNodes[0].nodeType===3) label.childNodes[0].textContent='';
+   timeSpan=document.createElement('span');
+   timeSpan.className='td9c-info-time';
+   timeSpan.textContent=(raw||'').trim();
+   label.insertBefore(timeSpan,label.firstChild);
+  }
+  if(existingSmall) existingSmall.classList.add('td9c-info-date');
   label.style.setProperty('line-height','1.35','important');
   label.style.setProperty('text-align','center','important');
   label.style.setProperty('white-space','normal','important');
   label.style.setProperty('overflow','visible','important');
-  label.querySelectorAll('small').forEach(e=>e.style.setProperty('font-size',date+'px','important'));
+  label.style.setProperty('display',(showTime||showDate)?'block':'none','important');
+  timeSpan.style.setProperty('display',showTime?'block':'none','important');
+  timeSpan.style.setProperty('font-size',time+'px','important');
+  if(existingSmall){
+    existingSmall.style.setProperty('display',showDate?'block':'none','important');
+    existingSmall.style.setProperty('font-size',date+'px','important');
+  }
  }
  return card;
-}
-// Text settings mutate the existing clock card: no replacement, no flicker.
-function updateDashboardTextOnly(){
- if(current!=='dashboard')return;
- const card=$('td9fRender')?.firstElementChild;
- if(!card)return;
- applyPlacementTextOptions(card,settings(),'dashboard');
 }
 function updateDashboardClockGeometry(){
  if(current!=='dashboard')return;
@@ -4930,8 +4942,26 @@ if(current==='sidebar'||current==='collapsed'){
  render.style.removeProperty('width');render.style.removeProperty('height');render.style.removeProperty('position');render.style.removeProperty('margin');
 }
 $('td9fWidthVal').textContent=$('td9fWidth').value+'%';$('td9fScaleVal').textContent=$('td9fScale').value+'%';$('td9fOffsetVal').textContent=$('td9fOffset').value+'px';$('td9fTopHeightVal').textContent=$('td9fTopHeight').value+'px'}
-function loadTarget(t){current=t;refreshSources();document.querySelectorAll('#td9fTargets button').forEach(b=>b.classList.toggle('on',b.dataset.target===t));const s=saved[t]||{width:100,scale:t==='collapsed'?40:t==='topbar'?45:t==='sidebar'?55:t==='profile'?45:100,align:'center',enabled:true};$('td9fWidth').value=s.width;$('td9fScale').value=s.scale;$('td9fAlign').value=s.align;$('td10fPosition').value=s.position??(s.align==='left'?0:s.align==='center'?50:100);$('td10fPositionVal').textContent=$('td10fPosition').value+'%';$('td10fVertical').value=s.vertical??50;$('td10fVerticalVal').textContent=$('td10fVertical').value+'%';$('td9fEnabled').checked=s.enabled;$('td9fOffset').value=s.offset??0;$('td9fTopHeight').value=s.topHeight??38;$('td9fTopStyle').value=s.topStyle||'compact';$('td9oClock').value=s.sidebarClock??110;$('td9oText').value=s.sidebarText??13;$('td9oDate').value=s.sidebarDate??10;$('td10dInfoShow').checked=s.showInfo!==false;$('td10dInfoTime').value=s.infoTime??15;$('td10dInfoDate').value=s.infoDate??11;$('td10dInfoTimeVal').textContent=$('td10dInfoTime').value+'px';$('td10dInfoDateVal').textContent=$('td10dInfoDate').value+'px';$('td9oSidebarControls').style.display=(t==='sidebar'||t==='collapsed')?'block':'none';$('td10dInfoControls').style.display=t==='dashboard'?'block':'none';['td9fOffset','td9fTopHeight','td9fTopStyle'].forEach(id=>{const el=$(id);if(el&&el.closest('label'))el.closest('label').style.display=t==='dashboard'?'none':''});if(s.cardSource&&[...$('td9fCardSource').options].some(o=>o.value===s.cardSource))$('td9fCardSource').value=s.cardSource;if(s.clockSource&&[...$('td9fClockSource').options].some(o=>o.value===s.clockSource))$('td9fClockSource').value=s.clockSource;preview()}
-function mount(t,previewConfig=null){
+function updatePlacementControlVisibility(t){
+ const hideLabel=id=>{const el=$(id);if(el&&el.closest('label'))el.closest('label').style.display='none'};
+ const showLabel=id=>{const el=$(id);if(el&&el.closest('label'))el.closest('label').style.display=''};
+ // default show everything, then placement-specific cleanup
+ ['td9fOffset','td9fTopHeight','td9fTopStyle','td9fWidth','td9fScale','td10fPosition','td10fVertical'].forEach(showLabel);
+ $('td9oSidebarControls').style.display=(t==='sidebar')?'block':'none';
+ $('td10dInfoControls').style.display=t==='dashboard'?'block':'none';
+ if(t==='dashboard'){
+   hideLabel('td9fOffset');hideLabel('td9fTopHeight');hideLabel('td9fTopStyle');hideLabel('td9fWidth');
+ }else if(t==='sidebar'){
+   hideLabel('td9fTopHeight');hideLabel('td9fTopStyle');hideLabel('td9fWidth');hideLabel('td9fScale');hideLabel('td10fPosition');hideLabel('td10fVertical');
+ }else if(t==='collapsed'){
+   hideLabel('td9fTopHeight');hideLabel('td9fTopStyle');hideLabel('td9fWidth');hideLabel('td10fPosition');hideLabel('td10fVertical');
+ }else if(t==='topbar'){
+   hideLabel('td9fOffset');hideLabel('td9fWidth');hideLabel('td10fPosition');hideLabel('td10fVertical');
+ }else if(t==='profile'){
+   hideLabel('td9fTopHeight');hideLabel('td9fTopStyle');hideLabel('td10fPosition');hideLabel('td10fVertical');
+ }
+}
+function loadTarget(t){current=t;refreshSources();document.querySelectorAll('#td9fTargets button').forEach(b=>b.classList.toggle('on',b.dataset.target===t));const s=saved[t]||{width:100,scale:t==='collapsed'?40:t==='topbar'?45:t==='sidebar'?55:t==='profile'?45:100,align:'center',enabled:true};$('td9fWidth').value=s.width;$('td9fScale').value=s.scale;$('td9fAlign').value=s.align;$('td10fPosition').value=s.position??(s.align==='left'?0:s.align==='center'?50:100);$('td10fPositionVal').textContent=$('td10fPosition').value+'%';$('td10fVertical').value=s.vertical??50;$('td10fVerticalVal').textContent=$('td10fVertical').value+'%';$('td9fEnabled').checked=s.enabled;$('td9fOffset').value=s.offset??0;$('td9fTopHeight').value=s.topHeight??38;$('td9fTopStyle').value=s.topStyle||'compact';$('td9oCard').value=s.sidebarCard??178;$('td9oCardVal').textContent=$('td9oCard').value+'px';$('td9oClock').value=s.sidebarClock??110;$('td9oText').value=s.sidebarText??13;$('td9oDate').value=s.sidebarDate??10;$('td9oShowTime').checked=s.sidebarShowTime!==false;$('td9oShowDate').checked=s.sidebarShowDate!==false;$('td10dInfoShow').checked=s.showInfo!==false;$('td10dInfoTime').value=s.infoTime??15;$('td10dInfoDate').value=s.infoDate??11;$('td10dInfoTimeVal').textContent=$('td10dInfoTime').value+'px';$('td10dInfoDateVal').textContent=$('td10dInfoDate').value+'px';updatePlacementControlVisibility(t);if(s.cardSource&&[...$('td9fCardSource').options].some(o=>o.value===s.cardSource))$('td9fCardSource').value=s.cardSource;if(s.clockSource&&[...$('td9fClockSource').options].some(o=>o.value===s.clockSource))$('td9fClockSource').value=s.clockSource;preview()}function mount(t,previewConfig=null){
  const selector={dashboard:'#page-dashboard .ml-hero, #page-dashboard .ab-hero',sidebar:'.side .nav',collapsed:'.side .nav',topbar:'.top .sp',profile:'.side .profile'}[t];
  const anchor=document.querySelector(selector);if(!anchor)return;
  let host=document.querySelector('.td9f-installed[data-target="'+t+'"]');
@@ -5018,9 +5048,12 @@ function tickClockDOM(host,now){
  });
  host.querySelectorAll('[data-td9-time]').forEach(e=>e.textContent=[h,m,sec].map(x=>String(x).padStart(2,'0')).join(':'));
  host.querySelectorAll('[data-td9-date]').forEach(e=>e.textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long'}).toUpperCase());
- const time=host.querySelector('.td9c-card-time,#td9cCardDate,.td9c-card-date');
- if(time&&time.firstChild?.nodeType===3)time.firstChild.textContent=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
- host.querySelectorAll('.td9c-card-date small').forEach(e=>e.textContent=now.toLocaleDateString('en-PK',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}));
+ const time=host.querySelector('.td9c-info-time,.td9c-card-time,#td9cCardDate,.td9c-card-date');
+ if(time){
+  if(time.classList?.contains('td9c-info-time')) time.textContent=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  else if(time.firstChild?.nodeType===3) time.firstChild.textContent=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ }
+ host.querySelectorAll('.td9c-card-date small,.td9c-info-date').forEach(e=>e.textContent=now.toLocaleDateString('en-PK',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}));
 }
 function updateTime(){
  const now=new Date();
@@ -5036,7 +5069,7 @@ function updateTime(){
 $('td9fTargets').addEventListener('click',e=>{const b=e.target.closest('button[data-target]');if(b){restoreDraft();loadTarget(b.dataset.target);markDirty()}});let draftActive=false,draftTarget=null;
 function restoreDraft(){if(draftActive&&draftTarget){draftActive=false;draftConfig=null;const t=draftTarget;draftTarget=null;mount(t)}}
 function livePlacement(){
- ['Clock','Text','Date'].forEach(n=>{const el=$('td9o'+n);$('td9o'+n+'Val').textContent=el.value+'px'});
+ ['Card','Clock','Text','Date'].forEach(n=>{const el=$('td9o'+n);if(el&&$('td9o'+n+'Val'))$('td9o'+n+'Val').textContent=el.value+'px'});
  markDirty();preview();
  if(current==='sidebar'||current==='collapsed'){
    restoreDraft();
@@ -5049,7 +5082,7 @@ function livePlacement(){
    $('td9fStatus').textContent='Live '+(t==='collapsed'?'collapsed':'expanded')+' sidebar preview — click Save & Apply Selected to keep changes.';
  }
 }
-['td9fWidth','td9fScale','td9fAlign','td10fPosition','td10fVertical','td9fEnabled','td9fOffset','td9fTopHeight','td9fTopStyle','td9oClock','td9oText','td9oDate','td10dInfoTime','td10dInfoDate'].forEach(id=>$(id).addEventListener('input',()=>{if(id==='td10dInfoTime')$('td10dInfoTimeVal').textContent=$(id).value+'px';if(id==='td10dInfoDate')$('td10dInfoDateVal').textContent=$(id).value+'px';if(current==='dashboard' && ['td9fScale','td9fWidth','td10fPosition','td10fVertical','td9fEnabled'].includes(id)){markDirty();updateDashboardClockGeometry()}else if(current==='dashboard' && ['td10dInfoTime','td10dInfoDate'].includes(id)){markDirty();updateDashboardTextOnly()}else livePlacement()}));$('td10dInfoShow').addEventListener('change',()=>{markDirty();if(current==='dashboard')updateDashboardTextOnly();else livePlacement()});$('td9fMulti').addEventListener('change',()=>{markDirty();$('td9fMultiTargets').hidden=!$('td9fMulti').checked});document.querySelectorAll('#td9fMultiTargets input').forEach(x=>x.addEventListener('change',markDirty));
+['td9fWidth','td9fScale','td9fAlign','td10fPosition','td10fVertical','td9fEnabled','td9fOffset','td9fTopHeight','td9fTopStyle','td9oCard','td9oClock','td9oText','td9oDate','td10dInfoTime','td10dInfoDate'].forEach(id=>$(id).addEventListener('input',()=>{if(id==='td10dInfoTime')$('td10dInfoTimeVal').textContent=$(id).value+'px';if(id==='td10dInfoDate')$('td10dInfoDateVal').textContent=$(id).value+'px';if(id==='td9oCard')$('td9oCardVal').textContent=$(id).value+'px';if(current==='dashboard' && ['td9fScale','td9fWidth','td10fPosition','td10fVertical','td9fEnabled'].includes(id)){markDirty();updateDashboardClockGeometry()}else if(current==='dashboard' && ['td10dInfoTime','td10dInfoDate'].includes(id)){markDirty();updateDashboardTextOnly()}else livePlacement()}));['td10dInfoShow','td9oShowTime','td9oShowDate'].forEach(id=>$(id).addEventListener('change',()=>{markDirty();if(current==='dashboard'&&id==='td10dInfoShow')updateDashboardTextOnly();else livePlacement()}));$('td9fMulti').addEventListener('change',()=>{markDirty();$('td9fMultiTargets').hidden=!$('td9fMulti').checked});document.querySelectorAll('#td9fMultiTargets input').forEach(x=>x.addEventListener('change',markDirty));
 const applyBtn=$('td9fApply');
 const applyOriginal=applyBtn.textContent;
 function markDirty(){
