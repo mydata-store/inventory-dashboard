@@ -959,7 +959,14 @@ body.cf8i-dashboard-only:has(.page.active:not(#page-dashboard)) .work{background
 #page-time-date-studio .td10f-position small{display:block;color:#71849b;margin-top:5px;font-size:10px}
 @media(max-width:900px){#page-time-date-studio .td10-layout{grid-template-columns:1fr!important}#page-time-date-studio .td10-preview-panel{position:static!important}}
 </style>
-<style id="td10g-stable-preview-css">#page-time-date-studio .td10d-hero{overflow:hidden!important}#page-time-date-studio .td10f-position{display:block;width:100%}#page-time-date-studio .td10f-position input[type="range"]{width:100%}#page-time-date-studio .td10d-hero #td9fRender,#page-time-date-studio .td10d-hero #td9fRender>*{transition:none!important;animation:none!important}</style></head><body>
+<style id="td10g-stable-preview-css">#page-time-date-studio .td10d-hero{overflow:hidden!important}#page-time-date-studio .td10f-position{display:block;width:100%}#page-time-date-studio .td10f-position input[type="range"]{width:100%}#page-time-date-studio .td10d-hero #td9fRender,#page-time-date-studio .td10d-hero #td9fRender>*{transition:none!important;animation:none!important}</style><style id="td10g-dashboard-width-cleanup">
+/* Keep width input available for sidebar/topbar, but eliminate it on Dashboard. */
+#td9fStage[data-area="dashboard"] ~ * {box-sizing:border-box}
+#page-time-date-studio:has(#td9fStage[data-area="dashboard"]) label:has(> #td9fWidth){display:none!important}
+#page-time-date-studio:has(#td9fStage[data-area="dashboard"]) label:has(#td9fWidth){display:none!important}
+/* At 0% and 100% the outside edge of the scaled artwork may touch the banner boundary. */
+#td9fStage[data-area="dashboard"] .td10d-hero{position:relative;overflow:visible}
+</style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂ &nbsp; Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒 &nbsp; Purchasing</span></button><button data-page="inventory"><span class="txt">▦ &nbsp; Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄ &nbsp; Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣ &nbsp; Gate Pass</span></button><button data-page="reports"><span class="txt">▤ &nbsp; Reports</span></button><button data-page="masters"><span class="txt">◆ &nbsp; Masters</span></button><button data-page="design-studio"><span class="txt">✦ &nbsp; Design Studio</span></button><button data-page="settings"><span class="txt">⚙ &nbsp; Settings</span></button></div><div class="profile">MW &nbsp; <b>Muhammad Waqas</b><br><small>Administrator</small></div></aside>
 <div class="shell"><header class="top"><button class="menu" id="m">☰</button><input class="search" placeholder="Search CoreFlow..."><div class="sp"></div><div class="cf-preview-switch" id="cfPreviewSwitch" title="Responsive Preview">
@@ -4730,7 +4737,7 @@ function selectedCard(){
 }
 function source(){return $('td9cCard')}
 function cloneCard(){const src=source();if(!src)return null;const copy=src.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));copy.querySelectorAll('[data-card-animation]').forEach(n=>n.removeAttribute('data-card-animation'));copy.style.animation='none';return copy}
-function settings(){return {width:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,position:+$('td10fPosition').value,vertical:+$('td10fVertical').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value,sidebarClock:+$('td9oClock').value,sidebarText:+$('td9oText').value,sidebarDate:+$('td9oDate').value}}
+function settings(){return {width:current==='dashboard'?100:+$('td9fWidth').value,scale:+$('td9fScale').value,align:$('td9fAlign').value,position:+$('td10fPosition').value,vertical:+$('td10fVertical').value,enabled:$('td9fEnabled').checked,offset:+$('td9fOffset').value,topHeight:+$('td9fTopHeight').value,topStyle:$('td9fTopStyle').value,sidebarClock:+$('td9oClock').value,sidebarText:+$('td9oText').value,sidebarDate:+$('td9oDate').value}}
 function applySettings(node,s){
  const width=Math.max(35,Math.min(100,+s.width||100));
  node.style.width=width+'%';node.style.justifyContent=s.align==='left'?'flex-start':s.align==='right'?'flex-end':'center';
@@ -4827,8 +4834,8 @@ function updateDashboardClockGeometry(){
  render.style.setProperty('max-height','none','important');
  render.style.setProperty('width',w+'px','important');
  render.style.setProperty('height',h+'px','important');
- render.style.setProperty('left','calc('+(x*100)+'% - '+(w*x)+'px)','important');
- render.style.setProperty('top','calc('+(y*100)+'% - '+(h*y)+'px)','important');
+ render.style.setProperty('left','calc((100% - '+w+'px) * '+x+')','important');
+ render.style.setProperty('top','calc((100% - '+h+'px) * '+y+')','important');
  render.style.setProperty('translate','none','important');
  render.style.setProperty('transform','none','important');
  render.style.setProperty('z-index','4','important');
@@ -4904,9 +4911,11 @@ function mount(t,previewConfig=null){
  const parent=host.parentElement;if(parent)parent.style.position='relative';
  const pos=Math.max(0,Math.min(100,Number(cfg.position??(cfg.align==='left'?0:cfg.align==='center'?50:100))))/100;
  host.style.setProperty('position','absolute','important');
- host.style.setProperty('left',(pos*100)+'%','important');
- host.style.setProperty('translate',(-pos*100)+'% -50%','important');
- host.style.setProperty('top','50%','important');
+ const vpos=Math.max(0,Math.min(100,Number(cfg.vertical??50)))/100;
+ // Position against the available banner area, accounting for the mounted clock footprint.
+ host.style.setProperty('left','calc((100% - min(100%, 210px)) * '+pos+')','important');
+ host.style.setProperty('top','calc((100% - '+Math.max(1,host.offsetHeight||90)+'px) * '+vpos+')','important');
+ host.style.setProperty('translate','none','important');
  host.style.setProperty('width','min(100%, 210px)','important');
  host.style.setProperty('z-index','5','important');
 }
