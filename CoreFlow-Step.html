@@ -5089,10 +5089,20 @@ function loadTarget(t){current=t;refreshSources();document.querySelectorAll('#td
  const vpos=Math.max(0,Math.min(100,Number(cfg.vertical??50)))/100;
  // Use one center-anchored coordinate system for real Dashboard and preview.
  // Avoid the former 210px wrapper, which made 50% point to the wrong visual center.
- const baseWidth=Math.max(180,+cfg.dashboardCardWidth||340);
+ // Match Advanced Preview geometry: measure the UNTRANSFORMED card, then
+ // fit it inside the actual banner before calculating its position.
+ // The old code inherited a scale from applySettings(), used a different
+ // card height and allowed the card to extend under the KPI row.
+ c.style.setProperty('transform','none','important');
+ c.style.setProperty('transform-origin','top left','important');
+ const baseWidth=Math.max(180,Math.min(520,+cfg.dashboardCardWidth||340));
  const baseHeight=Math.max(+cfg.dashboardCardHeight||160,c.scrollHeight||c.offsetHeight||160);
- const scaleMatch=(c.getBoundingClientRect().width||baseWidth)/baseWidth;
- const visualWidth=baseWidth*scaleMatch,visualHeight=baseHeight*scaleMatch;
+ const bannerWidth=Math.max(1,parent?.clientWidth||anchor.clientWidth||700);
+ const bannerHeight=Math.max(1,parent?.clientHeight||anchor.clientHeight||180);
+ const maxWidth=Math.max(75,Math.min(240,bannerWidth*.29));
+ const requestedScale=Math.max(.2,Math.min(1.6,(+cfg.scale||100)/100));
+ const fit=Math.min(1,maxWidth/baseWidth,Math.max(40,bannerHeight-20)/baseHeight)*requestedScale;
+ const visualWidth=baseWidth*fit,visualHeight=baseHeight*fit;
  host.style.setProperty('width',visualWidth+'px','important');
  host.style.setProperty('height',visualHeight+'px','important');
  host.style.setProperty('max-width','none','important');
@@ -5100,9 +5110,19 @@ function loadTarget(t){current=t;refreshSources();document.querySelectorAll('#td
  host.style.setProperty('overflow','visible','important');
  host.style.setProperty('justify-content','flex-start','important');
  host.style.setProperty('align-items','flex-start','important');
+ host.style.setProperty('padding','0','important');
+ host.style.setProperty('right','auto','important');
+ host.style.setProperty('bottom','auto','important');
+ c.style.setProperty('width',baseWidth+'px','important');
+ c.style.setProperty('min-width',baseWidth+'px','important');
+ c.style.setProperty('height','auto','important');
+ c.style.setProperty('min-height',(+cfg.dashboardCardHeight||160)+'px','important');
+ c.style.setProperty('transform','scale('+fit+')','important');
+ c.style.setProperty('transform-origin','top left','important');
  host.style.setProperty('left',(pos*100)+'%','important');
  host.style.setProperty('top',(vpos*100)+'%','important');
  host.style.setProperty('translate',(-pos*100)+'% '+(-vpos*100)+'%','important');
+ host.style.setProperty('transform','none','important');
  host.style.setProperty('z-index','5','important');
 }
  if(t==='sidebar'||t==='collapsed'){
