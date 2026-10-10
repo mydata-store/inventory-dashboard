@@ -5377,7 +5377,7 @@ function cfImportCard(name,id,doc,base){
  const cardId='external-'+String(id||name).replace(/[^a-zA-Z0-9_.:-]/g,'-').slice(0,85);
  const data={...base,id:cardId,Name:String(name||'Imported Clock').slice(0,110),clockId:'gallery:analog',Clock:'gallery:analog',externalHtml:doc,Width:440,Height:230,ClockSize:390,DatePosition:'bottom',Padding:0,AutoFit:true,Style:'solid',Bg:'#0b1523',Border:'#33536b',Text:'#f1f6ff'};
  const old=read();const ix=old.findIndex(x=>x.id===cardId);if(ix>=0)old[ix]=data;else old.push(data);
- localStorage.setItem(store,JSON.stringify(old));document.dispatchEvent(new Event('cf9card:refresh-imported'));render();
+ localStorage.setItem(store,JSON.stringify(old));document.dispatchEvent(new Event('cf9card:refresh-imported'));document.dispatchEvent(new Event('cf9clock:library-changed'));render();
  importStatus.textContent='Imported: '+data.Name+' — choose Preview & Apply, then Save & Apply.';
  return data;
 }
@@ -5390,12 +5390,12 @@ importInput.addEventListener('change',async()=>{
  try{
   if(file.size>15000000)throw Error('JSON file exceeds 15 MB');
   const json=JSON.parse(await file.text());
-  if(json && !Array.isArray(json) && json.type==='analog' && json.face && json.hands && json.markers && json.theme){
+  if(json && !Array.isArray(json) && (json.type==='analog'||(json.face&&json.markers&&json.hands)) && json.face && json.hands && json.markers && json.theme){
    cfImportCard(json.name,json.id,cfFrameDocFromAnalog(json),{...builtin[0],giftType:'analog'});
    return;
   }
   const candidates=[json,json?.designs,json?.cards,json?.cardDesigns,json?.savedCards,json?.data?.designs,json?.data?.cards,json?.data?.cardDesigns,json?.data?.savedCards,json?.data?.items,json?.items,json?.design&&[json.design],json?.card&&[json.card]].find(Array.isArray);
-  if(!candidates||!candidates.length)throw Error('Card designs not found. Expected designs/cards array from CoreFlow Card Designer. Upload JSON here for another format.');
+  if(!candidates||!candidates.length)throw Error('Unsupported JSON. Choose Neon_HUD_Clock2.json (analogue clock definition) or a CoreFlow exported cards file.');
   if(candidates.length>400)throw Error('Maximum 400 cards per import');
   const parsed=[];
   for(let i=0;i<candidates.length;i++){
@@ -5449,9 +5449,8 @@ function select(c){
   if(!card)return;
   if(![...card.options].some(o=>o.value===c.id))card.append(new Option(c.Name||'Gift Clock',c.id));
   card.value=c.id;
+  if(!c.id.startsWith('cf9gift-'))document.dispatchEvent(new CustomEvent('cf9card:load-by-id',{detail:{id:c.id}}));
   card.dispatchEvent(new Event('change',{bubbles:true}));
-  // Reload by ID after async source refresh so the placement snapshot is the imported artwork.
-  if(c.externalHtml)document.dispatchEvent(new CustomEvent('cf9card:load-by-id',{detail:{id:c.id}}));
   // If the imported/saved design is selected, keep this exact ID in the selector.
   // A refresh of the Preview tab must not switch it back to Current Card Designer.
   const status=document.getElementById('td9fStatus');
@@ -5460,6 +5459,7 @@ function select(c){
 }
 
 function tick(){const d=new Date(),h=d.getHours(),m=d.getMinutes(),s=d.getSeconds(),pad=x=>String(x).padStart(2,'0');section.querySelectorAll('[data-gift-time]').forEach(e=>e.textContent=pad(h%12||12)+':'+pad(m)+':'+pad(s)+(h>=12?' PM':' AM'));section.querySelectorAll('[data-gift-date]').forEach(e=>e.textContent=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}));section.querySelectorAll('.cf9gift-face').forEach(f=>{f.querySelector('.cf9gift-hour').style.transform='translateX(-50%) rotate('+((h%12)*30+m/2)+'deg)';f.querySelector('.cf9gift-minute').style.transform='translateX(-50%) rotate('+(m*6+s/10)+'deg)';f.querySelector('.cf9gift-second').style.transform='translateX(-50%) rotate('+(s*6)+'deg)'})}
+document.addEventListener('cf9card:refresh-imported',render);
 document.getElementById('td9pSearch').addEventListener('input',render);document.getElementById('td9pType').addEventListener('change',render);document.getElementById('td9pNew').addEventListener('click',()=>root.querySelector('[data-td9-tab="builder"]')?.click());root.querySelector('[data-td9-tab="gallery"]')?.addEventListener('click',()=>setTimeout(render,30));document.getElementById('td9cSave')?.addEventListener('click',()=>setTimeout(render,100));render();setInterval(()=>{if(!document.hidden)tick()},1000);resume();
 })();
 </script>
