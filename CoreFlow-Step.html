@@ -4673,8 +4673,45 @@ card.dataset.cardAnimation=c.Animation;card.style.setProperty('--td9c5b-duration
 syncCardLive()}
  function updateCardClockOptions(){let sel=document.getElementById('td9cClock'),current=cardClock;sel.replaceChildren();let built=document.createElement('optgroup');built.label='Built-in Clock Gallery';designs.forEach(d=>built.append(new Option(d[1],'gallery:'+d[0])));sel.append(built);let custom=document.createElement('optgroup');custom.label='My Custom Clocks';myClocks.forEach(c=>custom.append(new Option(c.name||'Custom Clock',c.id)));sel.append(custom);let dig=document.createElement('optgroup');dig.label='My Digital Clock Designs';digitalDesigns.forEach(v=>dig.append(new Option(v.Name||v.name,v.id)));sel.append(dig);if(current==='builtin')current='gallery:analog';cardClock=designs.some(d=>'gallery:'+d[0]===current)||myClocks.some(c=>c.id===current)||digitalDesigns.some(c=>c.id===current)?current:'gallery:analog';sel.value=cardClock;drawCard()}
  document.addEventListener('cf9gift:load-card',event=>{const c=event.detail;if(!c||!String(c.id||'').startsWith('cf9gift-'))return;activeCardId=null;loadCard(c);document.getElementById('td9cStatus').textContent='Built-in gift design loaded. Save only if you want your own editable copy.'});
- document.addEventListener('cf9card:load-by-id',event=>{const id=String(event.detail?.id||'');let found=cardDesigns.find(c=>String(c.id)===id);if(!found){try{const all=JSON.parse(localStorage.getItem(cardStoreKey)||'[]');if(Array.isArray(all)){cardDesigns=all;found=all.find(c=>String(c.id)===id)}}catch(e){}}if(!found)return;activeCardId=found.id;loadCard(found);document.getElementById('td9cStatus').textContent='Loaded saved design: '+(found.Name||'Untitled');});
+ document.addEventListener('cf9card:load-by-id',event=>{const id=String(event.detail?.id||'');let found=cardDesigns.find(c=>String(c.id)===id);if(!found){try{const all=JSON.parse(localStorage.getItem(cardStoreKey)||'[]');if(Array.isArray(all)){cardDesigns=all;found=all.find(c=>String(c.id)===id)}}catch(e){}}if(!found){document.getElementById('td9cStatus').textContent='Saved design ID not found: '+id;return;}activeCardId=found.id;loadCard(found);document.getElementById('td9cStatus').textContent='Loaded saved design: '+(found.Name||'Untitled');document.dispatchEvent(new CustomEvent('cf9card:loaded',{detail:{id:found.id,name:found.Name}}));});
  document.addEventListener('cf9card:refresh-imported',()=>{try{const all=JSON.parse(localStorage.getItem(cardStoreKey)||'[]');if(Array.isArray(all)){cardDesigns=all;refreshCardSaved()}}catch(e){}});
+ // Import CoreFlow Clock Builder JSON through the existing clock/card owners.
+ document.addEventListener('cf9clock:import-definition',async event=>{
+   const done=event.detail?.done;
+   try{
+     const def=event.detail?.definition;
+     if(!def || def.type!=='analog'||!def.face||!def.markers||!def.hands||!def.theme)throw Error('Not a CoreFlow analogue clock definition');
+     const color=(v,d)=>/^#[a-f0-9]{6}$/i.test(String(v||''))?v:d;
+     const th=def.theme, sz=Math.max(200,Math.min(1000,Number(def.size)||420)), cx=sz/2, scale=sz/420;
+     let svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${sz} ${sz}" width="${sz}" height="${sz}"><defs><radialGradient id="f"><stop stop-color="${color(th.faceInner,'#030b16')}"/><stop offset="1" stop-color="${color(th.faceOuter,'#07192c')}"/></radialGradient></defs><circle cx="${cx}" cy="${cx}" r="${Math.min(cx-3,195*scale)}" fill="url(#f)" stroke="${color(th.ring,'#0c3351')}" stroke-width="${Math.max(2,Number(def.face.rimWidth)||5)*scale}"/>`;
+     const count=Math.max(12,Math.min(120,Number(def.markers.tickCount)||60)), hc=Math.max(4,Math.min(24,Number(def.markers.hourCount)||12));
+     for(let k=0;k<count;k++){
+       const quarter=k%(count/4)===0, hour=k%(count/hc)===0, r=(Number(def.markers.tickRadius)||165)*scale;
+       const length=(quarter?Number(def.markers.quarterHourLength):hour?Number(def.markers.hourLength):Number(def.markers.tickLength))||7;
+       const a=k*2*Math.PI/count-Math.PI/2;
+       const x1=cx+Math.cos(a)*r,y1=cx+Math.sin(a)*r,x2=cx+Math.cos(a)*(r-length*scale),y2=cx+Math.sin(a)*(r-length*scale);
+       svg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${hour?color(th.neon,'#36dbff'):color(th.muted,'#6589a6')}" stroke-width="${(hour?Number(def.markers.hourWidth)||5:Number(def.markers.tickWidth)||1.5)*scale}" stroke-linecap="round"/>`;
+     }
+     svg+='</svg>';
+     const img='data:image/svg+xml;base64,'+btoa(svg);
+     const id=String(def.id||('imported-clock-'+Date.now()));
+     if(!/^[A-Za-z0-9_.:-]{1,100}$/.test(id))throw Error('Invalid clock ID');
+     const clock={id,name:String(def.name||'Imported Clock').slice(0,100),art:img,mime:'image/svg+xml',hands:'classic',color:color(th.neon,'#36dbff'),x:50,y:50,size:100,artFit:'contain',artX:0,artY:0,zoom:100,rotate:0,artOpacity:100,maskMode:'keep',hourLen:Math.round(100*(Number(def.hands.hour?.length)||89)/270),minuteLen:Math.round(100*(Number(def.hands.minute?.length)||125)/270),secondLen:Math.round(100*(Number(def.hands.second?.length)||138)/270),thickness:100,showSeconds:true,movement:def.animation?.secondMotion==='continuous'?'smooth':'tick',shadow:20,pinColor:color(th.neon,'#36dbff'),nativeDefinition:def};
+     await putClock(clock);
+     await refreshMyClocks();
+     updateCardClockOptions();
+     const cardId='import-card-'+id;
+     const card={...cardDefaults,id:cardId,Name:clock.name,clockId:id,Clock:id,Bg:color(th.faceOuter,'#07192c'),Text:color(th.silver,'#daefff'),Border:color(th.neon,'#36dbff'),ClockSize:155,Width:350,Height:240,TimeColor:color(th.silver,'#daefff'),DateColor:color(th.silver,'#daefff'),Glow:22,GlowColor:color(th.neon,'#36dbff'),DatePosition:'bottom'};
+     const previous=JSON.parse(localStorage.getItem(cardStoreKey)||'[]');
+     if(!Array.isArray(previous))throw Error('Saved card storage is invalid');
+     const ix=previous.findIndex(x=>x.id===cardId);if(ix>=0)previous[ix]=card;else previous.push(card);
+     localStorage.setItem(cardStoreKey,JSON.stringify(previous));
+     cardDesigns=previous;refreshCardSaved();
+     document.dispatchEvent(new Event('cf9card:refresh-imported'));
+     if(typeof done==='function')done(null,card);
+   }catch(err){if(typeof done==='function')done(err);}
+ });
+
  function refreshCardSaved(){let box=document.getElementById('td9cSaved');box.replaceChildren();cardDesigns.forEach(d=>{let art=document.createElement('article'),name=document.createElement('b');name.textContent=d.Name||'Untitled';let edit=document.createElement('button');edit.textContent='Edit';edit.onclick=()=>{activeCardId=d.id;loadCard(d);document.getElementById('td9cStatus').textContent='Editing saved card.'};let del=document.createElement('button');del.textContent='Delete';del.onclick=()=>{if(!confirm('Delete card design?'))return;cardDesigns=cardDesigns.filter(x=>x.id!==d.id);persistCardDesigns();refreshCardSaved()};art.append(name,edit,del);box.append(art)})}
  function persistCardDesigns(){try{localStorage.setItem(cardStoreKey,JSON.stringify(cardDesigns));return true}catch(e){document.getElementById('td9cStatus').textContent='Save failed: '+e.message;return false}}
  const presets=[['Modern Dark','#142b4b','#ffffff','solid'],['Light Minimal','#f0f6ff','#172b47','solid'],['Glass Blue','#2669a6','#ffffff','glass'],['Midnight Gradient','#12254b','#ffffff','gradient'],['Transparent','#182d4c','#ffffff','transparent'],['Executive','#334155','#ffffff','solid']];
@@ -5308,28 +5345,52 @@ exportSaved.addEventListener('click',()=>{
  const a=document.createElement('a');a.href=url;a.download='CoreFlow-Saved-Clock-Cards.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });toolbar.append(exportSaved);
 const importSaved=document.createElement('button');importSaved.type='button';importSaved.className='td9-primary';importSaved.textContent='Import Cards JSON';importSaved.title='Import previously exported CoreFlow custom clock cards';
-const importInput=document.createElement('input');importInput.type='file';importInput.accept='.json,application/json';importInput.hidden=true;
-const importStatus=document.createElement('span');importStatus.style.cssText='font-size:12px;color:#335b86;align-self:center';importStatus.setAttribute('role','status');
+const importInput=document.createElement('input');importInput.type='file';importInput.accept='.json,application/json';importInput.style.display='none';
+const importStatus=document.createElement('span');importStatus.style.cssText='font-size:12px;color:#335b86;align-self:center;flex-basis:100%;font-weight:650;white-space:normal';importStatus.setAttribute('role','status');
 importSaved.onclick=()=>importInput.click();
-importInput.addEventListener('change',async()=>{const file=importInput.files?.[0];if(!file)return;try{
- if(file.size>3000000)throw Error('JSON file exceeds 3 MB limit');
- const json=JSON.parse(await file.text());
- const rows=Array.isArray(json)?json:(Array.isArray(json?.designs)?json.designs:(json?.design&&typeof json.design==='object'?[json.design]:null));
- if(!rows||!rows.length)throw Error('Expected CoreFlow saved cards JSON containing designs');
- if(rows.length>250)throw Error('Too many card designs (maximum 250)');
- const valid=rows.map((row,i)=>{if(!row||typeof row!=='object'||Array.isArray(row))throw Error('Invalid card at '+(i+1));
- const name=String(row.Name||row.name||'Imported Card '+(i+1)).slice(0,110);
- const clockId=String(row.clockId||'gallery:analog').slice(0,150);
- const id=String(row.id||('import-'+Date.now()+'-'+i)).slice(0,100);
- if(!/^[\w:.-]+$/.test(id)||id.startsWith('cf9gift-'))throw Error('Invalid custom card ID at '+(i+1));
- if(Object.keys(row).length>130)throw Error('Invalid card structure at '+(i+1));
- return {...row,id,Name:name,clockId};});
- const previous=read();const map=new Map(previous.map(c=>[String(c.id),c]));valid.forEach(c=>map.set(c.id,c));
- const merged=Array.from(map.values());localStorage.setItem(store,JSON.stringify(merged));
- document.dispatchEvent(new Event('cf9card:refresh-imported'));render();
- importStatus.textContent='Imported '+valid.length+' design(s). Select a card to Apply.';
- const sel=document.getElementById('td9fCardSource');if(sel){const first=valid[0];if(![...sel.options].some(o=>o.value===first.id))sel.append(new Option(first.Name,first.id));}
- }catch(error){importStatus.textContent='Import failed: '+error.message}finally{importInput.value=''}});
+importInput.addEventListener('change',async()=>{
+ const file=importInput.files?.[0];if(!file)return;
+ try{
+  if(file.size>15000000)throw Error('JSON file exceeds 15 MB');
+  const json=JSON.parse(await file.text());
+  if(json && !Array.isArray(json) && json.type==='analog' && json.face && json.hands && json.markers && json.theme){
+   const imported=await new Promise((resolve,reject)=>{
+    document.dispatchEvent(new CustomEvent('cf9clock:import-definition',{detail:{definition:json,done:(error,card)=>error?reject(error):resolve(card)}}));
+   });
+   render();
+   importStatus.textContent='Imported analogue clock: '+imported.Name+' — click Preview & Apply in Gallery.';
+   const previewSelect=document.getElementById('td9fCardSource');
+   if(previewSelect&&!Array.from(previewSelect.options).some(o=>o.value===imported.id))previewSelect.append(new Option(imported.Name,imported.id));
+   return;
+  }
+  const candidates=[json,json?.designs,json?.cards,json?.cardDesigns,json?.savedCards,json?.data?.designs,json?.data?.cards,json?.data?.cardDesigns,json?.data?.savedCards,json?.data?.items,json?.items,json?.design&&[json.design],json?.card&&[json.card]].find(Array.isArray);
+  if(!candidates||!candidates.length)throw Error('Card designs not found. Expected designs/cards array from CoreFlow Card Designer. Upload JSON here for another format.');
+  if(candidates.length>400)throw Error('Maximum 400 cards per import');
+  const parsed=[];
+  for(let i=0;i<candidates.length;i++){
+   const row=candidates[i];if(!row||typeof row!=='object'||Array.isArray(row))continue;
+   const source=row.settings&&typeof row.settings==='object'?{...row.settings,...row}:row;
+   const cardLike=['ClockSize','Clock','clockId','TimeSize','DateSize','DatePosition','Bg','Shape','Ratio','ShowSeconds'].some(k=>k in source);
+   if(!cardLike)continue;
+   const id=String(source.id||source.ID||('import-'+Date.now()+'-'+i));
+   if(!/^[a-zA-Z0-9_:.\-]+$/.test(id)||id.startsWith('cf9gift-'))throw Error('Invalid card ID in entry '+(i+1));
+   const Name=String(source.Name||source.name||source.title||'Imported Card '+(i+1)).slice(0,110);
+   const clockId=String(source.clockId||source.Clock||'gallery:analog');
+   parsed.push({...source,id,Name,clockId});
+  }
+  if(!parsed.length)throw Error('This file contains no compatible Card Designer records. Clock Builder files require a separate clock importer; upload the JSON for conversion.');
+  const previous=read();const merged=new Map(previous.map(v=>[String(v.id),v]));
+  parsed.forEach(v=>merged.set(v.id,v));
+  localStorage.setItem(store,JSON.stringify([...merged.values()]));
+  document.dispatchEvent(new Event('cf9card:refresh-imported'));
+  render();
+  const first=parsed[0];
+  importStatus.textContent='Imported '+parsed.length+' card(s). First: '+first.Name+' · Click Preview & Apply in gallery.';
+  const previewSelect=document.getElementById('td9fCardSource');
+  if(previewSelect&&!Array.from(previewSelect.options).some(o=>o.value===first.id))previewSelect.append(new Option(first.Name,first.id));
+ }catch(error){importStatus.textContent='Import failed: '+(error.message||error);console.error('CoreFlow card JSON import failed',error)}
+ finally{importInput.value=''}
+});
  toolbar.append(importSaved,importInput,importStatus);
 const head=gallery.querySelector('.td9-sectionhead');head.querySelector('h2').textContent='Complete Clock Design Gallery · 12 Gift Designs';head.querySelector('p').textContent='12 built-in live designs + your own saved cards. Select a design to preview and apply.';const oldButton=head.querySelector('button');if(oldButton)oldButton.style.display='none';oldGrid.style.display='none';const section=document.createElement('div');section.id='td9pGallery';head.after(toolbar,section);
 const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
@@ -5348,6 +5409,8 @@ function select(c){
   if(![...card.options].some(o=>o.value===c.id))card.append(new Option(c.Name||'Gift Clock',c.id));
   card.value=c.id;
   card.dispatchEvent(new Event('change',{bubbles:true}));
+  // If the imported/saved design is selected, keep this exact ID in the selector.
+  // A refresh of the Preview tab must not switch it back to Current Card Designer.
   const status=document.getElementById('td9fStatus');
   if(status)status.textContent='Selected: '+(c.Name||'Clock')+'. Choose placement, then Save & Apply.';
  },140);
