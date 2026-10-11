@@ -5316,4 +5316,52 @@ async function companyCityFallback(){
 function bind(){if(!$('cf07gWeather'))return;read();fill();$('cf07gRefresh').addEventListener('click',refresh);$('cf07gDetect').addEventListener('click',()=>{if(!navigator.geolocation){status('Geolocation is not supported. Enter a city manually.');return}status('Requesting location permission…');navigator.geolocation.getCurrentPosition(pos=>{settings.lat=pos.coords.latitude;settings.lon=pos.coords.longitude;settings.city='';fill();save();refresh()},err=>status('Location unavailable ('+err.message+'). Enter a city manually.'),{enableHighAccuracy:false,timeout:12000,maximumAge:600000})});for(const key of ['enabled','showIcon','showCondition','showLocation'])$('cf07g'+key[0].toUpperCase()+key.slice(1)).addEventListener('change',e=>{settings[key]=e.target.checked;save();display()});$('cf07gUnit').addEventListener('change',e=>{settings.unit=e.target.value;save();display()});$('cf07gInterval').addEventListener('change',e=>{settings.interval=Number(e.target.value);save();display()});$('cf07gCity').addEventListener('change',e=>{const value=e.target.value.trim();if(value!==settings.city){settings.city=value;settings.lat=null;settings.lon=null;/* Retain last good reading until new city weather arrives. */save();display();if(value)refresh()}});setInterval(()=>{if(settings.enabled&&((settings.city||Number.isFinite(settings.lat))&&(!weather||Date.now()-weather.fetchedAt>=settings.interval*60000)))refresh()},60000);if(settings.enabled&&(settings.city||Number.isFinite(settings.lat))&&(!weather||Date.now()-weather.fetchedAt>=settings.interval*60000))refresh();
 else if(settings.enabled&&!settings.city&&!Number.isFinite(settings.lat))companyCityFallback().then(found=>{if(found)refresh()});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
-})();</script></body></html>
+})();</script>
+<style id="cf08a1-three-mode-preview-css">
+/* Step 08A1: scoped presentation only. Existing wallpaper apply/storage remains unchanged. */
+#cf8ePreviewModal .cf8e-preview-shell{width:min(1080px,95vw)!important;height:min(670px,90vh)!important;max-height:90vh!important}
+#cf8ePreviewModal .cf8f-layout{grid-template-columns:235px minmax(0,1fr)!important;height:calc(min(670px,90vh) - 66px)!important;min-height:0}
+#cf8ePreviewModal .cf8f-controls{min-width:0;overflow:auto}
+#cf8ePreviewModal .cf8f-stage{min-width:0;min-height:0;overflow:auto}
+#cf8ePreviewModal #cf8fPages{display:none!important}
+#cf8ePreviewModal .cf8g-targets{display:none!important}
+#cf8ePreviewModal .cf08a1-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0 0 12px}
+#cf8ePreviewModal .cf08a1-tab{border:1px solid #bfd7ee;border-radius:9px;background:#f8fbff;color:#17436a;padding:11px 3px;cursor:pointer;font-size:11px;font-weight:750}
+#cf8ePreviewModal .cf08a1-tab.active{color:white;background:#1688ef;border-color:#1688ef}
+#cf8ePreviewModal .cf08a1-tip{font-size:11px;color:#536b86;line-height:1.5;margin:0 0 12px}
+#cf8ePreviewModal .cf08a1-combo{position:relative;padding-left:110px;min-height:100%;box-sizing:border-box}
+#cf8ePreviewModal .cf08a1-combo:before{content:"";position:absolute;left:0;top:0;bottom:0;width:105px;background:linear-gradient(155deg,#0d2c4b,#195479);border-radius:8px 0 0 8px;border-right:3px solid #ffffff66}
+#cf8ePreviewModal .cf08a1-combo:after{content:"FPM\A Dashboard\A Purchasing\A Inventory\A Reports";white-space:pre;line-height:3.15;position:absolute;left:10px;top:14px;color:#fff;font-size:10px;font-weight:700}
+@media(max-width:650px){#cf8ePreviewModal .cf8f-layout{grid-template-columns:1fr!important;height:auto!important;max-height:calc(90vh - 66px);overflow:auto}#cf8ePreviewModal .cf8f-controls{max-height:250px}#cf8ePreviewModal .cf8f-stage{min-height:280px}}
+</style>
+<script id="cf08a1-three-mode-preview-js">
+(()=>{
+ function init(){
+  const modal=document.getElementById('cf8ePreviewModal'),controls=modal?.querySelector('.cf8f-controls'),pages=document.getElementById('cf8fPages'),stage=document.getElementById('cf8fStage');
+  if(!modal||!controls||!pages||!stage||modal.dataset.cf08a1Ready)return;
+  modal.dataset.cf08a1Ready='1';
+  const tabs=document.createElement('div');tabs.className='cf08a1-tabs';tabs.innerHTML='<button type="button" class="cf08a1-tab active" data-mode="workspace">Workspace</button><button type="button" class="cf08a1-tab" data-mode="sidebar">Sidebar</button><button type="button" class="cf08a1-tab" data-mode="both">Both</button>';
+  const tip=document.createElement('p');tip.className='cf08a1-tip';tip.textContent='Workspace aur Sidebar ke drafts independent hain. Both abhi combined preview hai; joint Apply agle step mein hoga.';
+  const oldTabs=controls.querySelector('.cf8g-targets');
+  if(oldTabs)oldTabs.insertAdjacentElement('beforebegin',tabs);else controls.insertBefore(tabs,controls.firstChild);
+  tabs.insertAdjacentElement('afterend',tip);
+  const oldHeading=controls.querySelector('h3');if(oldHeading)oldHeading.textContent='Wallpaper Target';
+  const openPreview=()=>modal.classList.contains('open');
+  const pick=(mode)=>{
+   tabs.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+   stage.classList.toggle('cf08a1-combo',mode==='both');
+   const target=mode==='sidebar'?'sidebar':'dashboard';
+   const source=controls.querySelector('.cf8g-targets [data-cf8g-target="'+target+'"]');
+   source?.click();
+   if(mode==='both')pages.querySelector('[data-p="Dashboard"]')?.click();
+   tip.textContent=mode==='both'?'Both: visual comparison only. Edit and Save & Apply Workspace and Sidebar separately in this step.':mode==='sidebar'?'Sidebar wallpaper settings only. Workspace settings remain independent.':'Workspace wallpaper settings only. Sidebar settings remain independent.';
+  };
+  tabs.addEventListener('click',e=>{const btn=e.target.closest('[data-mode]');if(btn)pick(btn.dataset.mode)});
+  const observer=new MutationObserver(()=>{if(openPreview())pick(tabs.querySelector('.active')?.dataset.mode||'workspace');});
+  observer.observe(modal,{attributes:true,attributeFilter:['class']});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+
+</body></html>
