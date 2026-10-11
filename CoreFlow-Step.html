@@ -5364,4 +5364,52 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+<style id="cf08r-reset-css">
+#cf8ePreviewModal .cf08r-reset-trigger{background:#fff8f7!important;border:1px solid #dfaaa4!important;color:#9f3632!important;font-weight:750;cursor:pointer;border-radius:9px;padding:10px 12px;width:100%;text-align:center}
+#cf8ePreviewModal .cf08r-box{border:1px solid #e8c7be;border-radius:11px;padding:11px;background:#fffafa;margin:9px 0 13px;color:#233b52}
+#cf8ePreviewModal .cf08r-box[hidden]{display:none!important}
+#cf8ePreviewModal .cf08r-box strong{display:block;font-size:12px;margin-bottom:4px}
+#cf8ePreviewModal .cf08r-box p{font-size:11px;line-height:1.55;margin:0 0 10px;color:#63768a}
+#cf8ePreviewModal .cf08r-box button{display:block;width:100%;padding:9px;border:1px solid #cbd9e8;border-radius:7px;background:white;color:#24466a;font-weight:700;font-size:11px;text-align:left;margin:5px 0;cursor:pointer}
+#cf8ePreviewModal .cf08r-box button.danger{border-color:#eac7c2;color:#a53a37;background:#fff3f1}
+#cf8ePreviewModal .cf08r-box .cf08r-cancel{color:#596d7c;text-align:center}
+</style>
+<script id="cf08r-reset-js">
+(()=>{
+ function init(){
+  const modal=document.getElementById('cf8ePreviewModal'),old=document.getElementById('cf8iDefault'),previewReset=document.getElementById('cf8fResetAll');
+  if(!modal||!old||!previewReset||modal.dataset.cf08rReady)return;
+  modal.dataset.cf08rReady='1';
+  const trigger=document.createElement('button');trigger.type='button';trigger.className='cf08r-reset-trigger';trigger.textContent='Reset Options ▾';
+  const box=document.createElement('div');box.className='cf08r-box';box.hidden=true;
+  box.innerHTML='<strong>Reset Wallpaper Settings</strong><p id="cf08rHint">Choose an action. Nothing changes on the real workspace until Save & Apply, except the full applied reset.</p><button type="button" data-reset="controls">↺ Reset current preview controls</button><button type="button" data-reset="draft">⊘ Remove wallpaper from current draft</button><button type="button" class="danger" data-reset="applied">⚠ Reset applied wallpapers (Workspace + Sidebar)</button><button type="button" class="cf08r-cancel" data-reset="cancel">Cancel</button>';
+  old.hidden=true;old.insertAdjacentElement('afterend',trigger);trigger.insertAdjacentElement('afterend',box);
+  const mode=()=>modal.querySelector('.cf08a1-tab.active')?.dataset.mode||'workspace';
+  const describe=()=>({workspace:'Workspace',sidebar:'Sidebar',both:'Both previews'})[mode()];
+  trigger.addEventListener('click',()=>{box.hidden=!box.hidden;trigger.setAttribute('aria-expanded',String(!box.hidden));box.querySelector('#cf08rHint').textContent='Selected: '+describe()+'. Preview reset does not erase saved wallpapers. Full applied reset affects both Workspace and Sidebar.'});
+  box.addEventListener('click',event=>{
+   const action=event.target.closest('[data-reset]')?.dataset.reset;if(!action)return;
+   if(action==='cancel'){box.hidden=true;return}
+   if(action==='controls'){
+    // Reuse the original preview-only reset handler. Persisted wallpaper data stays intact.
+    previewReset.click();box.hidden=true;return;
+   }
+   if(action==='draft'){
+    const noWallpaper=document.querySelector('#cf8aGrid [data-id="none"]');
+    const choose=noWallpaper?.querySelector('[data-wp-select]');
+    if(!choose){box.querySelector('#cf08rHint').textContent='No Wallpaper gallery choice was not found. Please select No Wallpaper from the gallery.';return}
+    choose.click();box.hidden=true;return;
+   }
+   if(action==='applied'){
+    // Explicit two-area confirmation; delegate to the original storage reset, which also confirms.
+    if(!window.confirm('Reset BOTH applied Workspace and Sidebar wallpapers? This also affects their saved wallpaper selections.'))return;
+    old.click();box.hidden=true;
+   }
+  });
+  modal.addEventListener('click',event=>{if(event.target===modal)box.hidden=true});
+  const oldReset=previewReset;oldReset.textContent='Reset Preview Controls';
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
 </body></html>
