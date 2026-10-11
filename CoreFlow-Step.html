@@ -4568,7 +4568,7 @@ function showEditor(key){sizeEditor=key;sizeDraft={...sizesFor(key)};$('cf05eHea
 document.querySelectorAll('[data-edit-placement]').forEach(el=>el.addEventListener('click',()=>showEditor(el.dataset.editPlacement)));
 $('cf05eClose').addEventListener('click',()=>{sizeEditor=null;sizeDraft=null;$('cf05eEditor').hidden=true;paint()});
 $('cf05eReset').addEventListener('click',()=>{if(!sizeEditor)return;sizeDraft={...baseSizes[sizeEditor]};editorControls();updateSizesPreview()});
-$('cf05eSave').addEventListener('click',async()=>{if(!sizeEditor||!sizesReady)return;$('cf05eSave').disabled=true;const copy={...placedSizes,[sizeEditor]:{...sizeDraft}};try{await write('placementSizes',copy);Object.assign(placedSizes,copy);sizeDraft={...placedSizes[sizeEditor]};paint();actualPlacement();$('cf05eStatus').textContent='Placement sizes saved and applied.'}catch(e){$('cf05eStatus').textContent='Save failed: '+e.message}finally{$('cf05eSave').disabled=false}});
+$('cf05eSave').addEventListener('click',async()=>{if(!sizeEditor)return;if(!sizesReady){$('cf05eStatus').textContent='Please wait: saved settings are still loading.';return;}$('cf05eSave').disabled=true;const copy={...placedSizes,[sizeEditor]:{...sizeDraft}};try{await write('placementSizes',copy);Object.assign(placedSizes,copy);sizeDraft={...placedSizes[sizeEditor]};paint();actualPlacement();$('cf05eStatus').textContent='Placement sizes saved and applied.'}catch(e){$('cf05eStatus').textContent='Save failed: '+e.message}finally{$('cf05eSave').disabled=false}});
 
 // Profile placement binding: the existing renderer and design storage remain the single owners.
 const actualHosts={sidebarExpanded:document.querySelector('.side > .profile'),topbar:document.getElementById('cf05dTopbar'),mobile:document.getElementById('cf05dMobileTopbar')};
@@ -4578,7 +4578,7 @@ function actualPlacement(){
  const design=designs.get(applied)||defaults;
  for(const [placement,host] of Object.entries(actualHosts)){
   if(!host)continue;
-  const model=placement==='sidebarExpanded'&&document.body.classList.contains('collapsed')?'sidebarCollapsed':placement;
+  const model=placement==='sidebarExpanded'&&(document.body.classList.contains('collapsed')||document.body.classList.contains('sc61-collapsed'))?'sidebarCollapsed':placement;
   const elt=render(design,model,savedProfile);
   host.replaceChildren(elt);
  }
@@ -4681,4 +4681,25 @@ body.cf-preview-mobile .top .cf05d-mobile-profile .cf05b-profile{width:39px!impo
 body.cf-preview-mobile .top .cf05d-mobile-profile .cf05b-text{display:none!important}
 /* Never suppress the mobile drawer or hamburger. */
 </style>
-</body></html>
+<style id="cf05e-operational-size-override">
+/* One authoritative placement-size layer; override obsolete fixed values from 05D.3. */
+.cf05b-stage>.cf05b-profile{box-sizing:border-box!important;width:min(100%,var(--cf05e-width,188px))!important;min-height:var(--cf05e-height,44px)!important;height:auto!important;padding:var(--cf05e-padding,7px)!important;gap:var(--cf05e-gap,6px)!important}
+.cf05b-profile .cf05b-face{box-sizing:border-box!important;width:var(--cf05e-avatar,30px)!important;height:var(--cf05e-avatar,30px)!important;flex:0 0 var(--cf05e-avatar,30px)!important;max-width:calc(100% - 2px)!important;max-height:none!important}
+.cf05b-profile .cf05b-text strong{font-size:var(--cf05e-name,10px)!important}
+.cf05b-profile .cf05b-text small{font-size:var(--cf05e-role,9px)!important}
+.side>.profile:has(.cf05b-profile){box-sizing:border-box!important;max-width:100%!important;min-width:0!important}
+body:not(.sc61-collapsed):not(.collapsed) .side>.profile:has(.cf05b-profile){width:calc(100% - 16px)!important;max-width:calc(100% - 16px)!important;margin-inline:8px!important}
+body:not(.sc61-collapsed):not(.collapsed) .side>.profile .cf05b-profile{box-sizing:border-box!important;width:min(100%,var(--cf05e-width,188px))!important;max-width:100%!important;min-height:var(--cf05e-height,44px)!important;height:auto!important;padding:var(--cf05e-padding,7px)!important;gap:var(--cf05e-gap,6px)!important;justify-content:flex-start!important}
+body:not(.sc61-collapsed):not(.collapsed) .side>.profile .cf05b-face{width:var(--cf05e-avatar,30px)!important;height:var(--cf05e-avatar,30px)!important;flex:0 0 var(--cf05e-avatar,30px)!important;max-height:none!important}
+body:not(.sc61-collapsed):not(.collapsed) .side>.profile .cf05b-text strong{font-size:var(--cf05e-name,10px)!important}
+body:not(.sc61-collapsed):not(.collapsed) .side>.profile .cf05b-text small{font-size:var(--cf05e-role,9px)!important}
+body:is(.sc61-collapsed,.collapsed) .side>.profile:has(.cf05b-profile){width:min(var(--cf05e-width,48px),calc(100% - 8px))!important;height:auto!important;max-width:calc(100% - 8px)!important;margin:6px auto!important}
+body:is(.sc61-collapsed,.collapsed) .side>.profile .cf05b-profile{box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-height:var(--cf05e-height,48px)!important;height:auto!important;padding:var(--cf05e-padding,4px)!important;gap:0!important;align-items:center!important;justify-content:center!important}
+body:is(.sc61-collapsed,.collapsed) .side>.profile .cf05b-face{width:min(var(--cf05e-avatar,30px),calc(100% - 2px))!important;height:min(var(--cf05e-avatar,30px),calc(100% - 2px))!important;flex:0 0 auto!important;max-height:none!important}
+/* The CSS variables used by each placement remain on the card; do not edit sidebar geometry. */
+.top .cf05d-topbar-profile .cf05b-profile{box-sizing:border-box!important;width:min(100%,var(--cf05e-width,210px))!important;min-height:var(--cf05e-height,44px)!important;max-width:100%!important;padding:var(--cf05e-padding,6px)!important;gap:var(--cf05e-gap,7px)!important}
+.top .cf05d-topbar-profile .cf05b-face{width:var(--cf05e-avatar,32px)!important;height:var(--cf05e-avatar,32px)!important;flex:0 0 var(--cf05e-avatar,32px)!important}
+.top .cf05d-mobile-profile .cf05b-profile{min-height:var(--cf05e-height,38px)!important;padding:var(--cf05e-padding,4px)!important;gap:var(--cf05e-gap,4px)!important}
+/* In a mobile header, width is capped by the true available header space. */
+@media(max-width:640px){.top .cf05d-mobile-profile .cf05b-profile{max-width:100%!important}.top .cf05d-mobile-profile .cf05b-face{width:min(var(--cf05e-avatar,28px),30px)!important;height:min(var(--cf05e-avatar,28px),30px)!important;flex:0 0 auto!important}}
+</style></body></html>
