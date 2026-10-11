@@ -5996,9 +5996,33 @@ function cf4lEl(id){return document.getElementById('cf4l'+id)}
 function cf4lReadEffects(){return {cfBgMode:cf4lEl('BgMode')?.value||'original',cfBg1:cf4lEl('Bg1')?.value||'#112c4a',cfBg2:cf4lEl('Bg2')?.value||'#1c74ad',cfAngle:+(cf4lEl('Angle')?.value||135),cfOpacity:+(cf4lEl('Opacity')?.value??100),cfOverlayColor:cf4lEl('OverlayColor')?.value||'#071d35',cfOverlay:+(cf4lEl('Overlay')?.value||0),cfRadius:+(cf4lEl('Radius')?.value??14),cfGlow:+(cf4lEl('Glow')?.value||0),cfBorderColor:cf4lEl('BorderColor')?.value||'#55b9f2',cfBorder:+(cf4lEl('Border')?.value||0)}}
 function cf4lLoadEffects(o){const defs={BgMode:'original',Bg1:'#112c4a',Bg2:'#1c74ad',Angle:135,Opacity:100,OverlayColor:'#071d35',Overlay:0,Radius:14,Glow:0,BorderColor:'#55b9f2',Border:0};Object.keys(defs).forEach(k=>{const el=cf4lEl(k);if(el)el.value=o['cf'+k]??defs[k]});cf4lUpdateLabels()}
 function cf4lUpdateLabels(){for(const [k,u] of [['Angle','°'],['Opacity','%'],['Overlay','%'],['Radius','px'],['Glow','px'],['Border','px']]){const el=cf4lEl(k+'Val');if(el)el.textContent=(cf4lEl(k)?.value||0)+u}}
-function cf4lApplyEffects(card,cfg){if(!card||!cfg)return;const num=(v,d)=>Number.isFinite(Number(v))?Number(v):d;const color=(v,d)=>/^#[0-9a-f]{6}$/i.test(String(v||''))?v:d;const bgMode=cfg.cfBgMode||'original';if(bgMode!=='original'){const c1=color(cfg.cfBg1,'#112c4a'),c2=color(cfg.cfBg2,'#1c74ad');const angle=Math.max(0,Math.min(360,num(cfg.cfAngle,135)));card.style.setProperty('background',bgMode==='gradient'?`linear-gradient(${angle}deg,${c1},${c2})`:c1,'important')}const alpha=Math.max(0,Math.min(1,num(cfg.cfOpacity,100)/100));if(bgMode!=='original')card.style.setProperty('background-color',color(cfg.cfBg1,'#112c4a'),'important');const tint=Math.max(0,Math.min(.85,num(cfg.cfOverlay,0)/100));const tc=color(cfg.cfOverlayColor,'#071d35');if(tint>0){const r=parseInt(tc.slice(1,3),16),g=parseInt(tc.slice(3,5),16),b=parseInt(tc.slice(5,7),16);card.style.setProperty('background-image',`linear-gradient(rgba(${r},${g},${b},${tint}),rgba(${r},${g},${b},${tint})),`+(bgMode==='gradient'?`linear-gradient(${num(cfg.cfAngle,135)}deg,${color(cfg.cfBg1,'#112c4a')},${color(cfg.cfBg2,'#1c74ad')})`:'linear-gradient(transparent,transparent)'),'important')}card.style.setProperty('border-radius',Math.max(0,Math.min(45,num(cfg.cfRadius,14)))+'px','important');const width=Math.max(0,Math.min(8,num(cfg.cfBorder,0)));if(width)card.style.setProperty('border',`${width}px solid ${color(cfg.cfBorderColor,'#55b9f2')}`,'important');const glow=Math.max(0,Math.min(45,num(cfg.cfGlow,0)));if(glow)card.style.setProperty('box-shadow',`0 0 ${glow}px ${color(cfg.cfBorderColor,'#55b9f2')}99`,'important');if(alpha<1){/* Opacity applies to card surface only, not the clock artwork. */card.style.setProperty('--cf4l-card-opacity',String(alpha));if(bgMode==='solid')card.style.setProperty('background-color',color(cfg.cfBg1,'#112c4a')+Math.round(alpha*255).toString(16).padStart(2,'0'),'important')}
+const cf4m1BaseCard=new WeakMap();
+const cf4m1BaseSurface=new WeakMap();
+function cf4m1Restore(el,map){if(!el)return;const old=map.get(el);if(old===undefined){map.set(el,el.getAttribute('style'));return}if(old===null)el.removeAttribute('style');else el.setAttribute('style',old)}
+function cf4m1RGBA(hex,opacity){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${opacity})`}
+function cf4m1Color(v,f){return /^#[0-9a-f]{6}$/i.test(String(v||''))?String(v):f}
+function cf4m1Clamp(v,min,max,def){const n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):def}
+function cf4lApplyEffects(card,cfg){
+ if(!card||!cfg)return;
+ cf4m1Restore(card,cf4m1BaseCard);
+ const c1=cf4m1Color(cfg.cfBg1,'#112c4a'),c2=cf4m1Color(cfg.cfBg2,'#1c74ad'),tint=cf4m1Color(cfg.cfOverlayColor,'#071d35');
+ const a=cf4m1Clamp(cfg.cfOpacity,0,100,100)/100,angle=cf4m1Clamp(cfg.cfAngle,0,360,135),overlay=cf4m1Clamp(cfg.cfOverlay,0,85,0)/100;
+ const mode=cfg.cfBgMode||'original';
+ let bg='';
+ if(mode==='solid')bg=cf4m1RGBA(c1,a);
+ if(mode==='gradient')bg=`linear-gradient(${angle}deg,${cf4m1RGBA(c1,a)},${cf4m1RGBA(c2,a)})`;
+ if(mode==='radial')bg=`radial-gradient(circle,${cf4m1RGBA(c1,a)},${cf4m1RGBA(c2,a)})`;
+ if(mode==='glass'){bg=cf4m1RGBA(c1,Math.min(a,.42));card.style.setProperty('backdrop-filter','blur(12px)','important')}
+ if(mode==='transparent')bg='transparent';
+ if(overlay>0){let layer=`linear-gradient(${cf4m1RGBA(tint,overlay)},${cf4m1RGBA(tint,overlay)})`;bg=bg?`${layer},${bg}`:`${layer},linear-gradient(transparent,transparent)`}
+ if(bg)card.style.setProperty('background',bg,'important');
+ card.style.setProperty('border-radius',cf4m1Clamp(cfg.cfRadius,0,45,14)+'px','important');
+ const width=cf4m1Clamp(cfg.cfBorder,0,8,0),glow=cf4m1Clamp(cfg.cfGlow,0,45,0),edge=cf4m1Color(cfg.cfBorderColor,'#55b9f2');
+ if(width)card.style.setProperty('border',`${width}px solid ${edge}`,'important');
+ if(glow)card.style.setProperty('box-shadow',`0 0 ${glow}px ${edge}99`,'important');
 }
-(function(){const root=document.getElementById('cf4kOverview');const host=root?.closest('.td9f-layout');const page=document.getElementById('page-time-date-studio');const bar=document.getElementById('cf4lEditorbar');if(!root||!host||!page||!bar)return;const frame=host.parentElement;frame.classList.add('cf4l-overview-mode');const name={dashboard:'Dashboard Banner',sidebar:'Sidebar Expanded',collapsed:'Sidebar Collapsed',topbar:'Topbar',profile:'Profile Card'};function openEditor(t){frame.classList.remove('cf4l-overview-mode');frame.classList.add('cf4l-editor-mode');bar.hidden=false;document.getElementById('cf4lEditorTitle').textContent=(name[t]||'Clock')+' — Display Editor';}function overview(){frame.classList.add('cf4l-overview-mode');frame.classList.remove('cf4l-editor-mode');bar.hidden=true;}document.getElementById('cf4lBack')?.addEventListener('click',overview);root.addEventListener('click',e=>{const btn=e.target.closest('[data-four-target]');if(btn)openEditor(btn.dataset.fourTarget)});document.getElementById('td9fTargets')?.addEventListener('click',e=>{const btn=e.target.closest('[data-target]');if(btn)openEditor(btn.dataset.target)});document.getElementById('cf4lAppearance')?.addEventListener('input',()=>{cf4lUpdateLabels();const card=document.getElementById('td9fRender')?.firstElementChild;if(card)cf4lApplyEffects(card,cf4lReadEffects());});document.getElementById('cf4lAppearance')?.addEventListener('change',()=>{cf4lUpdateLabels();const card=document.getElementById('td9fRender')?.firstElementChild;if(card)cf4lApplyEffects(card,cf4lReadEffects());});})();
+
+(function(){const root=document.getElementById('cf4kOverview');const host=root?.closest('.td9f-layout');const page=document.getElementById('page-time-date-studio');const bar=document.getElementById('cf4lEditorbar');if(!root||!host||!page||!bar)return;const frame=host.parentElement;frame.classList.add('cf4l-overview-mode');const name={dashboard:'Dashboard Banner',sidebar:'Sidebar Expanded',collapsed:'Sidebar Collapsed',topbar:'Topbar',profile:'Profile Card'};function openEditor(t){frame.classList.remove('cf4l-overview-mode');frame.classList.add('cf4l-editor-mode');bar.hidden=false;document.getElementById('cf4lEditorTitle').textContent=(name[t]||'Clock')+' — Display Editor';}function overview(){frame.classList.add('cf4l-overview-mode');frame.classList.remove('cf4l-editor-mode');bar.hidden=true;}document.getElementById('cf4lBack')?.addEventListener('click',overview);root.addEventListener('click',e=>{const btn=e.target.closest('[data-four-target]');if(btn)openEditor(btn.dataset.fourTarget)});document.getElementById('td9fTargets')?.addEventListener('click',e=>{const btn=e.target.closest('[data-target]');if(btn)openEditor(btn.dataset.target)});document.getElementById('cf4lAppearance')?.addEventListener('input',()=>{cf4lUpdateLabels();const card=document.getElementById('td9fRender')?.firstElementChild;if(card){const full={...cf4lReadEffects(),...cf4mRead()};cf4lApplyEffects(card,full);cf4mApply(card,full)}});document.getElementById('cf4lAppearance')?.addEventListener('change',()=>{cf4lUpdateLabels();const card=document.getElementById('td9fRender')?.firstElementChild;if(card){const full={...cf4lReadEffects(),...cf4mRead()};cf4lApplyEffects(card,full);cf4mApply(card,full)}});})();
 </script>
 <style id="cf4m-appearance-styles">
 #cf4mClockPanel{border:1px solid #d6e4f5;border-radius:11px;padding:13px;margin:14px 0;background:#f7faff;display:grid;gap:11px}
@@ -6016,34 +6040,54 @@ function cf4mEl(k){return document.getElementById('cf4m'+k)}
 function cf4mRead(){const keys=['Type','Shape','BgMode','Bg1','Bg2','Angle','Opacity','OverlayColor','Overlay','Radius','Glow','BorderColor','Border'];const a={};for(const k of keys){const v=cf4mEl(k)?.value;a['cm'+k]=['Angle','Opacity','Overlay','Radius','Glow','Border'].includes(k)?Number(v):v}a.cmCardShape=cf4mEl('CardShape')?.value||'original';a.cmShowDigital=cf4mEl('ShowDigital')?.checked!==false;a.cmShowDate=cf4mEl('ShowDate')?.checked!==false;return a}
 function cf4mLoad(cfg){const defaults={Type:'all',Shape:'original',BgMode:'original',Bg1:'#09192b',Bg2:'#27649b',Angle:135,Opacity:100,OverlayColor:'#061524',Overlay:0,Radius:14,Glow:0,BorderColor:'#54b9f3',Border:0,CardShape:'original',ShowDigital:true,ShowDate:true};for(const [key,val] of Object.entries(defaults)){const el=cf4mEl(key);if(!el)continue;if(el.type==='checkbox')el.checked=cfg['cm'+key]!==false;else el.value=cfg['cm'+key]??val}cf4mLabels();cf4mFilter()}
 function cf4mLabels(){for(const [k,u] of [['Angle','°'],['Opacity','%'],['Overlay','%'],['Radius','px'],['Glow','px'],['Border','px']]){const el=cf4mEl(k+'Val');if(el)el.textContent=String(cf4mEl(k)?.value||0)+u}}
-function cf4mFilter(){const sel=document.getElementById('td9fClockSource');if(!sel)return;const typ=cf4mEl('Type')?.value||'all';for(const opt of sel.querySelectorAll('option')){const text=(opt.textContent+' '+opt.value).toLowerCase();const group=opt.closest('optgroup')?.label?.toLowerCase()||'';const analog=/analog|analogue|dial|neon|royal|sapphire|carbon|gold|silver|classic|floral|ocean|needle|clockface/.test(text+' '+group);const digital=/digital|flip|led|lcd|numeric/.test(text+' '+group);opt.hidden=typ==='all'?false:typ==='analog'?(!analog&&digital):(!digital&&analog)} }
-function cf4mApply(card,cfg){if(!card||!cfg)return;
- const surface=card.querySelector('.td9c-card-clock')||card.querySelector('[class*="card-clock"]')||card;
- const clamp=(v,min,max,def)=>{const n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):def};
- const color=(v,fallback)=>/^#[0-9a-f]{6}$/i.test(String(v))?v:fallback;
- const c1=color(cfg.cmBg1,'#09192b'),c2=color(cfg.cmBg2,'#27649b'),tint=color(cfg.cmOverlayColor,'#061524');
- const angle=clamp(cfg.cmAngle,0,360,135),alpha=clamp(cfg.cmOpacity,0,100,100)/100,overlay=clamp(cfg.cmOverlay,0,85,0)/100;
- const shape=cfg.cmShape||'original';
- if(shape!=='original'){surface.style.setProperty('border-radius',shape==='circle'?'50%':shape==='pill'?'999px':shape==='square'?'0px':clamp(cfg.cmRadius,0,45,14)+'px','important')}
- const mode=cfg.cmBgMode||'original';let bg='';const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'};
- if(mode==='transparent')bg='transparent';if(mode==='solid')bg=rgba(c1,alpha);if(mode==='gradient')bg='linear-gradient('+angle+'deg,'+rgba(c1,alpha)+','+rgba(c2,alpha)+')';if(mode==='radial')bg='radial-gradient(circle,'+rgba(c1,alpha)+','+rgba(c2,alpha)+')';if(mode==='glass'){bg=rgba(c1,Math.min(alpha,.38));surface.style.setProperty('backdrop-filter','blur(9px)','important')}
- if(bg)surface.style.setProperty('background',bg,'important');
- if(overlay>0){surface.style.setProperty('background-image','linear-gradient('+rgba(tint,overlay)+','+rgba(tint,overlay)+')'+(mode==='gradient'? ',linear-gradient('+angle+'deg,'+rgba(c1,alpha)+','+rgba(c2,alpha)+')':''),'important')}
- const border=clamp(cfg.cmBorder,0,8,0),bc=color(cfg.cmBorderColor,'#54b9f3'),glow=clamp(cfg.cmGlow,0,45,0);
- if(border)surface.style.setProperty('border',border+'px solid '+bc,'important');if(glow)surface.style.setProperty('box-shadow','0 0 '+glow+'px '+bc+'aa','important');
- const cardMode=cfg.cfBgMode||'original';
- if(['transparent','glass','radial'].includes(cardMode)){
- const a=clamp(cfg.cfOpacity,0,100,100)/100,cb1=color(cfg.cfBg1,'#112c4a'),cb2=color(cfg.cfBg2,'#1c74ad');
- const background=cardMode==='transparent'?'transparent':cardMode==='glass'?rgba(cb1,Math.min(a,.38)):'radial-gradient(circle,'+rgba(cb1,a)+','+rgba(cb2,a)+')';
- card.style.setProperty('background',background,'important');
- if(cardMode==='glass')card.style.setProperty('backdrop-filter','blur(12px)','important');
+function cf4mFilter(){
+ const sel=document.getElementById('td9fClockSource');if(!sel)return;
+ const wanted=cf4mEl('Type')?.value||'all';
+ for(const opt of sel.querySelectorAll('option')){
+  // Explicit metadata takes precedence; unknown designs remain selectable.
+  const raw=(opt.dataset.clockType||opt.dataset.type||opt.closest('optgroup')?.dataset.clockType||opt.closest('optgroup')?.dataset.type||'').toLowerCase();
+  const group=(opt.closest('optgroup')?.label||'').toLowerCase();
+  let kind=/analog|analogue/.test(raw)?'analog':/digital/.test(raw)?'digital':null;
+  if(!kind&&/digital clock designs|digital builder/i.test(group))kind='digital';
+  if(!kind&&/analog clock designs|analogue clock designs/i.test(group))kind='analog';
+  opt.hidden=wanted!=='all'&&kind!==null&&kind!==wanted;
  }
- const cardShape=cfg.cmCardShape||'original';if(cardShape!=='original')card.style.setProperty('border-radius',cardShape==='circle'?'50%':cardShape==='pill'?'999px':cardShape==='square'?'0px':'14px','important');
- // CoreFlow label elements only; imported iframe owns its internal layout.
- if(cfg.cmShowDigital===false){card.querySelectorAll('.td9c-info-time,.td9c-card-date .td9c-info-time').forEach(e=>e.style.setProperty('display','none','important'))}
- if(cfg.cmShowDate===false){card.querySelectorAll('.td9c-info-date,.td9c-card-date small').forEach(e=>e.style.setProperty('display','none','important'))}
 }
-(function(){const panel=document.getElementById('cf4mClockPanel');if(!panel)return;const mutate=()=>{cf4mLabels();cf4mFilter();const c=document.getElementById('td9fRender')?.firstElementChild;if(c)cf4mApply(c,cf4mRead());const apply=document.getElementById('td9fApply');if(apply)apply.dataset.saveState='dirty'};panel.addEventListener('input',mutate);panel.addEventListener('change',mutate);
+
+function cf4mApply(card,cfg){
+ if(!card||!cfg)return;
+ const surface=card.querySelector('.td9c-card-clock')||card.querySelector('[class*="card-clock"]')||card;
+ if(surface!==card)cf4m1Restore(surface,cf4m1BaseSurface);
+ const c1=cf4m1Color(cfg.cmBg1,'#09192b'),c2=cf4m1Color(cfg.cmBg2,'#27649b'),tint=cf4m1Color(cfg.cmOverlayColor,'#061524');
+ const angle=cf4m1Clamp(cfg.cmAngle,0,360,135),alpha=cf4m1Clamp(cfg.cmOpacity,0,100,100)/100,overlay=cf4m1Clamp(cfg.cmOverlay,0,85,0)/100;
+ const shape=cfg.cmShape||'original';
+ if(shape!=='original'){
+  const radius=shape==='circle'?'50%':shape==='pill'?'999px':shape==='square'?'0px':cf4m1Clamp(cfg.cmRadius,0,45,14)+'px';
+  surface.style.setProperty('border-radius',radius,'important');
+  surface.style.setProperty('overflow','hidden','important');
+ }
+ const mode=cfg.cmBgMode||'original';let bg='';
+ if(mode==='transparent')bg='transparent';
+ if(mode==='solid')bg=cf4m1RGBA(c1,alpha);
+ if(mode==='gradient')bg=`linear-gradient(${angle}deg,${cf4m1RGBA(c1,alpha)},${cf4m1RGBA(c2,alpha)})`;
+ if(mode==='radial')bg=`radial-gradient(circle,${cf4m1RGBA(c1,alpha)},${cf4m1RGBA(c2,alpha)})`;
+ if(mode==='glass'){bg=cf4m1RGBA(c1,Math.min(alpha,.42));surface.style.setProperty('backdrop-filter','blur(9px)','important')}
+ if(overlay>0){const layer=`linear-gradient(${cf4m1RGBA(tint,overlay)},${cf4m1RGBA(tint,overlay)})`;bg=bg?`${layer},${bg}`:`${layer},linear-gradient(transparent,transparent)`}
+ if(bg)surface.style.setProperty('background',bg,'important');
+ const border=cf4m1Clamp(cfg.cmBorder,0,8,0),bc=cf4m1Color(cfg.cmBorderColor,'#54b9f3'),glow=cf4m1Clamp(cfg.cmGlow,0,45,0);
+ if(border)surface.style.setProperty('border',border+'px solid '+bc,'important');
+ if(glow)surface.style.setProperty('box-shadow','0 0 '+glow+'px '+bc+'aa','important');
+ const cardShape=cfg.cmCardShape||'original';
+ if(cardShape!=='original'){card.style.setProperty('border-radius',cardShape==='circle'?'50%':cardShape==='pill'?'999px':cardShape==='square'?'0px':'14px','important');card.style.setProperty('overflow','hidden','important')}
+ // Visibility is fully reversible for CoreFlow-owned labels; embedded iframe text is isolated.
+ for(const e of card.querySelectorAll('.td9c-info-time,.td9c-info-date,.td9c-card-date small')){
+  const isDate=e.matches('.td9c-info-date,.td9c-card-date small');
+  e.style.removeProperty('display');
+  if((isDate?cfg.cmShowDate:cfg.cmShowDigital)===false)e.style.setProperty('display','none','important');
+ }
+}
+
+(function(){const panel=document.getElementById('cf4mClockPanel');if(!panel)return;const mutate=()=>{cf4mLabels();cf4mFilter();const c=document.getElementById('td9fRender')?.firstElementChild;if(c){const full={...cf4lReadEffects(),...cf4mRead()};cf4lApplyEffects(c,full);cf4mApply(c,full)}const apply=document.getElementById('td9fApply');if(apply)apply.dataset.saveState='dirty'};panel.addEventListener('input',mutate);panel.addEventListener('change',mutate);
  cf4mEl('Type')?.addEventListener('change',()=>{const sel=document.getElementById('td9fClockSource');const t=cf4mEl('Type').value;if(!sel||t==='all')return;const arr=[...sel.options];const matches=arr.filter(o=>!o.hidden&&!o.disabled&&o.value);if(matches.length&&!matches.includes(sel.selectedOptions[0])){sel.value=matches[0].value;sel.dispatchEvent(new Event('change',{bubbles:true}))}});
  document.getElementById('cf4mCardShape')?.addEventListener('change',mutate)})();
 </script>
