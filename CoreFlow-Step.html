@@ -4363,6 +4363,8 @@ aside.side .nav .cf7g-real-icon svg{
  const DB='CoreFlowWallpaperDB', G='gallery', A='applied', APPLIED_ID='system', SIDEBAR_ID='sidebar';
  const SCOPE_ID='wallpaper-apply-mode'; let applyMode='separate';
  const state={target:'Dashboard',card:null,id:'none',name:'No Wallpaper',background:'none',assetData:null};
+ let cf08a2Mode='workspace';
+ document.addEventListener('cf08a2-mode',e=>{cf08a2Mode=['workspace','sidebar','both'].includes(e.detail?.mode)?e.detail.mode:'workspace';});
  let appliedSidebar=null; const drafts={};
  const shadows={None:'none',Soft:'0 6px 18px rgba(15,23,42,.10)',Medium:'0 10px 26px rgba(15,23,42,.18)',Strong:'0 14px 34px rgba(15,23,42,.28)'};
  const data=[['none','No Wallpaper','Minimal','Keep the normal CoreFlow background','none'],['aurora','Aurora Flow','Abstract','Luminous abstract blue layers','abstract'],['executiveBlue','Executive Blue','Corporate','Professional corporate workspace','corporate'],['paperMill','Paper Mill','Industrial','Production and mill inspired','mill'],['graphite','Graphite','Dark','Dark technical atmosphere','dark'],['spectrum','Spectrum','Gradient','Premium modern gradient','gradient'],['greenHorizon','Green Horizon','Nature','Calm landscape direction','nature'],['paperRolls','Paper Rolls','Industrial','Paper production inspired','paper'],['factoryBlueprint','Factory Blueprint','Industrial','Engineering grid direction','blueprint'],['ocean','Ocean Abstract','Abstract','Cool blue visual surface','abstract'],['midnight','Midnight Office','Dark','Deep office-friendly background','dark'],['cleanMist','Clean Mist','Minimal','Light distraction-free surface','paper'],['corporateOffice','Corporate Office','Corporate','Deep blue executive workspace','office'],['blueMesh','Blue Mesh','Abstract','Layered premium blue atmosphere','mesh'],['paperPlantPro','Paper Plant Pro','Industrial','Mill, production and paper-roll direction','paperplant'],['softWhite','Soft White','Minimal','Bright professional workspace','softwhite'],['navyGrid','Navy Grid','Dark','Subtle engineering grid','navygrid'],['sunrisePlant','Sunrise Field','Nature','Warm industrial landscape direction','sunrise']];
@@ -4401,7 +4403,9 @@ aside.side .nav .cf7g-real-icon svg{
  function loadDraft(st){state.id=st?.wallpaperId||'none';state.name=st?.name||'No Wallpaper';state.background=st?.background||'none';state.assetData=st?.assetData||null;
   const map={cf8dOpacity:Math.round((st?.opacity??1)*100),cf8dOverlay:Math.round((st?.overlay??0)*100),cf8dBlur:st?.blur??0,cf8dBright:st?.brightness??100,cf8dPosition:st?.position||'center',cf8dSize:st?.size||'cover',cf8dRepeat:st?.repeat||'no-repeat',cf8dAttach:st?.attach||'fixed'};
   Object.entries(map).forEach(([id,val])=>{if($(id))$(id).value=val});
-  $('cf8dSelected').textContent=state.name+' · '+state.target;renderWallpaperPreview();syncPreview();
+  const surfaceMap={seAlpha:st?.alpha??15,seBlur:st?.glass??8,seBorder:st?.border??55,seShadow:st?.shadow||'Soft',seKpi:st?.kpi||'Soft Glass',seNav:st?.nav||'Soft Glass',seButton:st?.button||'Soft Glass',seText:st?.text||'Auto',seBanner:st?.banner??0,seTopGap:st?.topGap??0,seBottomGap:st?.bottomGap??0};
+  Object.entries(surfaceMap).forEach(([id,val])=>{if($(id))$(id).value=val});
+  $('cf8dSelected').textContent=state.name+' · '+state.target;renderWallpaperPreview();renderSurface();syncPreview();
  }
  async function changeTarget(target){if(state.target===target)return;drafts[state.target]=captureDraft();state.target=target;
   document.querySelectorAll('[data-cf8-target]').forEach(b=>b.classList.toggle('active',b.dataset.cf8Target===(target==='Sidebar'?'sidebar':'dashboard')));
@@ -4438,8 +4442,48 @@ aside.side .nav .cf7g-real-icon svg{
  $('cf8iDefault')?.addEventListener('click',async()=>{if(!confirm('Reset wallpaper on System and Sidebar to default?'))return;try{await put({id:APPLIED_ID,wallpaperId:'none',name:'No Wallpaper',background:'none'},A);await put({id:SIDEBAR_ID,wallpaperId:'none',name:'No Wallpaper',background:'none'},A);applyMode='separate';await put({id:SCOPE_ID,mode:applyMode},A);apply(null);applySidebar(null);state.id='none';state.name='No Wallpaper';state.background='none';state.assetData=null;drafts.Dashboard=null;drafts.Sidebar=null;loadDraft(null);updateModeUI();say('Default wallpaper restored to System and Sidebar.')}catch(e){say('Reset failed: '+e.message)}});
  function enforceDashboardOnly(){document.body.classList.toggle('cf8i-dashboard-only',applyMode==='dashboard');}
  window.addEventListener('hashchange',enforceDashboardOnly);
- $('cf8fApply')?.addEventListener('click',()=>{if(previewPage==='Sidebar'){try{localStorage.setItem('coreflow.wallpaper.sidebar.paint.v8h',JSON.stringify(sidebarPaint));paintRealSidebar()}catch(e){console.warn('Sidebar paint save failed',e)}}$('cf8eSave')?.click()});$('cf8fHeaderApply')?.addEventListener('click',()=>{$('cf8fApply')?.click()});
- page.addEventListener('click',async e=>{const card=e.target.closest('#cf8aGrid .cf8a-card');if(card&&e.target.closest('[data-wp-delete]')){if(!card.dataset.id.startsWith('custom-')&&!card.dataset.id.startsWith('applied-custom-'))return;await del(card.dataset.id);if(state.id===card.dataset.id){state.id='none';state.name='No Wallpaper';state.background='none';state.assetData=null}await renderGallery();say('Custom wallpaper deleted from Gallery.');return}if(card&&e.target.closest('[data-wp-select]')){select(card);return}const id=e.target.closest('button')?.id;if(!id)return;if(id==='cf8dReset'){resetWallpaper();return}if(id==='cf8eSurfaceReset'){resetSurface();return}if(id==='cf8dPreviewOnly'){openPreview();return}if(id==='cf8ePreviewClose'){closePreview();return}if(id==='cf8eSave'){if(state.target==='Sidebar'){try{localStorage.setItem('coreflow.wallpaper.sidebar.paint.v8h',JSON.stringify(sidebarPaint));paintRealSidebar()}catch(e){console.warn(e)}}let st=applicationState();const targetId=state.target==='Sidebar'?SIDEBAR_ID:APPLIED_ID;st.id=targetId;try{if(st.assetData&&state.id==='customUpload'){const assetId='applied-custom-'+Date.now();await put({id:assetId,name:state.name,category:'Custom',data:st.assetData,created:Date.now()});st.wallpaperId=assetId;st.assetData=null}await put(st,A);const verify=await get(targetId,A);if(!verify)throw Error('IndexedDB verification failed');const resolved=await resolve(verify);if(state.target==='Sidebar')applySidebar(resolved);else apply(resolved);
+ async function cf08a2SaveRecord(target, draft){
+  const id=target==='Sidebar'?SIDEBAR_ID:APPLIED_ID;
+  const st={...draft,id,updated:Date.now()};
+  if(st.assetData&&st.wallpaperId==='customUpload'){
+   const assetId='applied-custom-'+Date.now()+'-'+(target==='Sidebar'?'s':'w');
+   await put({id:assetId,name:st.name,category:'Custom',data:st.assetData,created:Date.now()},G);
+   st.wallpaperId=assetId;st.assetData=null;
+  }
+  await put(st,A);
+  const read=await get(id,A);if(!read)throw Error(target+' save verification failed');
+  const resolved=await resolve(read);
+  if(target==='Sidebar')applySidebar(resolved);else apply(resolved);
+  drafts[target]={...resolved,assetData:null};
+ }
+ async function cf08a2SaveModes(){
+  const button=$('cf8fHeaderApply');if(button?.disabled)return;
+  if(button)button.disabled=true;
+  try{
+   drafts[state.target]=captureDraft();
+   // Always keep system and sidebar separate; legacy all/dashboard modes must not override another target.
+   applyMode='separate';await put({id:SCOPE_ID,mode:'separate'},A);updateModeUI();
+   if(cf08a2Mode==='both'){
+    for(const target of ['Dashboard','Sidebar']){
+     let draft=drafts[target];
+     if(!draft){const saved=await get(target==='Sidebar'?SIDEBAR_ID:APPLIED_ID,A);draft=saved?await resolve(saved):null}
+     if(draft)await cf08a2SaveRecord(target,draft);
+    }
+    try{localStorage.setItem('coreflow.wallpaper.sidebar.paint.v8h',JSON.stringify(sidebarPaint));paintRealSidebar()}catch(e){console.warn('Sidebar paint unavailable',e)}
+    say('Workspace + Sidebar independently saved & applied.');
+   }else{
+    const target=cf08a2Mode==='sidebar'?'Sidebar':'Dashboard';
+    let draft=drafts[target];
+    if(!draft){const saved=await get(target==='Sidebar'?SIDEBAR_ID:APPLIED_ID,A);draft=saved?await resolve(saved):null}
+    if(draft)await cf08a2SaveRecord(target,draft);
+    if(target==='Sidebar'){try{localStorage.setItem('coreflow.wallpaper.sidebar.paint.v8h',JSON.stringify(sidebarPaint));paintRealSidebar()}catch(e){console.warn(e)}}
+    say(target+' wallpaper saved independently; other area unchanged.');
+   }
+  }catch(err){say('Save failed: '+err.message)}finally{if(button)button.disabled=false}
+ }
+ $('cf8fApply')?.addEventListener('click',cf08a2SaveModes);
+ $('cf8fHeaderApply')?.addEventListener('click',()=>{$('cf8fApply')?.click()});
+ page.addEventListener('click',async e=>{const card=e.target.closest('#cf8aGrid .cf8a-card');if(card&&e.target.closest('[data-wp-delete]')){if(!card.dataset.id.startsWith('custom-')&&!card.dataset.id.startsWith('applied-custom-'))return;await del(card.dataset.id);if(state.id===card.dataset.id){state.id='none';state.name='No Wallpaper';state.background='none';state.assetData=null}await renderGallery();say('Custom wallpaper deleted from Gallery.');return}if(card&&e.target.closest('[data-wp-select]')){select(card);return}const id=e.target.closest('button')?.id;if(!id)return;if(id==='cf8dReset'){resetWallpaper();return}if(id==='cf8eSurfaceReset'){resetSurface();return}if(id==='cf8dPreviewOnly'){openPreview();return}if(id==='cf8ePreviewClose'){closePreview();return}if(id==='cf8eSave'){applyMode='separate';if(state.target==='Sidebar'){try{localStorage.setItem('coreflow.wallpaper.sidebar.paint.v8h',JSON.stringify(sidebarPaint));paintRealSidebar()}catch(e){console.warn(e)}}let st=applicationState();const targetId=state.target==='Sidebar'?SIDEBAR_ID:APPLIED_ID;st.id=targetId;try{if(st.assetData&&state.id==='customUpload'){const assetId='applied-custom-'+Date.now();await put({id:assetId,name:state.name,category:'Custom',data:st.assetData,created:Date.now()});st.wallpaperId=assetId;st.assetData=null}await put(st,A);const verify=await get(targetId,A);if(!verify)throw Error('IndexedDB verification failed');const resolved=await resolve(verify);if(state.target==='Sidebar')applySidebar(resolved);else apply(resolved);
  await put({id:SCOPE_ID,mode:applyMode},A);
  if(applyMode==='all'){const other=state.target==='Sidebar'?APPLIED_ID:SIDEBAR_ID;await put({...st,id:other},A);if(other===SIDEBAR_ID)applySidebar(resolved);else apply(resolved)}
  if(applyMode==='dashboard'){applySidebar(null)}
@@ -5341,20 +5385,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(!modal||!controls||!pages||!stage||modal.dataset.cf08a1Ready)return;
   modal.dataset.cf08a1Ready='1';
   const tabs=document.createElement('div');tabs.className='cf08a1-tabs';tabs.innerHTML='<button type="button" class="cf08a1-tab active" data-mode="workspace">Workspace</button><button type="button" class="cf08a1-tab" data-mode="sidebar">Sidebar</button><button type="button" class="cf08a1-tab" data-mode="both">Both</button>';
-  const tip=document.createElement('p');tip.className='cf08a1-tip';tip.textContent='Workspace aur Sidebar ke drafts independent hain. Both abhi combined preview hai; joint Apply agle step mein hoga.';
+  const tip=document.createElement('p');tip.className='cf08a1-tip';tip.textContent='Workspace aur Sidebar ke drafts independent hain. Both mode saves the independent Workspace and Sidebar drafts together.';
   const oldTabs=controls.querySelector('.cf8g-targets');
   if(oldTabs)oldTabs.insertAdjacentElement('beforebegin',tabs);else controls.insertBefore(tabs,controls.firstChild);
   tabs.insertAdjacentElement('afterend',tip);
   const oldHeading=controls.querySelector('h3');if(oldHeading)oldHeading.textContent='Wallpaper Target';
   const openPreview=()=>modal.classList.contains('open');
   const pick=(mode)=>{
+   document.dispatchEvent(new CustomEvent('cf08a2-mode',{detail:{mode}}));
    tabs.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
    stage.classList.toggle('cf08a1-combo',mode==='both');
    const target=mode==='sidebar'?'sidebar':'dashboard';
    const source=controls.querySelector('.cf8g-targets [data-cf8g-target="'+target+'"]');
    source?.click();
    if(mode==='both')pages.querySelector('[data-p="Dashboard"]')?.click();
-   tip.textContent=mode==='both'?'Both: visual comparison only. Edit and Save & Apply Workspace and Sidebar separately in this step.':mode==='sidebar'?'Sidebar wallpaper settings only. Workspace settings remain independent.':'Workspace wallpaper settings only. Sidebar settings remain independent.';
+   tip.textContent=mode==='both'?'Both: separate Workspace and Sidebar drafts; one Save & Apply saves both independently.':mode==='sidebar'?'Sidebar wallpaper settings only. Workspace settings remain independent.':'Workspace wallpaper settings only. Sidebar settings remain independent.';
   };
   tabs.addEventListener('click',e=>{const btn=e.target.closest('[data-mode]');if(btn)pick(btn.dataset.mode)});
   const observer=new MutationObserver(()=>{if(openPreview())pick(tabs.querySelector('.active')?.dataset.mode||'workspace');});
