@@ -5490,4 +5490,68 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
+
+<style id="cf08r2-adaptive-css">
+#cf8ePreviewModal .cf08r2-panel{padding:12px;border:1px solid #c9dceb;border-radius:11px;background:#f4f9ff;margin:12px 0;color:#193b58;font-size:11px}
+#cf8ePreviewModal .cf08r2-panel strong{display:block;font-size:12px;margin-bottom:8px}
+#cf8ePreviewModal .cf08r2-panel label{display:flex;align-items:center;justify-content:space-between;gap:5px;margin:9px 0;flex-wrap:wrap;font-weight:700}
+#cf8ePreviewModal .cf08r2-panel select{max-width:118px;min-width:85px;font-size:11px;padding:6px}
+#cf8ePreviewModal .cf08r2-panel input[type=checkbox]{accent-color:#1688ef}
+#cf8ePreviewModal .cf08r2-palette{display:flex;gap:5px;margin-top:8px}
+#cf8ePreviewModal .cf08r2-swatch{flex:1;text-align:center;border-radius:7px;padding:8px 2px;font-size:9px;font-weight:800;min-width:0}
+#cf8ePreviewModal .cf08r2-help{font-size:10px;line-height:1.45;color:#55718a;margin-top:7px}
+/* Scoped adaptive colors; do not recolor form inputs or table cells. */
+.side.cf08r2-adaptive .nav a:not(.active),.side.cf08r2-adaptive .nav button:not(.active){color:var(--cf08r2-normal-text)!important}
+.side.cf08r2-adaptive .nav a:not(.active) svg,.side.cf08r2-adaptive .nav button:not(.active) svg{color:inherit!important}
+.side.cf08r2-adaptive .nav a:hover,.side.cf08r2-adaptive .nav button:hover{background:var(--cf08r2-hover-bg)!important;color:var(--cf08r2-hover-text)!important}
+.side.cf08r2-adaptive .nav a.active,.side.cf08r2-adaptive .nav button.active{background:var(--cf08r2-active-bg)!important;color:var(--cf08r2-active-text)!important}
+.side.cf08r2-adaptive .nav a.active svg,.side.cf08r2-adaptive .nav button.active svg,.side.cf08r2-adaptive .nav a:hover svg,.side.cf08r2-adaptive .nav button:hover svg{color:inherit!important}
+#cf8fStage.cf08r2-preview .cf8f-sidebar-link{color:var(--cf08r2-preview-normal)!important}
+#cf8fStage.cf08r2-preview .cf8f-sidebar-link:first-of-type{background:var(--cf08r2-preview-active)!important;color:var(--cf08r2-preview-active-text)!important}
+#cf8fStage.cf08r2-preview .cf8f-sidebar-link:hover{background:var(--cf08r2-preview-hover)!important;color:var(--cf08r2-preview-hover-text)!important}
+/* Workspace is limited to module navigation, not data-entry content. */
+body.cf08r2-workspace .work .nav-card:hover,body.cf08r2-workspace .work .ml-nav-card:hover{background:var(--cf08r2-work-hover)!important;color:var(--cf08r2-work-hover-text)!important}
+body.cf08r2-workspace .work .nav-card.active,body.cf08r2-workspace .work .ml-nav-card.active{background:var(--cf08r2-work-active)!important;color:var(--cf08r2-work-active-text)!important}
+@media(prefers-reduced-motion:reduce){#cf08r2-panel *{transition:none!important}}
+</style>
+<script id="cf08r2-adaptive-js">
+(()=>{
+ const KEY='coreflow.wallpaper.adaptive.v1';
+ const defaults=()=>({enabled:false,intensity:'balanced',contrast:'auto',hoverOpacity:88,activeOpacity:96});
+ const settings={Dashboard:defaults(),Sidebar:defaults()};
+ try{const obj=JSON.parse(localStorage.getItem(KEY)||'{}');for(const t of ['Dashboard','Sidebar'])Object.assign(settings[t],obj[t]||{})}catch(e){}
+ let currentMode='workspace',previewSerial=0,lastColors={},lastSig='';
+ const el=id=>document.getElementById(id),clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+ const rgb=h=>{const x=h.replace('#','');return [0,2,4].map(i=>parseInt(x.slice(i,i+2),16))};
+ const hex=a=>'#'+a.map(n=>clamp(Math.round(n),0,255).toString(16).padStart(2,'0')).join('');
+ const mix=(a,b,f)=>hex(rgb(a).map((x,i)=>x*(1-f)+rgb(b)[i]*f));
+ const lum=h=>{const v=rgb(h).map(x=>{x/=255;return x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4)});return .2126*v[0]+.7152*v[1]+.0722*v[2]};
+ const contrast=a=>lum(a)>.22?'#172b40':'#ffffff';
+ const toRGBA=(h,alpha)=>{const a=rgb(h);return 'rgba('+a.join(',')+','+alpha+')'};
+ function palette(base,cfg){const sat=cfg.intensity==='vibrant'?1:cfg.intensity==='subtle'?.30:.65;const active=mix(mix(base,'#167ae5',.13),lum(base)>.36?'#213d58':'#f7fafc',lum(base)>.36?.28:.07);const hover=mix(base,lum(base)>.35?'#193653':'#f2f7fc',.22);const a=mix('#1a2939',active,sat),h=mix('#28435a',hover,sat);const fg=c=>cfg.contrast==='light'?'#ffffff':cfg.contrast==='dark'?'#14283e':contrast(c);return {normal:lum(base)>.5?'#192f42':'#f5faff',hover:h,active:a,hoverText:fg(h),activeText:fg(a),hoverBg:toRGBA(h,cfg.hoverOpacity/100),activeBg:toRGBA(a,cfg.activeOpacity/100)}}
+ function fallbackFromCss(bg){const m=(bg||'').match(/#[0-9a-f]{6}\b/ig);if(m?.length)return m[Math.floor(m.length/2)];const r=(bg||'').match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);if(r)return hex([+r[1],+r[2],+r[3]]);return '#426c8f'}
+ async function sampleBg(bg){const match=(bg||'').match(/url\(\s*["']?(.+?)["']?\s*\)/i);if(!match)return fallbackFromCss(bg);const url=match[1];return new Promise(resolve=>{const img=new Image();let done=false;const finish=v=>{if(done)return;done=true;resolve(v)};img.onload=()=>{try{const c=document.createElement('canvas');c.width=48;c.height=24;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,c.width,c.height);const d=ctx.getImageData(0,0,c.width,c.height).data;let sums=[0,0,0],n=0;for(let y=3;y<21;y+=3)for(let x=2;x<46;x+=3){const i=(y*48+x)*4;if(d[i+3]<150)continue;for(let j=0;j<3;j++)sums[j]+=d[i+j];n++}finish(n?hex(sums.map(v=>v/n)):fallbackFromCss(bg))}catch(e){finish(fallbackFromCss(bg))}};img.onerror=()=>finish(fallbackFromCss(bg));img.src=url;setTimeout(()=>finish(fallbackFromCss(bg)),2500)})}
+ function wallpaperBackground(){const wp=el('cf8fWallpaper');return wp?.style.background||wp?.style.backgroundImage||'none'}
+ function mode(){return document.querySelector('#cf8ePreviewModal .cf08a1-tab.active')?.dataset.mode||currentMode}
+ const target=()=>mode()==='sidebar'?'Sidebar':'Dashboard';
+ function applyActual(t,colors){if(t==='Sidebar'){const side=document.querySelector('.side');if(!side)return;const on=settings.Sidebar.enabled;side.classList.toggle('cf08r2-adaptive',on);if(!on)return;for(const [key,val] of Object.entries({'normal-text':colors.normal,'hover-bg':colors.hoverBg,'active-bg':colors.activeBg,'hover-text':colors.hoverText,'active-text':colors.activeText}))side.style.setProperty('--cf08r2-'+key,val)}else{const body=document.body;body.classList.toggle('cf08r2-workspace',!!settings.Dashboard.enabled);if(!settings.Dashboard.enabled)return;for(const [key,val] of Object.entries({'work-hover':colors.hoverBg,'work-active':colors.activeBg,'work-hover-text':colors.hoverText,'work-active-text':colors.activeText}))body.style.setProperty('--cf08r2-'+key,val)}}
+ function previewColors(colors){const stage=el('cf8fStage');if(!stage)return;stage.classList.toggle('cf08r2-preview',!!settings[target()].enabled);for(const [k,v] of Object.entries({normal:colors.normal,hover:colors.hoverBg,active:colors.activeBg,'hover-text':colors.hoverText,'active-text':colors.activeText}))stage.style.setProperty('--cf08r2-preview-'+k,v);const sw=el('cf08r2-swatches');if(sw)sw.innerHTML='<span class="cf08r2-swatch" style="background:'+colors.hoverBg+';color:'+colors.hoverText+'">Hover</span><span class="cf08r2-swatch" style="background:'+colors.activeBg+';color:'+colors.activeText+'">Active</span>'}
+ async function updatePreview(){const serial=++previewSerial,t=target(),cfg=settings[t];const bg=wallpaperBackground();const sampled=await sampleBg(bg);if(serial!==previewSerial)return;const colors=palette(sampled,cfg);lastColors[t]=colors;previewColors(colors)}
+ function loadInputs(){const c=settings[target()];for(const [id,v] of [['cf08r2-enabled',c.enabled],['cf08r2-intensity',c.intensity],['cf08r2-contrast',c.contrast],['cf08r2-hover',c.hoverOpacity],['cf08r2-active',c.activeOpacity]]){const i=el(id);if(!i)continue;if(i.type==='checkbox')i.checked=v;else i.value=v}const k=el('cf08r2-target');if(k)k.textContent=mode()==='both'?'Workspace settings (switch Sidebar to edit it separately)':target()+' settings';updatePreview()}
+ function readInputs(){const c=settings[target()];c.enabled=!!el('cf08r2-enabled')?.checked;c.intensity=el('cf08r2-intensity')?.value||'balanced';c.contrast=el('cf08r2-contrast')?.value||'auto';c.hoverOpacity=+(el('cf08r2-hover')?.value||88);c.activeOpacity=+(el('cf08r2-active')?.value||96);updatePreview()}
+ function persist(){try{localStorage.setItem(KEY,JSON.stringify(settings))}catch(e){console.warn('Adaptive settings save failed',e)}}
+ async function restoreApplied(){for(const [t,id] of [['Sidebar','sidebar'],['Dashboard','dashboard']]){const cfg=settings[t];if(!cfg.enabled){applyActual(t,{});continue}let bg='';if(t==='Sidebar')bg=document.querySelector('.side')?.style.getPropertyValue('--cf8f-side-bg')||'';else bg=document.documentElement.style.getPropertyValue('--cf8e-bg')||getComputedStyle(document.documentElement).getPropertyValue('--cf8e-bg')||'';if(!bg||bg==='none')bg=wallpaperBackground();const color=await sampleBg(bg);applyActual(t,palette(color,cfg))}}
+ function init(){const modal=el('cf8ePreviewModal');if(!modal||el('cf08r2-panel'))return;const panel=document.createElement('div');panel.id='cf08r2-panel';panel.className='cf08r2-panel';panel.innerHTML='<strong>Smart Adaptive Colors</strong><div id="cf08r2-target" class="cf08r2-help"></div><label>Auto Match Background / Text / Icons <input type="checkbox" id="cf08r2-enabled"></label><label>Color Intensity <select id="cf08r2-intensity"><option value="subtle">Subtle</option><option value="balanced">Balanced</option><option value="vibrant">Vibrant</option></select></label><label>Text Contrast <select id="cf08r2-contrast"><option value="auto">Automatic</option><option value="light">Light</option><option value="dark">Dark</option></select></label><label>Hover Opacity <input type="range" min="35" max="100" step="5" id="cf08r2-hover"></label><label>Active Opacity <input type="range" min="35" max="100" step="5" id="cf08r2-active"></label><div class="cf08r2-palette" id="cf08r2-swatches"></div><p class="cf08r2-help">Wallpaper preview se palette detect hoti hai. Sirf Save & Apply par live UI colors commit honge. Workspace aur Sidebar alag settings rakhte hain.</p>';
+ const anchor=modal.querySelector('.cf08r-reset-trigger')||el('cf8fResetAll');if(anchor?.parentElement)anchor.parentElement.insertBefore(panel,anchor);else modal.querySelector('.cf8f-controls')?.append(panel);
+ panel.addEventListener('input',readInputs);panel.addEventListener('change',readInputs);
+ modal.addEventListener('click',e=>{if(e.target.closest('.cf08a1-tab'))setTimeout(loadInputs,75)});
+ document.addEventListener('cf08a2-preview-refresh',()=>setTimeout(loadInputs,40));
+ for(const id of ['cf8fHeaderApply','cf8fApply'])el(id)?.addEventListener('click',()=>{persist();setTimeout(restoreApplied,500);setTimeout(restoreApplied,1400)},false);
+ const observer=new MutationObserver(()=>{if(modal.classList.contains('open'))setTimeout(loadInputs,30)});observer.observe(modal,{attributes:true,attributeFilter:['class']});
+ loadInputs();restoreApplied();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+ window.addEventListener('pageshow',()=>setTimeout(restoreApplied,400));
+})();
+</script>
 </body></html>
