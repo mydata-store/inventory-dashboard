@@ -5906,4 +5906,42 @@ $('cf09fExport').addEventListener('click',()=>{readForm();readAppearance();readT
 $('cf09fRemove').addEventListener('click',()=>{const id=state.design;if(builtinDesigns.includes(id)){$('cf09fMessage').textContent='Built-in designs cannot be deleted.';return}if(!confirm('Delete this imported login design?'))return;delete state.customDesigns[id];delete state.appearances[id];designs.splice(designs.indexOf(id),1);state.design='modern';populate();refreshCustomTiles();try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}$('cf09fMessage').textContent='Custom design removed.'});
 
 loadState();populate();refreshCustomTiles();status('Step 09F: design-specific motion controls, fixed preview and responsive fitting. Authentication untouched.');
-})();</script></body></html>
+})();</script><style id="cf10b1-registry-style">
+#cf10b1-open{position:fixed;right:18px;bottom:42px;z-index:820;border:1px solid #78b5ec;background:#0a3762;color:#fff;border-radius:22px;padding:10px 15px;font:700 12px Segoe UI,Arial;box-shadow:0 8px 25px #08274644;cursor:pointer;display:none}
+#cf10b1-dialog{position:fixed;inset:0;z-index:9998;background:#051c34a8;display:none;align-items:center;justify-content:center;padding:20px}
+#cf10b1-dialog.open{display:flex}#cf10b1-panel{width:min(940px,96vw);max-height:90vh;overflow:auto;background:#fff;color:#153653;border-radius:16px;padding:22px;box-shadow:0 24px 90px #0005;font:13px Segoe UI,Arial}
+#cf10b1-panel h2{margin:0 0 5px;font-size:21px}#cf10b1-panel p{color:#607c94;line-height:1.5}#cf10b1-panel .cf10-head{display:flex;justify-content:space-between;gap:12px;align-items:center}#cf10b1-panel button{border:1px solid #c8dbe9;background:#f3f8fc;color:#174c76;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}#cf10b1-panel .cf10-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}#cf10b1-panel .cf10-item{border:1px solid #dbe6ef;border-radius:10px;padding:12px;min-width:0}#cf10b1-panel .cf10-item b{display:block;margin-bottom:7px}#cf10b1-panel .cf10-item small{display:block;color:#71869a;word-break:break-word;line-height:1.5}#cf10b1-panel .cf10-status{color:#137852;font-weight:700}#cf10b1-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf4fa;padding:13px;border-radius:9px;max-height:180px;overflow:auto;font-size:11px}@media(max-width:700px){#cf10b1-panel .cf10-grid{grid-template-columns:1fr 1fr}#cf10b1-open{bottom:65px}}
+</style>
+<button id="cf10b1-open" type="button">◈ Design Registry · Read Only</button>
+<div id="cf10b1-dialog" role="dialog" aria-modal="true" aria-label="CoreFlow Design Registry"><div id="cf10b1-panel"><div class="cf10-head"><div><h2>CoreFlow Universal Design Registry</h2><p>Step 10B1 · Read-only compatibility inspector. No settings are changed or saved.</p></div><button id="cf10b1-close" type="button">Close ✕</button></div><div id="cf10b1-summary"></div><div class="cf10-grid" id="cf10b1-grid"></div><h3>Read-only package descriptor</h3><pre id="cf10b1-json"></pre></div></div>
+<script id="cf10b1-registry-script">
+/* Step 10B1: metadata-only adapter. No writes, no Apply override, no new state owner. */
+(function(){'use strict';
+if(window.CoreFlowDesignRegistry)return;
+const studioDefinitions=Object.freeze([
+{id:'theme',label:'Theme Studio',statePath:'selectedTheme',page:'page-theme-studio'},
+{id:'sidebar',label:'Sidebar Studio',statePath:'studio.sidebar.selected',page:'page-sidebar-studio'},
+{id:'icons',label:'Icon Studio',statePath:'studio.iconStudio.applied',page:'page-icon-studio'},
+{id:'wallpaper',label:'Wallpaper Studio',statePath:null,page:'page-wallpaper-studio',storageKey:'coreflow.wallpaper.adaptive.v1'},
+{id:'timeDate',label:'Time & Date Studio',statePath:null,page:'page-time-date-studio'},
+{id:'userProfile',label:'User Profile',statePath:null,page:'page-user-profile',storageKey:'coreflow.profile.designs.v1'},
+{id:'companyProfile',label:'Company Profile',statePath:null,page:'page-company-profile'},
+{id:'banner',label:'Banner Studio',statePath:null,page:'page-banner-studio',storageKey:'coreflow-banner-draft-v1'},
+{id:'dashboard',label:'Dashboard Studio',statePath:null,page:'page-dashboard-studio'},
+{id:'login',label:'Login Page Studio',statePath:null,page:'page-login-studio',storageKey:'coreflow-login-studio-draft-v1'}
+]);
+const packages=Object.freeze([
+Object.freeze({id:'modernLight',name:'Design 01 — Modern Light',version:'1.0',kind:'locked-built-in',parts:[]}),
+Object.freeze({id:'analyticsBlue',name:'Design 02 — Analytics Blue',version:'1.0',kind:'locked-built-in',parts:[]})
+]);
+function safeGet(path){try{return window.CoreFlowState?.get(path,null)??null}catch(e){return null}}
+function storagePresence(key){if(!key)return 'not-mapped';try{return localStorage.getItem(key)!==null?'saved':'not-saved'}catch(e){return 'storage-blocked'}}
+function inspect(){return {activeDesign:safeGet('selectedDesign'),studios:studioDefinitions.map(d=>({id:d.id,label:d.label,pagePresent:!!document.getElementById(d.page),statePresent:d.statePath?safeGet(d.statePath)!==null:null,storage:d.storageKey?storagePresence(d.storageKey):'not-mapped',binding:'read-only; apply handler not verified'}))}}
+const api=Object.freeze({version:'10B1',list:()=>packages.map(p=>({...p})),inspect,describe:(id)=>{const p=packages.find(p=>p.id===id);return p?{...p,parts:[],note:'Existing approved design. Studio parts intentionally not inferred.'}:null}});
+Object.defineProperty(window,'CoreFlowDesignRegistry',{value:api,writable:false,configurable:false});
+const $=id=>document.getElementById(id), open=$('cf10b1-open'),dialog=$('cf10b1-dialog');
+function showButton(){const hash=location.hash.replace(/^#/,'');const gallery=document.getElementById('page-design-studio');open.style.display=(hash==='design-studio'||hash==='design-gallery'||!!gallery?.classList.contains('active'))?'block':'none'}
+function render(){const data=inspect();$('cf10b1-summary').textContent='Applied design: '+(data.activeDesign||'not resolved')+' · 2 locked packages · 10 studio adapters (read-only)';$('cf10b1-grid').replaceChildren();data.studios.forEach(d=>{const card=document.createElement('div');card.className='cf10-item';const title=document.createElement('b');title.textContent=d.label;const status=document.createElement('small');status.textContent='Page: '+(d.pagePresent?'found':'not found')+' | State: '+(d.statePresent===null?'not mapped':d.statePresent?'found':'not saved')+' | Storage: '+d.storage;const note=document.createElement('small');note.textContent='Apply: not connected (safe)';card.append(title,status,note);$('cf10b1-grid').append(card)});$('cf10b1-json').textContent=JSON.stringify({schema:'coreflow.design-package.registry.v1',packages:api.list(),activeDesign:data.activeDesign,mode:'read-only'},null,2)}
+open.addEventListener('click',()=>{render();dialog.classList.add('open')});$('cf10b1-close').addEventListener('click',()=>dialog.classList.remove('open'));dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.classList.remove('open')});document.addEventListener('keydown',e=>{if(e.key==='Escape')dialog.classList.remove('open')});window.addEventListener('hashchange',showButton);document.addEventListener('click',()=>setTimeout(showButton,0));showButton();
+})();
+</script></body></html>
