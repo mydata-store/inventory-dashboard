@@ -2532,6 +2532,40 @@ document.addEventListener('dblclick',e=>{const card=e.target.closest('#page-purc
 document.addEventListener('click',e=>{const card=e.target.closest('#page-purchasing .empty-card');if(card&&/Local Purchase/i.test(card.textContent))openLP()});
 if(location.hash==='#local-purchase')openLP();
 })();
+</script><script id="pi14-route-fix">
+/* Dedicated Indent navigation: single capture handler; avoids legacy router conflict. */
+(()=>{
+ const key='purchase-indent', target=document.getElementById('page-'+key);
+ if(!target)return;
+ function openIndent(){
+   document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='none'});
+   target.classList.add('active');target.style.display='block';
+   document.body.dataset.cfPage=key;
+   document.querySelectorAll('.side .nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page==='purchasing'));
+   document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage==='purchasing'));
+   try{window.CoreFlowState?.set('activePage',key)}catch(_){}
+   if(location.hash!=='#'+key)history.replaceState(null,'','#'+key);
+   window.scrollTo({top:0,behavior:'instant'});
+ }
+ document.addEventListener('click',e=>{
+   const card=e.target.closest('#page-purchasing .pm13-card[data-sub="purchase-indent"]');
+   if(!card)return;
+   e.preventDefault();e.stopImmediatePropagation();openIndent();
+ },true);
+ document.addEventListener('keydown',e=>{
+   const card=e.target.closest('#page-purchasing .pm13-card[data-sub="purchase-indent"]');
+   if(!card||(e.key!=='Enter'&&e.key!==' '))return;
+   e.preventDefault();e.stopImmediatePropagation();openIndent();
+ },true);
+ document.addEventListener('click',e=>{
+   const back=e.target.closest('#page-purchase-indent [data-back="purchasing"]');
+   if(!back)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   const main=document.querySelector('.side .nav button[data-page="purchasing"]');
+   if(main)main.click();else location.hash='#purchasing';
+ },true);
+ if(location.hash==='#purchase-indent')addEventListener('load',()=>openIndent(),{once:true});
+})();
 </script><script id="modern-light-2c-js">
 (()=>{
  function openSub(key,parent){
