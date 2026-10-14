@@ -6846,7 +6846,18 @@ function auxReferenceOptions(){for(const [key,relations] of Object.entries(auxRe
    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
     e.preventDefault();cmTypeaheadIndex=(cmTypeaheadIndex+(e.key==='ArrowDown'?1:-1)+cmTypeaheadValues.length)%cmTypeaheadValues.length;
     [...cmTypeaheadMenu.children].forEach((opt,i)=>{opt.classList.toggle('selected',i===cmTypeaheadIndex);opt.setAttribute('aria-selected',String(i===cmTypeaheadIndex));});
-   }else if(e.key==='Enter'&&cmTypeaheadIndex>=0){e.preventDefault();cmPickSuggestion(cmTypeaheadIndex);}
+   }else if(e.key==='Tab'){
+    // Accept highlighted match, or first best match, then let native Tab move focus forward.
+    const pick=cmTypeaheadIndex>=0?cmTypeaheadIndex:0;
+    if(cmTypeaheadValues[pick]){
+     el.value=cmTypeaheadValues[pick];
+     cmHideSuggestions();
+     el.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    // Do not preventDefault or call focus: normal keyboard tab order remains intact.
+   }else if(e.key==='Enter'){
+    e.preventDefault();cmPickSuggestion(cmTypeaheadIndex>=0?cmTypeaheadIndex:0);
+   }
   });
   el.addEventListener('blur',()=>setTimeout(()=>{if(cmTypeaheadInput===el)cmHideSuggestions();},120));
  }
