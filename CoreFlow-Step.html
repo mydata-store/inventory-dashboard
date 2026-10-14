@@ -1475,6 +1475,22 @@ body[data-design="natureFlowLight"] .nf-table{width:100%;border-collapse:collaps
 .nf-legend{display:flex;gap:14px;align-items:center;font-size:11px;color:#5f7691;margin-bottom:10px}.nf-legend span{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}.nf-legend .l1{background:#28c896}.nf-legend .l2{background:#ffae3d}.nf-legend .l3{background:#9b6cff}.nf-linechart{width:100%;height:180px;background:linear-gradient(180deg,#fbfeff,#fff);border-radius:14px}
 @media(max-width:1180px){body[data-design="natureFlowLight"] .nf-nav{grid-template-columns:repeat(4,minmax(0,1fr))!important}body[data-design="natureFlowLight"] .nf-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}body[data-design="natureFlowLight"] .nf-lower{grid-template-columns:1fr!important}.nf-topbar-apps{display:none!important}}
 @media(max-width:780px){body[data-design="natureFlowLight"] .top{flex-wrap:wrap}.nf-topbar-clock{order:5;width:100%;align-items:flex-start}.top .search{max-width:none!important}.nf-hero{grid-template-columns:1fr!important}.nf-quote{display:none}.nf-live{width:100%!important}.nf-nav{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+</style><style id="cf10u-banner-studio-nature-flow">
+/* Banner Studio's existing applied banner occupies Nature Flow's hero slot.
+   Normal Nature Flow art resumes immediately when Restore Original is used. */
+body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied{
+ display:block!important;padding:0!important;min-height:0!important;height:auto!important;
+ border:0!important;border-radius:28px 28px 42px 42px!important;background:none!important;
+ box-shadow:none!important;overflow:hidden!important;isolation:isolate!important
+}
+body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied::before,
+body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied::after{display:none!important}
+body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>:not(.cf07i-clone){display:none!important}
+body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07i-clone{
+ display:grid!important;position:relative!important;inset:auto!important;width:100%!important;
+ min-height:190px!important;margin:0!important;box-sizing:border-box!important;
+ border-radius:inherit!important;visibility:visible!important
+}
 </style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂   Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒   Purchasing</span></button><button data-page="inventory"><span class="txt">▦   Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄   Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣   Gate Pass</span></button><button data-page="reports"><span class="txt">▤   Reports</span></button><button data-page="masters"><span class="txt">◆   Masters</span></button><button data-page="design-studio"><span class="txt">✦   Design Studio</span></button><button data-page="settings"><span class="txt">⚙   Settings</span></button></div><div class="profile">MW   <b>Muhammad Waqas</b><br/><small>Administrator</small></div></aside>
@@ -5872,9 +5888,19 @@ function add(duplicate){update();let src=duplicate?current():defaultDesign(built
 function remove(){const d=current();if(d.builtin)return;if(!confirm('Delete custom banner "'+d.name+'"? Save Banner to make deletion permanent.'))return;library=library.filter(x=>x.id!==d.id);selected=library[0].id;fill();status('Custom banner removed from draft. Save to confirm.')}
 // Dashboard binding: original hero remains in DOM until an explicit Apply.
 let cf07iApplied=null,cf07iRendering=false,cf07jLastKey="";
-const cf07iHero=()=>document.querySelector('#page-dashboard .ml-hero');
+const cf07iHero=()=>document.body.dataset.design==='natureFlowLight'
+ ? document.querySelector('#page-dashboard .nf-hero')
+ : document.querySelector('#page-dashboard .ml-hero');
 function cf07iRender(){
  const hero=cf07iHero(),source=$('cf07bBanner');if(!hero)return;
+ // Keep exactly one active Studio banner across both layouts. Restore the native
+ // contents in the inactive container rather than creating a second renderer.
+ document.querySelectorAll('#page-dashboard .ml-hero,#page-dashboard .nf-hero').forEach(other=>{
+  if(other===hero)return;
+  other.classList.remove('cf07i-applied');
+  other.querySelector('.cf07i-clone')?.remove();
+  Array.from(other.children).forEach(ch=>ch.hidden=false);
+ });
  if(!cf07iApplied){cf07jLastKey='';hero.classList.remove('cf07i-applied');const old=hero.querySelector('.cf07i-clone');if(old)old.remove();Array.from(hero.children).forEach(ch=>{if(!ch.classList.contains('cf07i-clone'))ch.hidden=false});return}
  if(!source||cf07iRendering)return;cf07iRendering=true;
  const prevSelected=selected,prevMode=$('cf07bMode').value;
@@ -5919,6 +5945,11 @@ function cf07jTick(){
 }
 async function cf07iWrite(value){const d=await db();try{await new Promise((ok,fail)=>{const t=d.transaction('records','readwrite');t.objectStore('records').put(value,'dashboard-applied');t.oncomplete=ok;t.onerror=()=>fail(t.error)})}finally{d.close()}}
 async function cf07iLoad(){const d=await db();try{cf07iApplied=await new Promise((ok,fail)=>{const t=d.transaction('records','readonly');const r=t.objectStore('records').get('dashboard-applied');r.onsuccess=()=>ok(r.result||null);r.onerror=()=>fail(r.error)})}finally{d.close()}cf07iRender()}
+// Design switch changes only the target of the EXISTING Banner Studio renderer.
+// It does not own navigation, storage, or Save & Apply.
+new MutationObserver(list=>{
+ if(list.some(entry=>entry.attributeName==='data-design'))cf07iRender();
+}).observe(document.body,{attributes:true,attributeFilter:['data-design']});
 async function cf07iApply(){update();const d=JSON.parse(JSON.stringify(current()));await cf07iWrite(d);cf07iApplied=d;cf07iRender();cf08sceneCards();status('Applied to Dashboard. Refresh will restore the selected design. Studio edits remain independent until Apply again.')}
 async function cf07iRestore(){await cf07iWrite(null);cf07iApplied=null;cf07iRender();status('Original Dashboard banner restored. Your saved Banner Gallery remains intact.')}
 const DB='coreflow-banner-library-07b';function db(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore('records');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
