@@ -2276,6 +2276,12 @@ body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07
 <div class="cf-control-grid"><label>Selected PC Storage Folder<input id="cf-cfg-folder" readonly placeholder="Click Select Storage Folder"></label></div>
 <div style="margin:7px 0;font-size:12px">Chrome will ask you to choose a folder and grant permission. No Python, ZIP, service key, or localhost connection is required for this backup.</div>
 <div class="cf-actions"><button type="button" id="cf-cfg-choose">Select Storage Folder</button><button type="button" id="cf-cfg-save">Save / Update All Data</button></div>
+<div class="cf-restore-panel" style="margin-top:16px;padding:14px;border:1px solid #c8d9ee;border-radius:12px;background:#f7fbff">
+<h3 style="margin:0 0 7px">Restore Data From Backup</h3>
+<p class="cf-muted" style="margin:0 0 10px">Choose a CoreFlow JSON snapshot. Preview first; restoring merges supported data and requires a safety copy of current data.</p>
+<div class="cf-actions"><button type="button" id="cf-restore-choose">Choose Backup File</button><input type="file" id="cf-restore-file" accept=".json,application/json" hidden><button type="button" id="cf-restore-apply" disabled>Restore Verified Data</button></div>
+<div id="cf-restore-preview" style="margin-top:9px;font-size:12px;white-space:pre-wrap" aria-live="polite">No backup selected.</div>
+</div>
 <p id="cf-cfg-status" class="cf-muted">Choose a folder, then press Save / Update All Data.</p>
 <div class="cf-control-grid"><label><input id="cf-auto-backup" type="checkbox" checked> Automatic Save / Update</label><div><b id="cf-last-backup">Last saved: —</b><p class="cf-muted">Automatic PC snapshot after save/change activity when folder permission is active. Online sync is not yet configured.</p></div></div>
 <p class="cf-muted">Existing browser data ko abhi delete na karein. Yeh PC backup hai, complete browser-to-PC database migration nahi. Supabase online sync baad mein connect hogi.</p></div></div></section><section class="page ml-subpage" id="page-data-management">
@@ -6974,6 +6980,67 @@ async function snapshot(){let ls={},warnings=[],databases={};try{for(let i=0;i<l
 if(indexedDB.databases){for(let d of await indexedDB.databases()){if(!d.name||d.name===DBNAME)continue;let db;try{db=await new Promise((resolve,reject)=>{let r=indexedDB.open(d.name);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onupgradeneeded=()=>{r.transaction.abort();reject(Error('Unexpected upgrade'))}});let stores={};for(let name of db.objectStoreNames){try{stores[name]=safe(await allRecords(db,name))}catch(e){warnings.push(d.name+'/'+name+': '+e.message)}}databases[d.name]={version:db.version,stores}}catch(e){warnings.push(d.name+': '+e.message)}finally{db?.close()}}}
 return {schema:'coreflow-browser-snapshot-1',createdAt:new Date().toISOString(),localStorage:ls,indexedDB:databases,warnings};}
 async function backup(manual){if(busy)return;busy=true;try{if(manual)await getPermission();else{if(!folder||await folder.queryPermission({mode:'readwrite'})!=='granted'){status('Auto Save paused: folder permission needed. Press Save / Update All Data.');return}}status('Saving data to selected PC folder…');let data=await snapshot();let file=await folder.getFileHandle('coreflow-browser-snapshot.json',{create:true});let w=await file.createWritable();try{await w.write(JSON.stringify(data));await w.close()}catch(e){try{await w.abort()}catch(_){}throw e}let when=new Date().toLocaleString();$('cf-last-backup').textContent='Last saved: '+when;status('Saved in '+folder.name+'/coreflow-browser-snapshot.json'+(data.warnings.length?' ('+data.warnings.length+' warnings: some records may be omitted)':''));}catch(e){status('Save failed: '+e.message)}finally{busy=false}}
+// Safe, non-destructive restore for the legacy coreflow-browser-snapshot-1 format.
+let restoreData=null, restoring=false;
+const restorePreview=$('cf-restore-preview'), restoreButton=$('cf-restore-apply');
+function restoreInfo(v){if(restorePreview)restorePreview.textContent=v}
+$('cf-restore-choose')?.addEventListener('click',()=>{$('cf-restore-file')?.click()});
+$('cf-restore-file')?.addEventListener('change',async e=>{
+ restoreData=null;restoreButton.disabled=true;
+ const file=e.target.files?.[0];if(!file)return;
+ try{
+  if(file.size>150*1024*1024)throw Error('File too large (150 MB limit).');
+  const data=JSON.parse(await file.text());
+  if(data?.schema!=='coreflow-browser-snapshot-1'||!data.localStorage||typeof data.localStorage!=='object'||!data.indexedDB||typeof data.indexedDB!=='object')throw Error('Not a supported CoreFlow snapshot.');
+  let ls=Object.keys(data.localStorage).length,dbs=Object.keys(data.indexedDB).length,stores=Object.values(data.indexedDB).reduce((n,d)=>n+Object.keys(d.stores||{}).length,0);
+  if(ls>15000||dbs>150||stores>1000)throw Error('Unreasonable snapshot record counts.');
+  restoreData=data;
+  restoreInfo('Backup: '+(data.createdAt||'date unknown')+'\nBrowser settings: '+ls+' keys | IndexedDB: '+dbs+' databases, '+stores+' stores\nWarnings in backup: '+(data.warnings||[]).length+'\nRestore MERGES records (no clearing). Stores without safe keys or with omitted binary data are skipped.\nCurrent data safety backup is required before restore.');
+  restoreButton.disabled=false;
+ }catch(err){restoreInfo('Cannot use backup: '+err.message)}
+});
+function hasMissingBinary(v){if(!v||typeof v!=='object')return false;if(Array.isArray(v))return v.some(hasMissingBinary);return Object.keys(v).some(k=>k==='__binary_not_exported__'||k==='__arraybuffer_not_exported__'||hasMissingBinary(v[k]))}
+async function restoreDb(name,source){
+ if(!name||name===DBNAME||!source||typeof source.stores!=='object')return {added:0,skipped:0};
+ const existing=await indexedDB.databases?.();if(!existing?.some(d=>d.name===name))return {added:0,skipped:Object.keys(source.stores).length};
+ let db=await new Promise((resolve,reject)=>{let r=indexedDB.open(name);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onupgradeneeded=()=>{r.transaction.abort();reject(Error('DB missing'))}});
+ let added=0,skipped=0;
+ try{for(const [store,records] of Object.entries(source.stores)){
+  if(!db.objectStoreNames.contains(store)||!Array.isArray(records)){skipped++;continue}
+  const keyPath=db.transaction(store,'readonly').objectStore(store).keyPath;
+  // Old snapshots omit the original keys of out-of-line-key stores.
+  if(!keyPath||typeof keyPath!=='string'){skipped++;continue}
+  const valid=records.filter(rec=>rec&&typeof rec==='object'&&!hasMissingBinary(rec)&&rec[keyPath]!==undefined&&rec[keyPath]!==null);
+  skipped+=records.length-valid.length;
+  if(!valid.length)continue;
+  await new Promise((resolve,reject)=>{const t=db.transaction(store,'readwrite'),os=t.objectStore(store);for(const rec of valid)os.put(rec);t.oncomplete=resolve;t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error)});
+  added+=valid.length;
+ }}finally{db.close()}
+ return {added,skipped};
+}
+restoreButton?.addEventListener('click',async()=>{
+ if(restoring||!restoreData)return;
+ if(!confirm('Restore backup data? Existing matching records/settings may be overwritten. A safety snapshot of current data will be created FIRST in your selected PC folder. Continue?'))return;
+ restoring=true;restoreButton.disabled=true;clearTimeout(pending);
+ try{
+  await getPermission();
+  const safety=await snapshot();
+  const filename='coreflow-before-restore-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+  const fh=await folder.getFileHandle(filename,{create:true});const writer=await fh.createWritable();
+  try{await writer.write(JSON.stringify(safety));await writer.close()}catch(err){await writer.abort().catch(()=>{});throw Error('Safety backup failed: '+err.message)}
+  let changed=0,skipped=0;
+  for(const [name,source] of Object.entries(restoreData.indexedDB)){try{const result=await restoreDb(name,source);changed+=result.added;skipped+=result.skipped}catch(err){skipped++;}}
+  let lsChanged=0;
+  for(const [key,value] of Object.entries(restoreData.localStorage)){
+   if(key==='coreflow.localservice.key.v1'||typeof value!=='string')continue;
+   try{localStorage.setItem(key,value);lsChanged++}catch(err){skipped++;}
+  }
+  enabled=false;if($('cf-auto-backup'))$('cf-auto-backup').checked=false;
+  restoreInfo('Restore completed. IndexedDB records merged: '+changed+'; browser settings: '+lsChanged+'; skipped/unsupported: '+skipped+'.\nCurrent-data safety backup: '+filename+'\nRefresh CoreFlow to load restored values. Auto Backup paused to avoid overwriting your selected source backup.');
+ }catch(err){restoreInfo('Restore stopped: '+err.message+'\nExisting browser data was not cleared.');}
+ finally{restoring=false;restoreButton.disabled=false;}
+});
+
 $('cf-cfg-save')?.addEventListener('click',()=>backup(true));$('cf-auto-backup')?.addEventListener('change',e=>enabled=e.target.checked);
 function schedule(){if(!enabled||!folder||document.visibilityState!=='visible')return;clearTimeout(pending);pending=setTimeout(()=>backup(false),5000)}
 document.addEventListener('change',e=>{if(!e.target.closest('#cf-local-settings'))schedule()},true);
