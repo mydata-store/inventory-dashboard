@@ -7209,58 +7209,7 @@ function renderAll(){if(hb){let q=norm(hb.querySelector('.cf13j-search').value);
 async function loadHistory(){try{cached=await getAll();renderAll()}catch(e){for(const x of [hb,rb,eb])if(x)x.querySelector('.cf13j-message').textContent='Ledger read failed: '+e.message}}
 document.addEventListener('click',e=>{if(e.target.closest('[data-lp13d-nav="local-purchase-history"],[data-lp13d-nav="local-purchase-report"],[data-lp13d-nav="local-purchase-excel"],[data-lp13d-nav="local-purchase-home"]'))setTimeout(loadHistory,30)},true);loadHistory();
 })();</script>
-<script id="lp13k-unified-excel">(()=>{'use strict';
-const body=document.getElementById('mlEntryBody'),page=document.getElementById('page-local-purchase');if(!body||!page)return;
-const fields=['date','igp','control','item','size','qty','unit','rate','amount','supplier','by','type','vehicle','remarks'];const calculated=new Set(['size','unit','amount']);
-let anchor=null,end=null,rectangle=null,mouseDown=false,editing=false,internal='',undo=[],redo=[],beforeEdit=null;
-const status=document.getElementById('lpRangeStatus')||document.createElement('div');status.id='lpRangeStatus';page.querySelector('#lpExcelHint')?.after(status);
-const idx=(el)=>{let tr=el?.closest('tr');if(!tr||tr.parentElement!==body)return null;let r=[...body.rows].indexOf(tr),c=fields.indexOf(el.dataset.f);return r>=0&&c>=0?{r,c}:null};
-const cell=(r,c)=>body.rows[r]?.querySelector('[data-f="'+fields[c]+'"]')||null;
-const bounds=(a,b)=>({r1:Math.min(a.r,b.r),r2:Math.max(a.r,b.r),c1:Math.min(a.c,b.c),c2:Math.max(a.c,b.c)});
-const snap=()=>[...body.rows].map(row=>fields.map(f=>row.querySelector('[data-f="'+f+'"]')?.value??''));
-function focus(r,c){const el=cell(Math.max(0,Math.min(r,body.rows.length-1)),Math.max(0,Math.min(c,fields.length-1)));el?.focus({preventScroll:true});el?.closest('td')?.scrollIntoView({block:'nearest',inline:'nearest'});return el}
-function paint(){body.querySelectorAll('.lp-range-cell,.lp-range-anchor').forEach(td=>td.classList.remove('lp-range-cell','lp-range-anchor'));if(!rectangle)return;for(let r=rectangle.r1;r<=rectangle.r2;r++)for(let c=rectangle.c1;c<=rectangle.c2;c++)cell(r,c)?.closest('td')?.classList.add('lp-range-cell');cell(anchor.r,anchor.c)?.closest('td')?.classList.add('lp-range-anchor');status.textContent=`Selected ${rectangle.r2-rectangle.r1+1} row(s) × ${rectangle.c2-rectangle.c1+1} column(s) · Shift+Arrows extend · Ctrl+C/X/V · Delete/Backspace · Ctrl+D`}
-function choose(a,b=a){anchor=a;end=b;rectangle=bounds(a,b);editing=false;paint()}
-function checkpoint(){undo.push(snap());if(undo.length>60)undo.shift();redo=[]}
-function write(r,c,value){const el=cell(r,c);if(!el||calculated.has(fields[c]))return;let v=String(value??'');if(fields[c]==='vehicle')v=v.toUpperCase();el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
-function operation(fn){checkpoint();fn();paint()}
-function restore(rows){for(let r=0;r<Math.min(rows.length,body.rows.length);r++)for(let c=0;c<fields.length;c++){let el=cell(r,c);if(el){el.value=rows[r][c];if(['qty','rate','type'].includes(fields[c]))el.dispatchEvent(new Event('input',{bubbles:true}))}}paint()}
-function csv(){if(!rectangle)return '';return Array.from({length:rectangle.r2-rectangle.r1+1},(_,i)=>Array.from({length:rectangle.c2-rectangle.c1+1},(_,j)=>cell(rectangle.r1+i,rectangle.c1+j)?.value??'').join('\t')).join('\n')}
-function clearRange(){if(!rectangle)return;operation(()=>{for(let r=rectangle.r1;r<=rectangle.r2;r++)for(let c=rectangle.c1;c<=rectangle.c2;c++)write(r,c,'')})}
-function paste(text){if(!text||!anchor)return;const lines=text.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(line=>line.split('\t'));
-const target=rectangle&&lines.length===1&&lines[0].length===1&&(rectangle.r1!==rectangle.r2||rectangle.c1!==rectangle.c2)?rectangle:null;
-operation(()=>{if(target){for(let r=target.r1;r<=target.r2;r++)for(let c=target.c1;c<=target.c2;c++)write(r,c,lines[0][0]);return}for(let i=0;i<lines.length;i++)for(let j=0;j<lines[i].length;j++)if(anchor.r+i<body.rows.length&&anchor.c+j<fields.length)write(anchor.r+i,anchor.c+j,lines[i][j])});
-if(!target){end={r:Math.min(body.rows.length-1,anchor.r+lines.length-1),c:Math.min(fields.length-1,anchor.c+Math.max(...lines.map(x=>x.length))-1)};rectangle=bounds(anchor,end);paint()}}
-function editingText(el){return editing&&el.tagName==='INPUT'&&!el.readOnly}
-function suggestionOpen(){return !!document.querySelector('.lp13-suggestions:not([hidden]),.lp13i-suggestions:not([hidden]),.lp-master-popover.open,.lp13e-popup.show')}
-body.addEventListener('mousedown',e=>{const el=e.target.closest('[data-f]'),at=idx(el);if(!at||e.button!==0)return;if(e.shiftKey&&anchor){end=at;rectangle=bounds(anchor,end);paint()}else choose(at);mouseDown=true},true);
-body.addEventListener('mouseover',e=>{if(!mouseDown||!anchor)return;const at=idx(e.target.closest('[data-f]'));if(at){end=at;rectangle=bounds(anchor,end);paint()}},true);
-document.addEventListener('mouseup',()=>mouseDown=false);
-body.addEventListener('focusin',e=>{const at=idx(e.target);if(!at)return;if(!anchor||!e.shiftKey&&!mouseDown&&!rectangle){choose(at)}},true);
-body.addEventListener('input',e=>{if(idx(e.target))editing=true},true);
-body.addEventListener('keydown',e=>{const el=e.target,at=idx(el);if(!at)return;if(!anchor)choose(at);
-const mod=e.ctrlKey||e.metaKey,lower=e.key.toLowerCase(),range=rectangle&&(rectangle.r1!==rectangle.r2||rectangle.c1!==rectangle.c2);
-if(e.shiftKey&&/^Arrow(Up|Down|Left|Right)$/.test(e.key)&&!suggestionOpen()){
- e.preventDefault();e.stopImmediatePropagation();let x=end||anchor;end={r:Math.max(0,Math.min(body.rows.length-1,x.r+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0))),c:Math.max(0,Math.min(fields.length-1,x.c+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)))};rectangle=bounds(anchor,end);paint();return}
-if(mod&&!e.altKey){
- if(lower==='c'||lower==='x'){return} // native copy/cut events populate OS clipboard
- if(lower==='v'){if(editingText(el)&&!range)return; /* native paste event owns clipboard */return}
- if(lower==='d'){e.preventDefault();e.stopImmediatePropagation();if(range)operation(()=>{for(let c=rectangle.c1;c<=rectangle.c2;c++){let v=cell(rectangle.r1,c)?.value||'';for(let r=rectangle.r1+1;r<=rectangle.r2;r++)write(r,c,v)}});else if(at.r>0)operation(()=>write(at.r,at.c,cell(at.r-1,at.c)?.value||''));return}
- if(lower==='z'||lower==='y'){e.preventDefault();e.stopImmediatePropagation();const source=lower==='z'?undo:redo,dest=lower==='z'?redo:undo;if(source.length){dest.push(snap());restore(source.pop())}return}
- if(lower==='s'){e.preventDefault();e.stopImmediatePropagation();page.querySelector('#mlSave')?.click();return}
- if(lower==='home'||lower==='end'){e.preventDefault();e.stopImmediatePropagation();const at2=lower==='home'?{r:0,c:0}:{r:body.rows.length-1,c:fields.length-1};choose(at2);focus(at2.r,at2.c);return}
- }
- if(e.key==='F2'){e.preventDefault();e.stopImmediatePropagation();editing=true;el.focus();if(el.setSelectionRange&&!el.readOnly)el.setSelectionRange(el.value.length,el.value.length);return}
- if(e.key==='Escape'){editing=false;return}
- if((e.key==='Delete'||e.key==='Backspace')&&!mod&&!e.altKey&&!suggestionOpen()){
- if(editingText(el)&&!range)return; e.preventDefault();e.stopImmediatePropagation();clearRange();editing=false;return}
- if(/^Arrow(Up|Down|Left|Right)$/.test(e.key)&&!editing&&!suggestionOpen()){e.preventDefault();e.stopImmediatePropagation();let target={r:Math.max(0,Math.min(body.rows.length-1,at.r+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0))),c:Math.max(0,Math.min(fields.length-1,at.c+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)))};choose(target);focus(target.r,target.c);return}
- if(e.key==='Enter'&&!suggestionOpen()){e.preventDefault();e.stopImmediatePropagation();let r=Math.max(0,Math.min(body.rows.length-1,at.r+(e.shiftKey?-1:1)));choose({r,c:at.c});focus(r,at.c);return}
- },true);
-body.addEventListener('copy',e=>{if(!idx(e.target)||!rectangle)return;if(editingText(e.target)&&e.target.selectionStart!==e.target.selectionEnd)return;e.preventDefault();e.clipboardData?.setData('text/plain',csv());internal=csv()},true);
-body.addEventListener('cut',e=>{if(!idx(e.target)||!rectangle)return;if(editingText(e.target)&&e.target.selectionStart!==e.target.selectionEnd)return;e.preventDefault();e.clipboardData?.setData('text/plain',csv());internal=csv();clearRange()},true);
-body.addEventListener('paste',e=>{if(!idx(e.target)||!rectangle)return;const t=e.clipboardData?.getData('text/plain')||internal;if(!t)return;e.preventDefault();e.stopImmediatePropagation();paste(t)},true);
-})();</script>
+
 
 <script id="cf13n-size-formatter">
 function cfSizeFormat(v){
@@ -7459,7 +7408,7 @@ const cell=(r,c)=>body.rows[r]?.querySelector('[data-f="'+fields[c]+'"]')||null;
 const bounds=(a,b)=>({r1:Math.min(a.r,b.r),r2:Math.max(a.r,b.r),c1:Math.min(a.c,b.c),c2:Math.max(a.c,b.c)});
 const snap=()=>[...body.rows].map(row=>fields.map(f=>row.querySelector('[data-f="'+f+'"]')?.value??''));
 function focus(r,c){const el=cell(Math.max(0,Math.min(r,body.rows.length-1)),Math.max(0,Math.min(c,fields.length-1)));el?.focus({preventScroll:true});el?.closest('td')?.scrollIntoView({block:'nearest',inline:'nearest'});return el}
-function paint(){body.querySelectorAll('.lp-range-cell,.lp-range-anchor').forEach(td=>td.classList.remove('lp-range-cell','lp-range-anchor'));if(!rectangle)return;for(let r=rectangle.r1;r<=rectangle.r2;r++)for(let c=rectangle.c1;c<=rectangle.c2;c++)cell(r,c)?.closest('td')?.classList.add('lp-range-cell');cell(anchor.r,anchor.c)?.closest('td')?.classList.add('lp-range-anchor');status.textContent=`Selected ${rectangle.r2-rectangle.r1+1} row(s) × ${rectangle.c2-rectangle.c1+1} column(s) · Shift+Arrows extend · Ctrl+C/X/V · Delete/Backspace · Ctrl+D`}
+function paint(){body.querySelectorAll('.lp-range-cell,.lp-range-anchor').forEach(td=>td.classList.remove('lp-range-cell','lp-range-anchor'));if(!rectangle)return;for(let r=rectangle.r1;r<=rectangle.r2;r++)for(let c=rectangle.c1;c<=rectangle.c2;c++)cell(r,c)?.closest('td')?.classList.add('lp-range-cell');cell(anchor.r,anchor.c)?.closest('td')?.classList.add('lp-range-anchor');status.textContent=`Selected ${rectangle.r2-rectangle.r1+1} row(s) × ${rectangle.c2-rectangle.c1+1} column(s) · Ctrl+C Copy · Ctrl+V Range Paste · Row → Column transpose (matching cells) · Shift+Arrows extend · Delete / Ctrl+D`}
 function choose(a,b=a){anchor=a;end=b;rectangle=bounds(a,b);editing=false;paint()}
 function checkpoint(){undo.push(snap());if(undo.length>60)undo.shift();redo=[]}
 function write(r,c,value){const el=cell(r,c);if(!el||calculated.has(fields[c]))return;let v=String(value??'');if(fields[c]==='vehicle')v=v.toUpperCase();el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
@@ -7467,10 +7416,25 @@ function operation(fn){checkpoint();fn();paint()}
 function restore(rows){for(let r=0;r<Math.min(rows.length,body.rows.length);r++)for(let c=0;c<fields.length;c++){let el=cell(r,c);if(el){el.value=rows[r][c];if(['qty','rate','type'].includes(fields[c]))el.dispatchEvent(new Event('input',{bubbles:true}))}}paint()}
 function csv(){if(!rectangle)return '';return Array.from({length:rectangle.r2-rectangle.r1+1},(_,i)=>Array.from({length:rectangle.c2-rectangle.c1+1},(_,j)=>cell(rectangle.r1+i,rectangle.c1+j)?.value??'').join('\t')).join('\n')}
 function clearRange(){if(!rectangle)return;operation(()=>{for(let r=rectangle.r1;r<=rectangle.r2;r++)for(let c=rectangle.c1;c<=rectangle.c2;c++)write(r,c,'')})}
-function paste(text){if(!text||!anchor)return;const lines=text.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(line=>line.split('\t'));
-const target=rectangle&&lines.length===1&&lines[0].length===1&&(rectangle.r1!==rectangle.r2||rectangle.c1!==rectangle.c2)?rectangle:null;
-operation(()=>{if(target){for(let r=target.r1;r<=target.r2;r++)for(let c=target.c1;c<=target.c2;c++)write(r,c,lines[0][0]);return}for(let i=0;i<lines.length;i++)for(let j=0;j<lines[i].length;j++)if(anchor.r+i<body.rows.length&&anchor.c+j<fields.length)write(anchor.r+i,anchor.c+j,lines[i][j])});
-if(!target){end={r:Math.min(body.rows.length-1,anchor.r+lines.length-1),c:Math.min(fields.length-1,anchor.c+Math.max(...lines.map(x=>x.length))-1)};rectangle=bounds(anchor,end);paint()}}
+function paste(text){if(!text||!anchor)return;
+ const lines=text.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(line=>line.split('\t'));
+ const h=lines.length,w=Math.max(...lines.map(x=>x.length)),rect=rectangle;
+ const chosen=rect&&(rect.r1!==rect.r2||rect.c1!==rect.c2);
+ let startR=chosen?rect.r1:anchor.r,startC=chosen?rect.c1:anchor.c;
+ // Excel-style: one full row copied to a vertical selection means repeat the row in each selected row.
+ // For a 1-column selection with equal height to copied row width, transpose horizontally to vertically.
+ const transpose=chosen&&h===1&&w>1&&rect.c1===rect.c2&&rect.r2-rect.r1+1===w;
+ const tile=chosen&&!transpose&&((rect.r2-rect.r1+1)%h===0)&&((rect.c2-rect.c1+1)%w===0);
+ const outH=transpose?w:tile?rect.r2-rect.r1+1:h;
+ const outW=transpose?1:tile?rect.c2-rect.c1+1:w;
+ operation(()=>{for(let i=0;i<outH;i++)for(let j=0;j<outW;j++){
+    if(startR+i>=body.rows.length||startC+j>=fields.length)continue;
+    const v=transpose?lines[0][i]:(lines[i%h]?.[j%w]??'');
+    write(startR+i,startC+j,v);
+ }});
+ anchor={r:startR,c:startC};end={r:Math.min(body.rows.length-1,startR+outH-1),c:Math.min(fields.length-1,startC+outW-1)};
+ rectangle=bounds(anchor,end);paint();
+}
 function editingText(el){return editing&&el.tagName==='INPUT'&&!el.readOnly}
 function suggestionOpen(){return !!document.querySelector('.lp13-suggestions:not([hidden]),.lp13i-suggestions:not([hidden]),.lp-master-popover.open,.lp13e-popup.show')}
 body.addEventListener('mousedown',e=>{const el=e.target.closest('[data-f]'),at=idx(el);if(!at||e.button!==0)return;if(e.shiftKey&&anchor){end=at;rectangle=bounds(anchor,end);paint()}else choose(at);mouseDown=true},true);
@@ -7483,8 +7447,7 @@ const mod=e.ctrlKey||e.metaKey,lower=e.key.toLowerCase(),range=rectangle&&(recta
 if(e.shiftKey&&/^Arrow(Up|Down|Left|Right)$/.test(e.key)&&!suggestionOpen()){
  e.preventDefault();e.stopImmediatePropagation();let x=end||anchor;end={r:Math.max(0,Math.min(body.rows.length-1,x.r+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0))),c:Math.max(0,Math.min(fields.length-1,x.c+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)))};rectangle=bounds(anchor,end);paint();return}
 if(mod&&!e.altKey){
- if(lower==='c'||lower==='x'){if(editingText(el)&&el.selectionStart!==el.selectionEnd)return;
- e.preventDefault();e.stopImmediatePropagation();internal=csv();if(navigator.clipboard?.writeText)navigator.clipboard.writeText(internal).catch(()=>{});if(lower==='x')clearRange();return}
+ if(lower==='c'||lower==='x'){return} // native copy/cut event handles OS clipboard
  if(lower==='v'){if(editingText(el)&&!range)return; /* native paste event owns clipboard */return}
  if(lower==='d'){e.preventDefault();e.stopImmediatePropagation();if(range)operation(()=>{for(let c=rectangle.c1;c<=rectangle.c2;c++){let v=cell(rectangle.r1,c)?.value||'';for(let r=rectangle.r1+1;r<=rectangle.r2;r++)write(r,c,v)}});else if(at.r>0)operation(()=>write(at.r,at.c,cell(at.r-1,at.c)?.value||''));return}
  if(lower==='z'||lower==='y'){e.preventDefault();e.stopImmediatePropagation();const source=lower==='z'?undo:redo,dest=lower==='z'?redo:undo;if(source.length){dest.push(snap());restore(source.pop())}return}
@@ -7498,7 +7461,7 @@ if(mod&&!e.altKey){
  if(/^Arrow(Up|Down|Left|Right)$/.test(e.key)&&!editing&&!suggestionOpen()){e.preventDefault();e.stopImmediatePropagation();let target={r:Math.max(0,Math.min(body.rows.length-1,at.r+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0))),c:Math.max(0,Math.min(fields.length-1,at.c+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)))};choose(target);focus(target.r,target.c);return}
  if(e.key==='Enter'&&!suggestionOpen()){e.preventDefault();e.stopImmediatePropagation();let r=Math.max(0,Math.min(body.rows.length-1,at.r+(e.shiftKey?-1:1)));choose({r,c:at.c});focus(r,at.c);return}
  },true);
-body.addEventListener('copy',e=>{if(!idx(e.target)||!rectangle)return;if(editingText(e.target)&&e.target.selectionStart!==e.target.selectionEnd)return;e.preventDefault();e.clipboardData?.setData('text/plain',csv());internal=csv()},true);
+body.addEventListener('copy',e=>{if(!idx(e.target)||!rectangle)return;if(editingText(e.target)&&e.target.selectionStart!==e.target.selectionEnd)return;e.preventDefault();internal=csv();e.clipboardData?.setData('text/plain',internal)},true);
 body.addEventListener('cut',e=>{if(!idx(e.target)||!rectangle)return;if(editingText(e.target)&&e.target.selectionStart!==e.target.selectionEnd)return;e.preventDefault();e.clipboardData?.setData('text/plain',csv());internal=csv();clearRange()},true);
 body.addEventListener('paste',e=>{if(!idx(e.target)||!rectangle)return;const t=e.clipboardData?.getData('text/plain')||internal;if(!t)return;e.preventDefault();e.stopImmediatePropagation();paste(t)},true);
 })();</script>
