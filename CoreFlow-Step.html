@@ -2540,7 +2540,45 @@ body.addEventListener('paste',e=>{const el=e.target;if(!el.matches('[data-f]'))r
 function formatDate(v){v=String(v||'').trim();let m=v.match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);if(!m)return null;let day=+m[1],mon=+m[2],yr=m[3]?+m[3]:new Date().getFullYear();if(yr<100)yr+=2000;const d=new Date(yr,mon-1,day);if(d.getFullYear()!==yr||d.getMonth()!==mon-1||d.getDate()!==day)return null;return String(day).padStart(2,'0')+'-'+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mon-1]+'-'+String(yr).slice(-2)}
 page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]').focus();page.querySelector('#mlClear').onclick=()=>{if(confirm('Clear current unsaved purchase rows?')){checkpoint();restore([])}};page.querySelector('#mlUndo').onclick=()=>{if(undo.length){redo.push(snap());restore(undo.pop())}};page.querySelector('#mlRedo').onclick=()=>{if(redo.length){undo.push(snap());restore(redo.pop())}};page.querySelector('#mlPrint').onclick=()=>window.print();
 page.querySelector('#mlSave').onclick=()=>{alert('Purchase posting is not connected yet. Entries have NOT been saved to Purchase History or Inventory.');};
-})();</script><script id="pi14-route-fix">
+})();</script><style id="lp13i2-excel-css">
+#page-local-purchase .lp-approved-table td.lp-excel-active{outline:2px solid #147ad6;outline-offset:-2px;background:#e8f4ff!important}
+#page-local-purchase .lp-approved-table td.lp-excel-active input,
+#page-local-purchase .lp-approved-table td.lp-excel-active select{background:transparent}
+#lpExcelHint{font-size:11px;color:#40637e;margin:6px 0 0 6px}
+</style>
+<script id="lp13i2-excel-keyboard">(()=>{'use strict';
+const page=document.getElementById('page-local-purchase'),body=document.getElementById('mlEntryBody');if(!page||!body)return;
+let active=null,editMode=false;
+const cols=['date','igp','control','item','size','qty','unit','rate','amount','supplier','by','type','vehicle','remarks'];
+function mark(el){if(!el?.matches?.('[data-f]'))return;const cell=el.closest('td');if(active!==cell){active?.classList.remove('lp-excel-active');active=cell;active.classList.add('lp-excel-active')} }
+function actual(){return active?.querySelector('[data-f]')||null}
+function navigate(el,deltaRow,deltaCol){let row=el.closest('tr'),idx=[...body.rows].indexOf(row),col=cols.indexOf(el.dataset.f);if(idx<0||col<0)return;let targetRow=body.rows[Math.max(0,Math.min(body.rows.length-1,idx+deltaRow))];let target=targetRow?.querySelector('[data-f="'+cols[Math.max(0,Math.min(cols.length-1,col+deltaCol))]+'"]');if(target){target.focus();mark(target);editMode=false}}
+const helper=document.createElement('div');helper.id='lpExcelHint';helper.textContent='Excel keys: Tab next cell · Enter next row · Ctrl+C/X/V copy/cut/paste · Ctrl+D fill down · Ctrl+Z/Y undo/redo · F2 edit · Esc close suggestions';page.querySelector('.lp-footer')?.after(helper);
+body.addEventListener('focusin',e=>{if(e.target.matches('[data-f]')){mark(e.target);editMode=false}},true);
+body.addEventListener('click',e=>{let f=e.target.closest('[data-f]');if(f)mark(f)});
+body.addEventListener('keydown',async e=>{const el=e.target;if(!el.matches('[data-f]'))return;mark(el);
+// Let the existing master suggestion widget own keys when its popup is open.
+const openSuggestion=document.querySelector('.lp13-suggestions:not([hidden]),.lp13i-suggestions:not([hidden]),.lp-master-popover.open,.lp13e-popup.show');
+if(e.key==='F2'){e.preventDefault();editMode=true;el.focus();if(el.setSelectionRange&&!el.readOnly){let len=el.value.length;el.setSelectionRange(len,len)}return}
+if(e.key==='Escape'){editMode=false;return}
+if((e.ctrlKey||e.metaKey)&&!e.altKey){const k=e.key.toLowerCase();
+ if((k==='c'||k==='x')&&!el.readOnly){
+   const selected=typeof el.selectionStart==='number'&&el.selectionStart!==el.selectionEnd;
+   if(selected)return; // preserve ordinary text selection copy/cut
+   e.preventDefault();const value=el.value;
+   try{await navigator.clipboard.writeText(value)}catch(err){const helper=document.createElement('textarea');helper.value=value;helper.style.position='fixed';helper.style.left='-9999px';document.body.append(helper);helper.select();document.execCommand('copy');helper.remove()}
+   if(k==='x'){el.value='';el.dispatchEvent(new Event('input',{bubbles:true}))}
+   return;
+ }
+ if(k==='a'&&!editMode){e.preventDefault();if(el.select)el.select();return}
+ }
+ if(!openSuggestion&&!editMode&&['ArrowLeft','ArrowRight'].includes(e.key)&&!el.matches('select')){
+   const selection=typeof el.selectionStart==='number'&&el.selectionStart!==el.selectionEnd;
+   if(!selection&&!el.value){e.preventDefault();navigate(el,0,e.key==='ArrowLeft'?-1:1)}
+ }
+},true);
+})();</script>
+<script id="pi14-route-fix">
 /* Dedicated Indent navigation: single capture handler; avoids legacy router conflict. */
 (()=>{
  const key='purchase-indent', target=document.getElementById('page-'+key);
