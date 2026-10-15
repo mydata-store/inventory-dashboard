@@ -7252,6 +7252,15 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()}
 .cf-pc-preview-cols{display:flex;gap:2px;width:max-content}.cf-pc-preview-cols button{min-width:75px;max-width:110px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;font-size:9px!important;font-weight:700!important;background:#cde9fa!important}
 .cf-pc-preview-rows{height:28px;background:repeating-linear-gradient(to bottom,#fff 0 13px,#d7eaf7 13px 14px)}
 .cf-pc-col{grid-template-columns:minmax(0,1fr) 73px 100px!important}.cf-pc-col select{max-width:100%;padding:6px 2px;border:1px solid #badbef;border-radius:5px}
+
+.cf-pc-preview-shell{position:relative;top:auto;padding:12px;background:#f1f8ff}
+.cf-pc-preview-canvas{gap:8px;padding:10px}
+.cf-pc-preview-cols button{min-width:106px!important;max-width:180px!important;font-size:10px!important;white-space:normal!important;min-height:31px}
+.cf-pc-preview-table{max-height:220px;overflow:auto}
+.cf-pc-preview-rows{height:auto!important;background:white!important}
+.cf-pc-preview-datarow{display:flex;width:max-content;border-bottom:1px solid #d0e2f3}
+.cf-pc-preview-datarow span{min-width:106px;max-width:180px;width:106px;padding:8px 5px;border-right:1px solid #cce1f1;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#23405e}
+.cf-pc-preview-selected{font-weight:750;color:#0b5fa6;font-size:11px;margin:7px 0}
 </style><script id="cf-purchase-controller-shared">(()=>{'use strict';const panel=document.getElementById('cf-purchase-controller'),shade=document.getElementById('cf-purchase-controller-shade'),content=document.getElementById('cf-pc-content'),launch=document.getElementById('cf-pc-launch');let page=null,cfg={};const KEY='coreflow.purchase.pageController.v1';const pages=['purchasing','local-purchase-home','local-purchase','local-purchase-history','local-purchase-reports','local-purchase-excel','purchase-indent-home','purchase-indent','zafar-purchase','board-purchase','purchase-history','supplier-analysis','purchase-challan'];const allPages=()=>pages.map(x=>document.getElementById('page-'+x)).filter(Boolean);const current=()=>allPages().find(x=>x.classList.contains('active')&&x.style.display!=='none')||null;function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return {}}};let saved=load();const orig=(p)=>p.getAttribute('data-cf-controller-id')||p.id;function config(p){return Object.assign({font:13,heading:24,spacing:12,info:true,header:true,rowHeight:34,tableFont:13,headerFont:12,btnFont:12,tableWidth:2060,columns:{},alignments:{}},saved[orig(p)]||{})}
 function apply(p,c){if(!p)return;const isLocal=p.id==='page-local-purchase',base=p.querySelector('.lp-approved-page')||p;p.style.setProperty('--cf-purchase-font',c.font+'px');base.style.fontSize=c.font+'px';base.style.paddingTop=c.spacing+'px';let title=base.querySelector('h1');if(title)title.style.fontSize=c.heading+'px';if(isLocal){let tbl=p.querySelector('.lp-approved-table');tbl.style.width=c.tableWidth+'px';tbl.style.minWidth=c.tableWidth+'px';tbl.querySelectorAll('td').forEach(td=>{td.style.height=c.rowHeight+'px';const i=td.cellIndex;if(c.alignments&&c.alignments[i])td.style.textAlign=c.alignments[i];});tbl.querySelectorAll('th').forEach(th=>th.style.fontSize=c.headerFont+'px');tbl.querySelectorAll('input,select').forEach(el=>el.style.fontSize=c.tableFont+'px');tbl.querySelectorAll('col').forEach((col,i)=>{if(c.columns[i])col.style.width=c.columns[i]+'px'});p.classList.toggle('cf-pc-hideinfo',!c.info)}let h=p.querySelector('.lp-approved-header,.ml-module-head,.ml-subhead');if(h)h.style.display=c.header?'':'none';p.querySelectorAll('button').forEach(b=>{if(!b.closest('#cf-purchase-controller'))b.style.fontSize=c.btnFont+'px'})}
 function section(name,inner){return '<details class="cf-pc-section" data-pc-section="'+name+'"><summary>'+name+'</summary>'+inner+'</details>'}function field(label,name,val,type='number'){return '<label>'+label+'<input data-cfg="'+name+'" type="'+type+'" value="'+String(val)+'"></label>'}function check(label,name,val){return '<label>'+label+'<input data-cfg="'+name+'" type="checkbox" '+(val?'checked':'')+'></label>'}
@@ -7262,11 +7271,12 @@ function previewHtml(){
  const title=header?.querySelector('h1,h2')?.textContent.trim()||page.id.replace('page-','').replaceAll('-',' ');
  const escape=t=>String(t||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const colheads=heads.map((h,i)=>'<button type="button" data-preview-section="Tables & Columns" data-preview-col="'+i+'" style="min-width:75px;text-align:'+(cfg.alignments?.[i]||'center')+'">'+escape(h)+'</button>').join('');
- const cols=local?'<div class="cf-pc-preview-cols">'+colheads+'</div><div class="cf-pc-preview-rows"><i></i><i></i></div>':'<div class="cf-pc-preview-placeholder">Click to edit table settings</div>';
- return '<div class="cf-pc-preview-shell"><div class="cf-pc-preview-heading">Interactive Page Preview <span>Click a section to edit it</span></div><div class="cf-pc-preview-canvas">'+
+ const sampleRows=local?[...page.querySelectorAll('.lp-approved-table tbody tr')].slice(0,3).map((tr,ri)=>'<div class="cf-pc-preview-datarow">'+[...tr.querySelectorAll('td')].map((td,i)=>'<span style="text-align:'+(cfg.alignments?.[i]||'left')+'">'+escape(td.querySelector('input,select')?.value|| (ri===0?'Row '+(ri+1):'—'))+'</span>').join('')+'</div>').join(''):'';
+ const cols=local?'<div class="cf-pc-preview-cols">'+colheads+'</div><div class="cf-pc-preview-rows">'+sampleRows+'</div>':'<div class="cf-pc-preview-placeholder">Click to edit table settings</div>';
+ return '<div class="cf-pc-preview-shell"><div class="cf-pc-preview-heading">Live Page Preview <span>Select header, column or buttons</span></div><div class="cf-pc-preview-canvas">'+
  '<button type="button" class="cf-pc-preview-header" data-preview-section="Workspace Header & Information Bars" '+(!cfg.header?'style="opacity:.35"':'')+'>'+escape(title)+'</button>'+
  '<button type="button" class="cf-pc-preview-info" data-preview-section="Workspace Header & Information Bars" '+(!cfg.info?'style="opacity:.35"':'')+'>Information bar</button>'+
- '<div class="cf-pc-preview-table" data-preview-section="Tables & Columns">'+cols+'</div>'+
+ '<div class="cf-pc-preview-selected">Click any column header to edit its width and alignment. Preview displays the first three table rows.</div><div class="cf-pc-preview-table" data-preview-section="Tables & Columns">'+cols+'</div>'+ 
  '<button type="button" class="cf-pc-preview-buttons" data-preview-section="Page & Fonts">Navigation · Actions · Save</button></div></div>';
 }
 function activatePreview(section,col){
@@ -7315,14 +7325,14 @@ function open(p){page=p||current();if(!page)return;cfg=config(page);apply(page,c
 <script id="lp13i4-range-clipboard">(()=>{'use strict';
 const p=document.getElementById('page-local-purchase'),body=document.getElementById('mlEntryBody');if(!p||!body)return;
 const fields=['date','igp','control','item','size','qty','unit','rate','amount','supplier','by','type','vehicle','remarks'];
-const readonly=new Set(['size','unit','amount']);let anchor=null,rect=null,drag=false,internal='',undo=[],redo=[],mutating=false;
+const readonly=new Set(['size','unit','amount']);let anchor=null,endpoint=null,rect=null,drag=false,editMode=false,internal='',undo=[],redo=[],mutating=false;
 const status=document.createElement('div');status.id='lpRangeStatus';p.querySelector('#lpExcelHint')?.after(status);
 function loc(el){let tr=el?.closest('tr');if(!tr||tr.parentElement!==body)return null;let c=fields.indexOf(el.dataset.f);if(c<0)return null;return {r:[...body.rows].indexOf(tr),c}}
 function control(r,c){return body.rows[r]?.querySelector('[data-f="'+fields[c]+'"]')||null}
 function bounds(a,b){return {r1:Math.min(a.r,b.r),r2:Math.max(a.r,b.r),c1:Math.min(a.c,b.c),c2:Math.max(a.c,b.c)}}
 function clearMarks(){body.querySelectorAll('.lp-range-cell,.lp-range-anchor').forEach(td=>td.classList.remove('lp-range-cell','lp-range-anchor'))}
 function paint(){clearMarks();if(!rect)return;for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)control(r,c)?.closest('td')?.classList.add('lp-range-cell');control(anchor.r,anchor.c)?.closest('td')?.classList.add('lp-range-anchor');status.textContent=`Selected ${rect.r2-rect.r1+1} row(s) × ${rect.c2-rect.c1+1} column(s) · Ctrl+C copy · Ctrl+V paste · Delete clear · Ctrl+D fill down`}
-function select(a,b){if(!a||!b)return;anchor=a;rect=bounds(a,b);paint()}
+function select(a,b){if(!a||!b)return;anchor=a;endpoint=b;rect=bounds(a,b);paint()}
 function snapshot(){return [...body.rows].map(tr=>fields.map(f=>tr.querySelector('[data-f="'+f+'"]')?.value??''))}
 function checkpoint(){undo.push(snapshot());if(undo.length>30)undo.shift();redo.length=0}
 function setCell(r,c,value){const el=control(r,c);if(!el||readonly.has(fields[c]))return;el.value=String(value??'');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
@@ -7331,12 +7341,19 @@ function reinstate(snap){let max=Math.min(snap.length,body.rows.length);for(let 
 function clipboardText(){if(!rect)return '';return Array.from({length:rect.r2-rect.r1+1},(_,i)=>Array.from({length:rect.c2-rect.c1+1},(_,j)=>control(rect.r1+i,rect.c1+j)?.value||'').join('\t')).join('\n')}
 async function copyText(t){internal=t;try{await navigator.clipboard.writeText(t)}catch(e){/* clipboard permission unavailable: internal copy retained */}}
 function pasteText(t){if(!t||!anchor)return;let rows=t.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(line=>line.split('\t'));let maxR=Math.min(body.rows.length-1,anchor.r+rows.length-1),maxC=Math.min(fields.length-1,anchor.c+Math.max(...rows.map(x=>x.length))-1);apply(()=>{for(let i=0;i<rows.length;i++)for(let j=0;j<rows[i].length;j++)if(anchor.r+i<=maxR&&anchor.c+j<=maxC)setCell(anchor.r+i,anchor.c+j,rows[i][j])});rect=bounds(anchor,{r:maxR,c:maxC});paint()}
-body.addEventListener('mousedown',e=>{if(e.button!==0)return;const el=e.target.closest('[data-f]'),at=loc(el);if(!at)return;if(e.shiftKey&&anchor){rect=bounds(anchor,at);paint()}else{anchor=at;rect=bounds(at,at);paint()}drag=true},true);
-body.addEventListener('mouseover',e=>{if(!drag||!anchor)return;let at=loc(e.target.closest('[data-f]'));if(at){rect=bounds(anchor,at);paint()}},true);
+body.addEventListener('mousedown',e=>{if(e.button!==0)return;const el=e.target.closest('[data-f]'),at=loc(el);if(!at)return;if(e.shiftKey&&anchor){endpoint=at;rect=bounds(anchor,at);paint()}else{anchor=at;endpoint=at;editMode=false;rect=bounds(at,at);paint()}drag=true},true);
+body.addEventListener('mouseover',e=>{if(!drag||!anchor)return;let at=loc(e.target.closest('[data-f]'));if(at){endpoint=at;rect=bounds(anchor,at);paint()}},true);
 document.addEventListener('mouseup',()=>{drag=false});
 body.addEventListener('keydown',e=>{const el=e.target.closest('[data-f]');if(!el||!rect||!anchor)return;
 const multi=rect.r1!==rect.r2||rect.c1!==rect.c2;
-if(e.shiftKey&&e.key.startsWith('Arrow')){const a=loc(el)||anchor;let r=Math.min(body.rows.length-1,Math.max(0,a.r+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0))),c=Math.min(fields.length-1,Math.max(0,a.c+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)));e.preventDefault();e.stopImmediatePropagation();rect=bounds(anchor,{r,c});paint();return}
+if(e.shiftKey&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+ const a=endpoint||anchor;
+ const r=Math.min(body.rows.length-1,Math.max(0,a.r+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0)));
+ const c=Math.min(fields.length-1,Math.max(0,a.c+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)));
+ e.preventDefault();e.stopImmediatePropagation();endpoint={r,c};rect=bounds(anchor,endpoint);paint();return;
+}
+if(e.key==='F2'){editMode=true;return}
+if(e.key==='Escape'){editMode=false;return}
 if((e.ctrlKey||e.metaKey)&&!e.altKey){let key=e.key.toLowerCase();
 if(key==='c'&&multi){e.preventDefault();e.stopImmediatePropagation();copyText(clipboardText());return}
 if(key==='x'&&multi){e.preventDefault();e.stopImmediatePropagation();let t=clipboardText();copyText(t);apply(()=>{for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)setCell(r,c,'')});return}
@@ -7345,9 +7362,40 @@ if(key==='v'){e.preventDefault();e.stopImmediatePropagation();(async()=>{let t=i
 if(key==='z'&&multi&&undo.length){e.preventDefault();e.stopImmediatePropagation();redo.push(snapshot());reinstate(undo.pop());return}
 if(key==='y'&&multi&&redo.length){e.preventDefault();e.stopImmediatePropagation();undo.push(snapshot());reinstate(redo.pop());return}
 }
-if((e.key==='Delete'||e.key==='Backspace')&&multi){e.preventDefault();e.stopImmediatePropagation();apply(()=>{for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)setCell(r,c,'')})}
+if((e.key==='Delete'||e.key==='Backspace')&&!e.ctrlKey&&!e.altKey&&!e.metaKey){
+ if(e.key==='Backspace'&&editMode&&!multi)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ apply(()=>{for(let r=rect.r1;r<=rect.r2;r++)for(let c=rect.c1;c<=rect.c2;c++)setCell(r,c,'')});return;
+}
 },true);
+body.addEventListener('input',e=>{if(e.target.closest('[data-f]')){editMode=true}},true);
 body.addEventListener('copy',e=>{if(!rect||rect.r1===rect.r2&&rect.c1===rect.c2)return;e.preventDefault();e.clipboardData.setData('text/plain',clipboardText())},true);
 body.addEventListener('paste',e=>{if(!anchor||!e.clipboardData)return;let t=e.clipboardData.getData('text/plain');if(t.includes('\t')||t.includes('\n')){e.preventDefault();e.stopImmediatePropagation();pasteText(t)}},true);
 })();</script>
-</body></html>
+<style id="lp13i5-newitem-style">
+#lp13i5-overlay[hidden]{display:none!important}#lp13i5-overlay{position:fixed;inset:0;background:#071d35a8;z-index:2147483200;display:grid;place-items:center;padding:15px}#lp13i5-dialog{width:min(540px,96vw);max-height:88vh;overflow:auto;background:#fff;border-radius:13px;box-shadow:0 24px 75px #041a35a1;padding:22px;color:#143c59;font:14px 'Segoe UI',Arial}#lp13i5-dialog h2{margin:0 0 7px;font-size:20px}#lp13i5-dialog p{line-height:1.45;color:#59738c;margin:4px 0 15px}#lp13i5-dialog label{display:block;font-size:12px;font-weight:700;margin:11px 0 5px}#lp13i5-dialog input,#lp13i5-dialog select{width:100%;min-height:37px;border:1px solid #add0e9;border-radius:7px;padding:7px;box-sizing:border-box;font:14px 'Segoe UI',Arial}#lp13i5-dialog .lp13i5-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}#lp13i5-dialog .lp13i5-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}#lp13i5-dialog button{border:1px solid #a0c9e4;background:#f5fbff;color:#0e557f;border-radius:7px;padding:10px 14px;cursor:pointer;font-weight:600}#lp13i5-dialog button.primary{background:#0285cb;color:#fff;border-color:#0285cb}#lp13i5-alert{color:#a32931!important;min-height:18px;font-size:12px}#lp13i5-step2[hidden],#lp13i5-step1[hidden]{display:none!important}
+</style>
+<div id="lp13i5-overlay" hidden><div id="lp13i5-dialog" role="dialog" aria-modal="true" aria-labelledby="lp13i5-title"><h2 id="lp13i5-title">New Item — Master Classification</h2><p id="lp13i5-context">Item Master mein matching record nahi mila.</p><section id="lp13i5-step1"><label>Purchase Destination *</label><select id="lp13i5-dest"><option value="">Select destination</option><option>Inventory</option><option>Mess</option><option>Cattle Farm</option><option>Department Stock</option></select><p>Destination se receiving section set hogi. Future consumption/issue ki departmental distribution Issue System mein hogi.</p></section><section id="lp13i5-step2" hidden><div class="lp13i5-grid"><div><label>Item Name *</label><input id="lp13i5-name" autocomplete="off"></div><div><label>Size / Specification</label><input id="lp13i5-size" autocomplete="off"></div><div><label>Unit *</label><input id="lp13i5-unit" autocomplete="off"></div><div><label>Category *</label><select id="lp13i5-category"></select></div><div><label>Stock Treatment *</label><select id="lp13i5-treatment"><option value="Stock Controlled">Stock Controlled</option><option value="Direct Consume">Direct Consume</option><option value="Department Controlled">Department Controlled</option></select></div></div><p>New item Item Master mein save hoga. Is action se Purchase ya Inventory transaction create nahi hogi.</p></section><p id="lp13i5-alert" role="status"></p><div class="lp13i5-actions"><button id="lp13i5-cancel" type="button">Cancel</button><button id="lp13i5-back" type="button" hidden>Back</button><button id="lp13i5-next" class="primary" type="button">Next: Category</button><button id="lp13i5-save" class="primary" type="button" hidden>Save Item Master</button></div></div></div>
+<script id="lp13i5-newitem-controller">(()=>{'use strict';
+const table=document.getElementById('mlEntryBody'),page=document.getElementById('page-local-purchase'),overlay=document.getElementById('lp13i5-overlay');if(!table||!page||!overlay)return;
+const $=id=>document.getElementById('lp13i5-'+id),BASE='coreflow.masters.12a.v1',DB='coreflow-masters-records-v1',STORE='snapshots';let pending=null,busy=false,closedFor=new WeakMap();
+const norm=v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ');const title=v=>String(v||'').trim().split(/\s+/).map(w=>/^(ms|ss|gi|lpg|pvc|hdpe|ppr|ac|dc|led)$/i.test(w)?w.toUpperCase():w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+const readLocal=()=>{try{return JSON.parse(localStorage.getItem(BASE)||'null')}catch(_){return null}};
+async function database(){return new Promise((ok,no)=>{let req=indexedDB.open(DB);req.onsuccess=()=>ok(req.result);req.onerror=()=>no(req.error||Error('IndexedDB unavailable'))})}
+async function snapshot(){let d=await database();try{if(!d.objectStoreNames.contains(STORE))return null;return await new Promise((ok,no)=>{let r=d.transaction(STORE,'readonly').objectStore(STORE).get(BASE);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>no(r.error)})}finally{d.close()}}
+async function persist(obj){let d=await database();try{if(!d.objectStoreNames.contains(STORE))throw Error('Masters storage store not found. Open Masters and save one record first.');await new Promise((ok,no)=>{let tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).put(obj,BASE);tx.oncomplete=ok;tx.onerror=()=>no(tx.error||Error('Master save failed'));tx.onabort=()=>no(tx.error||Error('Master save aborted'))})}finally{d.close()}}
+function records(doc,key){return Array.isArray(doc?.[key])?doc[key]:[]}
+function categories(doc){let res=[...records(doc?.aux,'categories'),...(doc?.categories||[])].filter(x=>x&&norm(x.status)!=='inactive').map(x=>typeof x==='string'?x:x.name).filter(Boolean);return [...new Set(res)]}
+function close(){overlay.hidden=true;pending=null;busy=false}
+function stage(which){$('step1').hidden=which!==1;$('step2').hidden=which!==2;$('next').hidden=which!==1;$('back').hidden=which!==2;$('save').hidden=which!==2;$('alert').textContent=''}
+function open(el){if(!el?.isConnected||overlay.hidden===false)return;const value=title(el.value);if(value.length<2)return;pending=el;$('context').textContent='"'+value+'" Item Master mein nahi mila. Pehli dafa classification select karein.';$('name').value=value;$('size').value=el.closest('tr').querySelector('[data-f="size"]')?.value||'';$('unit').value=el.closest('tr').querySelector('[data-f="unit"]')?.value||'';$('dest').value='';stage(1);overlay.hidden=false;$('dest').focus()}
+async function check(el){if(overlay.hidden===false||!el?.isConnected)return;const name=norm(el.value);if(name.length<2||el.closest('tr')?.dataset.lp13eItemCode||closedFor.get(el)===name)return;try{const d=await snapshot(),l=readLocal(),arr=[...records(d,'items'),...records(l,'items')];if(arr.some(x=>norm(x.name)===name))return;open(el)}catch(e){console.warn('New item detection unavailable',e)}}
+// Only after leaving Item field. While typing an existing item no popup interrupts suggestions.
+table.addEventListener('focusout',e=>{let el=e.target;if(!el.matches('input[data-f="item"]'))return;setTimeout(()=>check(el),220)},false);
+table.addEventListener('input',e=>{if(e.target.matches('input[data-f="item"]'))closedFor.delete(e.target)},false);
+$('cancel').onclick=()=>{if(pending)closedFor.set(pending,norm(pending.value));close()};$('back').onclick=()=>stage(1);
+$('next').onclick=async()=>{if(!$('dest').value){$('alert').textContent='Select destination first.';return}let doc=null;try{doc=await snapshot()}catch(_){}let opts=categories(doc||readLocal());$('category').replaceChildren(new Option('Select category',''));for(let name of opts)$('category').add(new Option(name,name));if(!opts.length){$('alert').textContent='Category Master is empty. Create a category in Masters first.';return}stage(2);$('name').focus()};
+$('save').onclick=async()=>{if(busy||!pending)return;let name=title($('name').value),size=title($('size').value),unit=title($('unit').value),category=$('category').value,dest=$('dest').value,treatment=$('treatment').value;if(!name||!unit||!category){$('alert').textContent='Item Name, Unit and Category are required.';return}busy=true;$('save').disabled=true;try{let old=await snapshot(),legacy=readLocal(),doc=old&&typeof old==='object'?structuredClone(old):(legacy&&typeof legacy==='object'?structuredClone(legacy):{items:[],aux:{}});doc.items=Array.isArray(doc.items)?doc.items:[];const combined=[...doc.items,...records(legacy,'items')];if(combined.some(x=>norm(x.name)===norm(name)&&norm(x.size||x.specification)===norm(size)))throw Error('Item with this name and size already exists. Select it from suggestions.');let id='ITM-'+String(Date.now()).slice(-9),record={id,code:id,name,size,unit,category,destination:dest,consumptionGroup:dest,stockTreatment:treatment,inventoryControl:treatment==='Direct Consume'?'Direct Consume':'Stock Controlled',status:'active',createdAt:new Date().toISOString()};doc.items.push(record);await persist(doc);
+let el=pending,tr=el.closest('tr');el.value=name;tr.dataset.lp13eItemCode=id;tr.dataset.lp13eItemName=name;for(let [k,v] of [['size',size],['unit',unit]]){let field=tr.querySelector('[data-f="'+k+'"]');if(field){field.value=v;field.readOnly=true}}el.dispatchEvent(new Event('input',{bubbles:true}));close();alert('Item saved in Masters database. Purchase entry is NOT posted yet.');
+}catch(e){$('alert').textContent='Not saved: '+e.message}finally{busy=false;$('save').disabled=false}};
+})();</script></body></html>
