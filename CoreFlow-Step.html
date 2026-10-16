@@ -7347,6 +7347,7 @@ tbody.addEventListener('keydown',e=>{const el=e.target;if(!el.matches('input[dat
   if(begin!==end||e.key==='ArrowLeft'&&begin>0||e.key==='ArrowRight'&&end<el.value.length)return;
  }
  e.preventDefault();if(e.key==='Enter'&&e.shiftKey)focusPos(p.r-1,p.c,false);
+ else if(e.key==='Enter'&&p.r===rows().length-1){checkpoint();make();focusPos(rows().length-1,p.c,false);}
  else if(e.key==='Tab'&&e.shiftKey)focusPos(p.r,p.c-1,false);
  else focusPos(p.r+d[0],p.c+d[1],e.shiftKey&&e.key!=='Enter');
 },true);
@@ -7764,7 +7765,7 @@ if(mod&&!e.altKey){
  if((e.key==='Delete'||e.key==='Backspace')&&!mod&&!e.altKey&&!suggestionOpen()){
  if(editingText(el)&&!range)return; e.preventDefault();e.stopImmediatePropagation();clearRange();editing=false;return}
  if(/^Arrow(Up|Down|Left|Right)$/.test(e.key)&&!editing&&!suggestionOpen()){e.preventDefault();e.stopImmediatePropagation();let target={r:Math.max(0,Math.min(body.rows.length-1,at.r+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0))),c:Math.max(0,Math.min(fields.length-1,at.c+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)))};choose(target);focus(target.r,target.c);return}
- if(e.key==='Enter'&&!suggestionOpen()){e.preventDefault();e.stopImmediatePropagation();let r=Math.max(0,Math.min(body.rows.length-1,at.r+(e.shiftKey?-1:1)));choose({r,c:at.c});focus(r,at.c);return}
+ if(e.key==='Enter'&&!suggestionOpen()){e.preventDefault();e.stopImmediatePropagation();let r=at.r+(e.shiftKey?-1:1);if(r>=body.rows.length){page.querySelector('#mlAddRow')?.click();r=body.rows.length-1;}r=Math.max(0,Math.min(body.rows.length-1,r));choose({r,c:at.c});focus(r,at.c);return}
  },true);
 body.addEventListener('copy',e=>{if(!idx(e.target)||!rectangle)return;if(editingText(e.target)&&e.target.selectionStart!==e.target.selectionEnd)return;e.preventDefault();internal=csv();e.clipboardData?.setData('text/plain',internal)},true);
 body.addEventListener('cut',e=>{if(!idx(e.target)||!rectangle)return;if(editingText(e.target)&&e.target.selectionStart!==e.target.selectionEnd)return;e.preventDefault();e.clipboardData?.setData('text/plain',csv());internal=csv();clearRange()},true);
