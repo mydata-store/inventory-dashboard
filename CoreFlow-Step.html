@@ -7270,21 +7270,27 @@ function hideSuggestions(){const menu=$('zp15Suggest');menu.hidden=true;menu.rep
 function choose(i){const opt=suggestions[i],target=editingSuggestion;if(!opt||!target)return;checkpoint();target.value=opt.label;const row=target.closest('tr');if(target.dataset.zpf==='item'){input(row,'size').value=opt.item.size||'';input(row,'unit').value=opt.item.unit||'';target.dataset.itemId=opt.item.id||''}hideSuggestions();calculateAll();target.dispatchEvent(new Event('change',{bubbles:true}));target.focus()}
 function suggest(el){const field=el.dataset.zpf;if(!['item','supplier'].includes(field)){hideSuggestions();return}const q=norm(el.value);if(!q){hideSuggestions();return}let list=[];if(field==='item')list=items().filter(x=>norm(x.name).startsWith(q)||norm(x.name+' '+(x.size||'')).includes(q)).map(x=>({label:String(x.name||''),sub:String(x.size||'')+' · '+String(x.unit||''),item:x}));else list=suppliers().filter(x=>norm(x.name).startsWith(q)||norm(x.name).includes(q)).map(x=>({label:String(x.name||''),sub:'Saved Supplier',item:x}));list=list.slice(0,12);if(!list.length){hideSuggestions();return}suggestions=list;editingSuggestion=el;suggestIndex=0;const menu=$('zp15Suggest');menu.replaceChildren();list.forEach((x,i)=>{const b=document.createElement('button');b.type='button';b.textContent=x.label+(x.sub?' — '+x.sub:'');b.addEventListener('mousedown',e=>{e.preventDefault();choose(i)});menu.append(b)});const rect=el.getBoundingClientRect();menu.style.left=Math.min(rect.left,innerWidth-280)+'px';menu.style.top=(rect.bottom+2)+'px';menu.style.width=Math.max(rect.width,250)+'px';menu.hidden=false}
 function clip(){if(!active)return '';const p=pos(active),s=selection||{r1:p.r,r2:p.r,c1:p.c,c2:p.c};return rows().slice(s.r1,s.r2+1).map(r=>fields.slice(s.c1,s.c2+1).map(f=>input(r,f).value).join('\t')).join('\n')}
-async function copy(){if(!active)return;const str=clip();window.__zp15Clip=str;try{await navigator.clipboard.writeText(str);status('Copied '+str.split('\n').length+' row(s)')}catch(_){status('Copied internally; use Ctrl+V inside Zafar sheet')}}
-async function paste(){if(!active)return;let t='';try{t=await navigator.clipboard.readText()}catch(_){t=window.__zp15Clip||''}if(!t)t=window.__zp15Clip||'';if(!t)return;
- const data=t.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(x=>x.split('\t'));
- const start=selection?{r:selection.r1,c:selection.c1}:pos(active);
- const h=selection&&selection.r2>selection.r1?selection.r2-selection.r1+1:data.length;
- const w=selection&&selection.c2>selection.c1?selection.c2-selection.c1+1:Math.max(...data.map(x=>x.length));
- checkpoint();let n=0;
- for(let i=0;i<h;i++){while(rows().length<=start.r+i)make();const r=rows()[start.r+i];for(let j=0;j<w;j++){const f=fields[start.c+j];if(!f||['size','unit','amount'].includes(f))continue;
- const source=data[i%data.length];const val=source[j%source.length]||'';input(r,f).value=val;n++;
- if(f==='item'){const item=items().find(x=>norm(x.name)===norm(val));input(r,'size').value=item?.size||'';input(r,'unit').value=item?.unit||'';}
- if(f==='date')input(r,'date').value=parseDate(val);
- }}calculateAll();applySelection(start,{r:start.r+h-1,c:Math.min(fields.length-1,start.c+w-1)});status('Pasted '+n+' cell(s)')}
-function fill(){if(!selection||selection.r2<=selection.r1)return;checkpoint();for(let c=selection.c1;c<=selection.c2;c++){const f=fields[c];if(['size','unit','amount'].includes(f))continue;const val=input(rows()[selection.r1],f).value;for(let r=selection.r1+1;r<=selection.r2;r++){const row=rows()[r];input(row,f).value=val;if(f==='item'){const item=items().find(x=>norm(x.name)===norm(val));input(row,'size').value=item?.size||'';input(row,'unit').value=item?.unit||''}}}calculateAll();status('Filled down')}
-function clear(){if(!selection||!active)return;checkpoint();for(let r=selection.r1;r<=selection.r2;r++)for(let c=selection.c1;c<=selection.c2;c++){const f=fields[c];if(['size','unit','amount'].includes(f))continue;input(rows()[r],f).value='';if(f==='item'){input(rows()[r],'size').value='';input(rows()[r],'unit').value=''}}calculateAll();status('Selected cells cleared')}
-function undoFn(isRedo=false){const from=isRedo?redo:undo,to=isRedo?undo:redo;if(!from.length)return;to.push(snap());restore(from.pop());status(isRedo?'Redo':'Undo')}
+function rememberClipboard(value){window.__zp15Clip=value;status('Copied '+value.split('\n').length+' row(s)')}
+async function copy(){if(!active)return;const value=clip();rememberClipboard(value);try{await navigator.clipboard.writeText(value)}catch(_){status('Copied internally — Paste is available inside Zafar sheet')}}
+function resolveItem(row,value){const candidates=items().filter(x=>norm(x.name)===norm(value));const existingSize=norm(input(row,'size').value);const matched=candidates.find(x=>norm(x.size)===existingSize)||candidates[0];input(row,'size').value=matched?.size||'';input(row,'unit').value=matched?.unit||''}
+function putValue(row,field,value){if(['size','unit','amount'].includes(field))return false;const el=input(row,field);el.value=field==='date'?parseDate(value):value;if(field==='item')resolveItem(row,value);return true}
+function pasteText(value){if(!active||!value)return;const data=String(value).replace(/\r/g,'').replace(/\n$/,'').split('\n').map(line=>line.split('\t'));
+ const start=selection?{r:selection.r1,c:selection.c1}:pos(active);if(start.r<0||start.c<0)return;
+ const selH=selection?selection.r2-selection.r1+1:1,selW=selection?selection.c2-selection.c1+1:1;
+ const sourceH=data.length,sourceW=Math.max(...data.map(row=>row.length));
+ // A copied horizontal row can be pasted vertically into a selected single column.
+ const transpose=sourceH===1&&sourceW>1&&selW===1&&selH===sourceW;
+ const h=transpose?selH:(selH>1?selH:sourceH),w=transpose?1:(selW>1?selW:sourceW);
+ checkpoint();let changed=0;
+ for(let i=0;i<h;i++){while(rows().length<=start.r+i)make();const row=rows()[start.r+i];for(let j=0;j<w;j++){
+ const f=fields[start.c+j];if(!f)continue;
+ const value=transpose?(data[0][i]||''):(data[i%sourceH]?.[j%(data[i%sourceH]?.length||1)]||'');
+ if(putValue(row,f,value))changed++;
+ }}calculateAll();applySelection(start,{r:start.r+h-1,c:Math.min(fields.length-1,start.c+w-1)});status('Pasted '+changed+' cell(s)');}
+async function paste(){if(!active)return;let value='';try{value=await navigator.clipboard.readText()}catch(_){}if(!value)value=window.__zp15Clip||'';pasteText(value)}
+function fill(){if(!selection||selection.r2<=selection.r1)return;checkpoint();let changed=0;for(let c=selection.c1;c<=selection.c2;c++){const f=fields[c];if(['size','unit','amount'].includes(f))continue;const value=input(rows()[selection.r1],f).value;for(let r=selection.r1+1;r<=selection.r2;r++)if(putValue(rows()[r],f,value))changed++}calculateAll();status('Filled '+changed+' cell(s) down')}
+function clear(){if(!selection||!active)return;checkpoint();let changed=0;for(let r=selection.r1;r<=selection.r2;r++)for(let c=selection.c1;c<=selection.c2;c++){const f=fields[c];if(putValue(rows()[r],f,''))changed++}calculateAll();status('Cleared '+changed+' cell(s)')}
+function undoFn(isRedo=false){const from=isRedo?redo:undo,to=isRedo?undo:redo;if(!from.length)return;const place=active?pos(active):{r:0,c:0},range=selection?{...selection}:null;to.push(snap());restore(from.pop());const target=input(rows()[Math.max(0,Math.min(place.r,rows().length-1))],fields[Math.max(0,Math.min(place.c,fields.length-1))]);active=target;anchor=range?{r:range.r1,c:range.c1}:pos(target);if(range)applySelection({r:range.r1,c:range.c1},{r:range.r2,c:range.c2});else applySelection(anchor,anchor);target.focus();status(isRedo?'Redo':'Undo')}
 const DB='CoreFlowZafarPurchases',STORE='purchases';function openDB(){return new Promise((resolve,reject)=>{const q=indexedDB.open(DB,1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains(STORE))q.result.createObjectStore(STORE,{keyPath:'id'})};q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
 async function getAll(){const db=await openDB();try{return await new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readonly').objectStore(STORE).getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error)})}finally{db.close()}}
 async function save(){if(busy)return;const lines=rows().map(rowValues).filter(x=>Object.values(x).some(v=>String(v).trim()));if(!lines.length){status('Nothing to save');return}const its=items(),sups=suppliers();for(let i=0;i<lines.length;i++){const x=lines[i];x.date=parseDate(x.date);if(!x.date||!x.item.trim()||!x.qty.trim()||num(x.qty)<=0||!x.supplier.trim()){status(`Row ${i+1}: Date, Item, positive Quantity and Supplier required`);return}if(!its.some(k=>norm(k.name)===norm(x.item)&&norm(k.size)===norm(x.size))){status(`Row ${i+1}: Select an Item + Size from saved Masters`);return}if(!sups.some(k=>norm(k.name)===norm(x.supplier))){status(`Row ${i+1}: Supplier must exist in Masters`);return}if(x.rate.trim()&&(Number.isNaN(Number(x.rate))||num(x.rate)<0)){status(`Row ${i+1}: Invalid Rate`);return}x.amount=x.rate.trim()?(num(x.qty)*num(x.rate)).toFixed(2):'';x.status=x.rate.trim()?'Posted':'Challan Pending'}
@@ -7297,16 +7303,37 @@ tbody.addEventListener('mouseover',e=>{if(!dragging)return;const el=e.target.clo
 document.addEventListener('mouseup',()=>{dragging=false});
 tbody.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-zpf]'))return;if(editSnapshot){undo.push(editSnapshot);if(undo.length>50)undo.shift();redo=[];editSnapshot=null}if(el.dataset.zpf==='item'){input(el.closest('tr'),'size').value='';input(el.closest('tr'),'unit').value=''}suggest(el);calculateAll()});
 tbody.addEventListener('change',e=>{if(e.target.dataset.zpf==='date')e.target.value=parseDate(e.target.value);calculateAll()});
-tbody.addEventListener('keydown',e=>{const el=e.target;if(!el.matches('input[data-zpf]'))return;active=el;const p=pos(el),key=e.key.toLowerCase();
+// Native clipboard events provide synchronous clipboardData access in Chrome and Excel.
+tbody.addEventListener('copy',e=>{if(!e.target.matches('input[data-zpf]'))return;active=e.target;const value=clip();if(e.clipboardData){e.clipboardData.setData('text/plain',value);e.preventDefault()}rememberClipboard(value)});
+tbody.addEventListener('cut',e=>{if(!e.target.matches('input[data-zpf]'))return;active=e.target;const value=clip();if(e.clipboardData){e.clipboardData.setData('text/plain',value);e.preventDefault()}rememberClipboard(value);clear()});
+tbody.addEventListener('paste',e=>{if(!e.target.matches('input[data-zpf]'))return;active=e.target;const value=e.clipboardData?.getData('text/plain');if(value){e.preventDefault();pasteText(value)}else{e.preventDefault();paste()}});
+tbody.addEventListener('keydown',e=>{const el=e.target;if(!el.matches('input[data-zpf]'))return;active=el;const p=pos(el),key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;
+ if(mod){
+  if(key==='a'){e.preventDefault();anchor={r:0,c:0};applySelection(anchor,{r:rows().length-1,c:fields.length-1});status('Selected all cells');return}
+  if(key==='s'){e.preventDefault();save();return}
+  if(key==='d'){e.preventDefault();fill();return}
+  if(key==='z'){e.preventDefault();undoFn(e.shiftKey);editSnapshot=null;return}
+  if(key==='y'){e.preventDefault();undoFn(true);editSnapshot=null;return}
+  // Let the browser fire copy/cut/paste events, which also work with Excel.
+  if(['c','v','x'].includes(key))return;
+  return;
+ }
  if(!$('zp15Suggest').hidden){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();suggestIndex=(suggestIndex+(e.key==='ArrowDown'?1:-1)+suggestions.length)%suggestions.length;[...$('zp15Suggest').children].forEach((x,i)=>x.classList.toggle('active',i===suggestIndex));return}if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();choose(suggestIndex);return}if(e.key==='Escape'){e.preventDefault();hideSuggestions();return}}
- if(e.ctrlKey||e.metaKey){if(['c','v','d','z','y','x'].includes(key))e.preventDefault();if(key==='c')copy();else if(key==='v')paste();else if(key==='d')fill();else if(key==='z'){undoFn(e.shiftKey);editSnapshot=null}else if(key==='y'){undoFn(true);editSnapshot=null}else if(key==='x')copy().then(clear);return}
- if(e.key==='Delete' || (e.key==='Backspace' && selection&&(selection.r1!==selection.r2||selection.c1!==selection.c2))){if(selection&&(selection.r1!==selection.r2||selection.c1!==selection.c2)){e.preventDefault();clear()}return}
+ if(e.key==='Escape'){hideSuggestions();const at=pos(el);anchor=at;applySelection(at,at);return}
+ if(e.key==='Delete'||e.key==='Backspace'){
+  if(selection&&(selection.r1!==selection.r2||selection.c1!==selection.c2)){e.preventDefault();clear();return}
+  if(e.key==='Delete'){e.preventDefault();if(!['size','unit','amount'].includes(el.dataset.zpf))clear();return}
+ }
  const arrows={'ArrowDown':[1,0],'ArrowUp':[-1,0],'ArrowLeft':[0,-1],'ArrowRight':[0,1]};
  const d=arrows[e.key]||(e.key==='Enter'?[1,0]:e.key==='Tab'?[0,e.shiftKey?-1:1]:null);
  if(!d)return;
- if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&!e.shiftKey&&el.selectionStart!==el.selectionEnd)return;
- if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&!e.shiftKey&&el.selectionStart===el.selectionEnd&&((e.key==='ArrowLeft'&&el.selectionStart>0)||(e.key==='ArrowRight'&&el.selectionStart<el.value.length)))return;
- e.preventDefault();if(e.key==='Tab'&&e.shiftKey)focusPos(p.r,p.c-1,false);else focusPos(p.r+d[0],p.c+d[1],e.shiftKey&&e.key!=='Enter');
+ if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&!e.shiftKey&&!el.readOnly&&el.selectionStart!==null){
+  const begin=el.selectionStart,end=el.selectionEnd;
+  if(begin!==end||e.key==='ArrowLeft'&&begin>0||e.key==='ArrowRight'&&end<el.value.length)return;
+ }
+ e.preventDefault();if(e.key==='Enter'&&e.shiftKey)focusPos(p.r-1,p.c,false);
+ else if(e.key==='Tab'&&e.shiftKey)focusPos(p.r,p.c-1,false);
+ else focusPos(p.r+d[0],p.c+d[1],e.shiftKey&&e.key!=='Enter');
 });
 document.addEventListener('mousedown',e=>{if(!e.target.closest('#zp15Suggest')&&!e.target.matches('#zp15Rows input'))hideSuggestions()});
 $('zp15Add').onclick=()=>{checkpoint();make();focusPos(rows().length-1,0)};$('zp15Copy').onclick=copy;$('zp15Paste').onclick=paste;$('zp15Fill').onclick=fill;$('zp15Undo').onclick=()=>undoFn();$('zp15Clear').onclick=clear;$('zp15Save').onclick=save;$('zp15Back').onclick=()=>document.querySelector('[data-page="purchasing"]')?.click();$('zp15History').onclick=()=>{$('zp15HistoryPane').hidden=!$('zp15HistoryPane').hidden;if(!$('zp15HistoryPane').hidden)refreshSaved()};$('zp15Refresh').onclick=refreshSaved;
