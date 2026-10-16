@@ -7224,6 +7224,23 @@ const hb=makePanel(history,'Saved Local Purchases',true),rb=makePanel(report,'Lo
 function table(headers,rows){const t=document.createElement('table');t.className='cf13j-table';const thead=t.createTHead(),head=thead.insertRow();for(const h of headers){let cell=document.createElement('th');cell.textContent=h;head.append(cell)}const b=t.createTBody();for(const row of rows){let tr=b.insertRow();for(const value of row){let td=tr.insertCell();td.textContent=String(value??'')}}return t}
 const esc13v=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cfg13v={section:'all',supplier:'all',item:'all',by:'all',sort:'latest',dateFrom:'',dateTo:'',dateExact:'',search:'',detail:null};
+// Step 13Y: normalize purchase entry dates (DD-Mmm-YY) for History filtering.
+const cf13yMonth={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function cf13yPurchaseISO(v){
+ const raw=String(v??'').trim();if(!raw)return '';
+ let y,m,d,match;
+ if((match=raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T\s].*)?$/))){y=+match[1];m=+match[2];d=+match[3];}
+ else if((match=raw.match(/^(\d{1,2})[-/\s]([A-Za-z]{3,9})[-/\s](\d{2,4})$/))){d=+match[1];m=cf13yMonth[match[2].slice(0,3).toLowerCase()];y=+match[3];}
+ else if((match=raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/))){d=+match[1];m=+match[2];y=+match[3];}
+ else return '';
+ if(y<100)y+=y>=70?1900:2000;
+ if(!m||m>12||d<1||d>31||y<1900)return '';
+ const dt=new Date(Date.UTC(y,m-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==m-1||dt.getUTCDate()!==d)return '';
+ return String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+function cf13yLineDate(p,l){return cf13yPurchaseISO(l.date)||(!String(l.date??'').trim()?cf13yPurchaseISO(p.savedAt):'');}
+function cf13yDateDisplay(p,l){const v=cf13yLineDate(p,l);if(!v)return String(l.date||'Invalid Date');const [y,m,d]=v.split('-');return d+'-'+Object.keys(cf13yMonth).find(k=>cf13yMonth[k]===+m).replace(/^./,c=>c.toUpperCase())+'-'+y.slice(-2);}
+
 if(hb){
  hb.classList.add('cf13v-history','cf13w-history');
  hb.querySelector('.cf13j-toolbar').style.display='none';
@@ -7267,19 +7284,19 @@ function renderHistory(){if(!hb)return;
   if(cfg13v.supplier!=='all'&&cfg13v.supplier.trim()&&!norm(l.supplier).includes(norm(cfg13v.supplier)))return false;
   if(cfg13v.item!=='all'&&cfg13v.item.trim()&&!norm(itemLabel13x(l.item,l.size)).includes(norm(cfg13v.item))&&!norm(l.item).includes(norm(cfg13v.item)))return false;
   if(cfg13v.by!=='all'&&norm(l.by)!==norm(cfg13v.by))return false;
-  const day=String(l.date||p.savedAt||'').slice(0,10);
-  const iso=/^\d{4}-\d{2}-\d{2}$/.test(day)?day:String(p.savedAt||'').slice(0,10);
+  const iso=cf13yLineDate(p,l);
+  if(!iso&&(cfg13v.dateExact||cfg13v.dateFrom||cfg13v.dateTo))return false;
   if(cfg13v.dateExact&&iso!==cfg13v.dateExact)return false;if(cfg13v.dateFrom&&iso<cfg13v.dateFrom||cfg13v.dateTo&&iso>cfg13v.dateTo)return false;
   return !q||norm([p.id,l.date,l.igp,l.control,l.item,itemLabel13x(l.item,l.size),l.itemCode,l.size,l.unit,l.supplier,l.by,l.type,l.vehicle,l.remarks].join(' ')).includes(q);
  });
- const stamp=x=>{let raw=String(x.l.date||'');if(/^\d{4}-\d\d-\d\d/.test(raw))return raw;return String(x.p.savedAt||'')};
+ const stamp=x=>cf13yLineDate(x.p,x.l)||String(x.p.savedAt||'');
  lines.sort((a,b)=>cfg13v.sort==='oldest'?stamp(a).localeCompare(stamp(b)):cfg13v.sort==='high'?(+b.l.amount||0)-(+a.l.amount||0):cfg13v.sort==='low'?(+a.l.amount||0)-(+b.l.amount||0):cfg13v.sort==='supplier'?String(a.l.supplier||'').localeCompare(String(b.l.supplier||'')):cfg13v.sort==='item'?String(a.l.item||'').localeCompare(String(b.l.item||'')):cfg13v.sort==='rateHigh'?(+b.l.rate||0)-(+a.l.rate||0):stamp(b).localeCompare(stamp(a))||String(b.p.savedAt).localeCompare(String(a.p.savedAt))||b.index-a.index);
  const total=lines.reduce((n,x)=>n+(Number(x.l.amount)||0),0),suppliers=new Set(lines.map(x=>norm(x.l.supplier)).filter(Boolean)).size,purchases=new Set(lines.map(x=>x.p.id)).size;
  for(const [k,v] of Object.entries({purchases:lines.length,lines:lines.length,value:money(total),suppliers}))controls.querySelector('[data-k="'+k+'"]').textContent=String(v);
  const active=controls.querySelector('.cf13w-active');const on=[];if(cfg13v.item!=='all')on.push('Item: '+cfg13v.item);if(cfg13v.supplier!=='all')on.push('Supplier: '+cfg13v.supplier);active.hidden=!on.length;active.textContent=on.join('  •  ')+' — Clear Filters to view all entries';
  let html='<div class="cf13v-scroll cf13w-scroll"><table class="cf13v-table cf13w-table"><thead><tr><th>Date</th><th>IGP No.</th><th>Item</th><th>Qty</th><th>Unit</th><th>Rate</th><th>Amount</th><th>Supplier / Party</th><th>Purchased By</th><th>Category / Section</th><th>Detail</th></tr></thead><tbody>';
  for(const x of lines){const {p,l,key}=x;const exp=cfg13v.detail===key;
- html+='<tr><td>'+esc13v(l.date||String(p.savedAt).slice(0,10))+'</td><td>'+esc13v(l.igp)+'</td><td><button class="cf13w-link" data-history-action="item" data-value="'+esc13v(l.item)+'" data-size="'+esc13v(l.size)+'">'+esc13v(l.item)+'</button><small>'+esc13v(l.size)+'</small></td><td class="cf13v-num">'+esc13v(l.qty)+'</td><td>'+esc13v(l.unit)+'</td><td class="cf13v-num">'+esc13v(l.rate)+'</td><td class="cf13v-num">'+money(l.amount)+'</td><td><button class="cf13w-link" data-history-action="supplier" data-value="'+esc13v(l.supplier)+'">'+esc13v(l.supplier)+'</button></td><td>'+esc13v(l.by)+'</td><td>'+esc13v(l.category||l.type)+'</td><td><button class="cf13w-detail" data-history-action="details" data-key="'+esc13v(key)+'">'+(exp?'Close':'Details')+'</button></td></tr>';
+ html+='<tr><td>'+esc13v(cf13yDateDisplay(p,l))+'</td><td>'+esc13v(l.igp)+'</td><td><button class="cf13w-link" data-history-action="item" data-value="'+esc13v(l.item)+'" data-size="'+esc13v(l.size)+'">'+esc13v(l.item)+'</button><small>'+esc13v(l.size)+'</small></td><td class="cf13v-num">'+esc13v(l.qty)+'</td><td>'+esc13v(l.unit)+'</td><td class="cf13v-num">'+esc13v(l.rate)+'</td><td class="cf13v-num">'+money(l.amount)+'</td><td><button class="cf13w-link" data-history-action="supplier" data-value="'+esc13v(l.supplier)+'">'+esc13v(l.supplier)+'</button></td><td>'+esc13v(l.by)+'</td><td>'+esc13v(l.category||l.type)+'</td><td><button class="cf13w-detail" data-history-action="details" data-key="'+esc13v(key)+'">'+(exp?'Close':'Details')+'</button></td></tr>';
  if(exp){html+='<tr class="cf13v-detail-row"><td colspan="11"><div class="cf13w-detail-grid">'+[['Purchase Reference',p.id],['Saved At',new Date(p.savedAt).toLocaleString('en-PK')],['IGP No.',l.igp],['Control No.',l.control],['Item Code',l.itemCode],['Size / Specification',l.size],['Purchase Section',l.type],['Stock Posting',l.posting],['Vehicle No.',l.vehicle],['Remarks',l.remarks]].map(([k,v])=>'<div><small>'+k+'</small><strong>'+esc13v(v||'—')+'</strong></div>').join('')+'</div></td></tr>'}
  }
  html+='</tbody></table></div>';if(!lines.length)html='<p class="cf13v-none">No purchase entries match your filters.</p>';
