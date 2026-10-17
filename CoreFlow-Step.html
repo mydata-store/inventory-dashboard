@@ -3016,13 +3016,10 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
 </script><script id="theme-studio-5a-js">
 (()=>{
  const open=()=>{
-   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-   document.getElementById('page-theme-studio')?.classList.add('active');
+   window.CoreFlowCentralNavigation?.open('theme-studio');
    const id=document.body.dataset.design||'modernLight';
    const n=document.getElementById('ts5DesignName');
    if(n)n.textContent=id==='analyticsBlue'?'Analytics Blue':'Modern Light';
-   history.replaceState(null,'','#theme-studio');
-   window.CoreFlowState?.set('activePage','theme-studio');
  };
  document.getElementById('openThemeStudio')?.addEventListener('click',open);
  const search=document.getElementById('ts5Search'), filter=document.getElementById('ts5Filter'), count=document.getElementById('ts5Count');
@@ -3037,37 +3034,14 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
  search?.addEventListener('input',update); filter?.addEventListener('change',update);
 })();
 </script><script id="design-studio-hub-js">
+/* Step 15N: Studio pages use the existing CoreFlow central navigation owner.
+   No standalone router, visibility sweep, history writer or click capture here. */
 (()=>{
- const S=window.CoreFlowState;
- const pages=['design-studio','design-gallery','theme-studio','sidebar-studio','icon-studio'];
- function show(key,push=true){
-   const p=document.getElementById('page-'+key); if(!p)return;
-   // 6B.3 surgical fix: legacy hub is an early capture listener, so it must
-   // perform the SAME visibility work as the canonical router.
-   document.querySelectorAll('.page').forEach(x=>{
-     const on=x===p;
-     x.classList.toggle('active',on);
-     x.style.display=on?'block':'none';
-   });
-   document.body.dataset.cfPage=key;
-   document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page==='design-studio'));
-   if(push) history.pushState(null,'','#'+key); else history.replaceState(null,'','#'+key);
-   S?.set('activePage',key);
-   if(key==='theme-studio'){
-     const n=document.getElementById('ts5DesignName'),id=document.body.dataset.design||'modernLight';
-     if(n)n.textContent=id==='analyticsBlue'?'Analytics Blue':'Modern Light';
-   }
- }
- // Sidebar Design Studio must ALWAYS open the hub, never the Gallery.
- document.addEventListener('click',e=>{
-   const b=e.target.closest('.nav button[data-page="design-studio"], #page-dashboard [data-go="design-studio"], #page-dashboard [data-open="design-studio"]');
-   if(!b)return;
-   e.preventDefault(); e.stopImmediatePropagation(); show('design-studio');
- },true);
- document.addEventListener('click',e=>{
-   const b=e.target.closest('[data-studio-route]'); if(!b || b.disabled)return;
-   e.preventDefault(); show(b.dataset.studioRoute);
- });
+  document.addEventListener('coreflow:navigated',event=>{
+    if(event.detail?.page!=='theme-studio')return;
+    const el=document.getElementById('ts5DesignName');
+    if(el)el.textContent=document.body.dataset.design==='analyticsBlue'?'Analytics Blue':'Modern Light';
+  });
 })();
 </script><div id="cfThemePreviewBar"><span class="cftp-name" id="cftpName">Theme Preview</span><button class="cftp-btn" id="cftpPrev">‹ Previous</button><button class="cftp-btn" id="cftpNext">Next ›</button><button class="cftp-btn" id="cftpBack">Theme Studio</button><button class="cftp-btn" id="cftpExit">Exit Preview</button></div><script id="master-theme-engine-5b1-js">
 (()=>{
@@ -3367,6 +3341,10 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
    const t=e.target;
    const side=t.closest('.nav button[data-page]');
    if(side)return side.dataset.page;
+   const studio=t.closest('[data-studio-route]');
+   if(studio && !studio.disabled && exists(studio.dataset.studioRoute))return studio.dataset.studioRoute;
+   const studioDash=t.closest('#page-dashboard [data-go="design-studio"],#page-dashboard [data-open="design-studio"]');
+   if(studioDash)return 'design-studio';
    const card=t.closest('#page-purchasing .pm13-card[data-sub],#page-purchasing [data-sub]');
    if(card && card.dataset.sub && exists(card.dataset.sub))return card.dataset.sub;
    const link=t.closest('[data-lp13d-nav]');
@@ -3391,7 +3369,7 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
  }
  document.addEventListener('click',e=>{
    const id=navigationTarget(e);
-   if(!id||id==='design-studio')return;
+   if(!id)return;
    e.preventDefault();e.stopImmediatePropagation();
    navigateTo(id);
  },true);
