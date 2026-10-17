@@ -2510,21 +2510,11 @@ body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07
 <p aria-live="polite" class="cf05b-notice" id="cf05bStatus" role="status">Preview uses unsaved Profile Master form data. Saving a design does not yet apply it to actual Sidebar or Topbar.</p>
 </section></section></main></div>
 <footer class="foot"><span><b>CoreFlow</b> • Universal Architecture</span><span>Step 4D • Persistence Fixed</span></footer>
-<script>
+<script id="cf-original-sidebar-collapse-only">
+// Legacy sidebar route binding retired: CoreFlowCentralNavigation owns page changes.
 const menu=document.getElementById('m');
-menu.onclick=()=>{document.body.classList.toggle('collapsed');CoreFlowState.set('sidebarCollapsed',document.body.classList.contains('collapsed'))};
-if(CoreFlowState.get('sidebarCollapsed',false)===true)document.body.classList.add('collapsed');
-
-const buttons=[...document.querySelectorAll('.nav button[data-page]')];
-const pages=[...document.querySelectorAll('.page')];
-function openPage(key,writeHash=true){
-  if(!document.getElementById('page-'+key))key='dashboard';
-  pages.forEach(p=>p.classList.toggle('active',p.id==='page-'+key));
-  buttons.forEach(b=>b.classList.toggle('active',b.dataset.page===key));
-  CoreFlowState.set('activePage',key);
-  if(writeHash && location.hash!=='#'+key) history.replaceState(null,'','#'+key);
-}
-buttons.forEach(b=>b.onclick=()=>openPage(b.dataset.page));
+if(menu) menu.onclick=()=>{document.body.classList.toggle('collapsed');window.CoreFlowState?.set('sidebarCollapsed',document.body.classList.contains('collapsed'))};
+if(window.CoreFlowState?.get('sidebarCollapsed',false)===true)document.body.classList.add('collapsed');
 </script>
 <div class="mobile-overlay" id="mobileOverlay"></div>
 <nav class="mobile-bottom" id="mobileBottom">
@@ -2616,55 +2606,13 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
 #page-local-purchase .lp-approved-table td.lp-excel-active select{background:transparent}
 #lpExcelHint{font-size:11px;color:#40637e;margin:6px 0 0 6px}
 </style>
-<script id="pi14-route-fix">
-/* Dedicated Indent navigation: single capture handler; avoids legacy router conflict. */
+<!-- pi14-route-fix retired: purchase-indent handled by CoreFlow central navigation --><script id="modern-light-2c-js">
+// Visual module card navigation delegates to the existing central owner.
+// No active-page mutation or separate hash/history implementation here.
 (()=>{
- const key='purchase-indent', target=document.getElementById('page-'+key);
- if(!target)return;
- function openIndent(){
-   document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='none'});
-   target.classList.add('active');target.style.display='block';
-   document.body.dataset.cfPage=key;
-   document.querySelectorAll('.side .nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page==='purchasing'));
-   document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage==='purchasing'));
-   try{window.CoreFlowState?.set('activePage',key)}catch(_){}
-   if(location.hash!=='#'+key)history.replaceState(null,'','#'+key);
-   window.scrollTo({top:0,behavior:'instant'});
- }
- document.addEventListener('click',e=>{
-   const card=e.target.closest('#page-purchasing .pm13-card[data-sub="purchase-indent"]');
-   if(!card)return;
-   e.preventDefault();e.stopImmediatePropagation();if(window.CoreFlowPurchaseNavigation13H)window.CoreFlowPurchaseNavigation13H.open('purchase-indent');else openIndent();
- },true);
- document.addEventListener('keydown',e=>{
-   const card=e.target.closest('#page-purchasing .pm13-card[data-sub="purchase-indent"]');
-   if(!card||(e.key!=='Enter'&&e.key!==' '))return;
-   e.preventDefault();e.stopImmediatePropagation();if(window.CoreFlowPurchaseNavigation13H)window.CoreFlowPurchaseNavigation13H.open('purchase-indent');else openIndent();
- },true);
- document.addEventListener('click',e=>{
-   const back=e.target.closest('#page-purchase-indent [data-back="purchasing"]');
-   if(!back)return;
-   e.preventDefault();e.stopImmediatePropagation();
-   const main=document.querySelector('.side .nav button[data-page="purchasing"]');
-   if(main)main.click();else location.hash='#purchasing';
- },true);
- if(location.hash==='#purchase-indent')addEventListener('load',()=>openIndent(),{once:true});
-})();
-</script><script id="modern-light-2c-js">
-(()=>{
- function openSub(key,parent){
-   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-   const p=document.getElementById('page-'+key);if(!p)return;p.classList.add('active');
-   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===parent));
-   CoreFlowState?.set('activePage',key);history.replaceState(null,'','#'+key);
- }
- document.querySelectorAll('.ml-module-card[data-sub]').forEach(c=>c.addEventListener('click',()=>openSub(c.dataset.sub,c.dataset.parent)));
- document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>document.querySelector(`.nav button[data-page="${b.dataset.back}"]`)?.click()));
- const hash=location.hash.slice(1);
- const sub=document.getElementById('page-'+hash);
- if(sub?.classList.contains('ml-subpage')){
-   const card=document.querySelector(`.ml-module-card[data-sub="${hash}"]`);openSub(hash,card?.dataset.parent||'dashboard');
- }
+ function open(id){return window.CoreFlowCentralNavigation?.open(id)||false}
+ document.querySelectorAll('.ml-module-card[data-sub]').forEach(card=>card.addEventListener('click',()=>open(card.dataset.sub)));
+ document.querySelectorAll('[data-back]').forEach(button=>button.addEventListener('click',()=>open(button.dataset.back)));
 })();
 </script><div class="cf-package-badge">Design Gallery • Persistence Fixed</div>
 <script id="modern-light-2d-package">
@@ -3373,7 +3321,7 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
    const par=parents[k]||k;
    document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===par));
    document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage===par));
-   if(writeHash && location.hash!=='#'+k) history.replaceState(null,'','#'+k);
+   if(writeHash && location.hash!=='#'+k) history.pushState({cfPage:k},'','#'+k);
    if(save && !isChild) S?.set('activePage',k);
    return true;
  }
@@ -3423,6 +3371,10 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
    if(card && card.dataset.sub && exists(card.dataset.sub))return card.dataset.sub;
    const link=t.closest('[data-lp13d-nav]');
    if(link && exists(link.dataset.lp13dNav))return link.dataset.lp13dNav;
+   const moduleCard=t.closest('.ml-module-card[data-sub]');
+   if(moduleCard && exists(moduleCard.dataset.sub))return moduleCard.dataset.sub;
+   const back=t.closest('[data-back]');
+   if(back && exists(back.dataset.back))return back.dataset.back;
    if(t.closest('#mlBackPurchase'))return 'local-purchase-home';
    const dashboard=t.closest('[data-go="purchasing"]');
    if(dashboard)return 'purchasing';
@@ -3500,7 +3452,9 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
 
  // Exact refresh route. Theme preview itself is intentionally not persisted:
  // F5 on #theme-studio stays Theme Studio; F5 on #dashboard stays Dashboard, with no intermediate flash.
- window.addEventListener('hashchange',()=>{const k=location.hash.slice(1);if(exists(k))route(k,{writeHash:false,save:!isChild})});
+ const syncUrl=()=>{const k=location.hash.slice(1);if(exists(k))route(k,{writeHash:false,save:!isChild})};
+ window.addEventListener('hashchange',syncUrl);
+ window.addEventListener('popstate',syncUrl);
 
  // Resolve BEFORE revealing the app.
  // A live Theme Preview is a session state: F5 must restore the same preview,
