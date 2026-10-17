@@ -2678,7 +2678,7 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
    });
  }
  const knownParents={
-   'local-purchase':'purchasing','zafar-purchase':'purchasing','board-purchase':'purchasing','purchase-history':'purchasing',
+   'local-purchase':'purchasing','local-purchase-home':'purchasing','local-purchase-history':'purchasing','local-purchase-report':'purchasing','local-purchase-excel':'purchasing','purchase-indent':'purchasing','purchase-indent-home':'purchasing','zafar-purchase':'purchasing','board-purchase':'purchasing','purchase-history':'purchasing',
    'stock-ledger':'inventory','current-stock':'inventory','supplier-analysis':'inventory','stock-summary':'inventory',
    'issue-entry':'issue-stock','issue-history':'issue-stock','consumption':'issue-stock','department-usage':'issue-stock',
    'rgp':'gate-pass','ogp':'gate-pass','cgp':'gate-pass','gate-history':'gate-pass',
@@ -3412,13 +3412,47 @@ page.querySelector('#mlAddRow').onclick=()=>make().querySelector('[data-f=item]'
    body.classList.remove('cf-preview-mobile','cf-preview-tablet','cf-rp-mobile','cf-rp-tablet','cf-mobile-menu-open');
  }
 
- // Single navigation owner for main sidebar routes.
+ // Central navigation owner — sidebar and purchase cards share a single route.
+ // Keep module-internal tabs owned by their module; do not reinitialise on page switch.
+ const purchaseChildIds=new Set(['local-purchase-home','local-purchase','local-purchase-history','local-purchase-report','local-purchase-excel','zafar-purchase','board-purchase','purchase-indent','purchase-indent-home']);
+ function navigationTarget(e){
+   const t=e.target;
+   const side=t.closest('.nav button[data-page]');
+   if(side)return side.dataset.page;
+   const card=t.closest('#page-purchasing .pm13-card[data-sub],#page-purchasing [data-sub]');
+   if(card && card.dataset.sub && exists(card.dataset.sub))return card.dataset.sub;
+   const link=t.closest('[data-lp13d-nav]');
+   if(link && exists(link.dataset.lp13dNav))return link.dataset.lp13dNav;
+   if(t.closest('#mlBackPurchase'))return 'local-purchase-home';
+   const dashboard=t.closest('[data-go="purchasing"]');
+   if(dashboard)return 'purchasing';
+   return null;
+ }
+ function navigateTo(id){
+   if(!id||!exists(id))return false;
+   const ok=route(id);
+   if(ok){
+     document.body.classList.remove('mobile-menu-open');
+     document.dispatchEvent(new CustomEvent('coreflow:navigated',{detail:{page:id}}));
+   }
+   return ok;
+ }
  document.addEventListener('click',e=>{
-   const b=e.target.closest('.nav button[data-page]');
-   if(!b || b.dataset.page==='design-studio') return;
-   e.preventDefault(); e.stopImmediatePropagation();
-   route(b.dataset.page);
+   const id=navigationTarget(e);
+   if(!id||id==='design-studio')return;
+   e.preventDefault();e.stopImmediatePropagation();
+   navigateTo(id);
  },true);
+ document.addEventListener('keydown',e=>{
+   if(e.key!=='Enter'&&e.key!==' ')return;
+   const card=e.target.closest('#page-purchasing .pm13-card[data-sub],[data-lp13d-nav]');
+   if(!card)return;
+   const id=card.dataset.sub||card.dataset.lp13dNav;
+   if(!exists(id))return;
+   e.preventDefault();e.stopImmediatePropagation();navigateTo(id);
+ },true);
+ window.CoreFlowPurchaseNavigation13H={open:navigateTo};
+ window.CoreFlowCentralNavigation={open:navigateTo, current:()=>document.body.dataset.cfPage||location.hash.slice(1)};
 
  // Existing top responsive switch — now only this controller owns it.
  document.addEventListener('click',e=>{
@@ -7683,36 +7717,7 @@ function render(){if(!page)return;content.innerHTML=previewHtml()+'<p class="cf-
 content.querySelectorAll('[data-cfg]').forEach(el=>{el.addEventListener('input',()=>{let k=el.dataset.cfg;cfg[k]=el.type==='checkbox'?el.checked:Math.max(0,Number(el.value)||0);apply(page,cfg);refreshPreview()})});content.querySelectorAll('[data-col]').forEach(el=>el.addEventListener('input',()=>{cfg.columns[el.dataset.col]=Math.max(55,Number(el.value)||55);apply(page,cfg);refreshPreview()}));content.querySelectorAll('[data-col-align]').forEach(el=>el.addEventListener('change',()=>{cfg.alignments[el.dataset.colAlign]=el.value;apply(page,cfg);refreshPreview()}));content.querySelector('.cf-pc-preview-shell')?.addEventListener('click',e=>{const hit=e.target.closest('[data-preview-section]');if(hit)activatePreview(hit.dataset.previewSection,hit.dataset.previewCol)});}
 function refreshPreview(){let old=content.querySelector('.cf-pc-preview-shell');if(old)old.outerHTML=previewHtml();content.querySelector('.cf-pc-preview-shell')?.addEventListener('click',e=>{let hit=e.target.closest('[data-preview-section]');if(hit)activatePreview(hit.dataset.previewSection,hit.dataset.previewCol)})}
 function open(p){page=p||current();if(!page)return;cfg=config(page);apply(page,cfg);render();panel.hidden=false;shade.hidden=false}function close(){panel.hidden=true;shade.hidden=true}launch.onclick=()=>open();document.querySelectorAll('.lp-page-control-open').forEach(b=>b.onclick=()=>open(b.closest('.page')));document.getElementById('cf-pc-close').onclick=close;shade.onclick=close;document.getElementById('cf-pc-save').onclick=async()=>{if(!page)return;const button=document.getElementById('cf-pc-save');button.disabled=true;const next={...saved,[orig(page)]:JSON.parse(JSON.stringify(cfg))};try{await controllerWrite(next);saved=next;try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(_){};apply(page,cfg);close()}catch(e){alert('Page Controller settings save failed: '+e.message)}finally{button.disabled=false}};document.getElementById('cf-pc-reset').onclick=async()=>{if(!page)return;const next={...saved};delete next[orig(page)];try{await controllerWrite(next);saved=next;try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(_){};cfg=config(page);apply(page,cfg);render()}catch(e){alert('Reset failed: '+e.message)}};document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden)close()});function sync(){let p=current();launch.hidden=!p;if(p&&!p.dataset.cfPcApplied){apply(p,config(p));p.dataset.cfPcApplied='1'}}document.addEventListener('click',()=>setTimeout(sync,0));window.addEventListener('hashchange',()=>setTimeout(sync,0));sync();controllerRead().then(data=>{if(data&&typeof data==='object'){saved=data;allPages().forEach(p=>{delete p.dataset.cfPcApplied;apply(p,config(p));});sync();}}).catch(err=>{console.warn('Page Controller IndexedDB load:',err)});})();</script>
-<script id="cf13h-unified-navigation">
-(()=>{'use strict';
- const purchasePages=new Set(['purchasing','local-purchase-home','local-purchase','local-purchase-history','local-purchase-report','local-purchase-excel','purchase-indent-home','purchase-indent']);
- const find=id=>document.getElementById('page-'+id);
- function activate(id,write=true){
-   const target=find(id);if(!target)return false;
-   document.querySelectorAll('.page').forEach(p=>{const yes=p===target;p.classList.toggle('active',yes);p.style.display=yes?'block':'none'});
-   const parent=purchasePages.has(id)?'purchasing':id;
-   document.querySelectorAll('.side .nav button[data-page],.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===parent));
-   document.body.dataset.cfPage=id;
-   try{window.CoreFlowState?.set('activePage',id)}catch(e){}
-   if(write&&location.hash!=='#'+id)history.pushState(null,'','#'+id);
-   window.scrollTo({top:0,behavior:'instant'});
-   return true;
- }
- // Handle only the routes that were conflicting; other Studios keep their existing routers.
- const supported=new Set(['dashboard',...purchasePages]);
- document.addEventListener('click',e=>{
-   let nav=e.target.closest('.side .nav button[data-page]');
-   let sub=e.target.closest('#page-purchasing .pm13-card[data-sub],#page-local-purchase-home [data-lp13d-nav],[data-lp13d-nav],#mlBackPurchase');
-   let card=e.target.closest('[data-go="purchasing"]');
-   let id=nav?.dataset.page||sub?.dataset.sub||sub?.dataset.lp13dNav||(sub?.id==='mlBackPurchase'?'local-purchase-home':'')||(card?'purchasing':'');
-   if(!supported.has(id))return;
-   e.preventDefault();e.stopImmediatePropagation();activate(id);
- },true);
- window.addEventListener('popstate',()=>{const id=location.hash.slice(1);if(supported.has(id))activate(id,false)});
- window.addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(supported.has(id))activate(id,false)});
- const initial=location.hash.slice(1);if(supported.has(initial))activate(initial,false);
- window.CoreFlowPurchaseNavigation13H={open:activate};
-})();</script><style id="lp13i4-range-style">
+<style id="lp13i4-range-style">
 #page-local-purchase .lp-approved-table td.lp-range-cell{background:#d9edff!important;box-shadow:inset 0 0 0 1px #4198dc}
 #page-local-purchase .lp-approved-table td.lp-range-anchor{box-shadow:inset 0 0 0 2px #1265b1!important}
 #lpRangeStatus{font-size:11px;color:#15527e;margin:5px 0 0 6px;min-height:15px}
