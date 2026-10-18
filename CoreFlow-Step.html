@@ -8043,19 +8043,30 @@ function compact(){return Object.fromEntries(Object.entries(drafts).map(([k,r])=
 function loadAll(){for(const st of [sessionStorage,localStorage]){try{const x=JSON.parse(st.getItem(KEY)||'null');if(x&&typeof x==='object')return x}catch(_){}}return {}}
 Object.assign(drafts,loadAll());
 function persist(){drafts[register]=rows;const data=JSON.stringify(compact());try{sessionStorage.setItem(KEY,data);if(!persistWarned)status('Draft saved in this tab · '+register);return true}catch(e){if(!persistWarned){persistWarned=true;status('Browser storage full: draft remains in current page memory. Free space in Data Storage; do not close tab before copying data.')}return false}}
-function hydrate(reg){const v=drafts[reg];rows=Array.isArray(v)?v.map(r=>Array.isArray(r)?Array.from({length:F},(_,i)=>String(r[i]??'')):blank()):[];while(rows.length<MIN)rows.push(blank());rows.forEach((_,i)=>recalcGross(i));render()}
+function hydrate(reg){const v=drafts[reg];rows=Array.isArray(v)?v.map(r=>Array.isArray(r)?Array.from({length:F},(_,i)=>String(r[i]??'')):blank()):[];while(rows.length<MIN)rows.push(blank());rows.forEach((_,i)=>{syncItemDefaults(i);recalcGross(i)});render()}
 function masters(){return window.CoreFlowMasters12A||null}
 function items(){return (masters()?.getItems()||[]).filter(x=>x.status!=='inactive')}
 function suppliers(){return (masters()?.getSuppliers()||[]).filter(x=>x.status!=='inactive'&&x.active!==false)}
 function unitLabel(u){return String(typeof u==='string'?u:u?.name??u?.unit??u?.title??u?.value??'').trim()}
 function units(){try{const m=masters();const arr=m?.getUnits?.()||m?.getMaster?.('units')||[];return Array.isArray(arr)?arr.filter(x=>x?.status!=='inactive'&&x?.active!==false).map(unitLabel).filter(Boolean):[]}catch(_){return []}}
 function defaultPackage(row){if(!String(rows[row]?.[7]||'').trim())rows[row][7]=units().find(x=>norm(x)==='vehicle')||'Vehicle'}
+function syncItemDefaults(i){
+ const r=rows[i];if(!r)return;
+ if(String(r[3]||'').trim()){
+  if(!String(r[6]||'').trim())r[6]='1';
+  defaultPackage(i);
+ }else{
+  // Clear dependent master-filled fields when Item with Size is removed.
+  r[6]='';r[7]='';r[13]='';setItemRef(register,i,null);
+ }
+}
+function vehicleUpper(v){return String(v??'').toUpperCase()}
 function numberValue(v){const n=Number(String(v||'').replace(/,/g,'').trim());return Number.isFinite(n)?n:null}
 // 23 table headers: Sr. No. is display-only; input columns start at Date (0).
 // 6 No. of Item, 7 Package, 8 Weight/Item, 9 Gross Weight,
 // 10 Ded %, 11 Deduction Weight, 12 Net Weight, 13 Unit,
 // 14 Unit Price, 15 Total Price, 16 Sales Tax %, 17 Sales Tax Amount, 18 Total Amount.
-function formatted(n){return String(Number(n.toFixed(6)))}
+function formatted(n){const v=Number(n.toFixed(6));return v.toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:6})}
 function recalcGross(i){
  const r=rows[i];if(!r)return;
  const has=v=>String(v??'').trim()!=='';
@@ -8120,7 +8131,7 @@ function afterGridChange(position,selectionA,selectionB){
 function focusCell(i,j,shift=false){i=Math.max(0,i);j=Math.max(0,Math.min(F-1,j));if(i>=rows.length){ensureRows(i+1);persist();render()}if(shift&&anchor)extent=[i,j];else anchor=extent=[i,j];paintSelection();rangeKeyboardMoving=true;cellAt(i,j)?.focus({preventScroll:true});rangeKeyboardMoving=false;cellAt(i,j)?.scrollIntoView({block:'nearest',inline:'nearest'})}
 function rangeText(q=bounds()){if(!q)return '';return rows.slice(q[0],q[2]+1).map(r=>r.slice(q[1],q[3]+1).join('\t')).join('\n')}
 function matrixFromText(t){return String(t||'').replace(/\r/g,'').replace(/\n$/,'').split('\n').map(r=>r.split('\t'))}
-function normalizeSet(i,j,v){if(i<0||j<0||j>=F||[9,11,12,15,17,18].includes(j))return;ensureRows(i+1);v=String(v??'');if(j===0)v=dateFormat(v);if(j===3){const itm=matchingItem(v);if(itm){v=itemLabel(itm);rows[i][13]=String(itm.unit||'');defaultPackage(i);setItemRef(register,i,itm)}else setItemRef(register,i,null)}if(j===7){const u=units().find(x=>norm(x)===norm(v));if(u)v=u}if(j===4){const spl=suppliers().find(x=>norm(supplierLabel(x))===norm(v));if(spl)v=supplierLabel(spl)}rows[i][j]=v;if([6,8,10,14,16].includes(j))recalcGross(i)}
+function normalizeSet(i,j,v){if(i<0||j<0||j>=F||[9,11,12,15,17,18].includes(j))return;ensureRows(i+1);v=String(v??'');if(j===0)v=dateFormat(v);if(j===3){const itm=matchingItem(v);if(itm){v=itemLabel(itm);rows[i][13]=String(itm.unit||'');setItemRef(register,i,itm)}else setItemRef(register,i,null)}if(j===7){const u=units().find(x=>norm(x)===norm(v));if(u)v=u}if(j===4){const spl=suppliers().find(x=>norm(supplierLabel(x))===norm(v));if(spl)v=supplierLabel(spl)}if(j===20)v=vehicleUpper(v);rows[i][j]=v;if(j===3)syncItemDefaults(i);if([3,6,8,10,14,16].includes(j))recalcGross(i)}
 function applyMatrix(matrix,fromClipboard=true,destination=null){
  if(!matrix.length)return;
  const q=destination?.range||bounds();const start=destination?.start||(q?[q[0],q[1]]:anchor);
@@ -8158,13 +8169,18 @@ function supplierLabel(s){return String(s.name||s.supplier||s.title||'').trim()}
 let menu=document.createElement('div');menu.className='bp16d-suggest';menu.hidden=true;root.append(menu);let target=null,choices=[],selected=0;
 function closeMenu(){menu.hidden=true;menu.replaceChildren();target=null;choices=[]}
 function suggestions(el){const col=+el.dataset.col;if(col!==3&&col!==4&&col!==7)return closeMenu();const q=norm(el.value);if(!q)return closeMenu();const all=col===3?items().map(x=>({label:itemLabel(x),data:x})):col===4?suppliers().map(x=>({label:supplierLabel(x),data:x})):units().map(x=>({label:x,data:x}));choices=all.filter(x=>norm(x.label).includes(q)||(col===3&&norm(x.data.code).includes(q))).slice(0,10);target=el;selected=0;menu.replaceChildren();if(!choices.length)return closeMenu();choices.forEach((x,i)=>{const b=document.createElement('button');b.type='button';b.textContent=x.label;b.className=i===0?'selected':'';b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>pick(i));menu.append(b)});const r=el.getBoundingClientRect(),parent=root.getBoundingClientRect();menu.style.left=Math.max(0,r.left-parent.left)+'px';menu.style.top=(r.bottom-parent.top+2)+'px';menu.style.minWidth=Math.max(230,r.width)+'px';menu.hidden=false}
-function pick(index){if(!target||!choices[index])return;const el=target,row=+el.dataset.row,col=+el.dataset.col,x=choices[index];if(col===3){rows[row][3]=itemLabel(x.data);rows[row][13]=String(x.data.unit||'');defaultPackage(row);setItemRef(register,row,x.data)}else if(col===7)rows[row][7]=x.label;else rows[row][4]=x.label;closeMenu();persist();render([row,col]);focusCell(row,Math.min(F-1,col+1))}
-function render(focus){closeMenu();body.replaceChildren();const frag=document.createDocumentFragment();rows.forEach((r,i)=>{const tr=document.createElement('tr'),sr=document.createElement('td');sr.className='bp16c-serial';sr.textContent=i+1;tr.append(sr);for(let j=0;j<F;j++){const td=document.createElement('td'),inp=document.createElement('input');inp.dataset.row=i;inp.dataset.col=j;inp.value=r[j]||'';inp.autocomplete='off';inp.spellcheck=false;inp.setAttribute('aria-label',`${i+1}: ${j+2}`);if(j===3||j===4||j===8){inp.setAttribute('aria-autocomplete','list')}if([9,11,12,15,17,18].includes(j)){inp.readOnly=true;inp.tabIndex=0;inp.title='Automatically calculated field'}td.append(inp);tr.append(td)}frag.append(tr)});body.append(frag);status(`${register} · ${rows.length} rows · ${rows.filter(r=>r.some(x=>String(x).trim())).length} filled · Draft only`);if(focus)body.querySelector(`input[data-row="${focus[0]}"][data-col="${focus[1]}"]`)?.focus();paintSelection()}
-body.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-row]'))return;if(!beforeEdit)beforeEdit=cloneRows();rows[+el.dataset.row][+el.dataset.col]=el.value;if([6,8,10,14,16].includes(+el.dataset.col))recalcGross(+el.dataset.row);if(+el.dataset.col===3)setItemRef(register,+el.dataset.row,null);persist();suggestions(el)});
+function pick(index){if(!target||!choices[index])return;const el=target,row=+el.dataset.row,col=+el.dataset.col,x=choices[index];if(col===3){rows[row][3]=itemLabel(x.data);rows[row][13]=String(x.data.unit||'');setItemRef(register,row,x.data);syncItemDefaults(row)}else if(col===7)rows[row][7]=x.label;else rows[row][4]=x.label;closeMenu();persist();render([row,col]);focusCell(row,Math.min(F-1,col+1))}
+function render(focus){closeMenu();body.replaceChildren();const frag=document.createDocumentFragment();rows.forEach((r,i)=>{const tr=document.createElement('tr'),sr=document.createElement('td');sr.className='bp16c-serial';sr.textContent=i+1;tr.append(sr);for(let j=0;j<F;j++){const td=document.createElement('td'),inp=document.createElement('input');inp.dataset.row=i;inp.dataset.col=j;inp.value=r[j]||'';inp.autocomplete='off';inp.spellcheck=false;inp.setAttribute('aria-label',`${i+1}: ${j+2}`);if(j===3||j===4||j===7){inp.setAttribute('aria-autocomplete','list')}if([9,11,12,15,17,18].includes(j)){inp.readOnly=true;inp.tabIndex=0;inp.title='Automatically calculated field'}td.append(inp);tr.append(td)}frag.append(tr)});body.append(frag);status(`${register} · ${rows.length} rows · ${rows.filter(r=>r.some(x=>String(x).trim())).length} filled · Draft only`);if(focus)body.querySelector(`input[data-row="${focus[0]}"][data-col="${focus[1]}"]`)?.focus();paintSelection()}
+body.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-row]'))return;if(!beforeEdit)beforeEdit=cloneRows();const ri=+el.dataset.row,cj=+el.dataset.col;
+ if(cj===20){const p=el.selectionStart;el.value=vehicleUpper(el.value);try{el.setSelectionRange(p,p)}catch(_){}}
+ rows[ri][cj]=el.value;
+ if(cj===3){setItemRef(register,ri,null);syncItemDefaults(ri);for(const col of [6,7,13]){const related=cellAt(ri,col);if(related)related.value=rows[ri][col]}}
+ if([3,6,8,10,14,16].includes(cj))recalcGross(ri);
+ persist();suggestions(el)});
 body.addEventListener('focusin',e=>{if(e.target.matches('input[data-row]')){const q=coords(e.target);if(!dragging&&!rangeKeyboardMoving)select(q);beforeEdit=null}if(e.target.matches('input[data-row]')&&[3,4,7].includes(+e.target.dataset.col)&&e.target.value.trim())suggestions(e.target)});
-body.addEventListener('focusout',e=>{const el=e.target;if(!el.matches('input[data-row]'))return;const i=+el.dataset.row,j=+el.dataset.col;let v=rows[i][j]||'';if(j===0)v=dateFormat(v);else if([3,4,5,7,19,20,21].includes(j))v=proper(v);if((j===3||j===4)&&v){const opts=j===3?items().map(itemLabel):suppliers().map(supplierLabel);const hit=opts.find(x=>norm(x)===norm(v));if(hit)v=hit;
- if(j===3){const item=matchingItem(v);if(item){v=itemLabel(item);rows[i][13]=String(item.unit||'');defaultPackage(i);setItemRef(register,i,item);const unitInput=body.querySelector(`input[data-row="${i}"][data-col="13"]`);if(unitInput)unitInput.value=rows[i][13]}else setItemRef(register,i,null)}
-}if(j===7){const match=units().find(x=>norm(x)===norm(v));if(match)v=match}rows[i][j]=v;el.value=v;if([6,8,10,14,16].includes(j))recalcGross(i);if(beforeEdit){remember(beforeEdit);beforeEdit=null}persist();setTimeout(()=>{if(document.activeElement!==el)closeMenu()},130)});
+body.addEventListener('focusout',e=>{const el=e.target;if(!el.matches('input[data-row]'))return;const i=+el.dataset.row,j=+el.dataset.col;let v=rows[i][j]||'';if(j===0)v=dateFormat(v);else if(j===20)v=vehicleUpper(v);else if([3,4,5,7,19,21].includes(j))v=proper(v);if((j===3||j===4)&&v){const opts=j===3?items().map(itemLabel):suppliers().map(supplierLabel);const hit=opts.find(x=>norm(x)===norm(v));if(hit)v=hit;
+ if(j===3){const item=matchingItem(v);if(item){v=itemLabel(item);rows[i][13]=String(item.unit||'');setItemRef(register,i,item);const unitInput=body.querySelector(`input[data-row="${i}"][data-col="13"]`);if(unitInput)unitInput.value=rows[i][13]}else setItemRef(register,i,null)}
+}if(j===7){const match=units().find(x=>norm(x)===norm(v));if(match)v=match}rows[i][j]=v;if(j===3){syncItemDefaults(i);for(const col of [6,7,13]){const related=cellAt(i,col);if(related)related.value=rows[i][col]}}el.value=v;if([3,6,8,10,14,16].includes(j))recalcGross(i);if(beforeEdit){remember(beforeEdit);beforeEdit=null}persist();setTimeout(()=>{if(document.activeElement!==el)closeMenu()},130)});
 body.addEventListener('mousedown',e=>{const inp=e.target.closest('input[data-row]');if(!inp)return;const q=coords(inp);dragging=true;if(e.shiftKey&&anchor)select(anchor,q);else select(q)});
 body.addEventListener('mouseover',e=>{if(!dragging)return;const inp=e.target.closest('input[data-row]');if(inp&&anchor){extent=coords(inp);paintSelection()}});
 document.addEventListener('mouseup',()=>{dragging=false});
