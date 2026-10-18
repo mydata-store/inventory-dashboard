@@ -8521,4 +8521,81 @@ window.addEventListener('hashchange',()=>setTimeout(requestRefresh,180));
 // Also recover from external tabs/older save paths without requiring full page refresh.
 setInterval(()=>{if(!document.hidden&&active())requestRefresh()},5000);
 })();</script>
+<script id="cf19e-local-last-saved-autofill">
+(()=>{'use strict';
+// Step 19E: read-only lookup against the original Local Purchase ledger.
+const body=document.getElementById('mlEntryBody');
+if(!body||window.__cf19eAutoFillInstalled)return;
+window.__cf19eAutoFillInstalled=true;
+const dbName='coreflow-local-purchase-ledger-v1';
+const norm=v=>String(v??'').trim().toLowerCase().replace(/\s+/g,' ');
+let cache=null,loadPromise=null;
+async function load(){
+ if(cache)return cache;if(loadPromise)return loadPromise;
+ loadPromise=new Promise((resolve,reject)=>{
+  const request=indexedDB.open(dbName);
+  request.onerror=()=>reject(request.error);
+  request.onupgradeneeded=()=>{};
+  request.onsuccess=()=>{
+   const db=request.result;
+   if(!db.objectStoreNames.contains('purchases')){db.close();resolve([]);return}
+   const tx=db.transaction('purchases','readonly');
+   const get=tx.objectStore('purchases').getAll();
+   get.onsuccess=()=>resolve((get.result||[]).sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))));
+   get.onerror=()=>reject(get.error);
+   tx.oncomplete=()=>db.close();tx.onabort=()=>db.close();
+  };
+ }).then(list=>(cache=list)).catch(e=>{console.warn('Local previous purchase lookup unavailable:',e);return []}).finally(()=>{loadPromise=null});
+ return loadPromise;
+}
+const wanted=['by','type','vehicle'];
+async function apply(tr,itemName,itemSize,itemCode,marker){
+ const purchases=await load();
+ if(!tr.isConnected||tr.dataset.cf19eMarker!==marker)return;
+ const itemNorm=norm(itemName),sizeNorm=norm(itemSize),codeNorm=norm(itemCode);
+ let previous=null;
+ for(const purchase of purchases){
+  if(norm(purchase.status)==='cancelled')continue;
+  for(const line of [...(purchase.lines||[])].reverse()){
+   if(line.isBillDiscount||norm(line.item)==='discount'||norm(line.status)==='cancelled')continue;
+   const sameCode=codeNorm&&norm(line.itemCode)===codeNorm;
+   const sameName=norm(line.item)===itemNorm&&norm(line.size)===sizeNorm;
+   if((sameCode&&norm(line.size)===sizeNorm)||sameName){previous=line;break}
+  }
+  if(previous)break;
+ }
+ if(!previous||tr.dataset.cf19eMarker!==marker)return;
+ for(const field of wanted){
+  const input=tr.querySelector('[data-f="'+field+'"]');
+  if(!input||input.value.trim())continue; // NEVER override typed/manual choices
+  let value=String(previous[field]??'').trim();
+  if(field==='vehicle')value=value.toUpperCase();
+  if(field==='type'&&norm(value)==='discount')continue;
+  if(!value)continue;
+  input.value=value;
+  input.dispatchEvent(new Event('change',{bubbles:true}));
+ }
+}
+function observe(el){
+ if(el.dataset.f!=='item')return;
+ const tr=el.closest('tr');if(!tr)return;
+ const name=el.value.trim();
+ if(!name||norm(name)==='discount'){
+  tr.dataset.cf19eMarker='';return;
+ }
+ const code=tr.dataset.lp13eItemCode||'';
+ const selected=tr.dataset.lp13eItemName||'';
+ // Lookup only after choosing the exact item in Item Master, not for partial typing.
+ if(!code||norm(name)!==norm(selected))return;
+ const size=tr.querySelector('[data-f="size"]')?.value||'';
+ const marker=norm(code)+'|'+norm(name)+'|'+norm(size);
+ if(tr.dataset.cf19eMarker===marker)return;
+ tr.dataset.cf19eMarker=marker;
+ apply(tr,name,size,code,marker);
+}
+body.addEventListener('input',e=>{if(e.target?.matches?.('input[data-f="item"]'))observe(e.target)});
+// Saved history may change without full-page refresh: invalidate only our read cache.
+window.addEventListener('coreflow:data-saved',e=>{if(!e.detail?.type||String(e.detail.type).includes('local')){cache=null}});
+})();
+</script>
 </body></html>
