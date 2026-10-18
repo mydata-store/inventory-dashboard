@@ -8064,36 +8064,70 @@ function matchingItem(value){return items().find(x=>norm(itemLabel(x))===norm(va
 let anchor=null,extent=null,dragging=false,rangeKeyboardMoving=false,internalClipboard=null,undoStack=[],redoStack=[],beforeEdit=null;
 const cloneRows=()=>rows.map(r=>r.slice());
 function remember(snapshot){if(!snapshot)return;undoStack.push(snapshot);if(undoStack.length>70)undoStack.shift();redoStack.length=0}
-function undo(){if(!undoStack.length)return;redoStack.push(cloneRows());rows=undoStack.pop();ensureRows();persist();render();paintSelection()}
-function redo(){if(!redoStack.length)return;undoStack.push(cloneRows());rows=redoStack.pop();ensureRows();persist();render();paintSelection()}
+function undo(){if(!undoStack.length)return;redoStack.push(cloneRows());rows=undoStack.pop();ensureRows();persist();afterGridChange(extent||anchor)}
+function redo(){if(!redoStack.length)return;undoStack.push(cloneRows());rows=redoStack.pop();ensureRows();persist();afterGridChange(extent||anchor)}
 function ensureRows(n=MIN){while(rows.length<n)rows.push(blank())}
 function cellAt(i,j){return body.querySelector(`input[data-row="${i}"][data-col="${j}"]`)}
 function coords(el){return [+el.dataset.row,+el.dataset.col]}
 function bounds(){if(!anchor)return null;const end=extent||anchor;return [Math.min(anchor[0],end[0]),Math.min(anchor[1],end[1]),Math.max(anchor[0],end[0]),Math.max(anchor[1],end[1])]}
 function paintSelection(){body.querySelectorAll('td.bp16e-selected').forEach(td=>td.classList.remove('bp16e-selected'));const q=bounds();if(!q)return;for(let i=q[0];i<=q[2];i++)for(let j=q[1];j<=q[3];j++)cellAt(i,j)?.closest('td')?.classList.add('bp16e-selected')}
-function select(a,b=a){anchor=a;extent=b;paintSelection()}
+function select(a,b=a){anchor=[...a];extent=[...b];paintSelection()}
+function restoreFocus(pos){
+ if(!pos)return;
+ const el=cellAt(pos[0],pos[1]);if(!el)return;
+ rangeKeyboardMoving=true;
+ try{el.focus({preventScroll:true})}finally{rangeKeyboardMoving=false}
+ el.scrollIntoView({block:'nearest',inline:'nearest'});
+ paintSelection();
+}
+function afterGridChange(position,selectionA,selectionB){
+ render();
+ if(selectionA)select(selectionA,selectionB||selectionA);
+ restoreFocus(position);
+}
+
 function focusCell(i,j,shift=false){i=Math.max(0,i);j=Math.max(0,Math.min(F-1,j));if(i>=rows.length){ensureRows(i+1);persist();render()}if(shift&&anchor)extent=[i,j];else anchor=extent=[i,j];paintSelection();rangeKeyboardMoving=true;cellAt(i,j)?.focus({preventScroll:true});rangeKeyboardMoving=false;cellAt(i,j)?.scrollIntoView({block:'nearest',inline:'nearest'})}
 function rangeText(q=bounds()){if(!q)return '';return rows.slice(q[0],q[2]+1).map(r=>r.slice(q[1],q[3]+1).join('\t')).join('\n')}
 function matrixFromText(t){return String(t||'').replace(/\r/g,'').replace(/\n$/,'').split('\n').map(r=>r.split('\t'))}
 function normalizeSet(i,j,v){if(i<0||j<0||j>=F)return;ensureRows(i+1);v=String(v??'');if(j===0)v=dateFormat(v);if(j===3){const itm=matchingItem(v);if(itm){v=itemLabel(itm);rows[i][13]=String(itm.unit||'');setItemRef(register,i,itm)}else setItemRef(register,i,null)}if(j===4){const spl=suppliers().find(x=>norm(supplierLabel(x))===norm(v));if(spl)v=supplierLabel(spl)}rows[i][j]=v}
-function applyMatrix(matrix,fromClipboard=true){if(!anchor||!matrix.length)return;const q=bounds();const start=q?[q[0],q[1]]:anchor;const height=Math.max(1,matrix.length),width=Math.max(1,...matrix.map(x=>x.length));const selectedH=q?q[2]-q[0]+1:1, selectedW=q?q[3]-q[1]+1:1;
- const vertical=height===1&&width>1&&selectedW===1&&selectedH>=width;
- const outH=vertical?width:(height===1&&width===1?selectedH:(selectedH>height&&selectedH%height===0&&selectedW===width?selectedH:height));
- const outW=vertical?1:(height===1&&width===1?selectedW:width);
- remember(cloneRows());for(let r=0;r<outH;r++)for(let c=0;c<outW;c++){
-   const v=vertical?matrix[0][r]??'':matrix[r%height][c%width]??'';
-   normalizeSet(start[0]+r,start[1]+c,v);
- }persist();render();select(start,[start[0]+outH-1,Math.min(F-1,start[1]+outW-1)]);status((fromClipboard?'Pasted':'Filled')+' '+outH+' row(s)');}
-function clearRange(){const q=bounds();if(!q)return;remember(cloneRows());for(let i=q[0];i<=q[2];i++)for(let j=q[1];j<=q[3];j++)normalizeSet(i,j,'');persist();render();paintSelection()}
-function fillDown(){let q=bounds();if(!q)return;const top=q[0],left=q[1],bottom=q[2],right=q[3];if(top===bottom&&top===0)return;remember(cloneRows());const source=top===bottom?top-1:top;for(let i=(top===bottom?top:top+1);i<=bottom;i++)for(let j=left;j<=right;j++)normalizeSet(i,j,rows[source][j]);persist();render();paintSelection();status('Fill Down applied')}
+function applyMatrix(matrix,fromClipboard=true,destination=null){
+ if(!matrix.length)return;
+ const q=destination?.range||bounds();const start=destination?.start||(q?[q[0],q[1]]:anchor);
+ if(!start)return;
+ const height=matrix.length,width=Math.max(1,...matrix.map(x=>x.length));
+ const selectedH=q?q[2]-q[0]+1:1,selectedW=q?q[3]-q[1]+1:1;
+ const vertical=height===1&&width>1&&selectedW===1&&selectedH===width;
+ // Excel-style: selecting a larger matching destination repeats copied cells.
+ const outH=vertical?width:(selectedH>=height&&selectedH%height===0&&selectedW>=width&&selectedW%width===0?selectedH:height);
+ const outW=vertical?1:(selectedH>=height&&selectedW>=width&&selectedW%width===0?selectedW:width);
+ remember(cloneRows());
+ for(let r=0;r<outH;r++)for(let c=0;c<outW;c++){
+  const value=vertical?(matrix[0][r]??''):(matrix[r%height][c%width]??'');
+  normalizeSet(start[0]+r,start[1]+c,value);
+ }
+ persist();
+ const last=[start[0]+outH-1,Math.min(F-1,start[1]+outW-1)];
+ afterGridChange(start,start,last);
+ status((fromClipboard?'Pasted':'Filled')+' '+outH+' row(s) × '+outW+' column(s)');
+}
+function clearRange(){const q=bounds();if(!q)return;remember(cloneRows());for(let i=q[0];i<=q[2];i++)for(let j=q[1];j<=q[3];j++)normalizeSet(i,j,'');persist();afterGridChange(anchor,anchor,extent)}
+function fillDown(){let q=bounds();if(!q)return;const top=q[0],left=q[1],bottom=q[2],right=q[3];if(top===bottom&&top===0)return;remember(cloneRows());const source=top===bottom?top-1:top;for(let i=(top===bottom?top:top+1);i<=bottom;i++)for(let j=left;j<=right;j++)normalizeSet(i,j,rows[source][j]);persist();afterGridChange([bottom,left],anchor,extent);status('Fill Down applied')}
 function writeCopy(){const t=rangeText();internalClipboard=t;if(navigator.clipboard?.writeText)navigator.clipboard.writeText(t).catch(()=>{});return t}
 function cutRange(){writeCopy();clearRange()}
-function pasteClipboard(){if(navigator.clipboard?.readText){navigator.clipboard.readText().then(t=>applyMatrix(matrixFromText(t||internalClipboard||''))).catch(()=>{if(internalClipboard!==null)applyMatrix(matrixFromText(internalClipboard))})}else if(internalClipboard!==null)applyMatrix(matrixFromText(internalClipboard));else status('Copy cells first, or use Ctrl+V with browser clipboard permission')}
+function pasteClipboard(){
+ const snapshot=bounds(),start=snapshot?[snapshot[0],snapshot[1]]:(anchor?[...anchor]:null);
+ if(!start)return;
+ const destination={range:snapshot?[...snapshot]:null,start};
+ const fallback=()=>{if(internalClipboard!==null)applyMatrix(matrixFromText(internalClipboard),true,destination);else status('Copy cells first, or allow clipboard access')};
+ // Internal Ctrl+C is reliable even without asynchronous browser clipboard permission.
+ if(internalClipboard!==null){fallback();return}
+ if(navigator.clipboard?.readText){navigator.clipboard.readText().then(t=>t?applyMatrix(matrixFromText(t),true,destination):fallback()).catch(fallback)}else fallback();
+}
 function supplierLabel(s){return String(s.name||s.supplier||s.title||'').trim()}
 let menu=document.createElement('div');menu.className='bp16d-suggest';menu.hidden=true;root.append(menu);let target=null,choices=[],selected=0;
 function closeMenu(){menu.hidden=true;menu.replaceChildren();target=null;choices=[]}
 function suggestions(el){const col=+el.dataset.col;if(col!==3&&col!==4)return closeMenu();const q=norm(el.value);if(!q)return closeMenu();const all=col===3?items().map(x=>({label:itemLabel(x),data:x})):suppliers().map(x=>({label:supplierLabel(x),data:x}));choices=all.filter(x=>norm(x.label).includes(q)||(col===3&&norm(x.data.code).includes(q))).slice(0,10);target=el;selected=0;menu.replaceChildren();if(!choices.length)return closeMenu();choices.forEach((x,i)=>{const b=document.createElement('button');b.type='button';b.textContent=x.label;b.className=i===0?'selected':'';b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>pick(i));menu.append(b)});const r=el.getBoundingClientRect(),parent=root.getBoundingClientRect();menu.style.left=Math.max(0,r.left-parent.left)+'px';menu.style.top=(r.bottom-parent.top+2)+'px';menu.style.minWidth=Math.max(230,r.width)+'px';menu.hidden=false}
-function pick(index){if(!target||!choices[index])return;const el=target,row=+el.dataset.row,col=+el.dataset.col,x=choices[index];if(col===3){rows[row][3]=itemLabel(x.data);rows[row][13]=String(x.data.unit||'');setItemRef(register,row,x.data)}else rows[row][4]=x.label;closeMenu();persist();render([row,col]);const nxt=body.querySelector(`input[data-row="${row}"][data-col="${col+1}"]`);nxt?.focus()}
+function pick(index){if(!target||!choices[index])return;const el=target,row=+el.dataset.row,col=+el.dataset.col,x=choices[index];if(col===3){rows[row][3]=itemLabel(x.data);rows[row][13]=String(x.data.unit||'');setItemRef(register,row,x.data)}else rows[row][4]=x.label;closeMenu();persist();render([row,col]);focusCell(row,Math.min(F-1,col+1))}
 function render(focus){closeMenu();body.replaceChildren();const frag=document.createDocumentFragment();rows.forEach((r,i)=>{const tr=document.createElement('tr'),sr=document.createElement('td');sr.className='bp16c-serial';sr.textContent=i+1;tr.append(sr);for(let j=0;j<F;j++){const td=document.createElement('td'),inp=document.createElement('input');inp.dataset.row=i;inp.dataset.col=j;inp.value=r[j]||'';inp.autocomplete='off';inp.spellcheck=false;inp.setAttribute('aria-label',`${i+1}: ${j+2}`);if(j===3||j===4){inp.setAttribute('aria-autocomplete','list')}td.append(inp);tr.append(td)}frag.append(tr)});body.append(frag);status(`${register} · ${rows.length} rows · ${rows.filter(r=>r.some(x=>String(x).trim())).length} filled · Draft only`);if(focus)body.querySelector(`input[data-row="${focus[0]}"][data-col="${focus[1]}"]`)?.focus();paintSelection()}
 body.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-row]'))return;if(!beforeEdit)beforeEdit=cloneRows();rows[+el.dataset.row][+el.dataset.col]=el.value;if(+el.dataset.col===3)setItemRef(register,+el.dataset.row,null);persist();suggestions(el)});
 body.addEventListener('focusin',e=>{if(e.target.matches('input[data-row]')){const q=coords(e.target);if(!dragging&&!rangeKeyboardMoving)select(q);beforeEdit=null}if(e.target.matches('input[data-row]')&&(+e.target.dataset.col===3||+e.target.dataset.col===4)&&e.target.value.trim())suggestions(e.target)});
@@ -8129,13 +8163,21 @@ body.addEventListener('keydown',e=>{
   const delta={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1],Enter:[e.shiftKey?-1:1,0],Tab:[0,e.shiftKey?-1:1]}[e.key];
   if(!delta)return;
   // Preserve normal caret movement while editing text, except Enter/Tab and range selection.
-  if(e.key.startsWith('Arrow')&&!e.shiftKey&&el.value&&!e.altKey&&!e.ctrlKey)return;
+  // Arrow keys always navigate spreadsheet cells; Alt+Arrow remains native.
+  if(e.key.startsWith('Arrow')&&e.altKey)return;
   e.preventDefault();closeMenu();
   if(beforeEdit){remember(beforeEdit);beforeEdit=null}
   let ni=i+delta[0],nj=j+delta[1];if(e.key==='Tab'){if(nj>=F){nj=0;ni++}if(nj<0){nj=F-1;ni--}}
   if(ni<0)return;
   focusCell(ni,nj,e.shiftKey&&e.key.startsWith('Arrow'));
  }
+});
+body.addEventListener('paste',e=>{
+ const el=e.target;if(!el.matches('input[data-row]'))return;
+ const str=e.clipboardData?.getData('text/plain');
+ if(!str||(!str.includes('\t')&&!str.includes('\n')))return;
+ e.preventDefault();
+ applyMatrix(matrixFromText(str),true);
 });
 root.querySelectorAll('[data-bp-reg]').forEach(b=>b.addEventListener('click',()=>{persist();register=b.dataset.bpReg;root.querySelectorAll('[data-bp-reg]').forEach(x=>x.classList.toggle('active',x===b));hydrate(register)}));
 $('bp16cAdd').addEventListener('click',()=>{rows.push(blank());persist();render([rows.length-1,0])});
