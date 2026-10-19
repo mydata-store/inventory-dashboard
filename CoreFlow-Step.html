@@ -8522,7 +8522,48 @@ function open(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,
 async function transact(mode,fn){const db=await open();return new Promise((resolve,reject)=>{const t=db.transaction(STORE,mode),st=t.objectStore(STORE);let result;t.oncomplete=()=>{db.close();resolve(result)};t.onerror=()=>{db.close();reject(t.error)};try{fn(st,v=>result=v)}catch(e){db.close();reject(e)}})}
 function validDate(s){const m=clean(s).match(/^(\d{2})-([A-Za-z]{3})-(\d{2})$/);if(!m)return '';const month=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].findIndex(x=>x.toLowerCase()===m[2].toLowerCase());return month<0?'':`20${m[3]}-${String(month+1).padStart(2,'0')}-${m[1]}`}
 function escape(s){return clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function save(records){if(!Array.isArray(records)||!records.length)return 0;const now=Date.now();const rows=records.map((x,i)=>({id:`BP-${now}-${i}-${Math.random().toString(36).slice(2,7)}`,register:x.register,values:x.values.map(clean),itemRef:x.itemRef||null,isBillAdjustment:!!window.CoreFlowPurchaseRouting.expense(x.values[3]),billAdjustmentType:window.CoreFlowPurchaseRouting.expense(x.values[3])||'',destination:x.itemRef?window.CoreFlowPurchaseRouting.destination(x.itemRef):'',posting:window.CoreFlowPurchaseRouting.expense(x.values[3])?'bill_expense':window.CoreFlowPurchaseRouting.route(x.itemRef),status:clean(x.values[14]).trim()?'Saved':'Challan Pending',createdAt:new Date().toISOString()}));await transact('readwrite',st=>{rows.forEach(r=>st.add(r))});await refresh();document.dispatchEvent(new CustomEvent('coreflow:board-purchases-saved'));return rows.length}
+// Step 19N: one Board/Paper/Board III posting bridge; the original Save and journal owners remain unchanged.
+const text19n=v=>String(v??'').trim();
+const val19n=v=>Number(text19n(v).replace(/,/g,''));
+function postInput19n(x){
+ const v=x.values||[],ref=x.itemRef||{};
+ const name=text19n(ref.name||v[3]);
+ const masters=window.CoreFlowMasters12A?.getItems?.()||[];
+ const fullName=text19n(v[3]).toLowerCase();
+ const item=masters.find(it=>text19n(it.id||it.code)===text19n(ref.id))||masters.find(it=>[text19n(it.name),text19n(it.size)].filter(Boolean).join(' ').toLowerCase()===fullName)||masters.find(it=>text19n(it.name).toLowerCase()===fullName);
+ const isSpecial=!!window.CoreFlowPurchaseRouting?.expense?.(v[3]);
+ const special=item||masters.find(it=>text19n(it.name).toLowerCase()===text19n(v[3]).toLowerCase());
+ if(!item&&!special)throw Error('Item with Size '+v[3]+' is not linked to Item Master. Select the saved item before posting.');
+ const matching=special||item;
+ return {source:x.register||'Board',itemId:text19n(matching.id||matching.code),itemName:text19n(matching.name),size:text19n(matching.size),date:v[0],qty:val19n(v[12]),rate:val19n(v[14]),amount:isSpecial?val19n(v[14]):val19n(v[18]),department:x.department||x.departmentId||''};
+}
+async function validate19n(records){
+ if(!window.CoreFlowCentralPosting?.preview||!window.CoreFlowCentralPosting?.post)throw Error('Central Posting Engine not ready; purchases were not saved.');
+ const prepared=[];
+ for(let i=0;i<records.length;i++){
+  const input=postInput19n(records[i]);
+  let route;
+  try{route=window.CoreFlowCentralPosting.preview(input)}catch(e){
+   if(/select the department/i.test(e.message||'')){
+    const dept=prompt('Row '+(i+1)+' ('+records[i].register+') — Enter the saved Department for '+input.itemName+':');
+    if(!text19n(dept))throw Error('Row '+(i+1)+': department not selected; save cancelled.');
+    input.department=dept;route=window.CoreFlowCentralPosting.preview(input);
+   }else throw Error('Row '+(i+1)+': '+e.message);
+  }
+  prepared.push({input,route});
+ }
+ return prepared;
+}
+
+async function save(records){if(!Array.isArray(records)||!records.length)return 0;const prepared=await validate19n(records);const now=Date.now();const rows=records.map((x,i)=>({id:`BP-${now}-${i}-${Math.random().toString(36).slice(2,7)}`,register:x.register,values:x.values.map(clean),itemRef:x.itemRef||null,isBillAdjustment:!!window.CoreFlowPurchaseRouting.expense(x.values[3]),billAdjustmentType:window.CoreFlowPurchaseRouting.expense(x.values[3])||'',destination:x.itemRef?window.CoreFlowPurchaseRouting.destination(x.itemRef):'',posting:window.CoreFlowPurchaseRouting.expense(x.values[3])?'bill_expense':window.CoreFlowPurchaseRouting.route(x.itemRef),status:clean(x.values[14]).trim()?'Saved':'Challan Pending',createdAt:new Date().toISOString()}));await transact('readwrite',st=>{rows.forEach(r=>st.add(r))});
+ let failed=[];
+ for(let i=0;i<rows.length;i++){
+  const input={...prepared[i].input,purchaseId:rows[i].id,lineId:'1'};
+  try{await window.CoreFlowCentralPosting.post(input)}catch(e){failed.push(rows[i].id+': '+e.message);console.error('Board posting journal error',rows[i].id,e)}
+ }
+ await refresh();document.dispatchEvent(new CustomEvent('coreflow:board-purchases-saved'));
+ if(failed.length){alert('Purchases SAVED, but '+failed.length+' line(s) need posting-journal reconciliation. Do NOT save again.\n'+failed.join('\n').slice(0,900))}
+ return rows.length}
 async function refresh(){all=await transact('readonly',(st,set)=>{const r=st.getAll();r.onsuccess=()=>set(r.result||[])});render()}
 const filter=()=>{const q=$('bp17aSearch').value.trim().toLowerCase(),from=$('bp17aFrom').value,to=$('bp17aTo').value,status=$('bp17aStatus').value;return all.filter(r=>{if(activeReg!=='All'&&r.register!==activeReg)return false;if(status!=='All'&&r.status!==status)return false;const date=validDate(r.values[0]);if(from&&(!date||date<from))return false;if(to&&(!date||date>to))return false;if(q&&!([r.id,r.register,...r.values].join(' ').toLowerCase().includes(q)))return false;return true}).sort((a,b)=>{const ad=validDate(a.values[0])||'',bd=validDate(b.values[0])||'';return bd.localeCompare(ad)||b.createdAt.localeCompare(a.createdAt)})};
 function render(){const data=filter(),tb=$('bp17aBody');$('bp17aCount').textContent=data.length.toLocaleString('en-PK');$('bp17aWeight').textContent=data.reduce((n,r)=>n+amount(r.values[12]),0).toLocaleString('en-PK',{maximumFractionDigits:3});$('bp17aAmount').textContent=data.reduce((n,r)=>n+amount(r.values[18]),0).toLocaleString('en-PK',{maximumFractionDigits:2});$('bp17aPending').textContent=data.filter(r=>r.status==='Challan Pending').length;if(!data.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:35px">No saved purchases match these filters.</td></tr>';return}tb.innerHTML=data.map(r=>`<tr><td>${escape(r.id)}</td><td>${escape(r.values[0])}</td><td>${escape(r.register)}</td><td>${escape(r.values[3])}</td><td>${escape(r.values[4])}</td><td class="num">${escape(r.values[12])}</td><td class="num">${escape(r.values[18])}</td><td>${escape(r.status)}</td><td><button type="button" data-detail="${escape(r.id)}">View</button></td></tr>`).join('')}
@@ -8781,7 +8822,13 @@ window.addEventListener('coreflow:data-saved',e=>{if(!e.detail?.type||String(e.d
  const dests=()=>api()?.getDestinations?.().filter(d=>d.kind==='controlled'&&d.active!==false)||[];
  function open(){return new Promise((res,rej)=>{const q=indexedDB.open(DB,1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains(STORE))q.result.createObjectStore(STORE,{keyPath:'id'})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
  async function transact(write,row){const db=await open();try{return await new Promise((res,rej)=>{const t=db.transaction(STORE,write?'readwrite':'readonly');const r=write?t.objectStore(STORE).put(row):t.objectStore(STORE).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);t.onerror=()=>rej(t.error)})}finally{db.close()}}
- async function refresh(){try{rows=(await transact(false)).sort((a,b)=>(a.time||0)-(b.time||0));ready=true;render()}catch(e){const el=$(HOST);if(el)el.innerHTML='<p>Department stock storage error: '+safe(e.message)+'</p>'}}
+ async function refresh(){try{
+  const manual=await transact(false);
+  let posted=[];
+  try{posted=(await window.CoreFlowCentralPosting?.records?.()||[]).filter(r=>r.status==='posted'&&r.kind==='controlled'&&Number(r.qty)>0).map(r=>({id:'journal:'+r.id,ref:r.purchaseId,date:r.date,time:Date.parse(r.createdAt)||0,type:'receipt',itemId:r.itemId,itemName:r.itemName,size:r.itemSize,unit:r.unit,dept:r.departmentId||r.destinationId,toDept:'',qty:Number(r.qty),note:'Automatic Purchase: '+r.source,fromJournal:true}))}catch(e){console.warn('Department purchase journal unavailable',e)}
+  const refs=new Set(manual.filter(r=>r.type==='receipt').map(r=>[String(r.ref||'').toLowerCase(),String(r.itemId||''),String(r.dept||'')].join('|')));
+  posted=posted.filter(r=>!refs.has([String(r.ref||'').toLowerCase(),String(r.itemId||''),String(r.dept||'')].join('|')));
+  rows=[...manual,...posted].sort((a,b)=>(a.time||0)-(b.time||0));ready=true;render()}catch(e){const el=$(HOST);if(el)el.innerHTML='<p>Department stock storage error: '+safe(e.message)+'</p>'}}
  const balance=(item,dept)=>rows.reduce((a,r)=>r.itemId!==item? a : a+(r.type==='receipt'&&r.dept===dept?r.qty:r.type==='consume'&&r.dept===dept?-r.qty:r.type==='transfer'?(r.dept===dept?-r.qty:r.toDept===dept?r.qty:0):0),0);
  const locationOptions=(selected='')=>'<option value="">Choose Department Destination</option>'+dests().map(d=>'<option value="'+safe(d.id)+'" '+(d.id===selected?'selected':'')+'>'+safe(d.name)+'</option>').join('');
  const itemOptions=()=>'<option value="">Choose Item from Master</option>'+items().filter(i=>i.status!=='inactive').map(i=>'<option value="'+safe(i.id)+'">'+safe([i.name,i.size].filter(Boolean).join(' '))+' ('+safe(i.unit||'')+')</option>').join('');
@@ -8792,7 +8839,7 @@ window.addEventListener('coreflow:data-saved',e=>{if(!e.detail?.type||String(e.d
  const b=balance(i.id,d.id);if(Math.abs(b)>1e-9)balances.push({d,i,b});
  }
  const receiptCount=rows.filter(r=>r.type==='receipt').length;
- el.innerHTML='<div class="ds-box"><h3>Department Controlled Stock</h3><p>Separate department balance, consumption and transfer ledger. Main Inventory is never increased here. Configure a Department Controlled Stock destination above, then use this register.</p><div class="ds-summary"><div>Controlled Departments<b>'+avail.length+'</b></div><div>Stock Transactions<b>'+rows.length+'</b></div><div>Receipts<b>'+receiptCount+'</b></div></div><div class="ds-tabs">'+tabBtn('balances','Current Balances')+tabBtn('receipt','Receive Stock')+tabBtn('consume','Record Consumption')+tabBtn('transfer','Department Transfer')+tabBtn('history','Movement History')+'</div>'+(!avail.length?'<p>Create a destination above and set Processing Rule to Department Controlled Stock (e.g. Pulp Mill).</p>':'')+(active==='balances'?'<div class="ds-scroll"><table><thead><tr><th>Department</th><th>Item with Size</th><th>Unit</th><th>Balance</th></tr></thead><tbody>'+(balances.map(x=>'<tr><td>'+safe(x.d.name)+'</td><td>'+safe([x.i.name,x.i.size].filter(Boolean).join(' '))+'</td><td>'+safe(x.i.unit)+'</td><td><b>'+fmt(x.b)+'</b></td></tr>').join('')||'<tr><td colspan="4">No department stock yet. Use Receive Stock to record opening quantities or verified receipts.</td></tr>')+'</tbody></table></div>': active==='history'?'<div class="ds-scroll"><table><thead><tr><th>Reference</th><th>Date</th><th>Type</th><th>Department</th><th>To</th><th>Item</th><th>Qty</th><th>Note</th></tr></thead><tbody>'+rows.slice().reverse().map(r=>{let i=items().find(x=>x.id===r.itemId);let d=avail.find(x=>x.id===r.dept),to=avail.find(x=>x.id===r.toDept);return '<tr><td>'+safe(r.ref)+'</td><td>'+safe(r.date)+'</td><td>'+safe(r.type)+'</td><td>'+safe(d?.name||r.dept)+'</td><td>'+safe(to?.name||r.toDept||'—')+'</td><td>'+safe([i?.name||r.itemName,i?.size||r.size].filter(Boolean).join(' '))+'</td><td>'+fmt(r.qty)+' '+safe(r.unit)+'</td><td>'+safe(r.note||'')+'</td></tr>'}).join('')+'</tbody></table></div>': '<form id="cf19iForm" class="ds-form"><label>Date<input type="date" name="date" required value="'+new Date().toLocaleDateString('en-CA')+'"></label><label>Department<select name="dept" required>'+locationOptions()+'</select></label><label>Item<select name="item" required>'+itemOptions()+'</select></label>'+(active==='transfer'?'<label>Transfer To<select name="toDept" required>'+locationOptions()+'</select></label>':'')+'<label>Quantity<input name="qty" type="number" min="0.000001" step="any" required placeholder="Quantity in Item Master unit"></label><label>Reference / Control #<input name="ref" placeholder="Purchase / Production reference"></label><label>Remarks<input name="note" placeholder="Production batch, use for, etc."></label><div class="ds-action"><button type="submit" class="ds-primary">'+(active==='receipt'?'Save Department Receipt':active==='transfer'?'Save Transfer':'Save Consumption')+'</button><span class="ds-message" id="cf19iMsg"></span></div></form>')+'<div class="ds-hint">Controlled Stock only: quantities are in the Item Master unit. Transfers preserve total material. Stock movements are saved in a separate IndexedDB ledger; purchase auto-posting is not yet enabled.</div></div>';
+ el.innerHTML='<div class="ds-box"><h3>Department Controlled Stock</h3><p>Separate department balance, consumption and transfer ledger. Main Inventory is never increased here. Configure a Department Controlled Stock destination above, then use this register.</p><div class="ds-summary"><div>Controlled Departments<b>'+avail.length+'</b></div><div>Stock Transactions<b>'+rows.length+'</b></div><div>Receipts<b>'+receiptCount+'</b></div></div><div class="ds-tabs">'+tabBtn('balances','Current Balances')+tabBtn('receipt','Receive Stock')+tabBtn('consume','Record Consumption')+tabBtn('transfer','Department Transfer')+tabBtn('history','Movement History')+'</div>'+(!avail.length?'<p>Create a destination above and set Processing Rule to Department Controlled Stock (e.g. Pulp Mill).</p>':'')+(active==='balances'?'<div class="ds-scroll"><table><thead><tr><th>Department</th><th>Item with Size</th><th>Unit</th><th>Balance</th></tr></thead><tbody>'+(balances.map(x=>'<tr><td>'+safe(x.d.name)+'</td><td>'+safe([x.i.name,x.i.size].filter(Boolean).join(' '))+'</td><td>'+safe(x.i.unit)+'</td><td><b>'+fmt(x.b)+'</b></td></tr>').join('')||'<tr><td colspan="4">No department stock yet. Use Receive Stock to record opening quantities or verified receipts.</td></tr>')+'</tbody></table></div>': active==='history'?'<div class="ds-scroll"><table><thead><tr><th>Reference</th><th>Date</th><th>Type</th><th>Department</th><th>To</th><th>Item</th><th>Qty</th><th>Note</th></tr></thead><tbody>'+rows.slice().reverse().map(r=>{let i=items().find(x=>x.id===r.itemId);let d=avail.find(x=>x.id===r.dept),to=avail.find(x=>x.id===r.toDept);return '<tr><td>'+safe(r.ref)+'</td><td>'+safe(r.date)+'</td><td>'+safe(r.type)+'</td><td>'+safe(d?.name||r.dept)+'</td><td>'+safe(to?.name||r.toDept||'—')+'</td><td>'+safe([i?.name||r.itemName,i?.size||r.size].filter(Boolean).join(' '))+'</td><td>'+fmt(r.qty)+' '+safe(r.unit)+'</td><td>'+safe(r.note||'')+'</td></tr>'}).join('')+'</tbody></table></div>': '<form id="cf19iForm" class="ds-form"><label>Date<input type="date" name="date" required value="'+new Date().toLocaleDateString('en-CA')+'"></label><label>Department<select name="dept" required>'+locationOptions()+'</select></label><label>Item<select name="item" required>'+itemOptions()+'</select></label>'+(active==='transfer'?'<label>Transfer To<select name="toDept" required>'+locationOptions()+'</select></label>':'')+'<label>Quantity<input name="qty" type="number" min="0.000001" step="any" required placeholder="Quantity in Item Master unit"></label><label>Reference / Control #<input name="ref" placeholder="Purchase / Production reference"></label><label>Remarks<input name="note" placeholder="Production batch, use for, etc."></label><div class="ds-action"><button type="submit" class="ds-primary">'+(active==='receipt'?'Save Department Receipt':active==='transfer'?'Save Transfer':'Save Consumption')+'</button><span class="ds-message" id="cf19iMsg"></span></div></form>')+'<div class="ds-hint">Controlled Stock only: quantities are in the Item Master unit. Transfers preserve total material. Stock movements are saved in a separate IndexedDB ledger; journal-posted purchase receipts are included in balances; manual receipts with matching purchase references are skipped to reduce double counting.</div></div>';
  el.querySelectorAll('[data-ds-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.dsTab;render()});
  const f=$('cf19iForm');if(f)f.onsubmit=async e=>{e.preventDefault();if(saving)return;const fd=new FormData(f),item=items().find(x=>x.id===fd.get('item')),dept=String(fd.get('dept')||''),toDept=String(fd.get('toDept')||''),qty=n(fd.get('qty'));
  const msg=$('cf19iMsg');const err=m=>{if(msg)msg.textContent=m};
@@ -8805,7 +8852,8 @@ window.addEventListener('coreflow:data-saved',e=>{if(!e.detail?.type||String(e.d
  };
  }
  document.addEventListener('click',e=>{if(e.target.closest('[data-cm-tab="destinations"]'))setTimeout(()=>{if(ready)render();else refresh()},30)});
- document.addEventListener('coreflow:masters-updated',()=>{if(ready)render()});
+ document.addEventListener('coreflow:masters-updated',()=>{refresh()});
+ window.addEventListener('coreflow:posting-changed',()=>{refresh()});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
  window.CoreFlowDepartmentStock=Object.freeze({refresh,getBalance:(itemId,destinationId)=>balance(itemId,destinationId)});
 })();
@@ -8853,4 +8901,38 @@ function preview(input){return resolve(input)}
 window.CoreFlowCentralPosting=Object.freeze({version:'19L',preview,post,records});
 })();
 </script>
-</body></html>
+<style id="cf19o-unified-stock-style">.cf19o-card{margin:14px 0 22px;padding:18px;background:#fff;border:1px solid #dbe4f0;border-radius:14px;color:#21354b}.cf19o-title{display:flex;align-items:start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:12px}.cf19o-title h3{margin:0 0 4px;font-size:17px}.cf19o-title small{display:block;color:#64748b;font-size:11px;font-weight:400}.cf19o-note,.cf19o-footer{font-size:12px;color:#64748b}.cf19o-title input{border:1px solid #dbe4f0;border-radius:8px;padding:8px;max-width:220px}.cf19o-title button{border:0;background:#2466bc;color:#fff;border-radius:8px;padding:9px;margin-left:6px;cursor:pointer}.cf19o-table{overflow:auto;max-height:500px}.cf19o-table table{border-collapse:collapse;width:100%;font-size:12px}.cf19o-table th,.cf19o-table td{padding:9px 11px;border-bottom:1px solid #e4ebf4;text-align:left;white-space:nowrap}.cf19o-table th{position:sticky;top:0;background:#f1f5fa}.cf19o-footer{margin-top:10px}.cf13q-wrap[hidden]{display:none!important}@media(max-width:650px){.cf19o-card{padding:11px}.cf19o-title input{max-width:180px}}</style><script id="cf19o-unified-stock-ledger">
+(()=>{'use strict';
+const DB='coreflow-local-purchase-ledger-v1';
+const pages=['page-current-stock','page-stock-ledger'];
+const txt=v=>String(v??'').trim();
+const n=v=>Number(String(v??'').replace(/,/g,''))||0;
+const esc=v=>txt(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=v=>Number(v||0).toLocaleString('en-PK',{maximumFractionDigits:3});
+function localRows(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('movements'))r.result.createObjectStore('movements',{keyPath:'id'})};r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,tx=db.transaction('movements','readonly'),q=tx.objectStore('movements').getAll();q.onsuccess=()=>{resolve(q.result||[]);db.close()};q.onerror=()=>{reject(q.error);db.close()}}})}
+let rows=[],busy=false;
+async function load(){if(busy)return;busy=true;try{
+ const [local,journal]=await Promise.all([localRows(),window.CoreFlowCentralPosting?.records?.()||Promise.resolve([])]);
+ const old=local.filter(r=>r.posting==='stock_receipt'&&n(r.quantity)>0).map(r=>({id:'legacy:'+r.id,source:'Local',purchaseId:r.purchaseId,date:r.date,itemId:txt(r.itemCode),itemName:r.item,unit:r.unit,size:r.size,qty:n(r.quantity),kind:'stock',status:'posted',legacy:true}));
+ const newer=journal.filter(r=>r.kind==='stock'&&r.status==='posted'&&n(r.qty)>0&&!/^local/i.test(txt(r.source)));
+ rows=[...old,...newer];render();
+ }catch(e){for(const page of pages){const root=document.getElementById('cf19o-'+page);if(root)root.querySelector('.cf19o-note').textContent='Stock read error: '+e.message}}finally{busy=false}}
+function install(pageId){const page=document.getElementById(pageId);if(!page)return null;let root=document.getElementById('cf19o-'+pageId);if(root)return root;
+ root=document.createElement('section');root.id='cf19o-'+pageId;root.className='cf19o-card';root.innerHTML='<div class="cf19o-title"><div><h3>Unified Inventory Stock <small>Local + Zafar + Board / Paper / Board III</small></h3><div class="cf19o-note">Purchase receipts only; issue and opening stock integrations pending.</div></div><div><input aria-label="Search inventory" placeholder="Search Item / Purchase #"><button type="button">Refresh</button></div></div><div class="cf19o-table"></div><div class="cf19o-footer"></div>';
+ (page.querySelector('.ml-subbody')||page).prepend(root);
+ root.querySelector('input').addEventListener('input',render);
+ root.querySelector('button').addEventListener('click',load);
+ // Existing Local-only report is retained in the code but hidden to avoid showing two overlapping receipt totals.
+ const legacy=page.querySelector('.cf13q-wrap');if(legacy)legacy.hidden=true;
+ return root}
+function render(){for(const pageId of pages){const root=install(pageId);if(!root)continue;const q=root.querySelector('input').value.trim().toLowerCase();const filtered=rows.filter(r=>[r.itemName,r.itemId,r.size,r.source,r.purchaseId].join(' ').toLowerCase().includes(q));
+ const summary=pageId==='page-current-stock';let html='';
+ if(summary){const m=new Map();for(const r of filtered){const k=[r.itemId||r.itemName,r.size||'',r.unit||''].join('|');if(!m.has(k))m.set(k,{item:r.itemName,size:r.size,unit:r.unit,qty:0,lines:0});const o=m.get(k);o.qty+=n(r.qty);o.lines++}html='<tr><th>Item</th><th>Size</th><th>Unit</th><th>Purchase Receipts</th><th>Lines</th></tr>'+[...m.values()].map(r=>'<tr><td>'+esc(r.item)+'</td><td>'+esc(r.size)+'</td><td>'+esc(r.unit)+'</td><td>'+fmt(r.qty)+'</td><td>'+r.lines+'</td></tr>').join('');root.querySelector('.cf19o-footer').textContent=m.size+' item balances (receipt-only; issues/opening stock not yet included).'}
+ else{html='<tr><th>Date</th><th>Purchase #</th><th>Register</th><th>Item</th><th>Size</th><th>Qty In</th><th>Unit</th></tr>'+filtered.slice().sort((a,b)=>txt(b.date).localeCompare(txt(a.date))).map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+esc(r.purchaseId)+'</td><td>'+esc(r.source)+'</td><td>'+esc(r.itemName)+'</td><td>'+esc(r.size)+'</td><td>'+fmt(r.qty)+'</td><td>'+esc(r.unit)+'</td></tr>').join('');root.querySelector('.cf19o-footer').textContent=filtered.length+' purchase receipt movements.'}
+ root.querySelector('.cf19o-table').innerHTML='<table>'+html+'</table>';}}
+function start(){pages.forEach(install);load();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+window.addEventListener('coreflow:posting-changed',load);document.addEventListener('coreflow:local-purchase-saved',load);document.addEventListener('coreflow:purchase-saved',load);
+window.CoreFlowUnifiedStock=Object.freeze({refresh:load});
+})();
+</script></body></html>
