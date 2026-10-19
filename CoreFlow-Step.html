@@ -8757,4 +8757,48 @@ window.addEventListener('coreflow:data-saved',e=>{if(!e.detail?.type||String(e.d
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
  window.CoreFlowDepartmentStock=Object.freeze({refresh,getBalance:(itemId,destinationId)=>balance(itemId,destinationId)});
 })();
-</script></body></html>
+</script><script id="cf19k-central-posting-engine">
+(()=>{'use strict';
+/* One central transaction journal. Purchase modules will call post() only after their own save commits.
+   Existing purchase records are NEVER imported/replayed automatically. */
+const DB='CoreFlowCentralPurchasePostingV1',STORE='journal';
+const asText=v=>String(v??'').trim();
+const key=v=>asText(v).toLowerCase().replace(/\s+/g,' ');
+const num=v=>Number(String(v??'').replace(/,/g,''));
+const masters=()=>window.CoreFlowMasters12A;
+function open(){return new Promise((resolve,reject)=>{let request=indexedDB.open(DB,1);request.onupgradeneeded=()=>{let db=request.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'})};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error('Posting journal inaccessible'))})}
+async function records(){let db=await open();try{return await new Promise((ok,no)=>{let tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>no(r.error||tx.error)})}finally{db.close()}}
+function activeItem(input){const source=masters()?.getItems?.()||[];const id=asText(input?.itemId||input?.itemCode);let item=source.find(i=>id&&(asText(i.id)===id||asText(i.code)===id));if(!item){const name=key(input?.itemName||input?.item),size=key(input?.size);item=source.find(i=>key(i.name)===name&&key(i.size||'')===size)}return item||null}
+function destination(item){const entries=masters()?.getDestinations?.()||[];const d=key(item.destination||item.stockDestination);return entries.find(x=>key(x.id)===d||key(x.name)===d)||null}
+function resolve(input){const item=activeItem(input);if(!item)throw Error('Item not found in Item Master; posting blocked');if(item.status==='inactive')throw Error('Inactive item; posting blocked');const dest=destination(item);if(!dest||dest.active===false)throw Error('Item destination is missing or inactive: '+asText(item.destination));const qty=num(input.qty??input.quantity??input.netWeight);const kind=dest.kind;const result={itemId:asText(item.id||item.code),itemName:asText(item.name),itemSize:asText(item.size),unit:asText(item.unit),destinationId:asText(dest.id),destinationName:asText(dest.name),kind,effect:asText(dest.effect||'none'),qty:null,departmentId:null,amount:null};
+if(kind==='bill'){const value=num(input.amount??input.rate);if(!Number.isFinite(value))throw Error('Valid bill adjustment amount is required');result.amount=dest.effect==='less'?-Math.abs(value):Math.abs(value);return result}
+if(!Number.isFinite(qty)||qty<=0)throw Error('Quantity must be greater than zero');result.qty=qty;
+if(kind==='controlled'||kind==='direct'){
+ const dept=asText(input.departmentId||input.department||input.targetDepartment||((kind==='direct')?dest.id:''));
+ if(!dept)throw Error('Select the department for '+result.itemName+' before posting');
+ if(kind==='controlled'){
+  const allowed=String(item.allowedDepartments||item.consumptionDepartments||'').split(',').map(key).filter(Boolean);
+  if(allowed.length&&!allowed.includes(key(dept))&&!allowed.includes(key(dest.name))&&!allowed.includes(key(dest.id)))throw Error('Department not allowed for item: '+dept);
+ }
+ result.departmentId=dept;
+}
+if(!['stock','controlled','direct'].includes(kind))throw Error('Unsupported routing rule: '+kind);
+return result}
+function fingerprint(input,route){return JSON.stringify({source:key(input.source),purchaseId:asText(input.purchaseId),lineId:asText(input.lineId),date:asText(input.date),itemId:route.itemId,destinationId:route.destinationId,departmentId:route.departmentId,qty:route.qty,amount:route.amount,kind:route.kind,effect:route.effect})}
+async function post(input){if(!input||!asText(input.source)||!asText(input.purchaseId)||!asText(input.lineId))throw Error('Source, purchaseId and lineId are required');
+const route=resolve(input),id=[key(input.source),asText(input.purchaseId),asText(input.lineId)].join('::'),hash=fingerprint(input,route);
+const db=await open();try{return await new Promise((ok,no)=>{
+let tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE),r=store.get(id),answer;
+r.onsuccess=()=>{let existing=r.result;if(existing){if(existing.fingerprint!==hash){tx.abort();return}answer={status:'already-posted',record:existing};return}
+let row={id,source:asText(input.source),purchaseId:asText(input.purchaseId),lineId:asText(input.lineId),date:asText(input.date),...route,fingerprint:hash,createdAt:new Date().toISOString(),status:'posted'};
+store.add(row);answer={status:'posted',record:row};};
+tx.oncomplete=()=>{window.dispatchEvent(new CustomEvent('coreflow:posting-changed',{detail:{id,status:answer.status}}));ok(answer)};
+tx.onabort=()=>no(new Error('Previously posted line differs; correction/reversal workflow required. No duplicate posting made.'));
+tx.onerror=()=>no(tx.error||new Error('Posting failed'))
+})}finally{db.close()}}
+/* Dry-run is the integration gate: modules can validate routing before touching journals. */
+function preview(input){return resolve(input)}
+window.CoreFlowCentralPosting=Object.freeze({version:'19K',preview,post,records});
+})();
+</script>
+</body></html>
