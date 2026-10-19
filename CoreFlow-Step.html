@@ -7514,7 +7514,40 @@ function undoFn(isRedo=false){const from=isRedo?redo:undo,to=isRedo?undo:redo;if
 const DB='CoreFlowZafarPurchases',STORE='purchases';function openDB(){return new Promise((resolve,reject)=>{const q=indexedDB.open(DB,1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains(STORE))q.result.createObjectStore(STORE,{keyPath:'id'})};q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
 async function getAll(){const db=await openDB();try{return await new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readonly').objectStore(STORE).getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error)})}finally{db.close()}}
 async function save(){if(busy)return;const lines=rows().map(rowValues).filter(x=>Object.values(x).some(v=>String(v).trim()));if(!lines.length){status('Nothing to save');return}const its=items(),sups=suppliers();for(let i=0;i<lines.length;i++){const x=lines[i];x.date=parseDate(x.date);const adjustment=window.CoreFlowPurchaseRouting.expense(x.item),discount=adjustment==='discount',special=!!adjustment;if(!x.date||!x.item.trim()||(!special&&(!x.qty.trim()||num(x.qty)<=0))||!x.supplier.trim()){status(`Row ${i+1}: Date, Item, positive Quantity and Supplier required`);return}if(!special&&!its.some(k=>norm(k.name)===norm(x.item)&&norm(k.size)===norm(x.size))){status(`Row ${i+1}: Select an Item + Size from saved Masters`);return}if(!sups.some(k=>norm(k.name)===norm(x.supplier))){status(`Row ${i+1}: Supplier must exist in Masters`);return}if(special?(!x.rate.trim()||!Number.isFinite(Number(x.rate))||(discount?Number(x.rate)>=0:Number(x.rate)<0)):(x.rate.trim()&&(Number.isNaN(Number(x.rate))||num(x.rate)<0))){status(`Row ${i+1}: Invalid Rate`);return}x.amount=special?window.CoreFlowPurchaseRouting.amount(x.item,x.rate).toFixed(2):(x.rate.trim()?(num(x.qty)*num(x.rate)).toFixed(2):'');if(special){x.qty='';x.unit='';x.size='';x.isBillDiscount=discount;x.isBillAdjustment=true;x.billAdjustmentType=adjustment;x.posting=discount?'bill_discount':'bill_expense'}else{const master=its.find(k=>norm(k.name)===norm(x.item)&&norm(k.size)===norm(x.size));x.destination=window.CoreFlowPurchaseRouting.destination(master);x.posting=window.CoreFlowPurchaseRouting.route(master)}x.status=x.rate.trim()?'Posted':'Challan Pending'}
-busy=true;$('zp15Save').disabled=true;try{const db=await openDB();await new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);const stamp=new Date().toISOString(),ref='ZP-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();lines.forEach((x,i)=>store.put({...x,id:ref+'-'+String(i+1).padStart(3,'0'),reference:ref,savedAt:stamp}));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});db.close();status('Saved '+lines.length+' Zafar line(s)');window.dispatchEvent(new CustomEvent('coreflow:data-saved',{detail:{type:'zafar-purchase'}}));restore(Array.from({length:20},()=>({})));await refreshSaved()}catch(e){status('Save failed: '+e.message)}finally{busy=false;$('zp15Save').disabled=false}}
+// 19M: Dry-run shared routing BEFORE the Zafar database transaction.
+// No old purchase is replayed. Extra bill rows are excluded from inventory journal.
+const central=window.CoreFlowCentralPosting;
+if(!central){status('Central Posting Engine unavailable. Save stopped safely.');return}
+const routed=[];
+for(let i=0;i<lines.length;i++){
+ const line=lines[i];if(line.isBillAdjustment||line.isBillDiscount)continue;
+ const item=its.find(k=>norm(k.name)===norm(line.item)&&norm(k.size)===norm(line.size));
+ const entry={source:'zafar',purchaseId:'PREVIEW',lineId:String(i+1),date:line.date,itemId:item?.id||'',itemCode:item?.code||'',itemName:line.item,size:line.size,qty:line.qty,amount:line.amount,rate:line.rate};
+ try{
+  let route;
+  try{route=central.preview(entry)}catch(e){
+   // Zafar has no department column. Ask explicitly; never silently choose a destination.
+   if(!/Select the department/.test(String(e.message)))throw e;
+   const allowed=String(item?.allowedDepartments||item?.consumptionDepartments||'').trim();
+   const answer=window.prompt('Row '+(i+1)+': Department for '+line.item+'?'+(allowed?'\nAllowed: '+allowed:''),'');
+   if(!answer){status('Save cancelled: Department is required for row '+(i+1));return}
+   entry.department=answer.trim();route=central.preview(entry);
+  }
+  routed.push({lineIndex:i,entry,route});
+ }catch(e){status('Row '+(i+1)+' routing: '+e.message);return}
+}
+let committedRef='';
+busy=true;$('zp15Save').disabled=true;try{const db=await openDB();await new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);const stamp=new Date().toISOString(),ref='ZP-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();committedRef=ref;lines.forEach((x,i)=>store.put({...x,id:ref+'-'+String(i+1).padStart(3,'0'),reference:ref,savedAt:stamp}));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});db.close();
+// Only after original purchase save has committed, write idempotent routing journal.
+// A partial journal failure must NEVER trigger the purchase save a second time.
+let posted=0,already=0,failed=[];
+for(const r of routed){
+ try{const res=await central.post({...r.entry,purchaseId:committedRef,lineId:String(r.lineIndex+1).padStart(3,'0')});
+  if(res.status==='already-posted')already++;else posted++;
+ }catch(e){failed.push('Row '+(r.lineIndex+1)+': '+e.message)}
+}
+status(failed.length?'Purchase SAVED, but '+failed.length+' routing journal line(s) need reconciliation: '+failed.join('; '):'Saved '+lines.length+' Zafar line(s); routed '+posted+(already?' (existing '+already+')':''));
+window.dispatchEvent(new CustomEvent('coreflow:data-saved',{detail:{type:'zafar-purchase'}}));restore(Array.from({length:20},()=>({})));await refreshSaved()}catch(e){status('Save failed: '+e.message)}finally{busy=false;$('zp15Save').disabled=false}}
 async function refreshSaved(){const target=$('zp15Saved');try{const all=await getAll();all.sort((a,b)=>String(b.savedAt).localeCompare(String(a.savedAt)));if(!all.length){target.textContent='No saved Zafar purchases yet.';return}const table=document.createElement('table'),head=document.createElement('tr');['Date','Control No.','Item / Size','Qty','Unit','Rate','Amount','Supplier','Bill','Status'].forEach(x=>{const th=document.createElement('th');th.textContent=x;head.append(th)});table.append(head);all.slice(0,250).forEach(x=>{const tr=document.createElement('tr');[x.date,x.control,(x.item||'')+' · '+(x.size||''),x.qty,x.unit,x.rate||'Pending',x.amount||'Pending',x.supplier,x.bill,x.status].forEach(y=>{const td=document.createElement('td');td.textContent=y||'';tr.append(td)});table.append(tr)});target.replaceChildren(table)}catch(e){target.textContent='History unavailable: '+e.message}}
 for(let i=0;i<20;i++)make({});calculateAll();
 tbody.addEventListener('focusin',e=>{const el=e.target;if(!el.matches('input[data-zpf]'))return;active=el;if(!dragging){const p=pos(el);if(!selection||p.r<selection.r1||p.r>selection.r2||p.c<selection.c1||p.c>selection.c2){anchor=p;applySelection(p,p)}}editSnapshot=snap()});
