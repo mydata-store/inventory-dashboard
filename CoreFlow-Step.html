@@ -9046,7 +9046,7 @@ function issuePage(){
   else {rows[ri][c]=selected.label;el.value=selected.label}
   close20();recalc20();persist();el.focus();
  }
- function suggest20(el){const c=+el.dataset.c,ri=+el.dataset.r,q=norm20(el.value);if(!options20[c]){close20();return}const list=choices20(ri,c).filter(x=>!q||norm20(x.label+' '+(x.detail||'')).includes(q)).slice(0,12);
+ function suggest20(el){const c=+el.dataset.c,ri=+el.dataset.r,q=norm20(el.value);if(!options20[c]||!q){close20();return}const list=choices20(ri,c).filter(x=>norm20(x.label+' '+(x.detail||'')).includes(q)).slice(0,12);
   if(!list.length){close20();if(c===2&&q)state.textContent=items20().length?'No matching Item Master entry: '+el.value:'No items loaded from Item Master yet';return}active20=el;matches20=list;index20=0;menu20.replaceChildren();list.forEach((x,i)=>{const b=document.createElement('button');b.type='button';b.className='is20i-option';b.innerHTML='<b>'+esc(x.label)+'</b><small>'+esc(x.detail||'')+'</small>';b.addEventListener('mousedown',ev=>{ev.preventDefault();pick20(i)});menu20.append(b)});menu20.children[0]?.classList.add('active');const r=el.getBoundingClientRect();menu20.style.left=Math.max(8,Math.min(r.left,innerWidth-310))+'px';menu20.style.top=(r.bottom+3>innerHeight-225?Math.max(8,r.top- Math.min(260,list.length*39+8)):r.bottom+3)+'px';menu20.style.width=Math.max(245,Math.min(370,r.width+110))+'px';menu20.hidden=false;
  }
  function highlight20(){[...menu20.children].forEach((x,i)=>x.classList.toggle('active',i===index20));menu20.children[index20]?.scrollIntoView({block:'nearest'});}
@@ -9057,21 +9057,22 @@ function issuePage(){
    const it=rowItem20(r),actual=it?stock20(it):null;
    const cellAt=c=>tbody.querySelector('input[data-r="'+ri+'"][data-c="'+c+'"]');
    const stockInput=cellAt(7),remainInput=cellAt(5),qtyInput=cellAt(4);
-   if(!it){if(stockInput)stockInput.value='';if(remainInput)remainInput.value='';if(qtyInput){qtyInput.setCustomValidity('');qtyInput.title='Select a saved inventory item';}return}
+   if(!it){if(stockInput)stockInput.value='';if(remainInput){remainInput.value='';remainInput.style.color='';remainInput.style.background='';remainInput.title='';}if(qtyInput){qtyInput.setCustomValidity('');qtyInput.title='Select a saved inventory item';}return}
    const k=String(it.id||it.code||it.name)+'|'+norm20(it.size)+'|'+norm20(it.unit);
    const prior=used.get(k)||0;
    const typed=String(r[4]||'').trim();const q=typed===''?0:Number(typed);
    const valid=Number.isFinite(q)&&q>=0&&q<=Math.max(0,actual-prior);
    if(stockInput)stockInput.value=String(+actual.toFixed(4));
-   if(remainInput)remainInput.value=String(+Math.max(0,actual-prior-(valid?q:0)).toFixed(4));
+   if(remainInput){const projected=actual-prior-(Number.isFinite(q)&&q>=0?q:0);remainInput.value=String(+projected.toFixed(4));remainInput.style.color=projected<0?'#b42318':'';remainInput.style.background=projected<0?'#fff1ee':'';remainInput.title=projected<0?'Insufficient stock — quantity exceeds available balance':'';}
    if(qtyInput){qtyInput.setCustomValidity(valid?'':'Quantity exceeds stock or is invalid');qtyInput.title=valid?('Available for this row: '+Math.max(0,actual-prior)+' '+it.unit):'Insufficient available stock';qtyInput.style.background=valid?'':'#fff1ee';qtyInput.style.color=valid?'':'#b42318';}
-   used.set(k,prior+(valid?q:0));
+   used.set(k,prior+(Number.isFinite(q)&&q>=0?q:0));
   });
  }
  function selectItem20(ri,raw){
   const t=norm20(raw);let it=items20().find(x=>norm20(x.name+' | '+(x.size||'No Size')+' | '+(x.unit||''))===t);
+  if(!it){const retained=rowItem20(rows[ri]);if(retained&&norm20(retained.name)===t)it=retained;}
   if(!it){const named=items20().filter(x=>norm20(x.name)===t);if(named.length===1)it=named[0]}
-  if(!it){rows[ri][3]='';rows[ri][6]='';selected20=null;return false}
+  if(!it){selected20=null;return false}
   rows[ri][2]=it.name;rows[ri][3]=it.size||'';rows[ri][6]=it.unit||'';
   selected20=it;return true;
  }
@@ -9082,7 +9083,7 @@ function issuePage(){
    if(c===4){el.type='number';el.min='0';el.step='any';el.inputMode='decimal'}
   });recalc20();
  }
- tbody.addEventListener('focusin',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;const r=Number(el.dataset.r),c=Number(el.dataset.c);if(options20[c])suggest20(el)});
+ tbody.addEventListener('focusin',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;close20();});
  tbody.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;const r=Number(el.dataset.r),c=Number(el.dataset.c);
   if(c===2){rows[r][2]=el.value;rows[r][3]='';rows[r][6]='';for(const i of [3,6]){const field=tbody.querySelector('input[data-r="'+r+'"][data-c="'+i+'"]');if(field)field.value=''};}
   if(c===8){const matched=depts20().find(x=>norm20(x.name)===norm20(el.value));if(matched){rows[r][8]=matched.name;el.value=matched.name}}
@@ -9101,13 +9102,13 @@ function issuePage(){
  function reapplyPageController(){const page=node.closest('.page');if(page){delete page.dataset.cfPcApplied;document.dispatchEvent(new MouseEvent('click',{bubbles:true}))}}
  function draw(focus){tbody.innerHTML=rows.map((r,ri)=>'<tr><td class="is22-sr">'+(ri+1)+'</td>'+r.map((v,ci)=>'<td><input spellcheck="false" data-r="'+ri+'" data-c="'+ci+'" value="'+esc(v).replace(/&quot;/g,'&quot;')+'" autocomplete="off" aria-label="'+esc(names[ci])+' row '+(ri+1)+'"></td>').join('')+'</tr>').join('');wire20();reapplyPageController();if(focus){let el=cell(focus[0],focus[1]);if(el){el.focus();el.select()}}}
  function cell(r,c){return tbody.querySelector('input[data-r="'+r+'"][data-c="'+c+'"]')}
- function move(r,c,dr,dc){let nr=r+dr,nc=c+dc;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr--}if(nr>=rows.length)rows.push(blank());nr=Math.max(0,nr);draw([nr,nc]);persist()}
+ function move(r,c,dr,dc){let nr=r+dr,nc=c+dc;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr--}nr=Math.max(0,nr);if(dc){const skip=new Set([3,5,6,7]);while(skip.has(nc)){nc+=dc>0?1:-1;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr=Math.max(0,nr-1)}}}if(nr>=rows.length)rows.push(blank());draw([nr,nc]);persist()}
  draw();persist();
  tbody.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;rows[+el.dataset.r][+el.dataset.c]=el.value;persist()});
  tbody.addEventListener('focusout',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;let r=+el.dataset.r,c=+el.dataset.c,v=el.value;if(c===0)v=dateFmt(v);if(c===1&&/^\d+$/.test(v.trim()))v='IR-'+String(+v).padStart(5,'0');if(c===6)v=v.trim()?v.trim().replace(/\b\w/g,ch=>ch.toUpperCase()):v;rows[r][c]=v;el.value=v;persist()});
  tbody.addEventListener('keydown',e=>{if(menu20.hidden||active20!==e.target)return;
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();e.stopImmediatePropagation();index20=(index20+(e.key==='ArrowDown'?1:-1)+matches20.length)%matches20.length;highlight20()}
-  else if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();e.stopImmediatePropagation();pick20(index20)}
+  else if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();e.stopImmediatePropagation();const r=+e.target.dataset.r,c=+e.target.dataset.c;pick20(index20);if(e.key==='Tab'){move(r,c,0,e.shiftKey?-1:1)}}
   else if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close20()}
  },true);
  node.closest('.page')?.addEventListener('scroll',close20,{passive:true});
