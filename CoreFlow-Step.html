@@ -1650,7 +1650,13 @@ body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07
 /* Keep the form's own Issue Entry title; suppress the redundant upper page heading. */
 #page-issue-entry > .ml-subhead > div:first-child { display: none !important; }
 </style>
-</head><body>
+<style id="cf20f-issue-title-and-typing">
+#page-issue-entry > .ml-subhead {display:none!important}
+#page-issue-entry .cf20a > .cf20f-titlebar {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 4px}
+#page-issue-entry .cf20a > .cf20f-titlebar h3{margin:0!important}
+#page-issue-entry .cf20f-back{border:1px solid #b8d8f4;background:#fff;color:#145487;padding:8px 13px;border-radius:6px;cursor:pointer;white-space:nowrap;font-size:12px;font-weight:600}
+#page-issue-entry .cf20f-back:hover{background:#eef7ff}
+</style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂   Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒   Purchasing</span></button><button data-page="inventory"><span class="txt">▦   Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄   Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣   Gate Pass</span></button><button data-page="reports"><span class="txt">▤   Reports</span></button><button data-page="masters"><span class="txt">◆   Masters</span></button><button data-page="design-studio"><span class="txt">✦   Design Studio</span></button><button data-page="settings"><span class="txt">⚙   Settings</span></button><button data-page="system-settings" title="Data Storage"><span class="txt">▣   Data Storage</span></button></div><div class="profile">MW   <b>Muhammad Waqas</b><br/><small>Administrator</small></div></aside>
 <div class="shell"><header class="top">
@@ -8980,6 +8986,19 @@ function issuePage(){
  is21RenderMain();
  const node=body('page-issue-entry','Issue Entry','Store Issue · Excel-style entry · shared Item Masters');
  if(!node)return;
+ // Reuse the central router: only reposition the existing Issue Home action in this page's title area.
+ const title=node.querySelector(':scope > h3');
+ if(title && !node.querySelector('.cf20f-titlebar')){
+   const header=document.createElement('div');header.className='cf20f-titlebar';
+   title.parentNode.insertBefore(header,title);header.appendChild(title);
+   const back=document.createElement('button');back.type='button';back.className='cf20f-back';
+   back.textContent='← Issue Home';back.setAttribute('aria-label','Back to Issue Management');
+   back.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();
+     if(window.CoreFlowCentralNavigation?.open)window.CoreFlowCentralNavigation.open('issue-stock');
+     else {location.hash='issue-stock'}
+   });header.appendChild(back);
+ }
+
  node.closest('.page')?.classList.add('is21-entry','is22-grid-entry');
  const issues=is21Relevant();
  const names=['Date','IR No.','Item','Size','Quantity','Remaining Balance','Unit','Available Stock','Department','Issued To','Used For','Remarks'];
@@ -8993,13 +9012,21 @@ function issuePage(){
  node.querySelector('.cf20a-content').innerHTML='<div class="is22-info">Type date like 25-6. Type IR number like 1 and it formats to IR-00001. <b>Entry rules and stock posting will be configured next.</b></div><div class="is22-wrap" tabindex="0"><table class="is22-table"><thead><tr><th>Sr No.</th>'+names.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody id="is22Rows"></tbody></table></div><div class="is22-actions"><span id="is22Status">15 blank entry rows ready · draft mode</span><div><button type="button" id="is22Add">+ Add Row</button><button type="button" id="is22Clear">Clear Table</button><button type="button" class="is22-primary" id="is22Draft">Save Draft</button><button type="button" title="Rules and posting are pending" disabled>Save Issue</button></div></div><h3 class="is21-section-title">Recent Issues</h3><div class="is21-tablewrap">'+recentHtml+'</div>'+is21Cards(recent);
  const tbody=node.querySelector('#is22Rows'),state=node.querySelector('#is22Status');
  const persist=()=>{try{sessionStorage.setItem(key,JSON.stringify(rows));state.textContent='Draft saved in this tab · '+rows.filter(r=>r.some(x=>x.trim())).length+' filled row(s)'}catch(_){state.textContent='Draft could not be stored'}};
+ const cf20fCase=value=>String(value||'').trim().replace(/\s+/g,' ').split(' ').map(word=>{
+   if(!word)return word;
+   if(/^(ms|ss|gi|pvc|hdpe|lpg|ir|grn|igp|ogp|rgp|lps|mm|kg|kv|hp|ac|dc)$/i.test(word))return word.toUpperCase();
+   return word.slice(0,1).toUpperCase()+word.slice(1).toLowerCase();
+ }).join(' ');
  const dateFmt=value=>{let m=String(value||'').trim().match(/^(\d{1,2})[-\/](\d{1,2})(?:[-\/](\d{2,4}))?$/);if(!m)return value;let day=+m[1],month=+m[2];if(day<1||day>31||month<1||month>12)return value;let year=m[3]?+m[3]:new Date().getFullYear();if(year<100)year+=2000;const dt=new Date(year,month-1,day);return dt.getDate()===day&&dt.getMonth()===month-1?String(day).padStart(2,'0')+'-'+dt.toLocaleString('en-GB',{month:'short'})+'-'+String(year).slice(-2):value};
  function draw(focus){tbody.innerHTML=rows.map((r,ri)=>'<tr><td class="is22-sr">'+(ri+1)+'</td>'+r.map((v,ci)=>'<td><input spellcheck="false" data-r="'+ri+'" data-c="'+ci+'" value="'+esc(v).replace(/&quot;/g,'&quot;')+'" autocomplete="off" aria-label="'+esc(names[ci])+' row '+(ri+1)+'"></td>').join('')+'</tr>').join('');if(focus){let el=cell(focus[0],focus[1]);if(el){el.focus();el.select()}}}
  function cell(r,c){return tbody.querySelector('input[data-r="'+r+'"][data-c="'+c+'"]')}
  function move(r,c,dr,dc){let nr=r+dr,nc=c+dc;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr--}if(nr>=rows.length)rows.push(blank());nr=Math.max(0,nr);draw([nr,nc]);persist()}
  draw();
  tbody.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;rows[+el.dataset.r][+el.dataset.c]=el.value;persist()});
- tbody.addEventListener('focusout',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;let r=+el.dataset.r,c=+el.dataset.c,v=el.value;if(c===0)v=dateFmt(v);if(c===1&&/^\d+$/.test(v.trim()))v='IR-'+String(+v).padStart(5,'0');if(c===6)v=v.trim()?v.trim().replace(/\b\w/g,ch=>ch.toUpperCase()):v;rows[r][c]=v;el.value=v;persist()});
+ tbody.addEventListener('focusout',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;let r=+el.dataset.r,c=+el.dataset.c,v=el.value;if(c===0)v=dateFmt(v);if(c===1&&/^\d+$/.test(v.trim()))v='IR-'+String(+v).padStart(5,'0');if([2,4,8,9,10,11].includes(c))v=cf20fCase(v);
+ if(c===3)v=String(v||'').trim().replace(/\s+/g,' ').replace(/\b(ms|ss|gi|pvc|hdpe|mm|kg|lpg)\b/gi,x=>x.toUpperCase());
+ if(c===6)v=String(v||'').trim().replace(/\b(kg|ms|ss|gi|lpg|pcs|nos)\b/gi,x=>x.toUpperCase());
+ rows[r][c]=v;el.value=v;persist()});
  tbody.addEventListener('keydown',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;let r=+el.dataset.r,c=+el.dataset.c;if(e.key==='Enter'){e.preventDefault();el.blur();move(r,c,1,0)}else if(e.key==='Tab'){e.preventDefault();el.blur();move(r,c,0,e.shiftKey?-1:1)}else if(e.key==='ArrowDown'&&!(e.ctrlKey||e.altKey)){e.preventDefault();move(r,c,1,0)}else if(e.key==='ArrowUp'&&!(e.ctrlKey||e.altKey)){e.preventDefault();move(r,c,-1,0)}else if(e.key==='Escape'){el.blur()}});
  node.querySelector('#is22Add').onclick=()=>{rows.push(blank());draw([rows.length-1,0]);persist()};
  node.querySelector('#is22Clear').onclick=()=>{if(!confirm('Clear Issue Entry draft? Saved issue history will not be deleted.'))return;rows=Array.from({length:minRows},blank);draw();persist()};
