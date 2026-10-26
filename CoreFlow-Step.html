@@ -1702,6 +1702,12 @@ body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07
 #is20pExcelRoot td,#is20pExcelRoot th{padding:8px 7px;border-right:1px solid #bed9f0;border-bottom:1px solid #c8def1;white-space:nowrap}
 #is20pExcelRoot tbody tr:nth-child(2n){background:#f7fbff}
 #is20pExcelRoot .is20p-zero{padding:25px;text-align:center;color:#68869d}
+</style><style id="cf20q-issue-entry-polish">
+#page-issue-entry .is22-wrap{min-height:510px!important;overflow:auto!important}
+#page-issue-entry .is22-actions{margin-bottom:4px!important}
+#page-issue-entry .cf20a-content{padding-bottom:2px!important}
+#page-issue-entry .is22-table input{transition:none!important;animation:none!important}
+@media(max-height:720px){#page-issue-entry .is22-wrap{min-height:400px!important}}
 </style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂   Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒   Purchasing</span></button><button data-page="inventory"><span class="txt">▦   Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄   Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣   Gate Pass</span></button><button data-page="reports"><span class="txt">▤   Reports</span></button><button data-page="masters"><span class="txt">◆   Masters</span></button><button data-page="design-studio"><span class="txt">✦   Design Studio</span></button><button data-page="settings"><span class="txt">⚙   Settings</span></button><button data-page="system-settings" title="Data Storage"><span class="txt">▣   Data Storage</span></button></div><div class="profile">MW   <b>Muhammad Waqas</b><br/><small>Administrator</small></div></aside>
@@ -8010,7 +8016,7 @@ if(isBoard){const tbl=p.querySelector('.bp16c-table');if(tbl){
  const show=(sel,on)=>{const el=p.querySelector(sel);if(el)el.style.display=on?'':'none'};
  show('.is22-pagehead',c.header);show('.is22-info',c.info);
  const wrap=p.querySelector('.is22-wrap'),tbl=p.querySelector('.is22-table');
- if(wrap)wrap.style.maxHeight=Math.max(220,Number(c.boardGridHeight)||430)+'px';
+ if(wrap){const h=Number(c.boardGridHeight)||430;wrap.style.maxHeight=Math.max(510,h)+'px';wrap.style.height=Math.max(510,h)+'px';}
  if(tbl){
   const heads=[...tbl.querySelectorAll('thead th')];
   heads.forEach((th,i)=>{th.style.fontSize=c.headerFont+'px';const w=Number(c.columns?.[i]);if(w>=38){th.style.width=w+'px';th.style.minWidth=w+'px'}else if(i===0){th.style.width='38px';th.style.minWidth='38px'}else{th.style.width='';th.style.minWidth=''}});
@@ -9211,7 +9217,18 @@ function issuePage(){
  tbody.addEventListener('paste',e=>{const x=e.target;if(!x.matches('input[data-r]'))return;const value=e.clipboardData?.getData('text/plain');if(value&&(value.includes('\t')||value.includes('\n'))){e.preventDefault();setRange20(+x.dataset.r,+x.dataset.c);pasteRange20(value)}});
  tbody.addEventListener('beforeinput',e=>{const x=e.target;if(x.matches('input[data-r]')&&!['insertCompositionText'].includes(e.inputType))checkpoint20()});
 
- function move(r,c,dr,dc){let nr=r+dr,nc=c+dc;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr--}nr=Math.max(0,nr);if(dc){const skip=new Set([3,5,6,7]);while(skip.has(nc)){nc+=dc>0?1:-1;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr=Math.max(0,nr-1)}}}if(nr>=rows.length)rows.push(blank());draw([nr,nc]);persist()}
+ function move(r,c,dr,dc){let nr=r+dr,nc=c+dc;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr--}nr=Math.max(0,nr);if(dc){const skip=new Set([3,5,6,7]);while(skip.has(nc)){nc+=dc>0?1:-1;if(nc>=count){nc=0;nr++}if(nc<0){nc=count-1;nr=Math.max(0,nr-1)}}}if(nr>=rows.length){
+   rows.push(blank());
+   const ri=rows.length-1;
+   const tr=document.createElement('tr');
+   tr.innerHTML='<td class="is22-sr">'+(ri+1)+'</td>'+rows[ri].map((v,ci)=>'<td><input spellcheck="false" data-r="'+ri+'" data-c="'+ci+'" value="" autocomplete="off" aria-label="'+esc(names[ci])+' row '+(ri+1)+'"></td>').join('');
+   tbody.appendChild(tr);wire20();
+  }
+  // Focus the existing input instead of redrawing the entire grid on every keypress.
+  // Redraw caused cell flicker, scroll jumps and suggestion interruptions.
+  const target=cell(nr,nc);
+  if(target){target.focus({preventScroll:true});target.select();target.scrollIntoView({block:'nearest',inline:'nearest'});}
+  persist();}
  draw();persist();
  tbody.addEventListener('input',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;rows[+el.dataset.r][+el.dataset.c]=el.value;persist()});
  tbody.addEventListener('focusout',e=>{const el=e.target;if(!el.matches('input[data-r]'))return;let r=+el.dataset.r,c=+el.dataset.c,v=el.value;if(c===0)v=dateFmt(v);if(c===1&&/^\d+$/.test(v.trim()))v='IR-'+String(+v).padStart(5,'0');if(c===6)v=v.trim()?v.trim().replace(/\b\w/g,ch=>ch.toUpperCase()):v;rows[r][c]=v;el.value=v;persist()});
