@@ -9426,4 +9426,34 @@ body.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.shiftKey||e.ctrlKey||e
 },true);
 
 load();draw();refreshMasters();window.addEventListener('focus',refreshMasters);document.addEventListener('click',e=>{if(e.target.closest('[data-rgpt-route="rgp-entry"]'))refreshMasters()});
-})();</script></body></html>
+})();</script><style id="cf21a-audit-css">
+#cf21aAudit{margin:16px 0;padding:16px;border:1px solid #b9d9ee;border-radius:12px;background:#fff;color:#194364;font:13px Segoe UI,Arial,sans-serif}
+#cf21aAudit .cf21a-head{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+#cf21aAudit button{background:#087ac7;color:white;border:0;border-radius:7px;padding:9px 13px;cursor:pointer}
+#cf21aAudit .cf21a-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:13px 0}
+#cf21aAudit .cf21a-stat{border:1px solid #d0e4f6;padding:10px;border-radius:7px;background:#f4f9fd}
+#cf21aAudit .cf21a-stat b{display:block;font-size:17px;margin-top:4px}
+#cf21aAudit table{border-collapse:collapse;width:100%;font-size:11px}#cf21aAudit th,#cf21aAudit td{border:1px solid #c8dfea;padding:7px;text-align:left}#cf21aAudit th{background:#e8f4ff}
+#cf21aAudit .cf21a-scroll{overflow:auto;max-height:350px}#cf21aAudit p{line-height:1.5}
+@media(max-width:750px){#cf21aAudit .cf21a-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script id="cf21a-readonly-inventory-audit">(()=>{'use strict';
+const page=document.getElementById('page-current-stock');if(!page)return;
+const box=document.createElement('section');box.id='cf21aAudit';box.innerHTML='<div class="cf21a-head"><div><b>Step 21A — Inventory Data Audit</b><p>Read-only reconciliation: saved purchase movements vs Item Master and Issue stock key. No records are modified.</p></div><button type="button" id="cf21aRun">Run Stock Audit</button></div><div id="cf21aResult">Press Run Stock Audit to inspect local saved data.</div>';
+(page.querySelector('.ml-subbody')||page).prepend(box);
+const $=sel=>box.querySelector(sel), clean=x=>String(x??'').trim(), norm=x=>clean(x).toLowerCase(), num=x=>Number(String(x??'').replace(/,/g,''))||0;
+const esc=v=>clean(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function inspect(dbName,storeName){return new Promise(resolve=>{const req=indexedDB.open(dbName);let created=false;req.onupgradeneeded=()=>{created=true;req.transaction?.abort()};req.onerror=()=>resolve({data:[],error:created?'Database not found':clean(req.error?.message)});req.onsuccess=()=>{const db=req.result;if(!db.objectStoreNames.contains(storeName)){db.close();return resolve({data:[],error:'Store not found'})}const tx=db.transaction(storeName,'readonly'),get=tx.objectStore(storeName).getAll();get.onsuccess=()=>resolve({data:get.result||[]});get.onerror=()=>resolve({data:[],error:clean(get.error?.message)});tx.oncomplete=()=>db.close()}})}
+async function audit(){const btn=$('#cf21aRun');btn.disabled=true;$('#cf21aResult').textContent='Reading saved ledgers…';try{
+const [local,journal,ops]=await Promise.all([inspect('coreflow-local-purchase-ledger-v1','movements'),inspect('CoreFlowCentralPurchasePostingV1','journal'),inspect('CoreFlowInventoryOps20A','transactions')]);
+const items=window.CoreFlowMasters12A?.getItems?.()||[];
+const receipts=[...local.data.filter(x=>x.posting==='stock_receipt'&&num(x.quantity)>0).map(x=>({id:clean(x.itemCode),name:clean(x.item),size:clean(x.size),unit:clean(x.unit),qty:num(x.quantity),source:'Local'})),...journal.data.filter(x=>x.kind==='stock'&&x.status==='posted'&&num(x.qty)>0&&!/^local/i.test(clean(x.source))).map(x=>({id:clean(x.itemId),name:clean(x.itemName),size:clean(x.itemSize),unit:clean(x.unit),qty:num(x.qty),source:clean(x.source)||'Journal'}))];
+const bySize=new Map(),byIssueKey=new Map();for(const r of receipts){const k=[norm(r.id||r.name),norm(r.size),norm(r.unit)].join('|'),ki=[norm(r.id||r.name),norm(r.unit)].join('|');if(!bySize.has(k))bySize.set(k,{...r,qty:0,lines:0});const x=bySize.get(k);x.qty+=r.qty;x.lines++;byIssueKey.set(ki,(byIssueKey.get(ki)||new Set()).add(k))}
+const masterIndex=new Map(items.map(x=>[[norm(x.id||x.code||x.name),norm(x.size),norm(x.unit)].join('|'),x]));
+const findings=[];for(const v of bySize.values()){const k=[norm(v.id||v.name),norm(v.size),norm(v.unit)].join('|');const alt=[norm(v.name),norm(v.size),norm(v.unit)].join('|');const match=masterIndex.get(k)||masterIndex.get(alt);const issueK=[norm(v.id||v.name),norm(v.unit)].join('|');const collisions=(byIssueKey.get(issueK)?.size||0)>1;if(!match||collisions)findings.push({...v,problem:[!match?'No exact Master ID/Size/Unit match':'',collisions?'Issue stock key merges multiple sizes':''].filter(Boolean).join('; ')})}
+const counts=[['Local receipts',local.data.filter(x=>x.posting==='stock_receipt').length],['Central stock receipts',journal.data.filter(x=>x.kind==='stock'&&x.status==='posted'&&!/^local/i.test(clean(x.source))).length],['Issue/Opening ledger entries',ops.data.length],['Potential matching issues',findings.length]];
+$('#cf21aResult').innerHTML='<div class="cf21a-grid">'+counts.map(([k,v])=>'<div class="cf21a-stat">'+esc(k)+'<b>'+v+'</b></div>').join('')+'</div><p><b>Source status:</b> Local '+esc(local.error||'OK')+' · Central '+esc(journal.error||'OK')+' · Operations '+esc(ops.error||'OK')+'</p><p><b>Audit warning:</b> Purchase receipts are being compared by Item ID + Size + Unit, but current Issue balance code omits Size. This is a structural check, not a stock correction. RGP/OGP/CGP are not yet included in the shared posting ledger.</p><div class="cf21a-scroll"><table><thead><tr><th>Item</th><th>Size</th><th>Unit</th><th>Receipt Qty</th><th>Source</th><th>Finding</th></tr></thead><tbody>'+ (findings.length?findings.slice(0,150).map(r=>'<tr><td>'+esc(r.name)+' ('+esc(r.id)+')</td><td>'+esc(r.size)+'</td><td>'+esc(r.unit)+'</td><td>'+r.qty+'</td><td>'+esc(r.source)+'</td><td>'+esc(r.problem)+'</td></tr>').join(''):'<tr><td colspan="6">No key collisions or exact master mismatches found in receipt records. Other posting gaps may still exist.</td></tr>')+'</tbody></table></div><p>Audit is read-only and does not update stock, masters or journal. Differences from actual Issue balances need transaction-level reconciliation in Step 21B.</p>';
+}catch(e){$('#cf21aResult').textContent='Audit failed safely: '+e.message}finally{btn.disabled=false}}
+$('#cf21aRun').addEventListener('click',audit);
+})();</script>
+</body></html>
