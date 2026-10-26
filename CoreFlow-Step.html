@@ -9456,4 +9456,42 @@ $('#cf21aResult').innerHTML='<div class="cf21a-grid">'+counts.map(([k,v])=>'<div
 }catch(e){$('#cf21aResult').textContent='Audit failed safely: '+e.message}finally{btn.disabled=false}}
 $('#cf21aRun').addEventListener('click',audit);
 })();</script>
+<style id="cf21b-match-style">
+#cf21bMatch{margin:14px 0;background:#fff;border:1px solid #b9d9ee;border-radius:12px;padding:15px;color:#194364;font:12px 'Segoe UI',Arial,sans-serif}
+#cf21bMatch .cf21b-head{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}#cf21bMatch .cf21b-head b{font-size:15px}
+#cf21bMatch button{background:#087ac7;border:1px solid #087ac7;color:white;border-radius:6px;padding:9px 11px;cursor:pointer}#cf21bMatch button.secondary{color:#075787;background:white}
+#cf21bMatch p{margin:5px 0 10px;color:#536e83;line-height:1.45}#cf21bMatch .cf21b-bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cf21bMatch input,#cf21bMatch select{min-width:175px;padding:8px;border:1px solid #b8d8ec;border-radius:6px}
+#cf21bMatch .cf21b-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}#cf21bMatch .cf21b-stat{border:1px solid #c7dff4;border-radius:8px;padding:10px;background:#f7fbff}#cf21bMatch .cf21b-stat strong{display:block;font-size:18px;margin-top:4px}#cf21bMatch .cf21b-scroll{max-height:420px;overflow:auto;border:1px solid #c5dbed}#cf21bMatch table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:11px}#cf21bMatch th{position:sticky;top:0;background:#eaf5ff;z-index:1}#cf21bMatch td,#cf21bMatch th{padding:8px;border:1px solid #d5e4ef;text-align:left}#cf21bMatch .warn{color:#a65e00;font-weight:700}#cf21bMatch .ok{color:#117344;font-weight:700}#cf21bMatch .critical{color:#a62929;font-weight:700}
+@media(max-width:800px){#cf21bMatch .cf21b-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script id="cf21b-purchase-matching">(()=>{'use strict';
+const page=document.getElementById('page-current-stock');if(!page)return;
+const box=document.createElement('section');box.id='cf21bMatch';box.innerHTML='<div class="cf21b-head"><div><b>Step 21B — Purchase Matching & Reconciliation</b><p>Item Code + Size + Unit matching. Read-only: no stock changes, no replay or duplicate posting.</p></div><div><button type="button" id="cf21bRun">Refresh Matching</button> <button class="secondary" type="button" id="cf21bCsv" disabled>Export Findings CSV</button></div></div><div class="cf21b-stats" id="cf21bStats"></div><div class="cf21b-bar"><input id="cf21bSearch" placeholder="Search item, code or size"><select id="cf21bFilter"><option value="all">All receipts</option><option value="ok">Exact Master matches</option><option value="warning">Needs review</option></select></div><div class="cf21b-scroll"><table><thead><tr><th>Source</th><th>Item code</th><th>Purchase item</th><th>Size</th><th>Unit</th><th>Qty In</th><th>Master match</th><th>Reason</th></tr></thead><tbody id="cf21bRows"><tr><td colspan="8">Refresh Matching to read the purchase ledgers.</td></tr></tbody></table></div><p id="cf21bMessage">This checks actual browser records without changing the approved Inventory display or Issue balances.</p>';
+(page.querySelector('.ml-subbody')||page).prepend(box);
+const $=s=>box.querySelector(s),txt=v=>String(v??'').trim(),norm=v=>txt(v).toLowerCase().replace(/\s+/g,' '),num=v=>Number(String(v??'').replace(/,/g,''))||0,esc=v=>txt(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let current=[];
+function read(dbName,storeName){return new Promise(resolve=>{let q=indexedDB.open(dbName),missing=false;q.onupgradeneeded=()=>{missing=true;q.transaction?.abort()};q.onerror=()=>resolve({rows:[],error:missing?'not present':txt(q.error?.message)||'open failed'});q.onsuccess=()=>{let db=q.result;if(!db.objectStoreNames.contains(storeName)){db.close();resolve({rows:[],error:'store not present'});return}let t=db.transaction(storeName,'readonly'),r=t.objectStore(storeName).getAll();r.onsuccess=()=>resolve({rows:r.result||[],error:''});r.onerror=()=>resolve({rows:[],error:txt(r.error?.message)||'read failed'});t.oncomplete=()=>db.close()}})}
+function state(row,items){let code=norm(row.code),size=norm(row.size),unit=norm(row.unit),name=norm(row.name);
+let idCandidates=items.filter(x=>code&&(norm(x.id)===code||norm(x.code)===code));let exact=idCandidates.filter(x=>norm(x.size)===size&&norm(x.unit)===unit);
+if(exact.length===1)return ['ok',exact[0],'Exact ID + Size + Unit'];
+if(exact.length>1)return ['warning',null,'Duplicate exact Master records'];
+let names=items.filter(x=>norm(x.name)===name&&norm(x.size)===size&&norm(x.unit)===unit);
+if(names.length===1)return ['warning',names[0],'Name/Size/Unit matches but Item Code differs'];
+if(names.length>1)return ['warning',null,'Multiple Master candidates'];
+if(idCandidates.length)return ['warning',null,'Item Code found, Size or Unit differs'];
+return ['warning',null,'No matching Item Master record']}
+function render(){let q=norm($('#cf21bSearch').value),f=$('#cf21bFilter').value,arr=current.filter(x=>(f==='all'||x.status===f)&&(!q||norm([x.source,x.code,x.name,x.size,x.unit,x.reason].join(' ')).includes(q)));
+$('#cf21bRows').innerHTML=arr.length?arr.map(r=>'<tr><td>'+esc(r.source)+'</td><td>'+esc(r.code)+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.size)+'</td><td>'+esc(r.unit)+'</td><td>'+num(r.qty).toLocaleString('en-PK')+'</td><td class="'+(r.status==='ok'?'ok':'warn')+'">'+(r.status==='ok'?'Matched':'Review')+'</td><td>'+esc(r.reason)+'</td></tr>').join(''):'<tr><td colspan="8">No matching receipt rows.</td></tr>'}
+async function refresh(){const b=$('#cf21bRun');b.disabled=true;$('#cf21bMessage').textContent='Reading purchase ledgers...';try{
+const [local,central]=await Promise.all([read('coreflow-local-purchase-ledger-v1','movements'),read('CoreFlowCentralPurchasePostingV1','journal')]);const items=window.CoreFlowMasters12A?.getItems?.()||[];
+const receipts=[...local.rows.filter(r=>r.posting==='stock_receipt'&&num(r.quantity)>0).map(r=>({source:'Local',code:txt(r.itemCode||r.itemId),name:txt(r.item||r.itemName),size:txt(r.size),unit:txt(r.unit),qty:num(r.quantity)})),...central.rows.filter(r=>r.kind==='stock'&&r.status==='posted'&&num(r.qty)>0&&!/^local/i.test(txt(r.source))).map(r=>({source:txt(r.source)||'Central',code:txt(r.itemId),name:txt(r.itemName),size:txt(r.itemSize||r.size),unit:txt(r.unit),qty:num(r.qty)}))];
+current=receipts.map(r=>{const [status,match,reason]=state(r,items);return {...r,status,masterId:txt(match?.id),reason}});
+const matched=current.filter(r=>r.status==='ok'),review=current.length-matched.length;
+$('#cf21bStats').innerHTML=[['Receipt lines',current.length],['Exact matches',matched.length],['Needs review',review],['Matched quantity',matched.reduce((n,r)=>n+r.qty,0).toLocaleString('en-PK')]].map(([k,v])=>'<div class="cf21b-stat">'+esc(k)+'<strong>'+esc(v)+'</strong></div>').join('');
+$('#cf21bMessage').textContent='Source status: Local '+(local.error||'OK')+'; Central '+(central.error||'OK')+'. Read-only reconciliation. Matching lines are NOT reposted. If purchase source data is missing, check that this URL uses the same browser origin/storage as the purchasing pages.';
+$('#cf21bCsv').disabled=!current.length;render();
+}catch(e){$('#cf21bMessage').textContent='Audit failed safely: '+e.message}finally{b.disabled=false}}
+$('#cf21bRun').onclick=refresh;$('#cf21bSearch').oninput=render;$('#cf21bFilter').onchange=render;
+$('#cf21bCsv').onclick=()=>{let data=[['Source','Item Code','Item','Size','Unit','Quantity','Status','Reason'],...current.map(x=>[x.source,x.code,x.name,x.size,x.unit,x.qty,x.status,x.reason])];let csv=data.map(r=>r.map(v=>'"'+txt(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download='CoreFlow_Inventory_Purchase_Matching.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)};
+})();</script>
 </body></html>
