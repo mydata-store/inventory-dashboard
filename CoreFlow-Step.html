@@ -2698,13 +2698,13 @@ body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07
 <section class="page ml-subpage" id="page-tools-issue"><div class="ml-subbody"><div class="cf24-page" id="cf23pIssue">
 <div class="cf24-title"><div><h2>Issue Tool / Machinery</h2><p>Registered tool handover — Worker / Department custody</p></div><button type="button" data-cf24-nav="tools-assets">← Tools Management</button></div>
 <div class="cf23p-stats" id="cf23pStats"></div><div class="cf23p-fields">
-<label>Tool ID / Item / Serial *<select id="cf23pTool"><option value="">Select available registered tool</option></select></label>
-<label>Issue Date *<input id="cf23pDate" type="date"></label>
-<label>Employee / Worker *<input id="cf23pWorker" list="cf23pWorkers" placeholder="Select or type employee"><datalist id="cf23pWorkers"></datalist></label>
-<label>Department *<input id="cf23pDept" list="cf23pDepartments" placeholder="Select department"><datalist id="cf23pDepartments"></datalist></label>
-<label>Issued By<input id="cf23pBy" placeholder="Store officer"></label>
+<label>Tool ID / Item / Serial *<input id="cf23pToolSearch" autocomplete="off" placeholder="Type tool ID, item or serial"><input id="cf23pTool" type="hidden"><div class="cf23q-suggest" id="cf23qToolList"></div></label>
+<label>Issue Date *<input id="cf23pDate" type="text" inputmode="text" autocomplete="off" placeholder="DD-Mon-YY (e.g. 29-10)"></label>
+<label>Employee / Worker *<input id="cf23pWorker" autocomplete="off" placeholder="Type employee name"><div class="cf23q-suggest" id="cf23qWorkerList"></div></label>
+<label>Department *<input id="cf23pDept" autocomplete="off" placeholder="Type department"><div class="cf23q-suggest" id="cf23qDeptList"></div></label>
+<label>Issued By<input id="cf23pBy" autocomplete="off" placeholder="Type issued by"><div class="cf23q-suggest" id="cf23qByList"></div></label>
 <label>Condition at Issue<select id="cf23pCondition"><option>Working</option><option>Used / Working</option></select></label>
-<label>Expected Return<input id="cf23pExpected" type="date"></label>
+<label>Expected Return<input id="cf23pExpected" type="text" autocomplete="off" placeholder="DD-Mon-YY (optional)"></label>
 <label>Purpose / Used For<input id="cf23pPurpose" placeholder="Use / Work order"></label>
 <label class="cf23p-wide">Remarks<textarea id="cf23pNotes" rows="2" placeholder="Optional remarks"></textarea></label>
 </div><div class="cf23p-actions"><button id="cf23pSave" type="button">Save Tool Issue</button><span id="cf23pMessage" role="status">Select an available registered tool. Store location and purchase history will be preserved.</span></div>
@@ -9877,16 +9877,67 @@ async function list(){let db=await dbopen();try{return await new Promise((ok,bad
 async function write(rec){let db=await dbopen();try{await new Promise((ok,bad)=>{const tx=db.transaction(issueStore,'readwrite');tx.objectStore(issueStore).add(rec);tx.oncomplete=ok;tx.onerror=()=>bad(tx.error)})}finally{db.close()}}
 function assets(){return window.CoreFlowAssetsStore?.read()?.assets||[]}
 function available(a){return !/issued|custody|department|worker|lost|written.off|disposed/i.test(String(a.status||''))&&!/broken|damaged|repair|unserviceable/i.test(String(a.condition||''))}
-function masterOptions(){const dep=window.CoreFlowMasters12A?.getDepartments?.()||[];const dd=$('cf23pDepartments');dd.innerHTML=dep.filter(x=>!['inactive','disabled'].includes(norm(x.status))).map(x=>'<option value="'+es(x.name||x.department||'')+'"></option>').join('');const emp=$('cf23pWorkers');let arr=[];try{const raw=JSON.parse(localStorage.getItem('coreflow.masters.12a.v1')||'{}');arr=raw.aux?.employees||[]}catch{}emp.innerHTML=arr.filter(x=>norm(x.status)!=='inactive').map(x=>'<option value="'+es(x.name||x.employeeName||'')+'"></option>').join('')}
-function paint(){const a=assets(),choice=$('cf23pTool').value;const ready=a.filter(available);$('cf23pTool').innerHTML='<option value="">Select available registered tool</option>'+ready.map(x=>'<option value="'+es(x.assetId)+'">'+es([x.assetId,x.itemName,x.size,x.serial].filter(Boolean).join(' · '))+'</option>').join('');if(ready.some(x=>x.assetId===choice))$('cf23pTool').value=choice;$('cf23pStats').textContent='Registered tools: '+a.length+'   ·   Available for issue: '+ready.length+'   ·   Issued to workers / departments: '+a.filter(x=>!available(x)&&/issued|custody/i.test(String(x.status||''))).length;
+function masterOptions(){ /* Suggestions read from Masters and previously saved issues when typing. */ }
+function unique(values){return [...new Set(values.map(x=>String(x||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}) )}
+function masterPeople(){let rows=[];try{const d=JSON.parse(localStorage.getItem('coreflow.masters.12a.v1')||'{}');rows=d.aux?.employees||[]}catch{}return rows.filter(x=>norm(x.status)!=='inactive').map(x=>x.name||x.employeeName||x.employee||'')}
+function masterDepartments(){return(window.CoreFlowMasters12A?.getDepartments?.()||[]).filter(x=>norm(x.status)!=='inactive').map(x=>x.name||x.department||'')}
+function candidates(kind){
+ if(kind==='tool')return assets().filter(available).map(a=>({value:a.assetId,label:[a.assetId,a.itemName,a.size,a.serial].filter(Boolean).join(' · ')}));
+ let names=kind==='worker'?[...masterPeople(),...issues.map(x=>x.worker)]:kind==='dept'?[...masterDepartments(),...issues.map(x=>x.department)]:issues.map(x=>x.issuedBy);
+ return unique(names).map(x=>({value:x,label:x}))
+}
+function attachSuggestions(inputId,listId,kind){
+ const field=$(inputId),panel=$(listId);let active=-1,matches=[];
+ const close=()=>{panel.style.display='none';active=-1};
+ const choose=i=>{const item=matches[i];if(!item)return;field.value=item.label;if(kind==='tool')$('cf23pTool').value=item.value;close()};
+ function update(){
+  if(kind==='tool')$('cf23pTool').value='';
+  const query=norm(field.value);if(!query){close();return}
+  matches=candidates(kind).filter(x=>norm(x.label).includes(query)).slice(0,10);
+  if(!matches.length){close();return}
+  panel.innerHTML=matches.map((x,i)=>'<button type="button" data-idx="'+i+'">'+es(x.label)+'</button>').join('');
+  active=-1;panel.style.display='block'
+ }
+ field.addEventListener('input',update);
+ field.addEventListener('keydown',e=>{
+  if(panel.style.display!=='block')return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();active=(active+(e.key==='ArrowDown'?1:-1)+matches.length)%matches.length;panel.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',i===active))}
+  else if((e.key==='Enter'||e.key==='Tab')&&matches.length){if(e.key==='Enter')e.preventDefault();choose(active>=0?active:0)}
+  else if(e.key==='Escape')close()
+ });
+ panel.addEventListener('mousedown',e=>{const b=e.target.closest('button[data-idx]');if(b){e.preventDefault();choose(Number(b.dataset.idx))}});
+ field.addEventListener('blur',()=>setTimeout(close,130));
+}
+function dateParts(raw){
+ const v=String(raw||'').trim();if(!v)return null;
+ const m=v.match(/^(\d{1,2})[-\/\s](\d{1,2}|[A-Za-z]{3,9})(?:[-\/\s](\d{2,4}))?$/);
+ if(!m)return null;
+ const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+ const mm=/^\d+$/.test(m[2])?Number(m[2]):monthNames.findIndex(n=>n.toLowerCase()===m[2].slice(0,3).toLowerCase())+1;
+ let y=m[3]?Number(m[3]):new Date().getFullYear();if(y<100)y+=2000;
+ const d=Number(m[1]), dt=new Date(y,mm-1,d);
+ if(!(mm>=1&&mm<=12&&dt.getFullYear()===y&&dt.getMonth()===mm-1&&dt.getDate()===d))return null;
+ return {display:String(d).padStart(2,'0')+'-'+monthNames[mm-1]+'-'+String(y).slice(-2),iso:String(y).padStart(4,'0')+'-'+String(mm).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
+}
+for(const id of ['cf23pDate','cf23pExpected'])$(id).addEventListener('blur',()=>{const v=$(id).value.trim(),parsed=dateParts(v);if(parsed)$(id).value=parsed.display;else if(v)$('cf23pMessage').textContent='Invalid date: '+v+'. Use DD-Mon-YY or 29-10.'});
+attachSuggestions('cf23pToolSearch','cf23qToolList','tool');
+attachSuggestions('cf23pWorker','cf23qWorkerList','worker');
+attachSuggestions('cf23pDept','cf23qDeptList','dept');
+attachSuggestions('cf23pBy','cf23qByList','by');
+function paint(){const a=assets(),ready=a.filter(available);const chosen=$('cf23pTool').value;if(!ready.some(x=>x.assetId===chosen)){$('cf23pTool').value='';$('cf23pToolSearch').value=''}$('cf23pStats').textContent='Registered tools: '+a.length+'   ·   Available for issue: '+ready.length+'   ·   Issued to workers / departments: '+a.filter(x=>!available(x)&&/issued|custody/i.test(String(x.status||''))).length;
 $('cf23pHistory').innerHTML=issues.length?issues.slice().reverse().map(r=>'<tr><td>'+es(r.ref)+'</td><td>'+es(r.date)+'</td><td>'+es(r.assetId+' · '+r.itemName)+'</td><td>'+es(r.worker)+'</td><td>'+es(r.department)+'</td><td>'+es(r.issuedBy||'—')+'</td><td>'+es(r.status)+'</td></tr>').join(''):'<tr><td colspan="7">No tool issue entries yet.</td></tr>';masterOptions()}
 async function refresh(){try{await window.CoreFlowAssetsStore.ready;issues=await list();paint()}catch(e){$('cf23pMessage').textContent='Unable to load saved tools: '+e.message}}
-$('cf23pSave').addEventListener('click',async()=>{const btn=$('cf23pSave');if(btn.disabled)return;const id=$('cf23pTool').value,worker=$('cf23pWorker').value.trim(),department=$('cf23pDept').value.trim(),date=$('cf23pDate').value,asset=assets().find(x=>x.assetId===id);if(!asset||!available(asset))return $('cf23pMessage').textContent='Select an available tool. Already issued/damaged tools cannot be issued again.';if(!date||!worker||!department)return $('cf23pMessage').textContent='Issue Date, Worker and Department are required.';btn.disabled=true;
-try{await window.CoreFlowAssetsStore.ready;const current=window.CoreFlowAssetsStore.read();const before=structuredClone(current);const target=current.assets.find(x=>x.assetId===id);if(!target||!available(target))throw Error('Tool is no longer available for issue');const ref='TI-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+crypto.randomUUID().slice(0,8).toUpperCase(),rec={id:ref,ref,assetId:id,itemId:target.itemId,itemName:target.itemName,size:target.size,serial:target.serial,worker,department,date,issuedBy:$('cf23pBy').value.trim(),condition:$('cf23pCondition').value,expectedReturn:$('cf23pExpected').value,purpose:$('cf23pPurpose').value.trim(),remarks:$('cf23pNotes').value.trim(),status:'Issued',originalRack:target.location||'',createdAt:new Date().toISOString()};
+$('cf23pSave').addEventListener('click',async()=>{const btn=$('cf23pSave');if(btn.disabled)return;const id=$('cf23pTool').value,worker=$('cf23pWorker').value.trim(),department=$('cf23pDept').value.trim(),date=dateParts($('cf23pDate').value)?.iso||'',asset=assets().find(x=>x.assetId===id);if(!asset||!available(asset))return $('cf23pMessage').textContent='Select an available tool. Already issued/damaged tools cannot be issued again.';if(!date||!worker||!department)return $('cf23pMessage').textContent='Valid Issue Date, Worker and Department are required.';if($('cf23pExpected').value.trim()&&!dateParts($('cf23pExpected').value))return $('cf23pMessage').textContent='Expected Return date is invalid.';btn.disabled=true;
+try{await window.CoreFlowAssetsStore.ready;const current=window.CoreFlowAssetsStore.read();const before=structuredClone(current);const target=current.assets.find(x=>x.assetId===id);if(!target||!available(target))throw Error('Tool is no longer available for issue');const ref='TI-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+crypto.randomUUID().slice(0,8).toUpperCase(),rec={id:ref,ref,assetId:id,itemId:target.itemId,itemName:target.itemName,size:target.size,serial:target.serial,worker,department,date,issuedBy:$('cf23pBy').value.trim(),condition:$('cf23pCondition').value,expectedReturn:dateParts($('cf23pExpected').value)?.iso||'',purpose:$('cf23pPurpose').value.trim(),remarks:$('cf23pNotes').value.trim(),status:'Issued',originalRack:target.location||'',createdAt:new Date().toISOString()};
 // Keep the custody record with the asset; original rack is retained for eventual return.
 target.status='Issued';target.worker=worker;target.department=department;target.issueDate=date;target.issueRef=ref;target.custodyLocation=department;target.previousRack=target.location||'';target.location='Employee Custody';
 await window.CoreFlowAssetsStore.save(current);try{await write(rec)}catch(e){await window.CoreFlowAssetsStore.save(before);throw Error('Issue log could not save: '+e.message)}
-issues.push(rec);$('cf23pMessage').textContent='Saved: '+ref+' · '+id+' issued to '+worker+'.';$('cf23pTool').value='';$('cf23pWorker').value='';$('cf23pNotes').value='';document.dispatchEvent(new Event('coreflow:tool-custody-updated'));paint();
+issues.push(rec);$('cf23pMessage').textContent='Saved: '+ref+' · '+id+' issued to '+worker+'.';$('cf23pTool').value='';$('cf23pToolSearch').value='';$('cf23pWorker').value='';$('cf23pNotes').value='';document.dispatchEvent(new Event('coreflow:tool-custody-updated'));paint();
 }catch(e){$('cf23pMessage').textContent='Issue not saved: '+e.message}finally{btn.disabled=false}});
-$('cf23pDate').value=new Date().toLocaleDateString('en-CA');document.addEventListener('coreflow:asset-registered',refresh);window.addEventListener('hashchange',()=>{if(location.hash==='#tools-issue')refresh()});refresh();
-})();</script></body></html>
+$('cf23pDate').value='';$('cf23pExpected').value='';document.addEventListener('coreflow:asset-registered',refresh);window.addEventListener('hashchange',()=>{if(location.hash==='#tools-issue')refresh()});refresh();
+})();</script><style id="cf23q-style">
+#cf23pIssue label{position:relative}
+#cf23pIssue .cf23q-suggest{display:none;position:absolute;left:0;right:0;top:100%;background:white;border:1px solid #96c7e8;border-radius:7px;box-shadow:0 8px 20px #1f46652b;z-index:250;max-height:220px;overflow:auto}
+#cf23pIssue .cf23q-suggest button{display:block;width:100%;text-align:left;background:white;color:#1b4c70;border:0;padding:9px 11px;font:13px 'Segoe UI',Arial;cursor:pointer}
+#cf23pIssue .cf23q-suggest button:hover,#cf23pIssue .cf23q-suggest button.active{background:#dff1ff}
+</style></body></html>
