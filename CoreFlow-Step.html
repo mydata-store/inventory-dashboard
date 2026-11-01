@@ -1985,6 +1985,14 @@ body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07
 <div class="pm13-grid"><div class="ml-module-card pm13-card" data-parent="gate-pass" data-sub="rgp" role="button" tabindex="0"><span class="pm13-icon">▣</span><span class="pm13-detail"><b>RGP</b><small>Returnable Gate Pass</small></span><span class="arr">›</span></div><div class="ml-module-card pm13-card" data-parent="gate-pass" data-sub="ogp" role="button" tabindex="0"><span class="pm13-icon">▤</span><span class="pm13-detail"><b>OGP</b><small>Outgoing Gate Pass</small></span><span class="arr">›</span></div><div class="ml-module-card pm13-card" data-parent="gate-pass" data-sub="cgp" role="button" tabindex="0"><span class="pm13-icon">♻</span><span class="pm13-detail"><b>CGP</b><small>Cash / Scrap Gate Pass</small></span><span class="arr">›</span></div><div class="ml-module-card pm13-card" data-parent="gate-pass" data-sub="gate-history" role="button" tabindex="0"><span class="pm13-icon">◷</span><span class="pm13-detail"><b>Gate Pass History</b><small>Review returnable, outgoing and scrap records</small></span><span class="arr">›</span></div></div>
 <div class="ml-module-card pm13-card" id="cf24yOpen" role="button" tabindex="0" style="margin:12px 0;cursor:pointer"><span class="pm13-icon">▣</span><span class="pm13-detail"><b>Returnable Items Ledger & Quantity Mapping</b><small>Purchase se received · Posted OGP se returned · supplier-wise pending</small></span><span class="arr">›</span></div>
 <div id="cf24yPage" hidden><div class="cf24y-head"><div><h2>Returnable Items — Mapping & Ledger</h2><p>Automatic ledger from existing Purchase and Posted OGP. No separate receipt or return entry.</p></div><button type="button" id="cf24yBack">← Gate Pass Management</button></div>
+<div id="cf24zHome"><h3>Returnable Containers Management</h3><p>Sirf Purchase se received aur Posted OGP se returned quantity. Koi separate transaction entry nahi.</p><div class="cf24z-cards">
+<button type="button" data-cf24z-go="party"><b>Party-wise Ledger</b><small>Supplier ke mutabiq outstanding cylinders</small></button>
+<button type="button" data-cf24z-go="item"><b>Item-wise Ledger</b><small>Oxygen, Chlorine aur baqi returnables</small></button>
+<button type="button" data-cf24z-go="transactions"><b>Transaction History</b><small>Purchase & Posted OGP references</small></button>
+<button type="button" data-cf24z-go="mapping"><b>Quantity Mapping Settings</b><small>Purchase field ko returnable quantity se map karein</small></button>
+</div><div id="cf24zHomeSummary" class="cf24z-note">Loading saved mappings and transactions…</div></div>
+<div id="cf24zSubnav" hidden><div class="cf24z-subtop"><button type="button" id="cf24zHomeBack">← Returnable Management</button><h3 id="cf24zTitle">Party-wise Ledger</h3></div><div id="cf24zViewControls" class="cf24z-controls"><label id="cf24zFilterLabel">Select Supplier<select id="cf24zFilter"><option value="">All Suppliers</option></select></label></div></div>
+<div id="cf24zDetailView" hidden><h3 id="cf24zDetailTitle">Transaction Details</h3><div id="cf24zDetailBody"></div></div>
 <div class="cf24y-tabs"><button type="button" data-y-tab="ledger" class="selected">Party / Item Ledger</button><button type="button" data-y-tab="mapping">Quantity Mapping Settings</button></div>
 <div id="cf24yMapping" hidden><h3>Item-wise Quantity Source</h3><div class="cf24y-form"><label>Purchase Item<input id="cf24yItem" list="cf24yItems" placeholder="Type item from Item Master" autocomplete="off"><datalist id="cf24yItems"></datalist></label><label>Purchase Type<select id="cf24yType"><option value="Board">Board / Paper / Board III</option><option value="Local">Local Purchase</option><option value="Zafar">Zafar Purchase</option></select></label><label>Quantity Source<select id="cf24ySource"><option value="number">Board: No. of Item (Cylinders)</option><option value="package">Board: Package text/count</option><option value="weight">Board: Net Weight (only if appropriate)</option><option value="purchaseQty">Purchase line quantity (Nos)</option></select></label><label>Container Type<input id="cf24yUnit" value="Cylinders" placeholder="Cylinders / Drums"></label><label>OGP Return Item<input id="cf24yOgp" placeholder="Same item or specific empty cylinder item"></label><label>Notes<input id="cf24yNotes" placeholder="Optional mapping notes"></label></div><button type="button" class="cf24y-primary" id="cf24ySave">Save Mapping</button><p class="cf24y-msg" id="cf24yMsg"></p><h3>Saved Mappings</h3><div class="cf24y-scroll"><table><thead><tr><th>Item</th><th>Purchase Type</th><th>Quantity Field</th><th>Unit</th><th>OGP Item</th><th>Action</th></tr></thead><tbody id="cf24yMappings"></tbody></table></div></div>
 <div id="cf24yLedger"><div class="cf24y-controls"><input id="cf24ySearch" placeholder="Search supplier or item"><button id="cf24yRefresh" type="button">Refresh Ledger</button></div><div class="cf24y-summary" id="cf24ySummary"></div><div class="cf24y-scroll"><table><thead><tr><th>Supplier</th><th>Item / Container</th><th>Received</th><th>Returned</th><th>Pending</th><th>Status</th><th>Action</th></tr></thead><tbody id="cf24yLedgerRows"></tbody></table></div><div id="cf24yHistory" class="cf24y-history"></div><p class="cf24y-msg" id="cf24yLedgerMsg"></p></div>
@@ -10374,4 +10382,45 @@ $('cf24ySave').onclick=async()=>{const item=$('cf24yItem').value.trim(),type=$('
 $('cf24yMappings').onclick=async ev=>{const b=ev.target.closest('[data-delete]');if(!b)return;const m=maps.find(x=>x.key===b.dataset.delete);if(!m||!confirm('Remove quantity mapping for '+m.item+'?'))return;await dbSave(m,true);refresh()};$('cf24yRefresh').onclick=refresh;$('cf24ySearch').oninput=paint;
 $('cf24yLedgerRows').onclick=ev=>{const b=ev.target.closest('[data-history]');if(!b)return;const g=ledger.find(x=>x.key===b.dataset.history);if(!g)return;let balance=0;const data=[...g.lines].sort((a,b)=>String(a.date).localeCompare(String(b.date)));$('cf24yHistory').innerHTML='<h3>'+e(g.supplier+' — '+g.item)+'</h3><div class="cf24y-scroll"><table><thead><tr><th>Date</th><th>Source</th><th>Reference</th><th>Received</th><th>Returned</th><th>Running Balance</th></tr></thead><tbody>'+data.map(x=>{balance+=x.qty;return '<tr><td>'+e(x.date)+'</td><td>'+e(x.kind)+'</td><td>'+e(x.ref)+'</td><td>'+(x.qty>0?show(x.qty):'—')+'</td><td>'+(x.qty<0?show(-x.qty):'—')+'</td><td>'+show(balance)+'</td></tr>'}).join('')+'</tbody></table></div>'};
 try{const items=window.CoreFlowMasters12A?.getItems?.()||[];$('cf24yItems').innerHTML=items.map(x=>'<option value="'+e(x.name||x.itemName)+'"></option>').join('')}catch{}
+})();</script><style id="cf24z-pages-css">
+#cf24yPage .cf24y-tabs{display:none!important}
+#cf24zHome .cf24z-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+#cf24zHome .cf24z-cards button{text-align:left;min-height:84px;padding:16px;background:#f7fbff;border:1px solid #bad9f0;border-radius:10px}
+#cf24zHome .cf24z-cards b{display:block;font-size:15px;color:#154f77}
+#cf24zHome .cf24z-cards small{display:block;margin-top:6px;font-size:12px;color:#647e91}
+#cf24zHome .cf24z-cards button:hover{background:#e9f5ff;border-color:#57a7e0}
+#cf24yPage .cf24z-note{background:#f0f8ff;border:1px solid #d2e8f7;border-radius:8px;padding:13px;font-size:12px}
+#cf24yPage .cf24z-subtop{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin:12px 0}
+#cf24yPage .cf24z-subtop h3{margin:0}
+#cf24yPage .cf24z-controls{margin-bottom:14px}
+#cf24yPage .cf24z-controls label{display:flex;align-items:center;flex-direction:row;gap:12px}
+#cf24yPage .cf24z-controls select{max-width:350px;width:100%}
+#cf24zDetailView{margin-top:15px}
+#cf24zDetailBody .cf24y-scroll{max-height:480px}
+@media(max-width:700px){#cf24zHome .cf24z-cards{grid-template-columns:1fr}}
+</style><script id="cf24z-pages-script">(()=>{'use strict';
+const $=id=>document.getElementById(id),home=$('cf24zHome'),sub=$('cf24zSubnav'),ledger=$('cf24yLedger'),mapping=$('cf24yMapping'),details=$('cf24zDetailView'),filter=$('cf24zFilter');
+if(!home||!sub||!ledger||!mapping||!details)return;
+let mode='home';
+const norm=s=>String(s||'').toLowerCase().trim();
+const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rows(){return [...$('cf24yLedgerRows').querySelectorAll('tr')].filter(tr=>tr.querySelector('[data-history]'))}
+function setVisibility(which){mode=which;home.hidden=which!=='home';sub.hidden=which==='home'||which==='detail';details.hidden=which!=='detail';ledger.hidden=!['party','item','transactions'].includes(which);mapping.hidden=which!=='mapping';if(which==='detail'){sub.hidden=false;$('cf24zViewControls').hidden=true;}else $('cf24zViewControls').hidden=which==='mapping';}
+function refreshFilters(){const values=new Set();const column=mode==='item'?1:0;for(const tr of rows()){values.add(tr.cells[column]?.textContent?.trim()||'')}const old=filter.value;filter.innerHTML='<option value="">All '+(mode==='item'?'Items':'Suppliers')+'</option>'+[...values].filter(Boolean).sort((a,b)=>a.localeCompare(b)).map(x=>'<option value="'+escape(x)+'">'+escape(x)+'</option>').join('');filter.value=old;applyFilter();}
+function applyFilter(){const v=norm(filter.value);const col=mode==='item'?1:0;rows().forEach(tr=>{tr.style.display=!v||norm(tr.cells[col]?.textContent).includes(v)?'':'none'})}
+function open(which){setVisibility(which);const titles={party:'Party-wise Ledger',item:'Item-wise Ledger',transactions:'Transaction History',mapping:'Quantity Mapping Settings',detail:'Transaction Detail'};$('cf24zTitle').textContent=titles[which]||'';
+if(which==='home'){const counts=rows();$('cf24zHomeSummary').textContent=counts.length+' mapped supplier/item balances. Received = Purchase, Returned = Posted OGP. Select a page above.';return}
+if(which==='party'||which==='item'||which==='transactions'){
+ $('cf24zFilterLabel').firstChild.textContent=which==='item'?'Filter by Item':'Filter by Supplier';
+ $('cf24ySearch').value='';$('cf24ySearch').dispatchEvent(new Event('input'));refreshFilters();
+ $('cf24yLedger').querySelector('.cf24y-summary').style.display='block';
+}
+}
+$('cf24zHomeBack').onclick=()=>open('home');home.querySelectorAll('[data-cf24z-go]').forEach(btn=>btn.onclick=()=>open(btn.dataset.cf24zGo));filter.onchange=applyFilter;
+$('cf24yLedgerRows').addEventListener('click',ev=>{const button=ev.target.closest('[data-history]');if(!button)return;queueMicrotask(()=>{const contents=$('cf24yHistory').innerHTML;details.innerHTML='<h3>Purchase / OGP Transaction History</h3><div id="cf24zDetailBody">'+contents+'</div>';open('detail')})});
+$('cf24yRefresh').addEventListener('click',()=>setTimeout(()=>{if(mode==='party'||mode==='item'||mode==='transactions')refreshFilters();if(mode==='home')open('home')},200));
+$('cf24yOpen').addEventListener('click',()=>queueMicrotask(()=>open('home')));
+$('cf24yBack').addEventListener('click',()=>open('home'));
+// Existing mapping and ledger code remains the sole owner of data calculations and writes.
+open('home');
 })();</script></body></html>
