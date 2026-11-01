@@ -6563,7 +6563,7 @@ if(source&&Number.isFinite(source.tempC)){$('cf07gTemp').textContent=formatTemp(
 document.dispatchEvent(new Event('cf07g:weather-changed'));
 }
 function fill(){for(const k of ['enabled','showIcon','showCondition','showLocation'])$('cf07g'+k[0].toUpperCase()+k.slice(1)).checked=!!settings[k];$('cf07gCity').value=settings.city||'';$('cf07gUnit').value=settings.unit;$('cf07gInterval').value=String(settings.interval);display()}
-async function fetchJSON(url){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const r=await fetch(url,{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error('Weather service returned '+r.status);return await r.json()}finally{clearTimeout(timer)}}
+async function fetchJSON(url){if(navigator.onLine===false)throw Error('Offline: weather unavailable; saved ERP data remains accessible');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const r=await fetch(url,{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error('Weather service returned '+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function refresh(){
 const cityInput=$('cf07gCity');
 if(cityInput&&cityInput.value.trim()!==settings.city){settings.city=cityInput.value.trim();settings.lat=null;settings.lon=null;save()}
@@ -7359,6 +7359,7 @@ const LOCAL_URL='http://127.0.0.1:8765';
 const LOCAL_TOKEN_KEY='coreflow.localservice.key.v1';
 let localServiceKey='';try{localServiceKey=localStorage.getItem(LOCAL_TOKEN_KEY)||''}catch(_){}
 async function localRequest(method,path,payload){
+ if(navigator.onLine===false)throw Error('Offline: optional PC service skipped');
  const response=await fetch(LOCAL_URL+path,{method,headers:{'Content-Type':'application/json','X-CoreFlow-Token':localServiceKey},body:payload===undefined?undefined:JSON.stringify(payload),cache:'no-store',signal:AbortSignal.timeout(5000)});
  const data=await response.json();if(!response.ok)throw Error(data.error||'Local service error '+response.status);return data;
 }
@@ -7367,14 +7368,14 @@ async function masterGet(){
   // Service is optional: browser IndexedDB remains a safe fallback until the PC-first migration is complete.
   const local=await browserOldGet().catch(()=>null);
   let remote=null;
-  if(localServiceKey){try{const reply=await localRequest('GET','/api/masters');remote=reply.exists?reply.data:null;}catch(e){console.warn('PC service offline; retaining browser Masters',e.message)}}
+  if(localServiceKey && navigator.onLine!==false){try{const reply=await localRequest('GET','/api/masters');remote=reply.exists?reply.data:null;}catch(e){console.warn('PC service unavailable; retaining browser Masters',e.message)}}
   return reconcileMasters(db,local,remote);
 }
 async function masterPut(snapshot){
   // Persist locally before trying any optional service transfer.
   const idb=await masterOpen();
   try{await new Promise((resolve,reject)=>{const tx=idb.transaction(MASTER_STORE,'readwrite');tx.objectStore(MASTER_STORE).put(snapshot,KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});}finally{idb.close()}
-  if(localServiceKey){try{await localRequest('PUT','/api/masters',snapshot)}catch(e){console.warn('PC service sync pending:',e.message)}}
+  if(localServiceKey && navigator.onLine!==false){try{await localRequest('PUT','/api/masters',snapshot)}catch(e){console.warn('PC service sync pending:',e.message)}}
   document.dispatchEvent(new Event('input',{bubbles:true}));
   return true;
 }
@@ -10222,4 +10223,5 @@ function renderNotice(){const x=candidates.find(c=>c.key===$('cf24hSource').valu
 async function refresh(){try{[records,transfers]=await Promise.all([all('coreflow-rgp-register-v1','passes'),all('coreflow-damaged-scrap-transfer-v1','transfers')]);candidates=candidateRows();const selected=$('cf24hSource').value;$('cf24hSource').innerHTML='<option value="">Select damaged return</option>'+candidates.filter(c=>available(c)>0).map(c=>'<option value="'+esc(c.key)+'">'+esc(c.rgp+' · '+c.item+' · '+c.size+' ('+available(c)+' '+c.unit+')')+'</option>').join('');$('cf24hSource').value=selected;renderNotice();$('cf24hEligible').innerHTML=candidates.map(c=>'<tr><td>'+esc(c.rgp)+'</td><td>'+esc(c.item+' · '+c.size)+'</td><td>'+esc(c.date)+'</td><td>'+c.qty+' '+esc(c.unit)+'</td><td>'+(c.qty-available(c))+'</td><td>'+available(c)+'</td></tr>').join('')||'<tr><td colspan="6">No damaged RGP return recorded yet.</td></tr>';$('cf24hHistory').innerHTML=transfers.slice().reverse().map(t=>'<tr><td>'+esc(t.date)+'</td><td>'+esc(t.rgp)+'</td><td>'+esc(t.item+' · '+t.size)+'</td><td>'+esc(t.qty)+' '+esc(t.unit)+'</td><td>'+esc(t.approvedBy)+'</td><td>'+esc(t.reason)+'</td><td>'+esc(t.id)+'</td></tr>').join('')||'<tr><td colspan="7">No scrap transfers yet.</td></tr>'}catch(e){$('cf24hNotice').textContent='Unable to load: '+e.message}}
 async function commit(){const x=candidates.find(c=>c.key===$('cf24hSource').value),qty=Number($('cf24hQty').value),approvedBy=str($('cf24hApproved').value),reason=str($('cf24hReason').value);if(!x||!Number.isFinite(qty)||qty<=0||qty>available(x)||!approvedBy||!reason){$('cf24hNotice').textContent='Select damaged return, valid available quantity, approving authority and reason.';return}const b=$('cf24hSave');b.disabled=true;try{transfers=await all('coreflow-damaged-scrap-transfer-v1','transfers');if(qty>available(x))throw Error('Available damaged balance changed. Refresh and retry.');await save({id:'SCRT-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),sourceKey:x.key,rgp:x.rgp,item:x.item,size:x.size,unit:x.unit,qty,approvedBy,reason,date:new Date().toISOString().slice(0,10),createdAt:new Date().toISOString()});$('cf24hApproved').value='';$('cf24hReason').value='';$('cf24hQty').value='';await refresh();document.dispatchEvent(new CustomEvent('coreflow:scrap-transfer-saved'));$('cf24hNotice').textContent='Scrap transfer saved. RGP source preserved. Scrap Sale integration pending.'}catch(e){$('cf24hNotice').textContent='Save failed: '+e.message}finally{b.disabled=false}}
 const observer=new MutationObserver(()=>{if(!$('cf24hOpen'))mount()});function init(){mount();const root=$('cf21dStock');if(root)observer.observe(root,{childList:true});document.addEventListener('coreflow:rgp-return-saved',()=>{if($('cf24hPanel')&&!$('cf24hPanel').hidden)refresh()})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();</script></body></html>
+})();</script><style id="cf24j-offline-status-style">#cf24j-offline-state{position:fixed;right:14px;bottom:14px;z-index:8500;padding:8px 12px;border:1px solid #bad1e3;border-radius:9px;background:#f5fbff;color:#204e73;font:600 12px system-ui,Arial;box-shadow:0 3px 18px #102b4520;max-width:min(300px,85vw)}#cf24j-offline-state.offline{background:#fff5e8;border-color:#e7ba80;color:#805012}</style>
+<script id="cf24j-offline-state">(()=>{'use strict';const node=document.createElement('div');node.id='cf24j-offline-state';node.setAttribute('role','status');node.setAttribute('aria-live','polite');function show(){const offline=navigator.onLine===false;node.classList.toggle('offline',offline);node.textContent=offline?'Offline · Saved browser data in use':'Online · Local browser data available';node.title='CoreFlow keeps its IndexedDB records in this browser. Offline access requires the HTML page to be opened locally or previously loaded.'}if(document.body){document.body.appendChild(node);show()}window.addEventListener('online',show);window.addEventListener('offline',show)})();</script></body></html>
