@@ -11148,10 +11148,11 @@ dc47RenderMaterial();
    $('dc48Subtitle').textContent=subtitle;
    $('dc48MaterialSection').hidden=kind!=='material';
    $('dc48SteamSection').hidden=kind!=='steam';
-   steam.hidden=true;detail.hidden=false;
+   steam.hidden=true;steam.style.setProperty('display','none','important');
+   detail.hidden=false;detail.style.setProperty('display','block','important');
    detail.scrollIntoView({block:'start',behavior:'auto'});
  }
- function back(){detail.hidden=true;steam.hidden=false;dc39Select('history');steam.scrollIntoView({block:'start',behavior:'auto'})}
+ function back(){detail.hidden=true;detail.style.removeProperty('display');steam.hidden=false;steam.style.removeProperty('display');dc39Select('history');steam.scrollIntoView({block:'start',behavior:'auto'})}
  function materialPage(id){
    const e=dc39State(),m=e.materials.find(x=>x.id===id);if(!m)return;
    showPage('material',m.name+' — Material Ledger','Complete dated receipts, consumption, running balance and costing · Unit: '+m.unit);
@@ -11211,9 +11212,19 @@ dc47RenderMaterial();
    if(b.dataset.dc39Edit){dc47EditDate(b.dataset.dc39Edit);return}
    steamPage(b.dataset.dc48Steam||b.dataset.dc47View);
  };
+ // Direct, capture-phase navigation survives re-render and prevents ancestor handlers hiding the detail screen.
+ document.addEventListener('click',function dc49OpenSteamDetails(e){
+   const b=e.target.closest('#dc42MonthlyMaterials [data-dc48-material], #dc39HistoryRows [data-dc48-steam], #dc39HistoryRows [data-dc47-view]');
+   if(!b)return;
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   const materialId=b.getAttribute('data-dc48-material');
+   if(materialId){materialPage(materialId);return}
+   const dt=b.getAttribute('data-dc48-steam')||b.getAttribute('data-dc47-view');
+   if(dt)steamPage(dt);
+ },true);
  $('dc42MonthlyMaterials').addEventListener('click',e=>{const b=e.target.closest('[data-dc48-material]');if(b)materialPage(b.dataset.dc48Material)});
  detail.addEventListener('click',e=>{
-   const edit=e.target.closest('[data-dc48-edit]');if(edit){detail.hidden=true;steam.hidden=false;dc47EditDate(edit.dataset.dc48Edit);return}
+   const edit=e.target.closest('[data-dc48-edit]');if(edit){detail.hidden=true;detail.style.removeProperty('display');steam.hidden=false;steam.style.removeProperty('display');dc47EditDate(edit.dataset.dc48Edit);return}
    const b=e.target.closest('[data-dc48-material]');if(b)materialPage(b.dataset.dc48Material);
  });
  $('dc48Back').onclick=back;
