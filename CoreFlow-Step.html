@@ -1979,7 +1979,7 @@ body[data-design="natureFlowLight"] #page-dashboard .nf-hero.cf07i-applied>.cf07
 #page-factory-daily > .fo27-shell[hidden]{display:none!important;visibility:hidden!important;}
 #page-factory-daily > #fc28Daily{display:block;}
 </style>
-</head><body>
+<style id="fc28f-steam-help">#fc28Daily .fc28f-help{margin:7px 0;padding:9px 12px;border:1px solid #bbd8f5;border-radius:6px;background:#f5faff;color:#325e81;font:12px/1.5 "Segoe UI",Arial,sans-serif}</style></head><body>
 <aside class="side"><div class="brand">CoreFlow<small>Universal ERP Shell</small></div><div class="nav">
 <button class="active" data-page="dashboard"><span class="txt">⌂   Dashboard</span></button><button data-page="purchasing"><span class="txt">🛒   Purchasing</span></button><button data-page="inventory"><span class="txt">▦   Inventory</span></button><button data-page="issue-stock"><span class="txt">⇄   Issue / Stock</span></button><button data-page="gate-pass"><span class="txt">▣   Gate Pass</span></button><button data-page="reports"><span class="txt">▤   Reports</span></button><button data-page="masters"><span class="txt">◆   Masters</span></button><button data-page="design-studio"><span class="txt">✦   Design Studio</span></button><button data-page="settings"><span class="txt">⚙   Settings</span></button><button data-page="system-settings" title="Data Storage"><span class="txt">▣   Data Storage</span></button></div><div class="profile">MW   <b>Muhammad Waqas</b><br/><small>Administrator</small></div></aside>
 <div class="shell"><header class="top">
@@ -11526,7 +11526,7 @@ function dateText(iso){if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return iso||'';const 
 function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 function get(k){return new Promise((res,rej)=>{const t=db.transaction(STORE,'readonly'),r=t.objectStore(STORE).get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 function put(k,v){return new Promise((res,rej)=>{const t=db.transaction(STORE,'readwrite');t.objectStore(STORE).put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})}
-function saveCfg(){return put('config',cfg)}
+function saveCfg(){return put('config',cfg).then(()=>{renderDaily()})}
 const order=x=>[...x].sort((a,b)=>(a.order||0)-(b.order||0)||a.name.localeCompare(b.name));const dep=()=>cfg.departments.find(x=>x.id===deptId),sec=()=>cfg.sections.find(x=>x.id===sectionId);const enabled=x=>x.enabled!==false;const activeSections=d=>order(cfg.sections.filter(s=>s.departmentId===d.id&&enabled(s)));const fullSection=d=>{const r=activeSections(d);return r.length?r:[{id:'main:'+d.id,name:d.name,type:'stock',costing:false,departmentId:d.id,virtual:true}]};
 function status(t,err=false){$('fc28Status').textContent=t;$('fc28Status').classList.toggle('fc28-error',err)}
 function nav(p){const target=document.querySelector('[data-fo27-open="'+p+'"]');if(target){target.click()}else{window.CoreFlowCentralNavigation?.open?.(p)|| (location.hash='#'+p)}}
@@ -11599,7 +11599,9 @@ function renderDaily(){
     if(sec.costing){const rate=rateAt(x,day);td.push(`<td class="fc28d-read" data-cost="${esc(x.id)}">${rate===null?'Unpriced':numfmt(total*rate)}</td>`)}
     return `<tr data-i-row="${esc(x.id)}">${td.join('')}</tr>`;
    }).join('');
-   sections.push(`<div class="fc28d-section"><div class="fc28d-section-name"><b>${esc(sec.name)}</b><small>${stock?'Stock & Consumption':'Daily Operational'}${sec.costing?' · Costing enabled':''}</small></div><div class="fc28d-scroll"><table class="fc28d-table"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div></div>`);
+   const missingSteamProduced=!stock&&/steam/i.test(sec.name)&&items.some(x=>x.role==='consumed')&&!items.some(x=>x.role==='produced');
+   const steamHelp=missingSteamProduced?'<div class="fc28f-help">Steam Produced abhi is section mein configured nahi hai. Control Center → Boiler House → Steam Production mein <b>Steam Produced</b> metric (Role: Produced / Generated) alag add karein. Steam Consumption aur uski locations neeche display hoti rahengi.</div>':'';
+   sections.push(`<div class="fc28d-section"><div class="fc28d-section-name"><b>${esc(sec.name)}</b><small>${stock?'Stock & Consumption':'Daily Operational'}${sec.costing?' · Costing enabled':''}</small></div>${steamHelp}<div class="fc28d-scroll"><table class="fc28d-table"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div></div>`);
   }
   if(sections.length)rows.push(`<section class="fc28d-department" data-entry-department="${esc(d.id)}"><h2>${esc(d.name)}</h2>${sections.join('')}</section>`);
  }
@@ -11614,7 +11616,7 @@ $('fc28Save').onclick=async()=>{let day=dateISO($('fc28Date').value);if(!day){$(
  const staged={...reports,[day]:{date:day,values,updatedAt:new Date().toISOString()}};
  for(const x of cfg.items.filter(x=>x.type==='stock')){let balance=amount(x.opening);for(const d of Object.keys(staged).sort()){if(x.openingDate&&d<x.openingDate)continue;const v=staged[d].values?.[x.id];if(v)balance+=amount(v.received)-Object.values(v.used||{}).reduce((a,b)=>a+amount(b),0);if(balance< -0.000001){$('fc28DailyStatus').textContent=`${x.name}: negative stock on ${dateText(d)}. Check opening, received or consumption.`;return}}}
  try{await put('report:'+day,staged[day]);reports=staged;$('fc28DailyStatus').textContent='Daily report saved / updated for '+dateText(day)+'.';renderDaily()}catch(e){$('fc28DailyStatus').textContent='Save failed: '+e.message}};
- document.querySelectorAll('[data-fc28-nav]').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.fc28Nav)));
+ document.querySelectorAll('[data-fc28-nav]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.fc28Nav==='factory-daily')renderDaily();nav(b.dataset.fc28Nav)}));
  async function boot(){try{db=await openDB();cfg=await get('config')||cfg;for(const k of ['departments','sections','items'])cfg[k]??=[];const t=db.transaction(STORE,'readonly'),r=t.objectStore(STORE).getAllKeys();const keys=await new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});for(const k of keys.filter(k=>String(k).startsWith('report:'))){const v=await get(k);if(v)reports[v.date]=v}status('Ready — independent v2 configuration. Older Factory Core settings remain untouched.');render();renderDaily()}catch(e){status('Storage error: '+e.message,true)}}
  boot();
 })();</script>
